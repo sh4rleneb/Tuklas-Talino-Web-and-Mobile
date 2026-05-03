@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Tuklas Talino",
+    "slug": "tuklas-talino",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "extra": {
+      "apiUrl": "http://localhost:4000/api"
+    }
+  }
+}

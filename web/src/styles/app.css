@@ -1,0 +1,28 @@
+/* Small React-only helpers. The visual identity comes from legacy-theme.css and gamification.css. */
+.loading-card{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  font-family:'Nunito',sans-serif;
+  font-weight:900;
+  color:var(--green-dark);
+  background:linear-gradient(135deg,#fff7dc,#e7fbfb);
+}
+.tt-loading-overlay{
+  position:fixed;
+  inset:0;
+  z-index:9990;
+  background:rgba(255,255,255,.42);
+  backdrop-filter:blur(2px);
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+}
+button.avatar-circle{border-style:solid;}
+button.module-card{text-align:center;}
+.lesson-card button{flex-shrink:0;}
+#admin-history-wrap .trow{grid-template-columns:2fr 1fr 1fr 1fr 1fr;}
+@media(max-width:720px){
+  #admin-history-wrap .trow{grid-template-columns:1fr;}
+  .lesson-card{align-items:flex-start;}
+}
