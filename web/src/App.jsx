@@ -96,15 +96,16 @@ export default function App() {
   function go(id) { setScreen(id); }
 
   async function safeRun(fn, fallback = 'May nangyaring error. Pakisubukan muli.') {
-    try {
-      setLoading(true);
-      await fn();
-    } catch (err) {
-      notify(err.message || fallback, 'bad');
-    } finally {
-      setLoading(false);
-    }
+  try {
+    setLoading(true);
+    return await fn();
+  } catch (err) {
+    notify(err.message || fallback, 'bad');
+    return null;
+  } finally {
+    setLoading(false);
   }
+}
 
   async function doLogout() {
     authLogout();
@@ -174,13 +175,20 @@ export default function App() {
   }
 
   async function submitMcq(question, option) {
-    if (!selectedLesson) return;
-    await safeRun(async () => {
-      const data = await api(`/lessons/${selectedLesson.id}/mcq`, { method: 'POST', body: { questionId: question.id, selectedOptionId: option.id } });
-      setLessonFeedback(data.correct ? '✅ Tama! +5 XP' : '💡 Subukan muli.');
-      await loadStudentDashboard();
+  if (!selectedLesson) return null;
+
+  return await safeRun(async () => {
+    const data = await api(`/lessons/${selectedLesson.id}/mcq`, {
+      method: 'POST',
+      body: { questionId: question.id, selectedOptionId: option.id }
     });
-  }
+
+    setLessonFeedback(data.correct ? '✅ Tama! +5 XP' : '❌ Subukan muli.');
+    await loadStudentDashboard();
+
+    return data;
+  });
+}
 
   async function submitWriting(taskId) {
     const content = read('writing-answer');
@@ -191,14 +199,28 @@ export default function App() {
     });
   }
 
-  async function submitSpeech(taskId) {
-    const transcript = read('speech-transcript') || selectedLesson?.speechTarget || '';
-    await safeRun(async () => {
-      await api(`/lessons/${selectedLesson.id}/speech`, { method: 'POST', body: { taskId, transcript, score: 90 } });
-      setLessonFeedback('🎤 Na-save ang speech practice attempt. +6 XP');
-      await loadStudentDashboard();
-    });
+  async function submitSpeech(taskId, transcript, score) {
+  if (!selectedLesson) return;
+
+  if (!transcript || transcript.trim().length < 2) {
+    setLessonFeedback('🎤 Paki-subukan munang magsalita bago i-submit.');
+    return;
   }
+
+  await safeRun(async () => {
+    await api(`/lessons/${selectedLesson.id}/speech`, {
+      method: 'POST',
+      body: {
+        taskId,
+        transcript,
+        score
+      }
+    });
+
+    setLessonFeedback(`🎤 Na-save ang speech practice attempt. Score: ${score}% +6 XP`);
+    await loadStudentDashboard();
+  });
+}
 
   async function updateAvatar(avatar) {
     setSelectedAvatar(avatar);
@@ -640,7 +662,7 @@ function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLes
   const s = data?.student;
   const level = data?.level || levelForXp(s?.xp);
   const pct = xpPercent(s?.xp);
-  const early = Number(s?.gradeLevel || 4) <= 3;
+  const early = Number(s?.gradeLevel || 4) <= 2;
 
   const openFirstSubjectLesson = (subject) => {
     const lesson = nextLessonForSubject(data, subject);
@@ -909,15 +931,595 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
   return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo" id="lessons-title">📚 Lessons</div><div className="pill">📌 <span id="lessons-count">{lessons.length}</span></div></div><div className="scroll"><div className="card"><div className="muted" id="lessons-sub">Mga aralin para sa iyong baitang.</div><div className="divider" /><div className="row"><button className={`btn btn-sm ${subjectFilter === 'ALL' ? 'btn-green' : 'btn-outline'}`} onClick={() => setSubjectFilter('ALL')}>All</button>{SUBJECTS.map(s => <button key={s.name} className={`btn btn-sm ${subjectFilter === s.name ? 'btn-green' : 'btn-outline'}`} onClick={() => setSubjectFilter(s.name)}>{s.icon} {s.name}</button>)}</div></div><div id="lessons-wrap">{lessons.map(l => <div className="lesson-card" key={l.id} onClick={() => openLesson(l)}><div className="lesson-icon">{SUBJECTS.find(s => s.name === l.subject)?.icon || '📘'}</div><div style={{ flex: 1 }}><b>{l.title}</b><div className="muted">{l.subject} • Grade {l.gradeLevel} • {l.xpReward} XP</div></div><div className="pill">{l.completed ? '✅ Done' : '▶ Start'}</div></div>)}{!lessons.length && <div className="card"><div className="muted">No lessons found.</div></div>}</div></div></>;
 }
 
-function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech }) {
-  const activities = lesson?.activities || [];
-  return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-lessons')}>← Back</button><div className="logo" id="lesson-title">📖 {lesson?.title || 'Lesson'}</div><div className="pill">⚡ +<span id="lesson-xp">{lesson?.xpReward || 0}</span></div></div><div className="scroll"><div className="card"><div className="section-title">📘 Teksto</div><div className="muted" id="lesson-instructions">{lesson?.instructions}</div><div className="divider" /><div id="lesson-passage" style={{ fontSize: 15, lineHeight: 1.8, fontWeight: 700 }}>{lesson?.passage}</div><div className="divider" /><div className="row"><button className="btn btn-blue" onClick={() => speechSynthesis.speak(new SpeechSynthesisUtterance(lesson?.passage || ''))}>🔊 Pakinggan (TTS)</button><button className="btn btn-purple" onClick={() => document.getElementById('speech-transcript')?.focus()}>🎤 Magsalita</button><button className="btn btn-outline" onClick={() => speechSynthesis.cancel()}>⏹ Stop</button></div><div className="divider" /><div id="speech-feedback">{feedback && <div className="feedback ok">{feedback}</div>}</div></div><div id="lesson-activity">{activities.map(a => <ActivityCard key={a.id} activity={a} submitMcq={submitMcq} submitWriting={submitWriting} submitSpeech={submitSpeech} />)}</div><div className="card"><div className="section-title">✅ Tapusin</div><div className="muted">Kapag natapos mo na ang gawain, pindutin ito para maitala ang progreso at XP.</div><div className="divider" /><button className="btn btn-green" style={{ width: '100%', justifyContent: 'center' }} onClick={completeLesson}>🎉 Mark as Completed</button></div></div></>;
+function normalizeSpeechText(text = '') {
+  return String(text)
+    .toLowerCase()
+    .replace(/[.,!?;:'"()\-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-function ActivityCard({ activity, submitMcq, submitWriting, submitSpeech }) {
-  if (activity.type === 'mcq') return <div className="card"><div className="section-title">🧩 Multiple Choice</div>{(activity.questions || []).map(q => <div key={q.id}><div style={{ fontWeight: 900 }}>{q.question}</div><div className="divider" /><div className="grid grid-2">{(q.options || []).map(o => <button className="btn btn-outline" key={o.id} onClick={() => submitMcq(q, o)}>{o.optionText}</button>)}</div></div>)}</div>;
-  if (activity.type === 'writing') return <div className="card"><div className="section-title">✍️ Writing Activity</div><div className="muted">{activity.writingTask?.prompt}</div><div className="divider" /><textarea className="input-field" id="writing-answer" placeholder="Isulat ang iyong sagot dito..." /><div className="divider" /><button className="btn btn-green" onClick={() => submitWriting(activity.writingTask?.id)}>Submit Writing</button></div>;
-  if (activity.type === 'speech') return <div className="card"><div className="section-title">🎙️ Oral Practice</div><div className="muted">Target: {activity.speechTask?.targetText}</div><div className="divider" /><input className="input-field" id="speech-transcript" placeholder="I-type dito ang nasabi mo / transcript placeholder" /><div className="divider" /><button className="btn btn-purple" onClick={() => submitSpeech(activity.speechTask?.id)}>Submit Speech Attempt</button></div>;
+function editDistance(a = '', b = '') {
+  const first = normalizeSpeechText(a);
+  const second = normalizeSpeechText(b);
+
+  const rows = first.length + 1;
+  const cols = second.length + 1;
+  const dp = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+  for (let i = 0; i < rows; i++) dp[i][0] = i;
+  for (let j = 0; j < cols; j++) dp[0][j] = j;
+
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const cost = first[i - 1] === second[j - 1] ? 0 : 1;
+
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return dp[first.length][second.length];
+}
+
+function speechSimilarityScore(target = '', transcript = '') {
+  const cleanTarget = normalizeSpeechText(target);
+  const cleanTranscript = normalizeSpeechText(transcript);
+
+  if (!cleanTarget || !cleanTranscript) return 0;
+
+  const distance = editDistance(cleanTarget, cleanTranscript);
+  const maxLength = Math.max(cleanTarget.length, cleanTranscript.length);
+
+  return Math.max(0, Math.round((1 - distance / maxLength) * 100));
+}
+
+function getSpeechRecognition() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech }) {
+  const activities = lesson?.activities || [];
+  const theme = subjectTheme(lesson?.subject);
+  const isEarlyGrade = Number(lesson?.gradeLevel || 4) <= 2;
+
+  function speakLesson() {
+    const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  }
+
+  return (
+    <>
+      <div className="top-nav">
+        <button className="btn btn-outline btn-sm" onClick={() => go('screen-lessons')}>
+          ← Back
+        </button>
+
+        <div className="logo">
+          {isEarlyGrade ? '🌈 Learning Mission' : '📘 Lesson Workspace'}
+        </div>
+
+        <div className="pill">
+          ⚡ +{lesson?.xpReward || 0} XP
+        </div>
+      </div>
+
+      <div className="scroll">
+        <div
+          className="card"
+          style={{
+            background: isEarlyGrade
+              ? `linear-gradient(135deg, ${theme.bg}, #ffffff)`
+              : '#ffffff',
+            border: `2px solid ${theme.accent}`,
+          }}
+        >
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+            <div>
+              <div
+                className="pill"
+                style={{
+                  background: theme.accent,
+                  color: 'white',
+                  marginBottom: 10,
+                }}
+              >
+                Grade {lesson?.gradeLevel || '—'} • {lesson?.subject || 'Filipino'}
+              </div>
+
+              <h2 style={{ margin: '4px 0 8px', fontSize: isEarlyGrade ? 30 : 24 }}>
+                {isEarlyGrade ? '🌟 ' : ''}{lesson?.title || 'Lesson'}
+              </h2>
+
+              <div className="muted" style={{ fontSize: isEarlyGrade ? 17 : 14 }}>
+                {isEarlyGrade
+                  ? 'Makinig, magbasa, at sagutin ang gawain. Kaya mo ito!'
+                  : 'Read the lesson carefully, complete the activities, and track your progress.'}
+              </div>
+            </div>
+
+            <div style={{ fontSize: isEarlyGrade ? 64 : 44 }}>
+              {theme.icon || '📘'}
+            </div>
+          </div>
+
+          <div className="divider" />
+
+          <div className="grid grid-3">
+            <Stat icon="📖" label="Type" value={theme.tag || 'Aralin'} />
+            <Stat icon="🎯" label="Activities" value={activities.length} />
+            <Stat icon="⚡" label="Reward" value={`+${lesson?.xpReward || 0}`} />
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="section-title">
+            {isEarlyGrade ? '1️⃣ Makinig at Basahin' : '1. Read the Lesson'}
+          </div>
+
+          {lesson?.instructions && (
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 16,
+                background: isEarlyGrade ? '#FFF8CF' : '#F8FAFF',
+                marginBottom: 12,
+                lineHeight: 1.6,
+                fontSize: isEarlyGrade ? 18 : 15,
+              }}
+            >
+              <b>{isEarlyGrade ? 'Panuto:' : 'Instructions:'}</b> {lesson.instructions}
+            </div>
+          )}
+
+          {lesson?.passage ? (
+            <div
+              style={{
+                padding: isEarlyGrade ? 20 : 18,
+                borderRadius: 18,
+                background: isEarlyGrade ? '#F8FAFF' : '#FFFFFF',
+                border: '1px solid #E1E7FF',
+                lineHeight: isEarlyGrade ? 1.9 : 1.75,
+                fontSize: isEarlyGrade ? 21 : 16,
+              }}
+            >
+              {lesson.passage}
+            </div>
+          ) : (
+            <div className="muted">No passage added for this lesson yet.</div>
+          )}
+
+          <div className="divider" />
+
+          <div className="row">
+            <button className="btn btn-blue" onClick={speakLesson}>
+              🔊 {isEarlyGrade ? 'Pakinggan' : 'Listen'}
+            </button>
+
+            <button className="btn btn-outline" onClick={() => speechSynthesis.cancel()}>
+              ⏹ Stop
+            </button>
+          </div>
+        </div>
+
+        {feedback && (
+          <div
+            className="card"
+            style={{
+              border: feedback.includes('Tama') || feedback.includes('Na-save') || feedback.includes('Naisumite')
+                ? '2px solid #2ECC71'
+                : '2px solid #E67E22',
+              background: feedback.includes('Tama') ? '#E9FBEF' : '#FFFFFF',
+            }}
+          >
+            <div className="section-title">
+              {isEarlyGrade ? '⭐ Feedback' : 'Feedback'}
+            </div>
+
+            <div style={{ fontSize: isEarlyGrade ? 20 : 16, fontWeight: 700 }}>
+              {feedback}
+            </div>
+          </div>
+        )}
+
+        <div className="card">
+          <div className="section-title">
+            {isEarlyGrade ? '2️⃣ Sagutan ang Activities' : '2. Complete the Activities'}
+          </div>
+
+          <div className="muted">
+            {activities.length
+              ? isEarlyGrade
+                ? 'Piliin, isulat, o bigkasin ang iyong sagot.'
+                : 'Answer the quiz, writing, and oral practice activities below.'
+              : 'Wala pang activities para sa lesson na ito.'}
+          </div>
+
+          <div className="divider" />
+
+          {activities.map((activity, index) => (
+            <ActivityCard
+              key={activity.id || index}
+              activity={activity}
+              index={index}
+              total={activities.length}
+              isEarlyGrade={isEarlyGrade}
+              submitMcq={submitMcq}
+              submitWriting={submitWriting}
+              submitSpeech={submitSpeech}
+            />
+          ))}
+        </div>
+
+        <div
+          className="card"
+          style={{
+            border: '2px solid #2ECC71',
+            background: isEarlyGrade ? '#F0FFF5' : '#FFFFFF',
+          }}
+        >
+          <div className="section-title">
+            {isEarlyGrade ? '3️⃣ Tapusin ang Lesson' : '3. Finish Lesson'}
+          </div>
+
+          <div className="muted">
+            Kapag tapos ka na, pindutin ito para maitala ang iyong progress at XP.
+          </div>
+
+          <div className="divider" />
+
+          <button className="btn btn-green" onClick={completeLesson}>
+            ✅ Mark as Completed
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq, submitWriting, submitSpeech }) {
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [mcqFeedback, setMcqFeedback] = useState({});
+  const [writingText, setWritingText] = useState('');
+  const [speechText, setSpeechText] = useState('');
+
+  const activityBoxStyle = {
+    boxShadow: 'none',
+    background: '#FFFFFF',
+    border: isEarlyGrade ? '2px solid #E8E8E8' : '1px solid #E8E8E8',
+    marginBottom: 14,
+  };
+
+  async function handleMcq(question, option) {
+    setSelectedAnswers(prev => ({
+      ...prev,
+      [question.id]: option.id,
+    }));
+
+    const result = await submitMcq(question, option);
+
+    if (result) {
+      setMcqFeedback(prev => ({
+        ...prev,
+        [question.id]: result.correct
+          ? isEarlyGrade
+            ? '✅ Tama! Ang galing mo!'
+            : '✅ Correct answer.'
+          : isEarlyGrade
+            ? '❌ Hindi pa tama. Subukan muli!'
+            : '❌ Not quite. Try again.'
+      }));
+    }
+  }
+
+  if (activity.type === 'mcq') {
+    const questions = activity.questions || [];
+
+    return (
+      <div className="card" style={activityBoxStyle}>
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="section-title">
+            {isEarlyGrade ? '🎮 Mini Quiz' : 'Multiple Choice Quiz'}
+          </div>
+
+          <div className="pill">
+            {index + 1}/{total}
+          </div>
+        </div>
+
+        <div className="muted">
+          {isEarlyGrade
+            ? 'Piliin ang tamang sagot.'
+            : 'Choose the best answer for each question.'}
+        </div>
+
+        <div className="divider" />
+
+        {questions.map((q, qIndex) => (
+          <div
+            key={q.id || qIndex}
+            style={{
+              padding: isEarlyGrade ? 16 : 14,
+              borderRadius: 16,
+              background: isEarlyGrade ? '#F8FAFF' : '#FAFAFA',
+              marginBottom: 12,
+            }}
+          >
+            <div className="pill" style={{ marginBottom: 10 }}>
+              Question {qIndex + 1} of {questions.length}
+            </div>
+
+            <h3 style={{ marginTop: 0, fontSize: isEarlyGrade ? 21 : 17 }}>
+              {q.question}
+            </h3>
+
+            <div className="grid grid-2">
+              {(q.options || []).map((option, optionIndex) => {
+                const selected = selectedAnswers[q.id] === option.id;
+                const label = option.optionText || option.text || `Option ${optionIndex + 1}`;
+
+                return (
+                  <button
+                    key={option.id || optionIndex}
+                    className={`btn ${selected ? 'btn-green' : 'btn-outline'}`}
+                    onClick={() => handleMcq(q, option)}
+                    style={{
+                      minHeight: isEarlyGrade ? 62 : 46,
+                      justifyContent: 'flex-start',
+                      textAlign: 'left',
+                      fontSize: isEarlyGrade ? 18 : 14,
+                      whiteSpace: 'normal',
+                    }}
+                  >
+                    <span style={{ marginRight: 8, fontWeight: 800 }}>
+                      {['A', 'B', 'C', 'D'][optionIndex] || '•'}.
+                    </span>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {mcqFeedback[q.id] && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  borderRadius: 14,
+                  background: mcqFeedback[q.id].includes('Tama') || mcqFeedback[q.id].includes('Correct')
+                    ? '#E9FBEF'
+                    : '#FFF4E5',
+                  fontWeight: 800,
+                  fontSize: isEarlyGrade ? 18 : 14,
+                }}
+              >
+                {mcqFeedback[q.id]}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (activity.type === 'writing') {
+    const prompt = activity.writingTask?.prompt || activity.prompt || 'Isulat ang iyong sagot.';
+
+    return (
+      <div className="card" style={activityBoxStyle}>
+        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="section-title">
+            ✍️ {isEarlyGrade ? 'Isulat ang Sagot' : 'Writing Activity'}
+          </div>
+
+          <div className="pill">
+            {index + 1}/{total}
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: 14,
+            borderRadius: 16,
+            background: '#FFF8CF',
+            lineHeight: 1.6,
+            marginBottom: 12,
+            fontSize: isEarlyGrade ? 17 : 14,
+          }}
+        >
+          <b>{isEarlyGrade ? 'Tanong:' : 'Prompt:'}</b> {prompt}
+        </div>
+
+        <textarea
+          className="input-field"
+          id="writing-answer"
+          rows="5"
+          value={writingText}
+          onChange={(e) => setWritingText(e.target.value)}
+          placeholder={isEarlyGrade ? 'Isulat dito ang sagot mo...' : 'Type your answer here...'}
+          style={{
+            minHeight: isEarlyGrade ? 150 : 130,
+            resize: 'vertical',
+            fontSize: isEarlyGrade ? 18 : 15,
+            lineHeight: 1.6,
+          }}
+        />
+
+        <div className="divider" />
+
+        <button
+          className="btn btn-green"
+          onClick={() => submitWriting(activity.writingTask?.id)}
+          disabled={!writingText.trim()}
+        >
+          ✅ Submit Writing
+        </button>
+      </div>
+    );
+  }
+
+  if (activity.type === 'speech') {
+  const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
+  const [speechTranscript, setSpeechTranscript] = useState('');
+  const [speechScore, setSpeechScore] = useState(null);
+  const [isListening, setIsListening] = useState(false);
+  const [speechError, setSpeechError] = useState('');
+
+  function speakTarget() {
+    speechSynthesis.cancel();
+    speechSynthesis.speak(new SpeechSynthesisUtterance(target));
+  }
+
+  function startSpeechRecognition() {
+    const Recognition = getSpeechRecognition();
+
+    if (!Recognition) {
+      setSpeechError('Hindi supported ng browser ang speech recognition. Subukan sa Chrome o Edge.');
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = 'fil-PH';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setSpeechError('');
+    setSpeechTranscript('');
+    setSpeechScore(null);
+    setIsListening(true);
+
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || '';
+      const score = speechSimilarityScore(target, transcript);
+
+      setSpeechTranscript(transcript);
+      setSpeechScore(score);
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      setSpeechError(`Speech recognition error: ${event.error}`);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  }
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          🎤 {isEarlyGrade ? 'Bigkasin Mo' : 'Oral Practice'}
+        </div>
+
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
+      </div>
+
+      <div className="muted">
+        {isEarlyGrade
+          ? 'Pakinggan muna, pagkatapos pindutin ang Start Speaking at bigkasin ang pangungusap.'
+          : 'Listen to the target text, then speak it aloud. Your answer will be scored using edit distance.'}
+      </div>
+
+      <div
+        style={{
+          padding: 16,
+          borderRadius: 16,
+          background: '#FFE2EA',
+          marginTop: 12,
+          fontSize: isEarlyGrade ? 20 : 16,
+          lineHeight: 1.7,
+        }}
+      >
+        <b>{isEarlyGrade ? 'Bibigkasin:' : 'Target:'}</b> {target}
+      </div>
+
+      <div className="divider" />
+
+      <div className="row">
+        <button className="btn btn-purple" onClick={speakTarget}>
+          🔊 Listen
+        </button>
+
+        <button className="btn btn-blue" onClick={startSpeechRecognition} disabled={isListening}>
+          {isListening ? '🎙️ Listening...' : '🎙️ Start Speaking'}
+        </button>
+
+        <button className="btn btn-outline" onClick={() => speechSynthesis.cancel()}>
+          ⏹ Stop Audio
+        </button>
+      </div>
+
+      {speechError && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 14,
+            background: '#FFF4E5',
+            fontWeight: 700,
+          }}
+        >
+          {speechError}
+        </div>
+      )}
+
+      {speechTranscript && (
+        <div
+          style={{
+            marginTop: 14,
+            padding: 14,
+            borderRadius: 16,
+            background: '#F8FAFF',
+            border: '1px solid #E1E7FF',
+            lineHeight: 1.6,
+          }}
+        >
+          <b>{isEarlyGrade ? 'Narinig ng system:' : 'Recognized speech:'}</b>
+          <div style={{ marginTop: 6 }}>{speechTranscript}</div>
+        </div>
+      )}
+
+      {speechScore !== null && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 14,
+            borderRadius: 16,
+            background: speechScore >= 75 ? '#E9FBEF' : '#FFF4E5',
+            fontWeight: 800,
+            fontSize: isEarlyGrade ? 18 : 15,
+          }}
+        >
+          {speechScore >= 75
+            ? `✅ Mahusay! Speech score: ${speechScore}%`
+            : `⭐ Subukan muli para mas malinaw. Speech score: ${speechScore}%`}
+        </div>
+      )}
+
+      <div className="divider" />
+
+      <button
+        className="btn btn-purple"
+        onClick={() => submitSpeech(activity.speechTask?.id, speechTranscript, speechScore || 0)}
+        disabled={!speechTranscript}
+      >
+        🎤 Submit Speech Attempt
+      </button>
+    </div>
+  );
+}
+
   return null;
 }
 
