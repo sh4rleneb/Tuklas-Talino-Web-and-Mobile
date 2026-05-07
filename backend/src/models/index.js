@@ -55,9 +55,32 @@ export const Lesson = sequelize.define('Lesson', {
 
 export const LessonActivity = sequelize.define('LessonActivity', {
   lessonId: { type: DataTypes.INTEGER, allowNull: false },
-  type: { type: DataTypes.ENUM('mcq', 'writing', 'speech'), allowNull: false },
-  title: { type: DataTypes.STRING(220), allowNull: false },
-  sortOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 }
+
+  type: {
+    type: DataTypes.STRING(40),
+    allowNull: false
+  },
+
+  title: {
+    type: DataTypes.STRING(220),
+    allowNull: false
+  },
+
+  instructions: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+
+  dataJson: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+
+  sortOrder: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1
+  }
 }, { tableName: 'lesson_activities' });
 
 export const MCQQuestion = sequelize.define('MCQQuestion', {
