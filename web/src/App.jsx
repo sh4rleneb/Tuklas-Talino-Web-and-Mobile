@@ -190,14 +190,27 @@ export default function App() {
   });
 }
 
-  async function submitWriting(taskId) {
-    const content = read('writing-answer');
-    await safeRun(async () => {
-      const data = await api(`/lessons/${selectedLesson.id}/writing`, { method: 'POST', body: { taskId, content } });
-      setLessonFeedback(data.submission?.feedback || 'Naisumite na ang sagot.');
-      await loadStudentDashboard();
-    });
+  async function submitWriting(taskId, answer) {
+  if (!selectedLesson) return;
+
+  if (!answer || answer.trim().length < 2) {
+    setLessonFeedback('✍️ Pakisulat muna ang iyong sagot bago i-submit.');
+    return;
   }
+
+  await safeRun(async () => {
+    await api(`/lessons/${selectedLesson.id}/writing`, {
+      method: 'POST',
+      body: {
+        taskId,
+        answer
+      }
+    });
+
+    setLessonFeedback('✍️ Na-save ang writing activity. +8 XP');
+    await loadStudentDashboard();
+  });
+}
 
   async function submitSpeech(taskId, transcript, score) {
   if (!selectedLesson) return;
@@ -241,7 +254,23 @@ export default function App() {
       api('/students?status=active'),
       api('/lessons')
     ]);
-    setTeacherData({ stats: dash.stats, rows: monitoring.rows || [], groups: groups.groups || [], students: students.students || [], lessons: lessons.lessons || [] });
+
+    const sortedLessons = [...(lessons.lessons || [])].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+
+      if (dateA !== dateB) return dateB - dateA;
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+    setTeacherData({
+      stats: dash.stats,
+      rows: monitoring.rows || [],
+      groups: groups.groups || [],
+      students: students.students || [],
+      lessons: sortedLessons
+    });
   }
 
   async function teacherCreateGroup() {
@@ -275,38 +304,72 @@ export default function App() {
     });
   }
 
-  async function teacherCreateLesson() {
-    await safeRun(async () => {
+ async function teacherCreateLesson(payload = null) {
+  await safeRun(async () => {
+    let requestBody = payload;
+
+    if (!requestBody) {
       const activities = [];
       const question = read('t-mcq-q');
+
       if (question) {
         const correct = Number(read('t-mcq-correct') || 0);
         const choices = [read('t-mcq-a'), read('t-mcq-b'), read('t-mcq-c'), read('t-mcq-d')].filter(Boolean);
+
         activities.push({
-          type: 'mcq', title: 'MCQ', questions: [{ question, options: choices.map((text, idx) => ({ text, isCorrect: idx === correct })) }]
+          type: 'mcq',
+          title: 'Multiple Choice Quiz',
+          questions: [
+            {
+              question,
+              options: choices.map((text, idx) => ({
+                text,
+                isCorrect: idx === correct
+              }))
+            }
+          ]
         });
       }
+
       const prompt = read('t-writing-prompt');
-      if (prompt) activities.push({ type: 'writing', title: 'Writing', prompt });
+      if (prompt) {
+        activities.push({
+          type: 'writing',
+          title: 'Writing Activity',
+          prompt
+        });
+      }
+
       const speechTarget = read('t-lesson-speechTarget');
-      if (speechTarget) activities.push({ type: 'speech', title: 'Speech', targetText: speechTarget });
-      await api('/lessons', {
-        method: 'POST',
-        body: {
-          gradeLevel: Number(read('t-lesson-grade')),
-          subject: read('t-lesson-subject'),
-          title: read('t-lesson-title'),
-          xpReward: Number(read('t-lesson-xp') || 25),
-          instructions: read('t-lesson-instructions'),
-          passage: read('t-lesson-passage'),
-          speechTarget,
-          activities
-        }
-      });
-      notify('Lesson created.');
-      await loadTeacherDashboard();
+      if (speechTarget) {
+        activities.push({
+          type: 'speech',
+          title: 'Speech Practice',
+          targetText: speechTarget
+        });
+      }
+
+      requestBody = {
+        gradeLevel: Number(read('t-lesson-grade')),
+        subject: read('t-lesson-subject'),
+        title: read('t-lesson-title'),
+        xpReward: Number(read('t-lesson-xp') || 25),
+        instructions: read('t-lesson-instructions'),
+        passage: read('t-lesson-passage'),
+        speechTarget,
+        activities
+      };
+    }
+
+    await api('/lessons', {
+      method: 'POST',
+      body: requestBody
     });
-  }
+
+    notify('Lesson created.');
+    await loadTeacherDashboard();
+  });
+}
 
   async function loadAdminDashboard() {
     const [stats, students, teachers, logs] = await Promise.all([
@@ -315,12 +378,29 @@ export default function App() {
       api('/teachers'),
       api('/admin/audit-logs?limit=50')
     ]);
-    setAdminData({ stats: stats.stats, students: students.students || [], teachers: teachers.teachers || [], logs: logs.logs || [] });
+
+    setAdminData({
+      stats: stats.stats,
+      students: students.students || [],
+      teachers: teachers.teachers || [],
+      logs: logs.logs || []
+    });
   }
 
   async function adminAddStudent() {
     await safeRun(async () => {
-      await api('/students', { method: 'POST', body: { studentCode: read('a-stu-id'), name: read('a-stu-name'), gradeLevel: Number(read('a-stu-grade')), section: read('a-stu-section'), avatar: '🦊', password: read('a-stu-password') || 'student123' } });
+      await api('/students', {
+        method: 'POST',
+        body: {
+          studentCode: read('a-stu-id'),
+          name: read('a-stu-name'),
+          gradeLevel: Number(read('a-stu-grade')),
+          section: read('a-stu-section'),
+          avatar: '',
+          password: read('a-stu-password') || 'student123'
+        }
+      });
+
       notify('Student added.');
       await loadAdminDashboard();
     });
@@ -328,22 +408,45 @@ export default function App() {
 
   async function adminAddTeacher() {
     await safeRun(async () => {
-      await api('/teachers', { method: 'POST', body: { username: read('a-t-username'), name: read('a-t-name'), employeeCode: read('a-t-code') || read('a-t-username'), password: read('a-t-password') || 'teach123' } });
+      await api('/teachers', {
+        method: 'POST',
+        body: {
+          username: read('a-t-username'),
+          name: read('a-t-name'),
+          employeeCode: read('a-t-code') || read('a-t-username'),
+          password: read('a-t-password') || 'teach123'
+        }
+      });
+
       notify('Teacher added.');
       await loadAdminDashboard();
     });
   }
 
   async function archiveStudent(id) {
-    await safeRun(async () => { await api(`/students/${id}/archive`, { method: 'POST' }); notify('Student archived.'); await loadAdminDashboard(); await loadTeacherDashboard().catch(() => null); });
+    await safeRun(async () => {
+      await api(`/students/${id}/archive`, { method: 'POST' });
+      notify('Student archived.');
+      await loadAdminDashboard();
+      await loadTeacherDashboard().catch(() => null);
+    });
   }
 
   async function resetStudent(id) {
-    await safeRun(async () => { await api(`/students/${id}/reset-progress`, { method: 'POST' }); notify('Progress reset.'); await loadAdminDashboard(); await loadTeacherDashboard().catch(() => null); });
+    await safeRun(async () => {
+      await api(`/students/${id}/reset-progress`, { method: 'POST' });
+      notify('Progress reset.');
+      await loadAdminDashboard();
+      await loadTeacherDashboard().catch(() => null);
+    });
   }
 
   async function archiveTeacher(id) {
-    await safeRun(async () => { await api(`/teachers/${id}/archive`, { method: 'POST' }); notify('Teacher archived.'); await loadAdminDashboard(); });
+    await safeRun(async () => {
+      await api(`/teachers/${id}/archive`, { method: 'POST' });
+      notify('Teacher archived.');
+      await loadAdminDashboard();
+    });
   }
 
   async function completeGroupTask(taskId) {
@@ -354,26 +457,53 @@ export default function App() {
     });
   }
 
-  function exportStudentsCSV() { window.location.href = downloadUrl('/reports/students.csv'); }
-  function exportLogsCSV() { window.location.href = downloadUrl('/reports/activity-logs.csv'); }
-  function downloadSummaryReport() { window.location.href = downloadUrl('/reports/summary.txt'); }
+  function exportStudentsCSV() {
+    window.location.href = downloadUrl('/reports/students.csv');
+  }
+
+  function exportLogsCSV() {
+    window.location.href = downloadUrl('/reports/activity-logs.csv');
+  }
+
+  function downloadSummaryReport() {
+    window.location.href = downloadUrl('/reports/summary.txt');
+  }
 
   const lessonsBySubject = useMemo(() => {
     const lessons = studentDash?.lessons || [];
-    return SUBJECTS.map(s => ({ ...s, lessons: lessons.filter(l => l.subject === s.name) }));
+    return SUBJECTS.map(subject => ({
+      ...subject,
+      lessons: lessons.filter(lesson => lesson.subject === subject.name)
+    }));
   }, [studentDash]);
 
   const visibleLessons = useMemo(() => {
     const lessons = studentDash?.lessons || [];
-    return subjectFilter === 'ALL' ? lessons : lessons.filter(l => l.subject === subjectFilter);
+    return subjectFilter === 'ALL'
+      ? lessons
+      : lessons.filter(lesson => lesson.subject === subjectFilter);
   }, [studentDash, subjectFilter]);
 
-  if (booting) return <div className="loading-card">Starting Tuklas Talino...</div>;
+  if (booting) {
+    return (
+      <div className="home-wrap">
+        <div className="home-card">
+          <div className="home-title">Tuklas Talino</div>
+          <div className="muted">Starting Tuklas Talino...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <Notification notice={notice} />
-      {loading && <div className="tt-loading-overlay"><div className="card">⏳ Loading...</div></div>}
+
+      {loading && (
+        <div className="notif-wrap">
+          <div className="notif">⏳ Loading...</div>
+        </div>
+      )}
 
       <Screen id="screen-landing" active={screen === 'screen-landing'}>
         <LandingScreen go={go} />
@@ -384,15 +514,26 @@ export default function App() {
       </Screen>
 
       <Screen id="screen-login-student" active={screen === 'screen-login-student'}>
-        <StudentLogin go={go} selectedAvatar={selectedAvatar} setSelectedAvatar={setSelectedAvatar} onLogin={() => handleLogin('student')} />
+        <StudentLogin
+          go={go}
+          selectedAvatar={selectedAvatar}
+          setSelectedAvatar={setSelectedAvatar}
+          onLogin={() => handleLogin('student')}
+        />
       </Screen>
 
       <Screen id="screen-login-teacher" active={screen === 'screen-login-teacher'}>
-        <TeacherLogin go={go} onLogin={() => handleLogin('teacher')} />
+        <TeacherLogin
+          go={go}
+          onLogin={() => handleLogin('teacher')}
+        />
       </Screen>
 
       <Screen id="screen-login-admin" active={screen === 'screen-login-admin'}>
-        <AdminLogin go={go} onLogin={() => handleLogin('admin')} />
+        <AdminLogin
+          go={go}
+          onLogin={() => handleLogin('admin')}
+        />
       </Screen>
 
       <Screen id="screen-student" active={screen === 'screen-student'}>
@@ -417,34 +558,47 @@ export default function App() {
       </Screen>
 
       <Screen id="screen-lesson" active={screen === 'screen-lesson'}>
-        <LessonScreen
-          lesson={selectedLesson}
-          feedback={lessonFeedback}
-          go={go}
-          completeLesson={completeLesson}
-          submitMcq={submitMcq}
-          submitWriting={submitWriting}
-          submitSpeech={submitSpeech}
-        />
+        {selectedLesson && (
+          <LessonScreen
+            lesson={selectedLesson}
+            feedback={lessonFeedback}
+            go={go}
+            completeLesson={completeLesson}
+            submitMcq={submitMcq}
+            submitWriting={submitWriting}
+            submitSpeech={submitSpeech}
+          />
+        )}
       </Screen>
 
       <Screen id="screen-stu-groups" active={screen === 'screen-stu-groups'}>
-        <StudentGroups data={studentDash} go={go} completeGroupTask={completeGroupTask} />
+        <StudentGroups
+          data={studentDash}
+          go={go}
+          completeGroupTask={completeGroupTask}
+        />
       </Screen>
 
       <Screen id="screen-stu-badges" active={screen === 'screen-stu-badges'}>
-        <StudentBadges data={studentDash} go={go} />
+        <StudentBadges
+          data={studentDash}
+          go={go}
+        />
       </Screen>
 
       <Screen id="screen-stu-profile" active={screen === 'screen-stu-profile'}>
-        <StudentProfile data={studentDash} selectedAvatar={selectedAvatar} updateAvatar={updateAvatar} go={go} />
+        <StudentProfile
+          data={studentDash}
+          selectedAvatar={selectedAvatar}
+          updateAvatar={updateAvatar}
+          go={go}
+        />
       </Screen>
 
       <Screen id="screen-teacher" active={screen === 'screen-teacher'}>
         <TeacherDashboard
           user={user}
           data={teacherData}
-          go={go}
           logout={doLogout}
           reload={() => safeRun(loadTeacherDashboard)}
           createGroup={teacherCreateGroup}
@@ -1181,18 +1335,116 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   );
 }
 
-function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq, submitWriting, submitSpeech }) {
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [mcqFeedback, setMcqFeedback] = useState({});
-  const [writingText, setWritingText] = useState('');
-  const [speechText, setSpeechText] = useState('');
+function getActivityData(activity) {
+  if (!activity?.dataJson) return {};
 
+  if (typeof activity.dataJson === 'string') {
+    try {
+      return JSON.parse(activity.dataJson);
+    } catch {
+      return {};
+    }
+  }
+
+  return activity.dataJson || {};
+}
+
+function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq, submitWriting, submitSpeech }) {
   const activityBoxStyle = {
     boxShadow: 'none',
     background: '#FFFFFF',
     border: isEarlyGrade ? '2px solid #E8E8E8' : '1px solid #E8E8E8',
     marginBottom: 14,
   };
+
+  if (activity.type === 'mcq') {
+    return (
+      <McqActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+        submitMcq={submitMcq}
+      />
+    );
+  }
+
+  if (activity.type === 'writing') {
+    return (
+      <WritingActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+        submitWriting={submitWriting}
+      />
+    );
+  }
+
+  if (activity.type === 'speech') {
+    return (
+      <SpeechActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+        submitSpeech={submitSpeech}
+      />
+    );
+  }
+
+  if (activity.type === 'matching') {
+    return (
+      <MatchingActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+      />
+    );
+  }
+
+  if (activity.type === 'vocabulary') {
+    return (
+      <VocabularyActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+      />
+    );
+  }
+
+  if (activity.type === 'infographic') {
+    return (
+      <InfographicActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+      />
+    );
+  }
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="section-title">Activity</div>
+      <div className="muted">
+        This activity type is not supported yet: {activity.type}
+      </div>
+    </div>
+  );
+}
+
+function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitMcq }) {
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [mcqFeedback, setMcqFeedback] = useState({});
 
   async function handleMcq(question, option) {
     setSelectedAnswers(prev => ({
@@ -1216,158 +1468,171 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
     }
   }
 
-  if (activity.type === 'mcq') {
-    const questions = activity.questions || [];
+  const questions = activity.questions || [];
 
-    return (
-      <div className="card" style={activityBoxStyle}>
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="section-title">
-            {isEarlyGrade ? '🎮 Mini Quiz' : 'Multiple Choice Quiz'}
-          </div>
-
-          <div className="pill">
-            {index + 1}/{total}
-          </div>
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          {isEarlyGrade ? '🎮 Mini Quiz' : 'Multiple Choice Quiz'}
         </div>
 
-        <div className="muted">
-          {isEarlyGrade
-            ? 'Piliin ang tamang sagot.'
-            : 'Choose the best answer for each question.'}
+        <div className="pill">
+          {index + 1}/{total}
         </div>
-
-        <div className="divider" />
-
-        {questions.map((q, qIndex) => (
-          <div
-            key={q.id || qIndex}
-            style={{
-              padding: isEarlyGrade ? 16 : 14,
-              borderRadius: 16,
-              background: isEarlyGrade ? '#F8FAFF' : '#FAFAFA',
-              marginBottom: 12,
-            }}
-          >
-            <div className="pill" style={{ marginBottom: 10 }}>
-              Question {qIndex + 1} of {questions.length}
-            </div>
-
-            <h3 style={{ marginTop: 0, fontSize: isEarlyGrade ? 21 : 17 }}>
-              {q.question}
-            </h3>
-
-            <div className="grid grid-2">
-              {(q.options || []).map((option, optionIndex) => {
-                const selected = selectedAnswers[q.id] === option.id;
-                const label = option.optionText || option.text || `Option ${optionIndex + 1}`;
-
-                return (
-                  <button
-                    key={option.id || optionIndex}
-                    className={`btn ${selected ? 'btn-green' : 'btn-outline'}`}
-                    onClick={() => handleMcq(q, option)}
-                    style={{
-                      minHeight: isEarlyGrade ? 62 : 46,
-                      justifyContent: 'flex-start',
-                      textAlign: 'left',
-                      fontSize: isEarlyGrade ? 18 : 14,
-                      whiteSpace: 'normal',
-                    }}
-                  >
-                    <span style={{ marginRight: 8, fontWeight: 800 }}>
-                      {['A', 'B', 'C', 'D'][optionIndex] || '•'}.
-                    </span>
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {mcqFeedback[q.id] && (
-              <div
-                style={{
-                  marginTop: 12,
-                  padding: 12,
-                  borderRadius: 14,
-                  background: mcqFeedback[q.id].includes('Tama') || mcqFeedback[q.id].includes('Correct')
-                    ? '#E9FBEF'
-                    : '#FFF4E5',
-                  fontWeight: 800,
-                  fontSize: isEarlyGrade ? 18 : 14,
-                }}
-              >
-                {mcqFeedback[q.id]}
-              </div>
-            )}
-          </div>
-        ))}
       </div>
-    );
-  }
 
-  if (activity.type === 'writing') {
-    const prompt = activity.writingTask?.prompt || activity.prompt || 'Isulat ang iyong sagot.';
-
-    return (
-      <div className="card" style={activityBoxStyle}>
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="section-title">
-            ✍️ {isEarlyGrade ? 'Isulat ang Sagot' : 'Writing Activity'}
-          </div>
-
-          <div className="pill">
-            {index + 1}/{total}
-          </div>
+      {activity.instructions && (
+        <div className="muted" style={{ marginBottom: 8 }}>
+          {activity.instructions}
         </div>
+      )}
 
+      <div className="muted">
+        {isEarlyGrade
+          ? 'Piliin ang tamang sagot.'
+          : 'Choose the best answer for each question.'}
+      </div>
+
+      <div className="divider" />
+
+      {questions.map((q, qIndex) => (
         <div
+          key={q.id || qIndex}
           style={{
-            padding: 14,
+            padding: isEarlyGrade ? 16 : 14,
             borderRadius: 16,
-            background: '#FFF8CF',
-            lineHeight: 1.6,
+            background: isEarlyGrade ? '#F8FAFF' : '#FAFAFA',
             marginBottom: 12,
-            fontSize: isEarlyGrade ? 17 : 14,
           }}
         >
-          <b>{isEarlyGrade ? 'Tanong:' : 'Prompt:'}</b> {prompt}
+          <div className="pill" style={{ marginBottom: 10 }}>
+            Question {qIndex + 1} of {questions.length}
+          </div>
+
+          <h3 style={{ marginTop: 0, fontSize: isEarlyGrade ? 21 : 17 }}>
+            {q.question}
+          </h3>
+
+          <div className="grid grid-2">
+            {(q.options || []).map((option, optionIndex) => {
+              const selected = selectedAnswers[q.id] === option.id;
+              const label = option.optionText || option.text || `Option ${optionIndex + 1}`;
+
+              return (
+                <button
+                  key={option.id || optionIndex}
+                  className={`btn ${selected ? 'btn-green' : 'btn-outline'}`}
+                  onClick={() => handleMcq(q, option)}
+                  style={{
+                    minHeight: isEarlyGrade ? 62 : 46,
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
+                    fontSize: isEarlyGrade ? 18 : 14,
+                    whiteSpace: 'normal',
+                  }}
+                >
+                  <span style={{ marginRight: 8, fontWeight: 800 }}>
+                    {['A', 'B', 'C', 'D'][optionIndex] || '•'}.
+                  </span>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {mcqFeedback[q.id] && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                borderRadius: 14,
+                background: mcqFeedback[q.id].includes('Tama') || mcqFeedback[q.id].includes('Correct')
+                  ? '#E9FBEF'
+                  : '#FFF4E5',
+                fontWeight: 800,
+                fontSize: isEarlyGrade ? 18 : 14,
+              }}
+            >
+              {mcqFeedback[q.id]}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitWriting }) {
+  const [writingText, setWritingText] = useState('');
+
+  const prompt = activity.writingTask?.prompt || activity.prompt || 'Isulat ang iyong sagot.';
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          ✍️ {isEarlyGrade ? 'Isulat ang Sagot' : 'Writing Activity'}
         </div>
 
-        <textarea
-          className="input-field"
-          id="writing-answer"
-          rows="5"
-          value={writingText}
-          onChange={(e) => setWritingText(e.target.value)}
-          placeholder={isEarlyGrade ? 'Isulat dito ang sagot mo...' : 'Type your answer here...'}
-          style={{
-            minHeight: isEarlyGrade ? 150 : 130,
-            resize: 'vertical',
-            fontSize: isEarlyGrade ? 18 : 15,
-            lineHeight: 1.6,
-          }}
-        />
-
-        <div className="divider" />
-
-        <button
-          className="btn btn-green"
-          onClick={() => submitWriting(activity.writingTask?.id)}
-          disabled={!writingText.trim()}
-        >
-          ✅ Submit Writing
-        </button>
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
       </div>
-    );
-  }
 
-  if (activity.type === 'speech') {
-  const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
+      {activity.instructions && (
+        <div className="muted" style={{ marginBottom: 8 }}>
+          {activity.instructions}
+        </div>
+      )}
+
+      <div
+        style={{
+          padding: 14,
+          borderRadius: 16,
+          background: '#FFF8CF',
+          lineHeight: 1.6,
+          marginBottom: 12,
+          fontSize: isEarlyGrade ? 17 : 14,
+        }}
+      >
+        <b>{isEarlyGrade ? 'Tanong:' : 'Prompt:'}</b> {prompt}
+      </div>
+
+      <textarea
+        className="input-field"
+        rows="5"
+        value={writingText}
+        onChange={(e) => setWritingText(e.target.value)}
+        placeholder={isEarlyGrade ? 'Isulat dito ang sagot mo...' : 'Type your answer here...'}
+        style={{
+          minHeight: isEarlyGrade ? 150 : 130,
+          resize: 'vertical',
+          fontSize: isEarlyGrade ? 18 : 15,
+          lineHeight: 1.6,
+        }}
+      />
+
+      <div className="divider" />
+
+      <button
+        className="btn btn-green"
+        onClick={() => submitWriting(activity.writingTask?.id, writingText)}
+        disabled={!writingText.trim()}
+      >
+        ✅ Submit Writing
+      </button>
+    </div>
+  );
+}
+
+function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitSpeech }) {
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [speechScore, setSpeechScore] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState('');
+
+  const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
 
   function speakTarget() {
     speechSynthesis.cancel();
@@ -1424,6 +1689,12 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
           {index + 1}/{total}
         </div>
       </div>
+
+      {activity.instructions && (
+        <div className="muted" style={{ marginBottom: 8 }}>
+          {activity.instructions}
+        </div>
+      )}
 
       <div className="muted">
         {isEarlyGrade
@@ -1520,7 +1791,238 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
   );
 }
 
-  return null;
+function MatchingActivity({ activity, index, total, isEarlyGrade, activityBoxStyle }) {
+  const data = getActivityData(activity);
+  const pairs = data.pairs || activity.pairs || [];
+
+  const [selectedLeft, setSelectedLeft] = useState(null);
+  const [matched, setMatched] = useState([]);
+  const [feedback, setFeedback] = useState('');
+
+  function chooseRight(rightValue) {
+    if (!selectedLeft) {
+      setFeedback(isEarlyGrade ? 'Pumili muna sa kaliwa.' : 'Choose an item from the left first.');
+      return;
+    }
+
+    const correctPair = pairs.find(pair => pair.left === selectedLeft);
+
+    if (correctPair?.right === rightValue) {
+      setMatched(prev => [...prev, selectedLeft]);
+      setFeedback(isEarlyGrade ? '✅ Tama! Magaling!' : '✅ Correct match.');
+    } else {
+      setFeedback(isEarlyGrade ? '❌ Subukan muli!' : '❌ Not a match. Try again.');
+    }
+
+    setSelectedLeft(null);
+  }
+
+  const completed = pairs.length > 0 && matched.length === pairs.length;
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          🧩 {activity.title || (isEarlyGrade ? 'Pagtapatin' : 'Matching Game')}
+        </div>
+
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
+      </div>
+
+      <div className="muted">
+        {activity.instructions || (isEarlyGrade
+          ? 'Pagtapatin ang tamang pares.'
+          : 'Match each item on the left with the correct item on the right.')}
+      </div>
+
+      <div className="divider" />
+
+      {pairs.length === 0 ? (
+        <div className="muted">No matching pairs added yet.</div>
+      ) : (
+        <div className="grid grid-2">
+          <div>
+            <div className="pill" style={{ marginBottom: 10 }}>Left</div>
+            {pairs.map((pair, pairIndex) => {
+              const isMatched = matched.includes(pair.left);
+              const isSelected = selectedLeft === pair.left;
+
+              return (
+                <button
+                  key={pair.left || pairIndex}
+                  className={`btn ${isMatched ? 'btn-green' : isSelected ? 'btn-blue' : 'btn-outline'}`}
+                  onClick={() => !isMatched && setSelectedLeft(pair.left)}
+                  disabled={isMatched}
+                  style={{
+                    width: '100%',
+                    marginBottom: 8,
+                    justifyContent: 'flex-start',
+                    whiteSpace: 'normal',
+                    fontSize: isEarlyGrade ? 17 : 14,
+                  }}
+                >
+                  {isMatched ? '✅ ' : ''}{pair.left}
+                </button>
+              );
+            })}
+          </div>
+
+          <div>
+            <div className="pill" style={{ marginBottom: 10 }}>Right</div>
+            {pairs.map((pair, pairIndex) => (
+              <button
+                key={pair.right || pairIndex}
+                className="btn btn-outline"
+                onClick={() => chooseRight(pair.right)}
+                style={{
+                  width: '100%',
+                  marginBottom: 8,
+                  justifyContent: 'flex-start',
+                  whiteSpace: 'normal',
+                  fontSize: isEarlyGrade ? 17 : 14,
+                }}
+              >
+                {pair.right}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {feedback && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 14,
+            background: feedback.includes('Tama') || feedback.includes('Correct') ? '#E9FBEF' : '#FFF4E5',
+            fontWeight: 800,
+          }}
+        >
+          {feedback}
+        </div>
+      )}
+
+      {completed && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 14,
+            background: '#E9FBEF',
+            fontWeight: 800,
+          }}
+        >
+          🎉 {isEarlyGrade ? 'Natapos mo ang matching game!' : 'Matching activity completed.'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VocabularyActivity({ activity, index, total, isEarlyGrade, activityBoxStyle }) {
+  const data = getActivityData(activity);
+  const words = data.words || activity.words || [];
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          📚 {activity.title || (isEarlyGrade ? 'Mga Bagong Salita' : 'Vocabulary Cards')}
+        </div>
+
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
+      </div>
+
+      <div className="muted">
+        {activity.instructions || (isEarlyGrade
+          ? 'Basahin ang salita at alamin ang kahulugan.'
+          : 'Study each word, its meaning, and example usage.')}
+      </div>
+
+      <div className="divider" />
+
+      {words.length === 0 ? (
+        <div className="muted">No vocabulary words added yet.</div>
+      ) : (
+        <div className="grid grid-2">
+          {words.map((item, wordIndex) => (
+            <div
+              key={`${item.word}-${wordIndex}`}
+              style={{
+                padding: 16,
+                borderRadius: 18,
+                background: isEarlyGrade ? '#E9FBEF' : '#F8FAFF',
+                border: '1px solid #E1E7FF',
+                lineHeight: 1.6,
+              }}
+            >
+              <div style={{ fontSize: isEarlyGrade ? 24 : 20, fontWeight: 900, marginBottom: 6 }}>
+                {item.word}
+              </div>
+
+              <div>
+                <b>Kahulugan:</b> {item.meaning}
+              </div>
+
+              {item.example && (
+                <div style={{ marginTop: 8 }}>
+                  <b>Halimbawa:</b> {item.example}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfographicActivity({ activity, index, total, isEarlyGrade, activityBoxStyle }) {
+  const data = getActivityData(activity);
+  const content = data.content || activity.content || '';
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          🖼️ {activity.title || (isEarlyGrade ? 'Tingnan at Matuto' : 'Info Card')}
+        </div>
+
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
+      </div>
+
+      <div className="muted">
+        {activity.instructions || (isEarlyGrade
+          ? 'Basahin ang maikling gabay sa ibaba.'
+          : 'Review the information below before answering the activities.')}
+      </div>
+
+      <div className="divider" />
+
+      <div
+        style={{
+          padding: isEarlyGrade ? 20 : 18,
+          borderRadius: 18,
+          background: isEarlyGrade
+            ? 'linear-gradient(135deg, #FFF8CF, #E9FBEF)'
+            : '#F8FAFF',
+          border: '1px solid #E1E7FF',
+          lineHeight: isEarlyGrade ? 1.9 : 1.75,
+          fontSize: isEarlyGrade ? 19 : 15,
+          whiteSpace: 'pre-line',
+        }}
+      >
+        {content || 'No infographic content added yet.'}
+      </div>
+    </div>
+  );
 }
 
 function StudentGroups({ data, go, completeGroupTask }) {
@@ -1542,7 +2044,786 @@ function TeacherDashboard({ user, data, logout, reload, createGroup, addTask, ad
 }
 
 function TeacherLessonManager({ lessons, createLesson }) {
-  return <div className="card"><div className="section-title">📚 Lesson Manager (Teacher-Created)</div><div className="muted">Create Filipino lessons and activities for Grade 1–6. Lessons are saved in MySQL through the backend API.</div><div className="divider" /><div className="grid grid-2"><div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}><div className="section-title">➕ Create Lesson</div><select className="input-field" id="t-lesson-grade"><option value="1">Grade 1</option><option value="2">Grade 2</option><option value="3">Grade 3</option><option value="4">Grade 4</option><option value="5">Grade 5</option><option value="6">Grade 6</option></select><div style={{ height: 10 }} /><select className="input-field" id="t-lesson-subject">{SUBJECTS.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}</select><div style={{ height: 10 }} /><input className="input-field" id="t-lesson-title" placeholder="Lesson title" /><div style={{ height: 10 }} /><input className="input-field" id="t-lesson-xp" type="number" min="0" max="500" defaultValue="25" placeholder="XP reward" /><div style={{ height: 10 }} /><textarea className="input-field" id="t-lesson-instructions" placeholder="Instructions" /><div style={{ height: 10 }} /><textarea className="input-field" id="t-lesson-passage" placeholder="Passage / content text" /><div style={{ height: 10 }} /><input className="input-field" id="t-lesson-speechTarget" placeholder="Speech target" /></div><div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}><div className="section-title">🧩 Optional Activities</div><input className="input-field" id="t-mcq-q" placeholder="Question" /><div style={{ height: 10 }} /><input className="input-field" id="t-mcq-a" placeholder="Choice A" /><div style={{ height: 10 }} /><input className="input-field" id="t-mcq-b" placeholder="Choice B" /><div style={{ height: 10 }} /><input className="input-field" id="t-mcq-c" placeholder="Choice C" /><div style={{ height: 10 }} /><input className="input-field" id="t-mcq-d" placeholder="Choice D" /><div style={{ height: 10 }} /><select className="input-field" id="t-mcq-correct"><option value="0">Correct: A</option><option value="1">Correct: B</option><option value="2">Correct: C</option><option value="3">Correct: D</option></select><div className="divider" /><textarea className="input-field" id="t-writing-prompt" placeholder="Writing prompt" /><div className="divider" /><button className="btn btn-green" onClick={createLesson}>Create Lesson</button></div></div><div className="divider" /><div className="section-title">📋 Recently Created Lessons</div><div id="t-lessons-wrap">{lessons.slice(0, 8).map(l => <div className="lesson-card" key={l.id}><div className="lesson-icon">📘</div><div><b>{l.title}</b><div className="muted">Grade {l.gradeLevel} • {l.subject} • {l.xpReward} XP</div></div></div>)}</div></div>;
+  const [lessonDraft, setLessonDraft] = useState({
+    gradeLevel: 1,
+    subject: 'Pagbasa',
+    title: '',
+    xpReward: 25,
+    duration: '10 minuto',
+    instructions: '',
+    passage: ''
+  });
+
+  const [activities, setActivities] = useState([]);
+
+  function makeId() {
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function updateLesson(field, value) {
+    setLessonDraft(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }
+
+  function addActivity(type) {
+    const base = {
+      id: makeId(),
+      type,
+      title: '',
+      instructions: ''
+    };
+
+    const activityMap = {
+      mcq: {
+        ...base,
+        title: 'Multiple Choice Quiz',
+        questions: [
+          {
+            id: makeId(),
+            question: '',
+            options: [
+              { id: makeId(), text: '', isCorrect: true },
+              { id: makeId(), text: '', isCorrect: false },
+              { id: makeId(), text: '', isCorrect: false },
+              { id: makeId(), text: '', isCorrect: false }
+            ]
+          }
+        ]
+      },
+      writing: {
+        ...base,
+        title: 'Writing Activity',
+        prompt: ''
+      },
+      speech: {
+        ...base,
+        title: 'Speech Practice',
+        targetText: ''
+      },
+      matching: {
+        ...base,
+        title: 'Matching Game',
+        pairs: [
+          { id: makeId(), left: '', right: '' },
+          { id: makeId(), left: '', right: '' }
+        ]
+      },
+      vocabulary: {
+        ...base,
+        title: 'Vocabulary Cards',
+        words: [
+          { id: makeId(), word: '', meaning: '', example: '' }
+        ]
+      },
+      infographic: {
+        ...base,
+        title: 'Info Card',
+        content: ''
+      }
+    };
+
+    setActivities(prev => [...prev, activityMap[type]]);
+  }
+
+  function updateActivity(activityId, patch) {
+    setActivities(prev =>
+      prev.map(activity =>
+        activity.id === activityId
+          ? { ...activity, ...patch }
+          : activity
+      )
+    );
+  }
+
+  function removeActivity(activityId) {
+    setActivities(prev => prev.filter(activity => activity.id !== activityId));
+  }
+
+  function updateMcqQuestion(activityId, questionId, patch) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          questions: activity.questions.map(question =>
+            question.id === questionId
+              ? { ...question, ...patch }
+              : question
+          )
+        };
+      })
+    );
+  }
+
+  function updateMcqOption(activityId, questionId, optionId, patch) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          questions: activity.questions.map(question => {
+            if (question.id !== questionId) return question;
+
+            return {
+              ...question,
+              options: question.options.map(option =>
+                option.id === optionId
+                  ? { ...option, ...patch }
+                  : patch.isCorrect
+                    ? { ...option, isCorrect: false }
+                    : option
+              )
+            };
+          })
+        };
+      })
+    );
+  }
+
+  function addMcqQuestion(activityId) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          questions: [
+            ...activity.questions,
+            {
+              id: makeId(),
+              question: '',
+              options: [
+                { id: makeId(), text: '', isCorrect: true },
+                { id: makeId(), text: '', isCorrect: false },
+                { id: makeId(), text: '', isCorrect: false },
+                { id: makeId(), text: '', isCorrect: false }
+              ]
+            }
+          ]
+        };
+      })
+    );
+  }
+
+  function updatePair(activityId, pairId, patch) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          pairs: activity.pairs.map(pair =>
+            pair.id === pairId
+              ? { ...pair, ...patch }
+              : pair
+          )
+        };
+      })
+    );
+  }
+
+  function addPair(activityId) {
+    setActivities(prev =>
+      prev.map(activity =>
+        activity.id === activityId
+          ? {
+              ...activity,
+              pairs: [
+                ...activity.pairs,
+                { id: makeId(), left: '', right: '' }
+              ]
+            }
+          : activity
+      )
+    );
+  }
+
+  function updateWord(activityId, wordId, patch) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          words: activity.words.map(item =>
+            item.id === wordId
+              ? { ...item, ...patch }
+              : item
+          )
+        };
+      })
+    );
+  }
+
+  function addWord(activityId) {
+    setActivities(prev =>
+      prev.map(activity =>
+        activity.id === activityId
+          ? {
+              ...activity,
+              words: [
+                ...activity.words,
+                { id: makeId(), word: '', meaning: '', example: '' }
+              ]
+            }
+          : activity
+      )
+    );
+  }
+
+  function cleanActivities() {
+    return activities
+      .map(activity => {
+        if (activity.type === 'mcq') {
+          const questions = (activity.questions || [])
+            .map(question => {
+              const options = (question.options || [])
+                .filter(option => option.text.trim())
+                .map(option => ({
+                  text: option.text.trim(),
+                  isCorrect: Boolean(option.isCorrect)
+                }));
+
+              if (!question.question.trim() || options.length < 2) return null;
+
+              if (!options.some(option => option.isCorrect)) {
+                options[0].isCorrect = true;
+              }
+
+              return {
+                question: question.question.trim(),
+                options
+              };
+            })
+            .filter(Boolean);
+
+          if (!questions.length) return null;
+
+          return {
+            type: 'mcq',
+            title: activity.title || 'Multiple Choice Quiz',
+            instructions: activity.instructions || null,
+            questions
+          };
+        }
+
+        if (activity.type === 'writing') {
+          if (!activity.prompt?.trim()) return null;
+
+          return {
+            type: 'writing',
+            title: activity.title || 'Writing Activity',
+            instructions: activity.instructions || null,
+            prompt: activity.prompt.trim()
+          };
+        }
+
+        if (activity.type === 'speech') {
+          if (!activity.targetText?.trim()) return null;
+
+          return {
+            type: 'speech',
+            title: activity.title || 'Speech Practice',
+            instructions: activity.instructions || null,
+            targetText: activity.targetText.trim()
+          };
+        }
+
+        if (activity.type === 'matching') {
+          const pairs = (activity.pairs || [])
+            .filter(pair => pair.left.trim() && pair.right.trim())
+            .map(pair => ({
+              left: pair.left.trim(),
+              right: pair.right.trim()
+            }));
+
+          if (pairs.length < 2) return null;
+
+          return {
+            type: 'matching',
+            title: activity.title || 'Matching Game',
+            instructions: activity.instructions || null,
+            pairs
+          };
+        }
+
+        if (activity.type === 'vocabulary') {
+          const words = (activity.words || [])
+            .filter(item => item.word.trim() && item.meaning.trim())
+            .map(item => ({
+              word: item.word.trim(),
+              meaning: item.meaning.trim(),
+              example: item.example?.trim() || null
+            }));
+
+          if (!words.length) return null;
+
+          return {
+            type: 'vocabulary',
+            title: activity.title || 'Vocabulary Cards',
+            instructions: activity.instructions || null,
+            words
+          };
+        }
+
+        if (activity.type === 'infographic') {
+          if (!activity.content?.trim()) return null;
+
+          return {
+            type: 'infographic',
+            title: activity.title || 'Info Card',
+            instructions: activity.instructions || null,
+            content: activity.content.trim()
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+  }
+
+  async function submitLessonBuilder() {
+    if (!lessonDraft.title.trim()) {
+      alert('Please enter a lesson title.');
+      return;
+    }
+
+    const payload = {
+      gradeLevel: Number(lessonDraft.gradeLevel),
+      subject: lessonDraft.subject,
+      title: lessonDraft.title.trim(),
+      xpReward: Number(lessonDraft.xpReward || 25),
+      duration: lessonDraft.duration || '10 minuto',
+      instructions: lessonDraft.instructions || null,
+      passage: lessonDraft.passage || null,
+      activities: cleanActivities()
+    };
+
+    await createLesson(payload);
+
+    setLessonDraft({
+      gradeLevel: 1,
+      subject: 'Pagbasa',
+      title: '',
+      xpReward: 25,
+      duration: '10 minuto',
+      instructions: '',
+      passage: ''
+    });
+
+    setActivities([]);
+  }
+
+  return (
+    <div className="card">
+      <div className="section-title">🧩 Flexible Lesson Builder</div>
+      <div className="muted">
+        Create grade-appropriate Filipino lessons with custom activity blocks for reading, vocabulary, literature, speech, and writing.
+      </div>
+
+      <div className="divider" />
+
+      <div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}>
+        <div className="section-title">1. Lesson Information</div>
+
+        <div className="grid grid-3">
+          <div>
+            <label className="muted">Grade Level</label>
+            <select
+              className="input-field"
+              value={lessonDraft.gradeLevel}
+              onChange={(e) => updateLesson('gradeLevel', Number(e.target.value))}
+            >
+              <option value="1">Grade 1</option>
+              <option value="2">Grade 2</option>
+              <option value="3">Grade 3</option>
+              <option value="4">Grade 4</option>
+              <option value="5">Grade 5</option>
+              <option value="6">Grade 6</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="muted">Subject Area</label>
+            <select
+              className="input-field"
+              value={lessonDraft.subject}
+              onChange={(e) => updateLesson('subject', e.target.value)}
+            >
+              {SUBJECTS.map(subject => (
+                <option key={subject.name} value={subject.name}>
+                  {subject.icon} {subject.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="muted">XP Reward</label>
+            <input
+              className="input-field"
+              type="number"
+              min="1"
+              max="500"
+              value={lessonDraft.xpReward}
+              onChange={(e) => updateLesson('xpReward', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div style={{ height: 10 }} />
+
+        <input
+          className="input-field"
+          value={lessonDraft.title}
+          onChange={(e) => updateLesson('title', e.target.value)}
+          placeholder="Lesson title, e.g. Pangngalan at mga Halimbawa"
+        />
+
+        <div style={{ height: 10 }} />
+
+        <input
+          className="input-field"
+          value={lessonDraft.duration}
+          onChange={(e) => updateLesson('duration', e.target.value)}
+          placeholder="Duration, e.g. 10 minuto"
+        />
+      </div>
+
+      <div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}>
+        <div className="section-title">2. Learning Content</div>
+
+        <textarea
+          className="input-field"
+          value={lessonDraft.instructions}
+          onChange={(e) => updateLesson('instructions', e.target.value)}
+          placeholder="Instructions for students"
+          rows="3"
+        />
+
+        <div style={{ height: 10 }} />
+
+        <textarea
+          className="input-field"
+          value={lessonDraft.passage}
+          onChange={(e) => updateLesson('passage', e.target.value)}
+          placeholder="Main passage / story / lesson content"
+          rows="6"
+        />
+      </div>
+
+      <div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}>
+        <div className="section-title">3. Activity Builder</div>
+        <div className="muted">
+          Add any activity blocks needed for this lesson. Empty or incomplete activity blocks will be ignored.
+        </div>
+
+        <div className="divider" />
+
+        <div className="row">
+          <button className="btn btn-outline btn-sm" onClick={() => addActivity('mcq')}>+ MCQ</button>
+          <button className="btn btn-outline btn-sm" onClick={() => addActivity('writing')}>+ Writing</button>
+          <button className="btn btn-outline btn-sm" onClick={() => addActivity('speech')}>+ Speech</button>
+          <button className="btn btn-outline btn-sm" onClick={() => addActivity('matching')}>+ Matching</button>
+          <button className="btn btn-outline btn-sm" onClick={() => addActivity('vocabulary')}>+ Vocabulary</button>
+          <button className="btn btn-outline btn-sm" onClick={() => addActivity('infographic')}>+ Info Card</button>
+        </div>
+
+        <div className="divider" />
+
+        {activities.length === 0 && (
+          <div className="muted">
+            No activities added yet. You can still create a reading-only lesson, or add activities above.
+          </div>
+        )}
+
+        {activities.map((activity, activityIndex) => (
+          <TeacherActivityBlock
+            key={activity.id}
+            activity={activity}
+            activityIndex={activityIndex}
+            updateActivity={updateActivity}
+            removeActivity={removeActivity}
+            updateMcqQuestion={updateMcqQuestion}
+            updateMcqOption={updateMcqOption}
+            addMcqQuestion={addMcqQuestion}
+            updatePair={updatePair}
+            addPair={addPair}
+            updateWord={updateWord}
+            addWord={addWord}
+          />
+        ))}
+      </div>
+
+      <div className="card" style={{ boxShadow: 'none', background: '#F8FAFF', border: '1px solid #E1E7FF' }}>
+        <div className="section-title">4. Student Preview</div>
+
+        <div className="lesson-card">
+          <div className="lesson-icon">
+            {SUBJECTS.find(s => s.name === lessonDraft.subject)?.icon || '📘'}
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <b>{lessonDraft.title || 'Untitled Lesson'}</b>
+            <div className="muted">
+              Grade {lessonDraft.gradeLevel} • {lessonDraft.subject} • {lessonDraft.xpReward || 0} XP
+            </div>
+            <div className="muted">
+              {cleanActivities().length} valid activity block{cleanActivities().length === 1 ? '' : 's'}
+            </div>
+          </div>
+        </div>
+
+        <div className="divider" />
+
+        <button className="btn btn-green" onClick={submitLessonBuilder}>
+          ✅ Create Lesson
+        </button>
+      </div>
+
+      <div className="divider" />
+
+      <div className="section-title">Recently Created Lessons</div>
+
+      <div id="t-lessons-wrap">
+        {[...lessons]
+          .sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+
+            if (dateA !== dateB) return dateB - dateA;
+
+            return Number(b.id || 0) - Number(a.id || 0);
+          })
+          .slice(0, 8)
+          .map(lesson => (
+            <div className="lesson-card" key={lesson.id}>
+              <div className="lesson-icon">
+                {SUBJECTS.find(s => s.name === lesson.subject)?.icon || '📘'}
+              </div>
+
+              <div>
+                <b>{lesson.title}</b>
+                <div className="muted">
+                  Grade {lesson.gradeLevel} • {lesson.subject} • {lesson.xpReward} XP
+                </div>
+              </div>
+            </div>
+          ))}
+
+        {!lessons.length && (
+          <div className="muted">No teacher-created lessons yet.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TeacherActivityBlock({
+  activity,
+  activityIndex,
+  updateActivity,
+  removeActivity,
+  updateMcqQuestion,
+  updateMcqOption,
+  addMcqQuestion,
+  updatePair,
+  addPair,
+  updateWord,
+  addWord
+}) {
+  const typeLabel = {
+    mcq: 'Multiple Choice Quiz',
+    writing: 'Writing Activity',
+    speech: 'Speech Practice',
+    matching: 'Matching Game',
+    vocabulary: 'Vocabulary Cards',
+    infographic: 'Info Card'
+  };
+
+  return (
+    <div className="card" style={{ boxShadow: 'none', background: '#FFFFFF', border: '1px solid #E8E8E8', marginBottom: 14 }}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          Activity {activityIndex + 1}: {typeLabel[activity.type] || activity.type}
+        </div>
+
+        <button className="btn btn-danger btn-sm" onClick={() => removeActivity(activity.id)}>
+          Remove
+        </button>
+      </div>
+
+      <div className="grid grid-2">
+        <input
+          className="input-field"
+          value={activity.title}
+          onChange={(e) => updateActivity(activity.id, { title: e.target.value })}
+          placeholder="Activity title"
+        />
+
+        <input
+          className="input-field"
+          value={activity.instructions}
+          onChange={(e) => updateActivity(activity.id, { instructions: e.target.value })}
+          placeholder="Activity instructions"
+        />
+      </div>
+
+      <div className="divider" />
+
+      {activity.type === 'mcq' && (
+        <>
+          {activity.questions.map((question, qIndex) => (
+            <div key={question.id} style={{ padding: 12, borderRadius: 14, background: '#F8FAFF', marginBottom: 12 }}>
+              <div className="pill" style={{ marginBottom: 10 }}>
+                Question {qIndex + 1}
+              </div>
+
+              <input
+                className="input-field"
+                value={question.question}
+                onChange={(e) => updateMcqQuestion(activity.id, question.id, { question: e.target.value })}
+                placeholder="Question"
+              />
+
+              <div style={{ height: 10 }} />
+
+              <div className="grid grid-2">
+                {question.options.map((option, oIndex) => (
+                  <div key={option.id} className="row" style={{ alignItems: 'center' }}>
+                    <input
+                      type="radio"
+                      name={`correct-${activity.id}-${question.id}`}
+                      checked={option.isCorrect}
+                      onChange={() => updateMcqOption(activity.id, question.id, option.id, { isCorrect: true })}
+                    />
+
+                    <input
+                      className="input-field"
+                      value={option.text}
+                      onChange={(e) => updateMcqOption(activity.id, question.id, option.id, { text: e.target.value })}
+                      placeholder={`Choice ${String.fromCharCode(65 + oIndex)}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <button className="btn btn-outline btn-sm" onClick={() => addMcqQuestion(activity.id)}>
+            + Add MCQ Question
+          </button>
+        </>
+      )}
+
+      {activity.type === 'writing' && (
+        <textarea
+          className="input-field"
+          value={activity.prompt}
+          onChange={(e) => updateActivity(activity.id, { prompt: e.target.value })}
+          placeholder="Writing prompt, e.g. Sumulat ng dalawang pangungusap tungkol sa iyong pamilya."
+          rows="4"
+        />
+      )}
+
+      {activity.type === 'speech' && (
+        <textarea
+          className="input-field"
+          value={activity.targetText}
+          onChange={(e) => updateActivity(activity.id, { targetText: e.target.value })}
+          placeholder="Speech target, e.g. Ang bata ay masayang nagbabasa."
+          rows="4"
+        />
+      )}
+
+      {activity.type === 'matching' && (
+        <>
+          <div className="muted">Create at least two matching pairs.</div>
+          <div style={{ height: 10 }} />
+
+          {activity.pairs.map((pair, pairIndex) => (
+            <div key={pair.id} className="grid grid-2" style={{ marginBottom: 10 }}>
+              <input
+                className="input-field"
+                value={pair.left}
+                onChange={(e) => updatePair(activity.id, pair.id, { left: e.target.value })}
+                placeholder={`Left item ${pairIndex + 1}`}
+              />
+
+              <input
+                className="input-field"
+                value={pair.right}
+                onChange={(e) => updatePair(activity.id, pair.id, { right: e.target.value })}
+                placeholder={`Right match ${pairIndex + 1}`}
+              />
+            </div>
+          ))}
+
+          <button className="btn btn-outline btn-sm" onClick={() => addPair(activity.id)}>
+            + Add Pair
+          </button>
+        </>
+      )}
+
+      {activity.type === 'vocabulary' && (
+        <>
+          <div className="muted">Add words with meanings and optional example sentences.</div>
+          <div style={{ height: 10 }} />
+
+          {activity.words.map((item, wordIndex) => (
+            <div key={item.id} style={{ padding: 12, borderRadius: 14, background: '#F8FAFF', marginBottom: 12 }}>
+              <div className="pill" style={{ marginBottom: 10 }}>
+                Word {wordIndex + 1}
+              </div>
+
+              <div className="grid grid-2">
+                <input
+                  className="input-field"
+                  value={item.word}
+                  onChange={(e) => updateWord(activity.id, item.id, { word: e.target.value })}
+                  placeholder="Word"
+                />
+
+                <input
+                  className="input-field"
+                  value={item.meaning}
+                  onChange={(e) => updateWord(activity.id, item.id, { meaning: e.target.value })}
+                  placeholder="Meaning"
+                />
+              </div>
+
+              <div style={{ height: 10 }} />
+
+              <input
+                className="input-field"
+                value={item.example}
+                onChange={(e) => updateWord(activity.id, item.id, { example: e.target.value })}
+                placeholder="Example sentence"
+              />
+            </div>
+          ))}
+
+          <button className="btn btn-outline btn-sm" onClick={() => addWord(activity.id)}>
+            + Add Word
+          </button>
+        </>
+      )}
+
+      {activity.type === 'infographic' && (
+        <textarea
+          className="input-field"
+          value={activity.content}
+          onChange={(e) => updateActivity(activity.id, { content: e.target.value })}
+          placeholder="Short info card content. Example: Ang pangngalan ay salita na tumutukoy sa tao, bagay, hayop, lugar, o pangyayari."
+          rows="5"
+        />
+      )}
+    </div>
+  );
 }
 
 function AdminDashboard({ data, logout, addStudent, addTeacher, archiveStudent, resetStudent, archiveTeacher, reload }) {
