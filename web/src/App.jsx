@@ -77,20 +77,25 @@ export default function App() {
   }, [notice]);
 
   useEffect(() => {
-    if (!booting && user) {
-      if (user.role === 'student') {
-        setScreen('screen-student');
-        loadStudentDashboard();
-      } else if (user.role === 'teacher') {
-        setScreen('screen-teacher');
-        loadTeacherDashboard();
-      } else if (user.role === 'admin') {
-        setScreen('screen-admin');
-        loadAdminDashboard();
-      }
+  if (!booting && user) {
+    if (user.mustChangePassword) {
+      setScreen('screen-change-password');
+      return;
     }
+
+    if (user.role === 'student') {
+      setScreen('screen-student');
+      loadStudentDashboard();
+    } else if (user.role === 'teacher') {
+      setScreen('screen-teacher');
+      loadTeacherDashboard();
+    } else if (user.role === 'admin') {
+      setScreen('screen-admin');
+      loadAdminDashboard();
+    }
+  }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booting]);
+}, [booting, user?.id, user?.role, user?.mustChangePassword]);
 
   function notify(text, type = '') { setNotice({ text, type }); }
   function go(id) { setScreen(id); }
@@ -135,15 +140,82 @@ export default function App() {
       if (!identifier) throw new Error(role === 'student' ? 'Ilagay ang Student ID.' : 'Ilagay ang username.');
       if (!password) throw new Error('Ilagay ang password.');
       const logged = await login({ role, identifier, password });
-      if (role === 'student') {
-        setSelectedAvatar(logged.student?.avatar || selectedAvatar);
-        await loadStudentDashboard();
-        go('screen-student');
-      }
-      if (role === 'teacher') { await loadTeacherDashboard(); go('screen-teacher'); }
-      if (role === 'admin') { await loadAdminDashboard(); go('screen-admin'); }
+
+if (logged.mustChangePassword) {
+  notify('Kailangan munang palitan ang temporary password bago magpatuloy.', 'warn');
+  go('screen-change-password');
+  return;
+}
+
+if (role === 'student') {
+  setSelectedAvatar(logged.student?.avatar || selectedAvatar);
+  await loadStudentDashboard();
+  go('screen-student');
+}
+
+if (role === 'teacher') {
+  await loadTeacherDashboard();
+  go('screen-teacher');
+}
+
+if (role === 'admin') {
+  await loadAdminDashboard();
+  go('screen-admin');
+}
     }, 'Hindi makapag-login.');
   }
+
+  async function handleChangePassword() {
+  const currentPassword = read('cp-current-password');
+  const newPassword = read('cp-new-password');
+  const confirmPassword = read('cp-confirm-password');
+
+  if (!currentPassword) {
+    return notify('Ilagay ang kasalukuyang password.', 'warn');
+  }
+
+  if (!newPassword) {
+    return notify('Ilagay ang bagong password.', 'warn');
+  }
+
+  if (newPassword.length < 8) {
+    return notify('Ang bagong password ay dapat hindi bababa sa 8 characters.', 'warn');
+  }
+
+  if (newPassword !== confirmPassword) {
+    return notify('Hindi magkapareho ang bagong password at confirm password.', 'warn');
+  }
+
+  await safeRun(async () => {
+    await api('/auth/change-password', {
+      method: 'POST',
+      body: {
+        currentPassword,
+        newPassword
+      }
+    });
+
+    const updatedUser = {
+      ...user,
+      mustChangePassword: false
+    };
+
+    setUser(updatedUser);
+
+    notify('Password changed successfully. Maaari ka nang magpatuloy.');
+
+    if (updatedUser.role === 'student') {
+      await loadStudentDashboard();
+      go('screen-student');
+    } else if (updatedUser.role === 'teacher') {
+      await loadTeacherDashboard();
+      go('screen-teacher');
+    } else if (updatedUser.role === 'admin') {
+      await loadAdminDashboard();
+      go('screen-admin');
+    }
+  }, 'Hindi napalitan ang password.');
+}
 
   async function loadStudentDashboard() {
     const data = await api('/students/dashboard');
@@ -509,6 +581,14 @@ export default function App() {
         <LandingScreen go={go} />
       </Screen>
 
+      <Screen id="screen-change-password" active={screen === 'screen-change-password'}>
+  <ChangePasswordScreen
+    user={user}
+    onSubmit={handleChangePassword}
+    onLogout={doLogout}
+  />
+</Screen>
+
       <Screen id="screen-home" active={screen === 'screen-home'}>
         <HomeScreen go={go} notify={notify} />
       </Screen>
@@ -733,6 +813,62 @@ function HomeScreen({ go, notify }) {
       <div className="reset-area-v2"><button className="btn btn-green reset-btn-v2" onClick={() => notify('Database reset is done from backend: npm.cmd run reset', 'warn')}>♻️ Reset Demo Data</button><div className="muted">For full reset, run backend reset command.</div></div>
     </div>
   </div>;
+}
+
+function ChangePasswordScreen({ user, onSubmit, onLogout }) {
+  return (
+    <>
+      <section className="auth-page">
+        <div className="auth-card">
+          <h1>Palitan ang Temporary Password</h1>
+
+          <p>
+            Kumusta, {user?.displayName || 'user'}! Para sa seguridad ng iyong account,
+            kailangan mong palitan muna ang temporary password bago magpatuloy.
+          </p>
+
+          <label>
+            Current Password
+            <input
+              id="cp-current-password"
+              type="password"
+              placeholder="Ilagay ang temporary/current password"
+            />
+          </label>
+
+          <label>
+            New Password
+            <input
+              id="cp-new-password"
+              type="password"
+              placeholder="Gumawa ng bagong password"
+            />
+          </label>
+
+          <label>
+            Confirm New Password
+            <input
+              id="cp-confirm-password"
+              type="password"
+              placeholder="Ulitin ang bagong password"
+            />
+          </label>
+
+          <button onClick={onSubmit}>
+            Change Password
+          </button>
+
+          <button type="button" onClick={onLogout}>
+            Logout
+          </button>
+
+          <p className="muted">
+            Tip: Gumamit ng password na may hindi bababa sa 8 characters.
+          </p>
+        </div>
+      </section>
+    </>
+  );
 }
 
 function StudentLogin({ go, selectedAvatar, setSelectedAvatar, onLogin }) {
