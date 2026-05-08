@@ -1,11 +1,16 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, GroupMember, Group, GroupTask, GroupTaskCompletion } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
+
+function generateTemporaryPin() {
+  return Array.from({ length: 6 }, () => crypto.randomInt(2, 10)).join('');
+}
 
 const router = Router();
 router.use(authenticate);
@@ -153,6 +158,50 @@ router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
     await audit(req.user.id, 'student.reactivate', 'student', student.id);
     res.json({ student });
   } catch (err) { next(err); }
+});
+
+router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) => {
+  try {
+    const student = await Student.findByPk(req.params.id, {
+      include: [User]
+    });
+
+    if (!student || !student.User) {
+      return res.status(404).json({
+        message: 'Student account not found.'
+      });
+    }
+
+    if (student.status !== 'active' || student.User.status !== 'active') {
+      return res.status(422).json({
+        message: 'Reactivate the student account before resetting the password.'
+      });
+    }
+
+    const temporaryPin = req.body.temporaryPin?.trim() || generateTemporaryPin();
+
+    if (!/^[2-9]{6}$/.test(temporaryPin)) {
+      return res.status(422).json({
+        message: 'Temporary PIN must be exactly 6 digits using numbers 2-9.'
+      });
+    }
+
+    student.User.passwordHash = await bcrypt.hash(temporaryPin, 12);
+    student.User.mustChangePassword = true;
+
+    await student.User.save();
+
+    await audit(req.user.id, 'student.reset_password', 'student', student.id, {
+      forcedPasswordChange: true
+    });
+
+    res.json({
+      message: 'Student password reset successfully.',
+      temporaryPin
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) => {
