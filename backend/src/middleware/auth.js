@@ -94,3 +94,20 @@ export function requireRole(...roles) {
     next();
   };
 }
+
+export function requirePasswordChanged(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({
+      message: 'Authentication required.'
+    });
+  }
+
+  if (req.user.mustChangePassword) {
+    return res.status(403).json({
+      message: 'Password change required before accessing this resource.',
+      code: 'PASSWORD_CHANGE_REQUIRED'
+    });
+  }
+
+  next();
+}

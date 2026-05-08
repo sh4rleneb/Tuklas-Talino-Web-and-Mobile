@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { Op } from 'sequelize';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, GroupMember, Group, GroupTask, GroupTaskCompletion } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
@@ -9,6 +9,7 @@ import { studentSchema, validate } from '../validators/common.js';
 
 const router = Router();
 router.use(authenticate);
+router.use(requirePasswordChanged);
 
 async function getStudentForRequest(req, idParam) {
   if (req.role === 'student') return req.student;

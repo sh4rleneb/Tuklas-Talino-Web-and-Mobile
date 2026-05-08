@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Role, User, Teacher, Student, CompletedLesson, Lesson, Group, GroupMember } from '../models/index.js';
 import { teacherSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
 
 const router = Router();
 router.use(authenticate);
+router.use(requirePasswordChanged);
 
 router.get('/', requireRole('admin'), async (req, res, next) => {
   try {

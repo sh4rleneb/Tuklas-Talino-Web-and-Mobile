@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Lesson, LessonActivity, MCQQuestion, MCQOption, WritingTask, SpeechTask, CompletedLesson, QuizHistory, WritingSubmission, SpeechAttempt } from '../models/index.js';
 import { awardXp } from '../services/progress.service.js';
 import { lessonSchema, validate } from '../validators/common.js';
@@ -7,6 +7,7 @@ import { audit } from '../services/audit.service.js';
 
 const router = Router();
 router.use(authenticate);
+router.use(requirePasswordChanged);
 
 const lessonIncludes = [{
   model: LessonActivity,

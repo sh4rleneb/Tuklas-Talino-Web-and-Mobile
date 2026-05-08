@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { User, Role, Student, Teacher, Lesson, CompletedLesson, AuditLog } from '../models/index.js';
 
 const router = Router();
 router.use(authenticate, requireRole('admin'));
+router.use(requirePasswordChanged);
 
 router.get('/stats', async (req, res, next) => {
   try {
