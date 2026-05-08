@@ -57,11 +57,12 @@ router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
     const body = validate(studentSchema, req.body);
     const role = await Role.findOne({ where: { name: 'student' } });
     const user = await User.create({
-      roleId: role.id,
-      username: body.studentCode,
-      displayName: body.name,
-      passwordHash: await bcrypt.hash(body.password || process.env.DEMO_STUDENT_PASSWORD || 'student123', 12)
-    });
+  roleId: role.id,
+  username: body.studentCode,
+  displayName: body.name,
+  passwordHash: await bcrypt.hash(body.password || process.env.DEMO_STUDENT_PASSWORD || 'student123', 12),
+  mustChangePassword: true
+});
     const student = await Student.create({ userId: user.id, ...body });
     await audit(req.user.id, 'student.create', 'student', student.id);
     res.status(201).json({ student });

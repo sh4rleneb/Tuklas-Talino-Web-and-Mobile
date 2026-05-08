@@ -818,55 +818,125 @@ function HomeScreen({ go, notify }) {
 function ChangePasswordScreen({ user, onSubmit, onLogout }) {
   return (
     <>
-      <section className="auth-page">
-        <div className="auth-card">
-          <h1>Palitan ang Temporary Password</h1>
+      <div className="top-nav login-top-nav login-student-nav">
+        <button className="btn btn-outline btn-sm" onClick={onLogout}>
+          ← Logout
+        </button>
 
-          <p>
-            Kumusta, {user?.displayName || 'user'}! Para sa seguridad ng iyong account,
-            kailangan mong palitan muna ang temporary password bago magpatuloy.
-          </p>
+        <div className="logo">🔐 Account Security</div>
 
-          <label>
-            Current Password
-            <input
-              id="cp-current-password"
-              type="password"
-              placeholder="Ilagay ang temporary/current password"
-            />
-          </label>
-
-          <label>
-            New Password
-            <input
-              id="cp-new-password"
-              type="password"
-              placeholder="Gumawa ng bagong password"
-            />
-          </label>
-
-          <label>
-            Confirm New Password
-            <input
-              id="cp-confirm-password"
-              type="password"
-              placeholder="Ulitin ang bagong password"
-            />
-          </label>
-
-          <button onClick={onSubmit}>
-            Change Password
-          </button>
-
-          <button type="button" onClick={onLogout}>
-            Logout
-          </button>
-
-          <p className="muted">
-            Tip: Gumamit ng password na may hindi bababa sa 8 characters.
-          </p>
+        <div className="login-nav-pill">
+          ⭐ Secure muna bago magpatuloy!
         </div>
-      </section>
+      </div>
+
+      <div className="login-stage student-stage">
+        <div className="login-shell student-shell">
+          <aside className="login-visual-card student-visual-card">
+            <div className="login-sparkles">✦</div>
+
+            <h2>
+              Palitan ang<br />
+              Password! 🔐
+            </h2>
+
+            <p>
+              Para sa seguridad ng iyong account, kailangan mong gumawa ng sarili
+              mong password bago ka makapagpatuloy.
+            </p>
+
+            <div className="student-hero-illustration" aria-hidden="true">
+              <div className="hero-child">{user?.student?.avatar || '🧒'}</div>
+              <div className="hero-school">🏫</div>
+              <div className="hero-book">🔐</div>
+            </div>
+
+            <div className="login-info-card">
+              <span className="info-icon">🛡️</span>
+              <div>
+                <b>Ligtas ang Iyong Account</b>
+                <br />
+                <span>
+                  Protektado ang iyong progress, XP, badges, at learning records.
+                </span>
+              </div>
+            </div>
+          </aside>
+
+          <section className="login-form-panel student-form-panel">
+            <div className="login-form-heading">
+              <span className="heading-badge">👤</span>
+              <div>
+                <h3>Kumusta, {user?.displayName || 'Mag-aaral'}!</h3>
+                <p>Palitan muna ang temporary password bago magpatuloy.</p>
+              </div>
+            </div>
+
+            <div className="login-divider" />
+
+            <label className="login-label" htmlFor="cp-current-password">
+              🔒 Current Password
+            </label>
+            <div className="input-with-icon">
+              <span>🔐</span>
+              <input
+                className="input-field"
+                id="cp-current-password"
+                type="password"
+                placeholder="Ilagay ang temporary/current password"
+              />
+            </div>
+
+            <label className="login-label" htmlFor="cp-new-password">
+              ✨ New Password
+            </label>
+            <div className="input-with-icon">
+              <span>🆕</span>
+              <input
+                className="input-field"
+                id="cp-new-password"
+                type="password"
+                placeholder="Gumawa ng bagong password"
+              />
+            </div>
+
+            <label className="login-label" htmlFor="cp-confirm-password">
+              ✅ Confirm New Password
+            </label>
+            <div className="input-with-icon">
+              <span>✅</span>
+              <input
+                className="input-field"
+                id="cp-confirm-password"
+                type="password"
+                placeholder="Ulitin ang bagong password"
+              />
+            </div>
+
+            <button className="btn btn-green login-main-btn" onClick={onSubmit}>
+              🔐 Change Password
+            </button>
+
+            <button
+              className="btn btn-outline login-main-btn"
+              type="button"
+              onClick={onLogout}
+              style={{ marginTop: 10 }}
+            >
+              Logout
+            </button>
+
+            <p className="secure-note">
+              🔒 Gumamit ng password na may hindi bababa sa 8 characters.
+            </p>
+          </section>
+        </div>
+
+        <div className="login-tip-card">
+          💡 <b>Tip:</b> Huwag ibahagi ang iyong password sa iba.
+          <span> 💚</span>
+        </div>
+      </div>
     </>
   );
 }

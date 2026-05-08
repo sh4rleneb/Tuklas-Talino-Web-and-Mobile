@@ -20,12 +20,13 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
     const body = validate(teacherSchema, req.body);
     const role = await Role.findOne({ where: { name: 'teacher' } });
     const user = await User.create({
-      roleId: role.id,
-      username: body.username,
-      email: body.email,
-      displayName: body.name,
-      passwordHash: await bcrypt.hash(body.password || process.env.DEMO_TEACHER_PASSWORD || 'teach123', 12)
-    });
+  roleId: role.id,
+  username: body.username,
+  email: body.email,
+  displayName: body.name,
+  passwordHash: await bcrypt.hash(body.password || process.env.DEMO_TEACHER_PASSWORD || 'teach123', 12),
+  mustChangePassword: true
+});
     const teacher = await Teacher.create({ userId: user.id, employeeCode: body.employeeCode, name: body.name });
     await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
     res.status(201).json({ teacher });
