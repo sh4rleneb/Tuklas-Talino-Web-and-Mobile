@@ -60,6 +60,7 @@ const [adminData, setAdminData] = useState({
   students: [],
   archivedStudents: [],
   teachers: [],
+  archivedTeachers: [],
   logs: []
 });
   const [loading, setLoading] = useState(false);
@@ -123,11 +124,12 @@ const [adminData, setAdminData] = useState({
     setStudentDash(null);
     setSelectedLesson(null);
     setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [] });
-    setAdminData({
+setAdminData({
   stats: null,
   students: [],
   archivedStudents: [],
   teachers: [],
+  archivedTeachers: [],
   logs: []
 });
     go('screen-landing');
@@ -455,12 +457,13 @@ if (role === 'admin') {
   });
 }
 
- async function loadAdminDashboard() {
-  const [stats, students, archivedStudents, teachers, logs] = await Promise.all([
+async function loadAdminDashboard() {
+  const [stats, students, archivedStudents, teachers, archivedTeachers, logs] = await Promise.all([
     api('/admin/stats'),
     api('/students?status=active'),
     api('/students?status=archived'),
-    api('/teachers'),
+    api('/teachers?status=active'),
+    api('/teachers?status=archived'),
     api('/admin/audit-logs?limit=50')
   ]);
 
@@ -469,6 +472,7 @@ if (role === 'admin') {
     students: students.students || [],
     archivedStudents: archivedStudents.students || [],
     teachers: teachers.teachers || [],
+    archivedTeachers: archivedTeachers.teachers || [],
     logs: logs.logs || []
   });
 }
@@ -592,13 +596,33 @@ async function resetStudentPassword(id, name = 'student') {
   }, 'Hindi na-reset ang teacher password.');
 }
 
-  async function archiveTeacher(id) {
-    await safeRun(async () => {
-      await api(`/teachers/${id}/archive`, { method: 'POST' });
-      notify('Teacher archived.');
-      await loadAdminDashboard();
-    });
-  }
+async function reactivateTeacher(id) {
+  const confirmed = window.confirm(
+    'Reactivate this teacher account? The teacher will be able to log in again.'
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    await api(`/teachers/${id}/reactivate`, { method: 'POST' });
+    notify('Teacher reactivated.');
+    await loadAdminDashboard();
+  });
+}
+
+async function archiveTeacher(id) {
+  const confirmed = window.confirm(
+    'Archive this teacher account? The teacher will not be able to log in until reactivated.'
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    await api(`/teachers/${id}/archive`, { method: 'POST' });
+    notify('Teacher archived. You can restore this account from Archived Teachers.');
+    await loadAdminDashboard();
+  });
+}
 
   async function completeGroupTask(taskId) {
     await safeRun(async () => {
@@ -782,6 +806,7 @@ async function resetStudentPassword(id, name = 'student') {
   resetTeacherPassword={resetTeacherPassword}
   resetStudent={resetStudent}
   archiveTeacher={archiveTeacher}
+  reactivateTeacher={reactivateTeacher}
   reload={() => safeRun(loadAdminDashboard)}
 />
       </Screen>
@@ -5738,6 +5763,7 @@ function AdminDashboard({
   resetStudent,
   resetTeacherPassword,
   archiveTeacher,
+  reactivateTeacher,
   reload
 }) {
   return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div>
@@ -5814,5 +5840,47 @@ function AdminDashboard({
 >
   Archive
 </button>
-  </div>)}</div></div><div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
+
+  </div>)}</div></div>
+
+  <div className="card">
+  <div className="section-title">🗃️ Archived Teachers</div>
+
+  <div className="muted">
+    Archived teachers cannot log in, but their records are still saved.
+    Use Reactivate if an account was archived by mistake.
+  </div>
+
+  <div className="divider" />
+
+  <div id="admin-archived-teachers-wrap">
+    {(data.archivedTeachers || []).map(t => (
+      <div className="lesson-card" key={t.id}>
+        <div className="lesson-icon">👩‍🏫</div>
+
+        <div style={{ flex: 1 }}>
+          <b>{t.name}</b>
+          <div className="muted">
+            {t.employeeCode} • Archived
+          </div>
+        </div>
+
+        <button
+          className="btn btn-green btn-sm"
+          onClick={() => reactivateTeacher(t.id)}
+        >
+          Reactivate
+        </button>
+      </div>
+    ))}
+
+    {!(data.archivedTeachers || []).length && (
+      <div className="muted">
+        No archived teachers.
+      </div>
+    )}
+  </div>
+</div>
+  
+  <div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
 }

@@ -16,9 +16,22 @@ router.use(requirePasswordChanged);
 
 router.get('/', requireRole('admin'), async (req, res, next) => {
   try {
-    const teachers = await Teacher.findAll({ include: [User], order: [['name','ASC']] });
+    const where = {};
+
+    if (['active', 'archived'].includes(req.query.status)) {
+      where.status = req.query.status;
+    }
+
+    const teachers = await Teacher.findAll({
+      where,
+      include: [User],
+      order: [['name', 'ASC']]
+    });
+
     res.json({ teachers });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post('/', requireRole('admin'), async (req, res, next) => {
