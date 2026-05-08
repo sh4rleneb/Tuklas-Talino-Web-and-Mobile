@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Lesson, LessonActivity, MCQQuestion, MCQOption, WritingTask, SpeechTask, CompletedLesson, QuizHistory, WritingSubmission, SpeechAttempt } from '../models/index.js';
 import { awardXp } from '../services/progress.service.js';
 import { lessonSchema, validate } from '../validators/common.js';
@@ -7,6 +7,7 @@ import { audit } from '../services/audit.service.js';
 
 const router = Router();
 router.use(authenticate);
+router.use(requirePasswordChanged);
 
 const lessonIncludes = [{
   model: LessonActivity,
@@ -18,20 +19,53 @@ const lessonIncludes = [{
   ]
 }];
 
+function buildActivityData(activity) {
+  if (activity.type === 'matching') {
+    return {
+      pairs: activity.pairs || []
+    };
+  }
+
+  if (activity.type === 'vocabulary') {
+    return {
+      words: activity.words || []
+    };
+  }
+
+  if (activity.type === 'infographic') {
+    return {
+      content: activity.content || ''
+    };
+  }
+
+  return activity.dataJson || null;
+}
+
 async function createActivities(lesson, activities = []) {
   for (let i = 0; i < activities.length; i++) {
     const activity = activities[i];
+
     const created = await LessonActivity.create({
       lessonId: lesson.id,
       type: activity.type,
       title: activity.title || activity.type,
+      instructions: activity.instructions || null,
+      dataJson: buildActivityData(activity),
       sortOrder: i + 1
     });
+
     if (activity.type === 'mcq') {
       const questions = activity.questions || [];
+
       for (let qIndex = 0; qIndex < questions.length; qIndex++) {
         const q = questions[qIndex];
-        const question = await MCQQuestion.create({ activityId: created.id, question: q.question, sortOrder: qIndex + 1 });
+
+        const question = await MCQQuestion.create({
+          activityId: created.id,
+          question: q.question,
+          sortOrder: qIndex + 1
+        });
+
         for (let oIndex = 0; oIndex < (q.options || []).length; oIndex++) {
           await MCQOption.create({
             questionId: question.id,
@@ -42,11 +76,21 @@ async function createActivities(lesson, activities = []) {
         }
       }
     }
+
     if (activity.type === 'writing') {
-      await WritingTask.create({ activityId: created.id, prompt: activity.prompt || 'Sumulat ng iyong sagot.', rubricJson: activity.rubric || null });
+      await WritingTask.create({
+        activityId: created.id,
+        prompt: activity.prompt || 'Sumulat ng iyong sagot.',
+        rubricJson: activity.rubric || null
+      });
     }
+
     if (activity.type === 'speech') {
-      await SpeechTask.create({ activityId: created.id, promptJson: activity.prompts || [], targetText: activity.targetText || lesson.speechTarget || '' });
+      await SpeechTask.create({
+        activityId: created.id,
+        promptJson: activity.prompts || [],
+        targetText: activity.targetText || lesson.speechTarget || ''
+      });
     }
   }
 }
@@ -72,12 +116,22 @@ router.get('/:id', async (req, res, next) => {
 router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
     const body = validate(lessonSchema, req.body);
-    const lesson = await Lesson.create({ ...body, createdByUserId: req.user.id, status: 'published' });
-    await createActivities(lesson, body.activities);
+    const { activities = [], ...lessonPayload } = body;
+
+    const lesson = await Lesson.create({
+      ...lessonPayload,
+      createdByUserId: req.user.id,
+      status: 'published'
+    });
+
+    await createActivities(lesson, activities);
     await audit(req.user.id, 'lesson.create', 'lesson', lesson.id);
+
     const full = await Lesson.findByPk(lesson.id, { include: lessonIncludes });
     res.status(201).json({ lesson: full });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => {

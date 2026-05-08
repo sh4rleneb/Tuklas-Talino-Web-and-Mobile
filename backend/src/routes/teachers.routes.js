@@ -1,18 +1,37 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import crypto from 'crypto';
+import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Role, User, Teacher, Student, CompletedLesson, Lesson, Group, GroupMember } from '../models/index.js';
 import { teacherSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
 
+function generateTemporaryPin() {
+  return Array.from({ length: 6 }, () => crypto.randomInt(2, 10)).join('');
+}
+
 const router = Router();
 router.use(authenticate);
+router.use(requirePasswordChanged);
 
 router.get('/', requireRole('admin'), async (req, res, next) => {
   try {
-    const teachers = await Teacher.findAll({ include: [User], order: [['name','ASC']] });
+    const where = {};
+
+    if (['active', 'archived'].includes(req.query.status)) {
+      where.status = req.query.status;
+    }
+
+    const teachers = await Teacher.findAll({
+      where,
+      include: [User],
+      order: [['name', 'ASC']]
+    });
+
     res.json({ teachers });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post('/', requireRole('admin'), async (req, res, next) => {
@@ -20,12 +39,13 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
     const body = validate(teacherSchema, req.body);
     const role = await Role.findOne({ where: { name: 'teacher' } });
     const user = await User.create({
-      roleId: role.id,
-      username: body.username,
-      email: body.email,
-      displayName: body.name,
-      passwordHash: await bcrypt.hash(body.password || process.env.DEMO_TEACHER_PASSWORD || 'teach123', 12)
-    });
+  roleId: role.id,
+  username: body.username,
+  email: body.email,
+  displayName: body.name,
+  passwordHash: await bcrypt.hash(body.password || process.env.DEMO_TEACHER_PASSWORD || 'teach123', 12),
+  mustChangePassword: true
+});
     const teacher = await Teacher.create({ userId: user.id, employeeCode: body.employeeCode, name: body.name });
     await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
     res.status(201).json({ teacher });
@@ -88,6 +108,50 @@ router.patch('/:id', requireRole('admin'), async (req, res, next) => {
     await audit(req.user.id, 'teacher.update', 'teacher', teacher.id, req.body);
     res.json({ teacher });
   } catch (err) { next(err); }
+});
+
+router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) => {
+  try {
+    const teacher = await Teacher.findByPk(req.params.id, {
+      include: [User]
+    });
+
+    if (!teacher || !teacher.User) {
+      return res.status(404).json({
+        message: 'Teacher account not found.'
+      });
+    }
+
+    if (teacher.status !== 'active' || teacher.User.status !== 'active') {
+      return res.status(422).json({
+        message: 'Reactivate the teacher account before resetting the password.'
+      });
+    }
+
+    const temporaryPin = req.body.temporaryPin?.trim() || generateTemporaryPin();
+
+    if (!/^[2-9]{6}$/.test(temporaryPin)) {
+      return res.status(422).json({
+        message: 'Temporary PIN must be exactly 6 digits using numbers 2-9.'
+      });
+    }
+
+    teacher.User.passwordHash = await bcrypt.hash(temporaryPin, 12);
+    teacher.User.mustChangePassword = true;
+
+    await teacher.User.save();
+
+    await audit(req.user.id, 'teacher.reset_password', 'teacher', teacher.id, {
+      forcedPasswordChange: true
+    });
+
+    res.json({
+      message: 'Teacher password reset successfully.',
+      temporaryPin
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {

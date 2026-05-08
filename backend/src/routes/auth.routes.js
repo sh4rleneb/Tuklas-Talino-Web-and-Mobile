@@ -14,6 +14,7 @@ function publicUser(user) {
     email: user.email,
     displayName: user.displayName,
     role: user.Role?.name,
+    mustChangePassword: user.mustChangePassword,
     student: user.Student,
     teacher: user.Teacher,
     admin: user.AdminProfile
@@ -59,13 +60,22 @@ router.get('/me', authenticate, async (req, res) => {
 router.post('/change-password', authenticate, async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(422).json({ message: 'New password must be at least 6 characters.' });
-    }
+    if (!newPassword || newPassword.length < 8) {
+  return res.status(422).json({
+    message: 'New password must be at least 8 characters.'
+  });
+}
+
+if (newPassword === currentPassword) {
+  return res.status(422).json({
+    message: 'New password must be different from the current password.'
+  });
+}
     const valid = await bcrypt.compare(currentPassword || '', req.user.passwordHash);
     if (!valid) return res.status(401).json({ message: 'Current password is incorrect.' });
 
     req.user.passwordHash = await bcrypt.hash(newPassword, 12);
+    req.user.mustChangePassword = false;
     await req.user.save();
     await audit(req.user.id, 'auth.change_password', 'user', req.user.id);
     return res.json({ message: 'Password updated.' });
@@ -77,12 +87,13 @@ router.post('/register/student', authenticate, requireRole('admin', 'teacher'), 
     const body = validate(studentSchema, req.body);
     const role = await Role.findOne({ where: { name: 'student' } });
     const user = await User.create({
-      roleId: role.id,
-      username: body.studentCode,
-      passwordHash: await bcrypt.hash(body.password || process.env.DEMO_STUDENT_PASSWORD || 'student123', 12),
-      displayName: body.name,
-      status: 'active'
-    });
+  roleId: role.id,
+  username: body.studentCode,
+  passwordHash: await bcrypt.hash(body.password || process.env.DEMO_STUDENT_PASSWORD || 'student123', 12),
+  displayName: body.name,
+  status: 'active',
+  mustChangePassword: true
+});
     const student = await Student.create({
       userId: user.id,
       studentCode: body.studentCode,
@@ -102,13 +113,14 @@ router.post('/register/teacher', authenticate, requireRole('admin'), async (req,
     const body = validate(teacherSchema, req.body);
     const role = await Role.findOne({ where: { name: 'teacher' } });
     const user = await User.create({
-      roleId: role.id,
-      username: body.username,
-      email: body.email,
-      passwordHash: await bcrypt.hash(body.password || process.env.DEMO_TEACHER_PASSWORD || 'teach123', 12),
-      displayName: body.name,
-      status: 'active'
-    });
+  roleId: role.id,
+  username: body.username,
+  email: body.email,
+  passwordHash: await bcrypt.hash(body.password || process.env.DEMO_TEACHER_PASSWORD || 'teach123', 12),
+  displayName: body.name,
+  status: 'active',
+  mustChangePassword: true
+});
     const teacher = await Teacher.create({
       userId: user.id,
       employeeCode: body.employeeCode,

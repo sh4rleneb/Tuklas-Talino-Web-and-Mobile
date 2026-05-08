@@ -55,7 +55,14 @@ export default function App() {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [lessonFeedback, setLessonFeedback] = useState('');
   const [teacherData, setTeacherData] = useState({ stats: null, rows: [], groups: [], students: [], lessons: [] });
-  const [adminData, setAdminData] = useState({ stats: null, students: [], teachers: [], logs: [] });
+const [adminData, setAdminData] = useState({
+  stats: null,
+  students: [],
+  archivedStudents: [],
+  teachers: [],
+  archivedTeachers: [],
+  logs: []
+});
   const [loading, setLoading] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState('ALL');
 
@@ -77,20 +84,25 @@ export default function App() {
   }, [notice]);
 
   useEffect(() => {
-    if (!booting && user) {
-      if (user.role === 'student') {
-        setScreen('screen-student');
-        loadStudentDashboard();
-      } else if (user.role === 'teacher') {
-        setScreen('screen-teacher');
-        loadTeacherDashboard();
-      } else if (user.role === 'admin') {
-        setScreen('screen-admin');
-        loadAdminDashboard();
-      }
+  if (!booting && user) {
+    if (user.mustChangePassword) {
+      setScreen('screen-change-password');
+      return;
     }
+
+    if (user.role === 'student') {
+      setScreen('screen-student');
+      loadStudentDashboard();
+    } else if (user.role === 'teacher') {
+      setScreen('screen-teacher');
+      loadTeacherDashboard();
+    } else if (user.role === 'admin') {
+      setScreen('screen-admin');
+      loadAdminDashboard();
+    }
+  }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booting]);
+}, [booting, user?.id, user?.role, user?.mustChangePassword]);
 
   function notify(text, type = '') { setNotice({ text, type }); }
   function go(id) { setScreen(id); }
@@ -112,7 +124,14 @@ export default function App() {
     setStudentDash(null);
     setSelectedLesson(null);
     setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [] });
-    setAdminData({ stats: null, students: [], teachers: [], logs: [] });
+setAdminData({
+  stats: null,
+  students: [],
+  archivedStudents: [],
+  teachers: [],
+  archivedTeachers: [],
+  logs: []
+});
     go('screen-landing');
   }
 
@@ -135,15 +154,82 @@ export default function App() {
       if (!identifier) throw new Error(role === 'student' ? 'Ilagay ang Student ID.' : 'Ilagay ang username.');
       if (!password) throw new Error('Ilagay ang password.');
       const logged = await login({ role, identifier, password });
-      if (role === 'student') {
-        setSelectedAvatar(logged.student?.avatar || selectedAvatar);
-        await loadStudentDashboard();
-        go('screen-student');
-      }
-      if (role === 'teacher') { await loadTeacherDashboard(); go('screen-teacher'); }
-      if (role === 'admin') { await loadAdminDashboard(); go('screen-admin'); }
+
+if (logged.mustChangePassword) {
+  notify('Kailangan munang palitan ang temporary password bago magpatuloy.', 'warn');
+  go('screen-change-password');
+  return;
+}
+
+if (role === 'student') {
+  setSelectedAvatar(logged.student?.avatar || selectedAvatar);
+  await loadStudentDashboard();
+  go('screen-student');
+}
+
+if (role === 'teacher') {
+  await loadTeacherDashboard();
+  go('screen-teacher');
+}
+
+if (role === 'admin') {
+  await loadAdminDashboard();
+  go('screen-admin');
+}
     }, 'Hindi makapag-login.');
   }
+
+  async function handleChangePassword() {
+  const currentPassword = read('cp-current-password');
+  const newPassword = read('cp-new-password');
+  const confirmPassword = read('cp-confirm-password');
+
+  if (!currentPassword) {
+    return notify('Ilagay ang kasalukuyang password.', 'warn');
+  }
+
+  if (!newPassword) {
+    return notify('Ilagay ang bagong password.', 'warn');
+  }
+
+  if (newPassword.length < 8) {
+    return notify('Ang bagong password ay dapat hindi bababa sa 8 characters.', 'warn');
+  }
+
+  if (newPassword !== confirmPassword) {
+    return notify('Hindi magkapareho ang bagong password at confirm password.', 'warn');
+  }
+
+  await safeRun(async () => {
+    await api('/auth/change-password', {
+      method: 'POST',
+      body: {
+        currentPassword,
+        newPassword
+      }
+    });
+
+    const updatedUser = {
+      ...user,
+      mustChangePassword: false
+    };
+
+    setUser(updatedUser);
+
+    notify('Password changed successfully. Maaari ka nang magpatuloy.');
+
+    if (updatedUser.role === 'student') {
+      await loadStudentDashboard();
+      go('screen-student');
+    } else if (updatedUser.role === 'teacher') {
+      await loadTeacherDashboard();
+      go('screen-teacher');
+    } else if (updatedUser.role === 'admin') {
+      await loadAdminDashboard();
+      go('screen-admin');
+    }
+  }, 'Hindi napalitan ang password.');
+}
 
   async function loadStudentDashboard() {
     const data = await api('/students/dashboard');
@@ -190,14 +276,27 @@ export default function App() {
   });
 }
 
-  async function submitWriting(taskId) {
-    const content = read('writing-answer');
-    await safeRun(async () => {
-      const data = await api(`/lessons/${selectedLesson.id}/writing`, { method: 'POST', body: { taskId, content } });
-      setLessonFeedback(data.submission?.feedback || 'Naisumite na ang sagot.');
-      await loadStudentDashboard();
-    });
+  async function submitWriting(taskId, answer) {
+  if (!selectedLesson) return;
+
+  if (!answer || answer.trim().length < 2) {
+    setLessonFeedback('✍️ Pakisulat muna ang iyong sagot bago i-submit.');
+    return;
   }
+
+  await safeRun(async () => {
+    await api(`/lessons/${selectedLesson.id}/writing`, {
+      method: 'POST',
+      body: {
+        taskId,
+        content: answer
+      }
+    });
+
+    setLessonFeedback('✍️ Na-save ang writing activity. +8 XP');
+    await loadStudentDashboard();
+  });
+}
 
   async function submitSpeech(taskId, transcript, score) {
   if (!selectedLesson) return;
@@ -241,7 +340,23 @@ export default function App() {
       api('/students?status=active'),
       api('/lessons')
     ]);
-    setTeacherData({ stats: dash.stats, rows: monitoring.rows || [], groups: groups.groups || [], students: students.students || [], lessons: lessons.lessons || [] });
+
+    const sortedLessons = [...(lessons.lessons || [])].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+
+      if (dateA !== dateB) return dateB - dateA;
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+    setTeacherData({
+      stats: dash.stats,
+      rows: monitoring.rows || [],
+      groups: groups.groups || [],
+      students: students.students || [],
+      lessons: sortedLessons
+    });
   }
 
   async function teacherCreateGroup() {
@@ -275,52 +390,107 @@ export default function App() {
     });
   }
 
-  async function teacherCreateLesson() {
-    await safeRun(async () => {
+ async function teacherCreateLesson(payload = null) {
+  await safeRun(async () => {
+    let requestBody = payload;
+
+    if (!requestBody) {
       const activities = [];
       const question = read('t-mcq-q');
+
       if (question) {
         const correct = Number(read('t-mcq-correct') || 0);
         const choices = [read('t-mcq-a'), read('t-mcq-b'), read('t-mcq-c'), read('t-mcq-d')].filter(Boolean);
+
         activities.push({
-          type: 'mcq', title: 'MCQ', questions: [{ question, options: choices.map((text, idx) => ({ text, isCorrect: idx === correct })) }]
+          type: 'mcq',
+          title: 'Multiple Choice Quiz',
+          questions: [
+            {
+              question,
+              options: choices.map((text, idx) => ({
+                text,
+                isCorrect: idx === correct
+              }))
+            }
+          ]
         });
       }
-      const prompt = read('t-writing-prompt');
-      if (prompt) activities.push({ type: 'writing', title: 'Writing', prompt });
-      const speechTarget = read('t-lesson-speechTarget');
-      if (speechTarget) activities.push({ type: 'speech', title: 'Speech', targetText: speechTarget });
-      await api('/lessons', {
-        method: 'POST',
-        body: {
-          gradeLevel: Number(read('t-lesson-grade')),
-          subject: read('t-lesson-subject'),
-          title: read('t-lesson-title'),
-          xpReward: Number(read('t-lesson-xp') || 25),
-          instructions: read('t-lesson-instructions'),
-          passage: read('t-lesson-passage'),
-          speechTarget,
-          activities
-        }
-      });
-      notify('Lesson created.');
-      await loadTeacherDashboard();
-    });
-  }
 
-  async function loadAdminDashboard() {
-    const [stats, students, teachers, logs] = await Promise.all([
-      api('/admin/stats'),
-      api('/students?status=active'),
-      api('/teachers'),
-      api('/admin/audit-logs?limit=50')
-    ]);
-    setAdminData({ stats: stats.stats, students: students.students || [], teachers: teachers.teachers || [], logs: logs.logs || [] });
-  }
+      const prompt = read('t-writing-prompt');
+      if (prompt) {
+        activities.push({
+          type: 'writing',
+          title: 'Writing Activity',
+          prompt
+        });
+      }
+
+      const speechTarget = read('t-lesson-speechTarget');
+      if (speechTarget) {
+        activities.push({
+          type: 'speech',
+          title: 'Speech Practice',
+          targetText: speechTarget
+        });
+      }
+
+      requestBody = {
+        gradeLevel: Number(read('t-lesson-grade')),
+        subject: read('t-lesson-subject'),
+        title: read('t-lesson-title'),
+        xpReward: Number(read('t-lesson-xp') || 25),
+        instructions: read('t-lesson-instructions'),
+        passage: read('t-lesson-passage'),
+        speechTarget,
+        activities
+      };
+    }
+
+    await api('/lessons', {
+      method: 'POST',
+      body: requestBody
+    });
+
+    notify('Lesson created.');
+    await loadTeacherDashboard();
+  });
+}
+
+async function loadAdminDashboard() {
+  const [stats, students, archivedStudents, teachers, archivedTeachers, logs] = await Promise.all([
+    api('/admin/stats'),
+    api('/students?status=active'),
+    api('/students?status=archived'),
+    api('/teachers?status=active'),
+    api('/teachers?status=archived'),
+    api('/admin/audit-logs?limit=50')
+  ]);
+
+  setAdminData({
+    stats: stats.stats,
+    students: students.students || [],
+    archivedStudents: archivedStudents.students || [],
+    teachers: teachers.teachers || [],
+    archivedTeachers: archivedTeachers.teachers || [],
+    logs: logs.logs || []
+  });
+}
 
   async function adminAddStudent() {
     await safeRun(async () => {
-      await api('/students', { method: 'POST', body: { studentCode: read('a-stu-id'), name: read('a-stu-name'), gradeLevel: Number(read('a-stu-grade')), section: read('a-stu-section'), avatar: '🦊', password: read('a-stu-password') || 'student123' } });
+      await api('/students', {
+        method: 'POST',
+        body: {
+          studentCode: read('a-stu-id'),
+          name: read('a-stu-name'),
+          gradeLevel: Number(read('a-stu-grade')),
+          section: read('a-stu-section'),
+          avatar: '',
+          password: read('a-stu-password') || 'student123'
+        }
+      });
+
       notify('Student added.');
       await loadAdminDashboard();
     });
@@ -328,23 +498,131 @@ export default function App() {
 
   async function adminAddTeacher() {
     await safeRun(async () => {
-      await api('/teachers', { method: 'POST', body: { username: read('a-t-username'), name: read('a-t-name'), employeeCode: read('a-t-code') || read('a-t-username'), password: read('a-t-password') || 'teach123' } });
+      await api('/teachers', {
+        method: 'POST',
+        body: {
+          username: read('a-t-username'),
+          name: read('a-t-name'),
+          employeeCode: read('a-t-code') || read('a-t-username'),
+          password: read('a-t-password') || 'teach123'
+        }
+      });
+
       notify('Teacher added.');
       await loadAdminDashboard();
     });
   }
 
   async function archiveStudent(id) {
-    await safeRun(async () => { await api(`/students/${id}/archive`, { method: 'POST' }); notify('Student archived.'); await loadAdminDashboard(); await loadTeacherDashboard().catch(() => null); });
-  }
+  const confirmed = window.confirm(
+    'Archive this student account? The student will not be able to log in until reactivated.'
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    await api(`/students/${id}/archive`, { method: 'POST' });
+    notify('Student archived. You can restore this account from Archived Students.');
+    await loadAdminDashboard();
+    await loadTeacherDashboard().catch(() => null);
+  });
+}
+
+async function reactivateStudent(id) {
+  const confirmed = window.confirm(
+    'Reactivate this student account? The student will be able to log in again.'
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    await api(`/students/${id}/reactivate`, { method: 'POST' });
+    notify('Student reactivated.');
+    await loadAdminDashboard();
+    await loadTeacherDashboard().catch(() => null);
+  });
+}
+
+async function resetStudentPassword(id, name = 'student') {
+  const confirmed = window.confirm(
+    `Reset password for ${name}? The system will generate a temporary 6-digit PIN. The student must change it after logging in.`
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    const data = await api(`/students/${id}/reset-password`, {
+      method: 'POST',
+      body: {}
+    });
+
+    window.alert(
+      `Temporary PIN for ${name}:\n\n${data.temporaryPin}\n\nGive this PIN to the student. They will be required to change their password after logging in.`
+    );
+
+    notify('Student password reset. Temporary PIN was shown to admin.');
+    await loadAdminDashboard();
+  }, 'Hindi na-reset ang password.');
+}
 
   async function resetStudent(id) {
-    await safeRun(async () => { await api(`/students/${id}/reset-progress`, { method: 'POST' }); notify('Progress reset.'); await loadAdminDashboard(); await loadTeacherDashboard().catch(() => null); });
+    await safeRun(async () => {
+      await api(`/students/${id}/reset-progress`, { method: 'POST' });
+      notify('Progress reset.');
+      await loadAdminDashboard();
+      await loadTeacherDashboard().catch(() => null);
+    });
   }
 
-  async function archiveTeacher(id) {
-    await safeRun(async () => { await api(`/teachers/${id}/archive`, { method: 'POST' }); notify('Teacher archived.'); await loadAdminDashboard(); });
-  }
+  async function resetTeacherPassword(id, name = 'teacher') {
+  const confirmed = window.confirm(
+    `Reset password for ${name}? The system will generate a temporary 6-digit PIN. The teacher must change it after logging in.`
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    const data = await api(`/teachers/${id}/reset-password`, {
+      method: 'POST',
+      body: {}
+    });
+
+    window.alert(
+      `Temporary PIN for ${name}:\n\n${data.temporaryPin}\n\nGive this PIN to the teacher. They will be required to change their password after logging in.`
+    );
+
+    notify('Teacher password reset. Temporary PIN was shown to admin.');
+    await loadAdminDashboard();
+  }, 'Hindi na-reset ang teacher password.');
+}
+
+async function reactivateTeacher(id) {
+  const confirmed = window.confirm(
+    'Reactivate this teacher account? The teacher will be able to log in again.'
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    await api(`/teachers/${id}/reactivate`, { method: 'POST' });
+    notify('Teacher reactivated.');
+    await loadAdminDashboard();
+  });
+}
+
+async function archiveTeacher(id) {
+  const confirmed = window.confirm(
+    'Archive this teacher account? The teacher will not be able to log in until reactivated.'
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    await api(`/teachers/${id}/archive`, { method: 'POST' });
+    notify('Teacher archived. You can restore this account from Archived Teachers.');
+    await loadAdminDashboard();
+  });
+}
 
   async function completeGroupTask(taskId) {
     await safeRun(async () => {
@@ -354,45 +632,91 @@ export default function App() {
     });
   }
 
-  function exportStudentsCSV() { window.location.href = downloadUrl('/reports/students.csv'); }
-  function exportLogsCSV() { window.location.href = downloadUrl('/reports/activity-logs.csv'); }
-  function downloadSummaryReport() { window.location.href = downloadUrl('/reports/summary.txt'); }
+  function exportStudentsCSV() {
+    window.location.href = downloadUrl('/reports/students.csv');
+  }
+
+  function exportLogsCSV() {
+    window.location.href = downloadUrl('/reports/activity-logs.csv');
+  }
+
+  function downloadSummaryReport() {
+    window.location.href = downloadUrl('/reports/summary.txt');
+  }
 
   const lessonsBySubject = useMemo(() => {
     const lessons = studentDash?.lessons || [];
-    return SUBJECTS.map(s => ({ ...s, lessons: lessons.filter(l => l.subject === s.name) }));
+    return SUBJECTS.map(subject => ({
+      ...subject,
+      lessons: lessons.filter(lesson => lesson.subject === subject.name)
+    }));
   }, [studentDash]);
 
   const visibleLessons = useMemo(() => {
     const lessons = studentDash?.lessons || [];
-    return subjectFilter === 'ALL' ? lessons : lessons.filter(l => l.subject === subjectFilter);
+    return subjectFilter === 'ALL'
+      ? lessons
+      : lessons.filter(lesson => lesson.subject === subjectFilter);
   }, [studentDash, subjectFilter]);
 
-  if (booting) return <div className="loading-card">Starting Tuklas Talino...</div>;
+  if (booting) {
+    return (
+      <div className="home-wrap">
+        <div className="home-card">
+          <div className="home-title">Tuklas Talino</div>
+          <div className="muted">Starting Tuklas Talino...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <Notification notice={notice} />
-      {loading && <div className="tt-loading-overlay"><div className="card">⏳ Loading...</div></div>}
+
+      {loading && (
+        <div className="notif-wrap">
+          <div className="notif">⏳ Loading...</div>
+        </div>
+      )}
 
       <Screen id="screen-landing" active={screen === 'screen-landing'}>
         <LandingScreen go={go} />
       </Screen>
+
+      <Screen id="screen-change-password" active={screen === 'screen-change-password'}>
+  <ChangePasswordScreen
+    user={user}
+    onSubmit={handleChangePassword}
+    onLogout={doLogout}
+  />
+</Screen>
 
       <Screen id="screen-home" active={screen === 'screen-home'}>
         <HomeScreen go={go} notify={notify} />
       </Screen>
 
       <Screen id="screen-login-student" active={screen === 'screen-login-student'}>
-        <StudentLogin go={go} selectedAvatar={selectedAvatar} setSelectedAvatar={setSelectedAvatar} onLogin={() => handleLogin('student')} />
+        <StudentLogin
+          go={go}
+          selectedAvatar={selectedAvatar}
+          setSelectedAvatar={setSelectedAvatar}
+          onLogin={() => handleLogin('student')}
+        />
       </Screen>
 
       <Screen id="screen-login-teacher" active={screen === 'screen-login-teacher'}>
-        <TeacherLogin go={go} onLogin={() => handleLogin('teacher')} />
+        <TeacherLogin
+          go={go}
+          onLogin={() => handleLogin('teacher')}
+        />
       </Screen>
 
       <Screen id="screen-login-admin" active={screen === 'screen-login-admin'}>
-        <AdminLogin go={go} onLogin={() => handleLogin('admin')} />
+        <AdminLogin
+          go={go}
+          onLogin={() => handleLogin('admin')}
+        />
       </Screen>
 
       <Screen id="screen-student" active={screen === 'screen-student'}>
@@ -417,34 +741,47 @@ export default function App() {
       </Screen>
 
       <Screen id="screen-lesson" active={screen === 'screen-lesson'}>
-        <LessonScreen
-          lesson={selectedLesson}
-          feedback={lessonFeedback}
-          go={go}
-          completeLesson={completeLesson}
-          submitMcq={submitMcq}
-          submitWriting={submitWriting}
-          submitSpeech={submitSpeech}
-        />
+        {selectedLesson && (
+          <LessonScreen
+            lesson={selectedLesson}
+            feedback={lessonFeedback}
+            go={go}
+            completeLesson={completeLesson}
+            submitMcq={submitMcq}
+            submitWriting={submitWriting}
+            submitSpeech={submitSpeech}
+          />
+        )}
       </Screen>
 
       <Screen id="screen-stu-groups" active={screen === 'screen-stu-groups'}>
-        <StudentGroups data={studentDash} go={go} completeGroupTask={completeGroupTask} />
+        <StudentGroups
+          data={studentDash}
+          go={go}
+          completeGroupTask={completeGroupTask}
+        />
       </Screen>
 
       <Screen id="screen-stu-badges" active={screen === 'screen-stu-badges'}>
-        <StudentBadges data={studentDash} go={go} />
+        <StudentBadges
+          data={studentDash}
+          go={go}
+        />
       </Screen>
 
       <Screen id="screen-stu-profile" active={screen === 'screen-stu-profile'}>
-        <StudentProfile data={studentDash} selectedAvatar={selectedAvatar} updateAvatar={updateAvatar} go={go} />
+        <StudentProfile
+          data={studentDash}
+          selectedAvatar={selectedAvatar}
+          updateAvatar={updateAvatar}
+          go={go}
+        />
       </Screen>
 
       <Screen id="screen-teacher" active={screen === 'screen-teacher'}>
         <TeacherDashboard
           user={user}
           data={teacherData}
-          go={go}
           logout={doLogout}
           reload={() => safeRun(loadTeacherDashboard)}
           createGroup={teacherCreateGroup}
@@ -459,15 +796,19 @@ export default function App() {
 
       <Screen id="screen-admin" active={screen === 'screen-admin'}>
         <AdminDashboard
-          data={adminData}
-          logout={doLogout}
-          addStudent={adminAddStudent}
-          addTeacher={adminAddTeacher}
-          archiveStudent={archiveStudent}
-          resetStudent={resetStudent}
-          archiveTeacher={archiveTeacher}
-          reload={() => safeRun(loadAdminDashboard)}
-        />
+  data={adminData}
+  logout={doLogout}
+  addStudent={adminAddStudent}
+  addTeacher={adminAddTeacher}
+  archiveStudent={archiveStudent}
+  reactivateStudent={reactivateStudent}
+  resetStudentPassword={resetStudentPassword}
+  resetTeacherPassword={resetTeacherPassword}
+  resetStudent={resetStudent}
+  archiveTeacher={archiveTeacher}
+  reactivateTeacher={reactivateTeacher}
+  reload={() => safeRun(loadAdminDashboard)}
+/>
       </Screen>
     </>
   );
@@ -579,6 +920,132 @@ function HomeScreen({ go, notify }) {
       <div className="reset-area-v2"><button className="btn btn-green reset-btn-v2" onClick={() => notify('Database reset is done from backend: npm.cmd run reset', 'warn')}>♻️ Reset Demo Data</button><div className="muted">For full reset, run backend reset command.</div></div>
     </div>
   </div>;
+}
+
+function ChangePasswordScreen({ user, onSubmit, onLogout }) {
+  return (
+    <>
+      <div className="top-nav login-top-nav login-student-nav">
+        <button className="btn btn-outline btn-sm" onClick={onLogout}>
+          ← Logout
+        </button>
+
+        <div className="logo">🔐 Account Security</div>
+
+        <div className="login-nav-pill">
+          ⭐ Secure muna bago magpatuloy!
+        </div>
+      </div>
+
+      <div className="login-stage student-stage">
+        <div className="login-shell student-shell">
+          <aside className="login-visual-card student-visual-card">
+            <div className="login-sparkles">✦</div>
+
+            <h2>
+              Palitan ang<br />
+              Password! 🔐
+            </h2>
+
+            <p>
+              Para sa seguridad ng iyong account, kailangan mong gumawa ng sarili
+              mong password bago ka makapagpatuloy.
+            </p>
+
+            <div className="student-hero-illustration" aria-hidden="true">
+              <div className="hero-child">{user?.student?.avatar || '🧒'}</div>
+              <div className="hero-school">🏫</div>
+              <div className="hero-book">🔐</div>
+            </div>
+
+            <div className="login-info-card">
+              <span className="info-icon">🛡️</span>
+              <div>
+                <b>Ligtas ang Iyong Account</b>
+                <br />
+                <span>
+                  Protektado ang iyong progress, XP, badges, at learning records.
+                </span>
+              </div>
+            </div>
+          </aside>
+
+          <section className="login-form-panel student-form-panel">
+            <div className="login-form-heading">
+              <span className="heading-badge">👤</span>
+              <div>
+                <h3>Kumusta, {user?.displayName || 'Mag-aaral'}!</h3>
+                <p>Palitan muna ang temporary password bago magpatuloy.</p>
+              </div>
+            </div>
+
+            <div className="login-divider" />
+
+            <label className="login-label" htmlFor="cp-current-password">
+              🔒 Current Password
+            </label>
+            <div className="input-with-icon">
+              <span>🔐</span>
+              <input
+                className="input-field"
+                id="cp-current-password"
+                type="password"
+                placeholder="Ilagay ang temporary/current password"
+              />
+            </div>
+
+            <label className="login-label" htmlFor="cp-new-password">
+              ✨ New Password
+            </label>
+            <div className="input-with-icon">
+              <span>🆕</span>
+              <input
+                className="input-field"
+                id="cp-new-password"
+                type="password"
+                placeholder="Gumawa ng bagong password"
+              />
+            </div>
+
+            <label className="login-label" htmlFor="cp-confirm-password">
+              ✅ Confirm New Password
+            </label>
+            <div className="input-with-icon">
+              <span>✅</span>
+              <input
+                className="input-field"
+                id="cp-confirm-password"
+                type="password"
+                placeholder="Ulitin ang bagong password"
+              />
+            </div>
+
+            <button className="btn btn-green login-main-btn" onClick={onSubmit}>
+              🔐 Change Password
+            </button>
+
+            <button
+              className="btn btn-outline login-main-btn"
+              type="button"
+              onClick={onLogout}
+              style={{ marginTop: 10 }}
+            >
+              Logout
+            </button>
+
+            <p className="secure-note">
+              🔒 Gumamit ng password na may hindi bababa sa 8 characters.
+            </p>
+          </section>
+        </div>
+
+        <div className="login-tip-card">
+          💡 <b>Tip:</b> Huwag ibahagi ang iyong password sa iba.
+          <span> 💚</span>
+        </div>
+      </div>
+    </>
+  );
 }
 
 function StudentLogin({ go, selectedAvatar, setSelectedAvatar, onLogin }) {
@@ -1181,18 +1648,116 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   );
 }
 
-function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq, submitWriting, submitSpeech }) {
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [mcqFeedback, setMcqFeedback] = useState({});
-  const [writingText, setWritingText] = useState('');
-  const [speechText, setSpeechText] = useState('');
+function getActivityData(activity) {
+  if (!activity?.dataJson) return {};
 
+  if (typeof activity.dataJson === 'string') {
+    try {
+      return JSON.parse(activity.dataJson);
+    } catch {
+      return {};
+    }
+  }
+
+  return activity.dataJson || {};
+}
+
+function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq, submitWriting, submitSpeech }) {
   const activityBoxStyle = {
     boxShadow: 'none',
     background: '#FFFFFF',
     border: isEarlyGrade ? '2px solid #E8E8E8' : '1px solid #E8E8E8',
     marginBottom: 14,
   };
+
+  if (activity.type === 'mcq') {
+    return (
+      <McqActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+        submitMcq={submitMcq}
+      />
+    );
+  }
+
+  if (activity.type === 'writing') {
+    return (
+      <WritingActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+        submitWriting={submitWriting}
+      />
+    );
+  }
+
+  if (activity.type === 'speech') {
+    return (
+      <SpeechActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+        submitSpeech={submitSpeech}
+      />
+    );
+  }
+
+  if (activity.type === 'matching') {
+    return (
+      <MatchingActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+      />
+    );
+  }
+
+  if (activity.type === 'vocabulary') {
+    return (
+      <VocabularyActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+      />
+    );
+  }
+
+  if (activity.type === 'infographic') {
+    return (
+      <InfographicActivity
+        activity={activity}
+        index={index}
+        total={total}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+      />
+    );
+  }
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="section-title">Activity</div>
+      <div className="muted">
+        This activity type is not supported yet: {activity.type}
+      </div>
+    </div>
+  );
+}
+
+function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitMcq }) {
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [mcqFeedback, setMcqFeedback] = useState({});
 
   async function handleMcq(question, option) {
     setSelectedAnswers(prev => ({
@@ -1216,158 +1781,171 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
     }
   }
 
-  if (activity.type === 'mcq') {
-    const questions = activity.questions || [];
+  const questions = activity.questions || [];
 
-    return (
-      <div className="card" style={activityBoxStyle}>
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="section-title">
-            {isEarlyGrade ? '🎮 Mini Quiz' : 'Multiple Choice Quiz'}
-          </div>
-
-          <div className="pill">
-            {index + 1}/{total}
-          </div>
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          {isEarlyGrade ? '🎮 Mini Quiz' : 'Multiple Choice Quiz'}
         </div>
 
-        <div className="muted">
-          {isEarlyGrade
-            ? 'Piliin ang tamang sagot.'
-            : 'Choose the best answer for each question.'}
+        <div className="pill">
+          {index + 1}/{total}
         </div>
-
-        <div className="divider" />
-
-        {questions.map((q, qIndex) => (
-          <div
-            key={q.id || qIndex}
-            style={{
-              padding: isEarlyGrade ? 16 : 14,
-              borderRadius: 16,
-              background: isEarlyGrade ? '#F8FAFF' : '#FAFAFA',
-              marginBottom: 12,
-            }}
-          >
-            <div className="pill" style={{ marginBottom: 10 }}>
-              Question {qIndex + 1} of {questions.length}
-            </div>
-
-            <h3 style={{ marginTop: 0, fontSize: isEarlyGrade ? 21 : 17 }}>
-              {q.question}
-            </h3>
-
-            <div className="grid grid-2">
-              {(q.options || []).map((option, optionIndex) => {
-                const selected = selectedAnswers[q.id] === option.id;
-                const label = option.optionText || option.text || `Option ${optionIndex + 1}`;
-
-                return (
-                  <button
-                    key={option.id || optionIndex}
-                    className={`btn ${selected ? 'btn-green' : 'btn-outline'}`}
-                    onClick={() => handleMcq(q, option)}
-                    style={{
-                      minHeight: isEarlyGrade ? 62 : 46,
-                      justifyContent: 'flex-start',
-                      textAlign: 'left',
-                      fontSize: isEarlyGrade ? 18 : 14,
-                      whiteSpace: 'normal',
-                    }}
-                  >
-                    <span style={{ marginRight: 8, fontWeight: 800 }}>
-                      {['A', 'B', 'C', 'D'][optionIndex] || '•'}.
-                    </span>
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {mcqFeedback[q.id] && (
-              <div
-                style={{
-                  marginTop: 12,
-                  padding: 12,
-                  borderRadius: 14,
-                  background: mcqFeedback[q.id].includes('Tama') || mcqFeedback[q.id].includes('Correct')
-                    ? '#E9FBEF'
-                    : '#FFF4E5',
-                  fontWeight: 800,
-                  fontSize: isEarlyGrade ? 18 : 14,
-                }}
-              >
-                {mcqFeedback[q.id]}
-              </div>
-            )}
-          </div>
-        ))}
       </div>
-    );
-  }
 
-  if (activity.type === 'writing') {
-    const prompt = activity.writingTask?.prompt || activity.prompt || 'Isulat ang iyong sagot.';
-
-    return (
-      <div className="card" style={activityBoxStyle}>
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="section-title">
-            ✍️ {isEarlyGrade ? 'Isulat ang Sagot' : 'Writing Activity'}
-          </div>
-
-          <div className="pill">
-            {index + 1}/{total}
-          </div>
+      {activity.instructions && (
+        <div className="muted" style={{ marginBottom: 8 }}>
+          {activity.instructions}
         </div>
+      )}
 
+      <div className="muted">
+        {isEarlyGrade
+          ? 'Piliin ang tamang sagot.'
+          : 'Choose the best answer for each question.'}
+      </div>
+
+      <div className="divider" />
+
+      {questions.map((q, qIndex) => (
         <div
+          key={q.id || qIndex}
           style={{
-            padding: 14,
+            padding: isEarlyGrade ? 16 : 14,
             borderRadius: 16,
-            background: '#FFF8CF',
-            lineHeight: 1.6,
+            background: isEarlyGrade ? '#F8FAFF' : '#FAFAFA',
             marginBottom: 12,
-            fontSize: isEarlyGrade ? 17 : 14,
           }}
         >
-          <b>{isEarlyGrade ? 'Tanong:' : 'Prompt:'}</b> {prompt}
+          <div className="pill" style={{ marginBottom: 10 }}>
+            Question {qIndex + 1} of {questions.length}
+          </div>
+
+          <h3 style={{ marginTop: 0, fontSize: isEarlyGrade ? 21 : 17 }}>
+            {q.question}
+          </h3>
+
+          <div className="grid grid-2">
+            {(q.options || []).map((option, optionIndex) => {
+              const selected = selectedAnswers[q.id] === option.id;
+              const label = option.optionText || option.text || `Option ${optionIndex + 1}`;
+
+              return (
+                <button
+                  key={option.id || optionIndex}
+                  className={`btn ${selected ? 'btn-green' : 'btn-outline'}`}
+                  onClick={() => handleMcq(q, option)}
+                  style={{
+                    minHeight: isEarlyGrade ? 62 : 46,
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
+                    fontSize: isEarlyGrade ? 18 : 14,
+                    whiteSpace: 'normal',
+                  }}
+                >
+                  <span style={{ marginRight: 8, fontWeight: 800 }}>
+                    {['A', 'B', 'C', 'D'][optionIndex] || '•'}.
+                  </span>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {mcqFeedback[q.id] && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 12,
+                borderRadius: 14,
+                background: mcqFeedback[q.id].includes('Tama') || mcqFeedback[q.id].includes('Correct')
+                  ? '#E9FBEF'
+                  : '#FFF4E5',
+                fontWeight: 800,
+                fontSize: isEarlyGrade ? 18 : 14,
+              }}
+            >
+              {mcqFeedback[q.id]}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitWriting }) {
+  const [writingText, setWritingText] = useState('');
+
+  const prompt = activity.writingTask?.prompt || activity.prompt || 'Isulat ang iyong sagot.';
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          ✍️ {isEarlyGrade ? 'Isulat ang Sagot' : 'Writing Activity'}
         </div>
 
-        <textarea
-          className="input-field"
-          id="writing-answer"
-          rows="5"
-          value={writingText}
-          onChange={(e) => setWritingText(e.target.value)}
-          placeholder={isEarlyGrade ? 'Isulat dito ang sagot mo...' : 'Type your answer here...'}
-          style={{
-            minHeight: isEarlyGrade ? 150 : 130,
-            resize: 'vertical',
-            fontSize: isEarlyGrade ? 18 : 15,
-            lineHeight: 1.6,
-          }}
-        />
-
-        <div className="divider" />
-
-        <button
-          className="btn btn-green"
-          onClick={() => submitWriting(activity.writingTask?.id)}
-          disabled={!writingText.trim()}
-        >
-          ✅ Submit Writing
-        </button>
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
       </div>
-    );
-  }
 
-  if (activity.type === 'speech') {
-  const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
+      {activity.instructions && (
+        <div className="muted" style={{ marginBottom: 8 }}>
+          {activity.instructions}
+        </div>
+      )}
+
+      <div
+        style={{
+          padding: 14,
+          borderRadius: 16,
+          background: '#FFF8CF',
+          lineHeight: 1.6,
+          marginBottom: 12,
+          fontSize: isEarlyGrade ? 17 : 14,
+        }}
+      >
+        <b>{isEarlyGrade ? 'Tanong:' : 'Prompt:'}</b> {prompt}
+      </div>
+
+      <textarea
+        className="input-field"
+        rows="5"
+        value={writingText}
+        onChange={(e) => setWritingText(e.target.value)}
+        placeholder={isEarlyGrade ? 'Isulat dito ang sagot mo...' : 'Type your answer here...'}
+        style={{
+          minHeight: isEarlyGrade ? 150 : 130,
+          resize: 'vertical',
+          fontSize: isEarlyGrade ? 18 : 15,
+          lineHeight: 1.6,
+        }}
+      />
+
+      <div className="divider" />
+
+      <button
+        className="btn btn-green"
+        onClick={() => submitWriting(activity.writingTask?.id, writingText)}
+        disabled={!writingText.trim()}
+      >
+        ✅ Submit Writing
+      </button>
+    </div>
+  );
+}
+
+function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitSpeech }) {
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [speechScore, setSpeechScore] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState('');
+
+  const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
 
   function speakTarget() {
     speechSynthesis.cancel();
@@ -1424,6 +2002,12 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
           {index + 1}/{total}
         </div>
       </div>
+
+      {activity.instructions && (
+        <div className="muted" style={{ marginBottom: 8 }}>
+          {activity.instructions}
+        </div>
+      )}
 
       <div className="muted">
         {isEarlyGrade
@@ -1520,7 +2104,238 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
   );
 }
 
-  return null;
+function MatchingActivity({ activity, index, total, isEarlyGrade, activityBoxStyle }) {
+  const data = getActivityData(activity);
+  const pairs = data.pairs || activity.pairs || [];
+
+  const [selectedLeft, setSelectedLeft] = useState(null);
+  const [matched, setMatched] = useState([]);
+  const [feedback, setFeedback] = useState('');
+
+  function chooseRight(rightValue) {
+    if (!selectedLeft) {
+      setFeedback(isEarlyGrade ? 'Pumili muna sa kaliwa.' : 'Choose an item from the left first.');
+      return;
+    }
+
+    const correctPair = pairs.find(pair => pair.left === selectedLeft);
+
+    if (correctPair?.right === rightValue) {
+      setMatched(prev => [...prev, selectedLeft]);
+      setFeedback(isEarlyGrade ? '✅ Tama! Magaling!' : '✅ Correct match.');
+    } else {
+      setFeedback(isEarlyGrade ? '❌ Subukan muli!' : '❌ Not a match. Try again.');
+    }
+
+    setSelectedLeft(null);
+  }
+
+  const completed = pairs.length > 0 && matched.length === pairs.length;
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          🧩 {activity.title || (isEarlyGrade ? 'Pagtapatin' : 'Matching Game')}
+        </div>
+
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
+      </div>
+
+      <div className="muted">
+        {activity.instructions || (isEarlyGrade
+          ? 'Pagtapatin ang tamang pares.'
+          : 'Match each item on the left with the correct item on the right.')}
+      </div>
+
+      <div className="divider" />
+
+      {pairs.length === 0 ? (
+        <div className="muted">No matching pairs added yet.</div>
+      ) : (
+        <div className="grid grid-2">
+          <div>
+            <div className="pill" style={{ marginBottom: 10 }}>Left</div>
+            {pairs.map((pair, pairIndex) => {
+              const isMatched = matched.includes(pair.left);
+              const isSelected = selectedLeft === pair.left;
+
+              return (
+                <button
+                  key={pair.left || pairIndex}
+                  className={`btn ${isMatched ? 'btn-green' : isSelected ? 'btn-blue' : 'btn-outline'}`}
+                  onClick={() => !isMatched && setSelectedLeft(pair.left)}
+                  disabled={isMatched}
+                  style={{
+                    width: '100%',
+                    marginBottom: 8,
+                    justifyContent: 'flex-start',
+                    whiteSpace: 'normal',
+                    fontSize: isEarlyGrade ? 17 : 14,
+                  }}
+                >
+                  {isMatched ? '✅ ' : ''}{pair.left}
+                </button>
+              );
+            })}
+          </div>
+
+          <div>
+            <div className="pill" style={{ marginBottom: 10 }}>Right</div>
+            {pairs.map((pair, pairIndex) => (
+              <button
+                key={pair.right || pairIndex}
+                className="btn btn-outline"
+                onClick={() => chooseRight(pair.right)}
+                style={{
+                  width: '100%',
+                  marginBottom: 8,
+                  justifyContent: 'flex-start',
+                  whiteSpace: 'normal',
+                  fontSize: isEarlyGrade ? 17 : 14,
+                }}
+              >
+                {pair.right}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {feedback && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 14,
+            background: feedback.includes('Tama') || feedback.includes('Correct') ? '#E9FBEF' : '#FFF4E5',
+            fontWeight: 800,
+          }}
+        >
+          {feedback}
+        </div>
+      )}
+
+      {completed && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 14,
+            background: '#E9FBEF',
+            fontWeight: 800,
+          }}
+        >
+          🎉 {isEarlyGrade ? 'Natapos mo ang matching game!' : 'Matching activity completed.'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VocabularyActivity({ activity, index, total, isEarlyGrade, activityBoxStyle }) {
+  const data = getActivityData(activity);
+  const words = data.words || activity.words || [];
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          📚 {activity.title || (isEarlyGrade ? 'Mga Bagong Salita' : 'Vocabulary Cards')}
+        </div>
+
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
+      </div>
+
+      <div className="muted">
+        {activity.instructions || (isEarlyGrade
+          ? 'Basahin ang salita at alamin ang kahulugan.'
+          : 'Study each word, its meaning, and example usage.')}
+      </div>
+
+      <div className="divider" />
+
+      {words.length === 0 ? (
+        <div className="muted">No vocabulary words added yet.</div>
+      ) : (
+        <div className="grid grid-2">
+          {words.map((item, wordIndex) => (
+            <div
+              key={`${item.word}-${wordIndex}`}
+              style={{
+                padding: 16,
+                borderRadius: 18,
+                background: isEarlyGrade ? '#E9FBEF' : '#F8FAFF',
+                border: '1px solid #E1E7FF',
+                lineHeight: 1.6,
+              }}
+            >
+              <div style={{ fontSize: isEarlyGrade ? 24 : 20, fontWeight: 900, marginBottom: 6 }}>
+                {item.word}
+              </div>
+
+              <div>
+                <b>Kahulugan:</b> {item.meaning}
+              </div>
+
+              {item.example && (
+                <div style={{ marginTop: 8 }}>
+                  <b>Halimbawa:</b> {item.example}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfographicActivity({ activity, index, total, isEarlyGrade, activityBoxStyle }) {
+  const data = getActivityData(activity);
+  const content = data.content || activity.content || '';
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          🖼️ {activity.title || (isEarlyGrade ? 'Tingnan at Matuto' : 'Info Card')}
+        </div>
+
+        <div className="pill">
+          {index + 1}/{total}
+        </div>
+      </div>
+
+      <div className="muted">
+        {activity.instructions || (isEarlyGrade
+          ? 'Basahin ang maikling gabay sa ibaba.'
+          : 'Review the information below before answering the activities.')}
+      </div>
+
+      <div className="divider" />
+
+      <div
+        style={{
+          padding: isEarlyGrade ? 20 : 18,
+          borderRadius: 18,
+          background: isEarlyGrade
+            ? 'linear-gradient(135deg, #FFF8CF, #E9FBEF)'
+            : '#F8FAFF',
+          border: '1px solid #E1E7FF',
+          lineHeight: isEarlyGrade ? 1.9 : 1.75,
+          fontSize: isEarlyGrade ? 19 : 15,
+          whiteSpace: 'pre-line',
+        }}
+      >
+        {content || 'No infographic content added yet.'}
+      </div>
+    </div>
+  );
 }
 
 function StudentGroups({ data, go, completeGroupTask }) {
@@ -1537,14 +2352,3535 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go }) {
   return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo">👤 Profile</div><div /></div><div className="scroll"><div className="card"><div className="section-title">Avatar</div><div className="muted">Palitan ang avatar mo (saved sa account).</div><div className="divider" /><div className="avatar-grid" id="profile-avatar-grid">{AVATARS.map(a => <button key={a} className={`avatar-circle ${selectedAvatar === a ? 'selected' : ''}`} onClick={() => updateAvatar(a)}>{a}</button>)}</div></div><div className="card"><div className="section-title">📊 Summary</div><div id="profile-summary"><div className="grid grid-3"><Stat icon="👤" label="Name" value={s?.name || '—'} /><Stat icon="🎒" label="Grade" value={s?.gradeLevel || '—'} /><Stat icon="⚡" label="XP" value={s?.xp || 0} /></div></div></div></div></>;
 }
 
-function TeacherDashboard({ user, data, logout, reload, createGroup, addTask, addMember, createLesson, exportStudentsCSV, exportLogsCSV, downloadSummaryReport }) {
-  return <><div className="top-nav"><div className="logo">👩‍🏫 Teacher Dashboard</div><div className="row"><div className="pill">🏫 <span id="t-name">{user?.displayName || 'Teacher'}</span></div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,#2980B9,#3498DB)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>📌 Monitoring</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Tingnan ang progreso, engagement, group participation, at reports.</div></div><div className="card"><div className="section-title">📈 Quick Stats</div><div className="grid grid-3" id="t-stats"><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="📚" label="Lessons" value={data.stats?.lessons || 0} /><Stat icon="👥" label="Groups" value={data.stats?.groups || 0} /></div></div><div className="card"><div className="section-title">👥 Group Manager</div><div className="muted">Gumawa ng grupo, mag-assign ng members, at maglagay ng tasks + deadline.</div><div className="divider" /><div className="grid grid-2"><div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}><div className="section-title">➕ Create Group</div><input className="input-field" id="t-group-name" placeholder="Group name" /><div style={{ height: 10 }} /><input className="input-field" id="t-group-section" placeholder="Description / Section" /><div style={{ height: 10 }} /><button className="btn btn-green" onClick={createGroup}>Create</button></div><div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}><div className="section-title">➕ Add Task</div><select className="input-field" id="t-task-group">{data.groups.map(g => <option value={g.id} key={g.id}>{g.name}</option>)}</select><div style={{ height: 10 }} /><input className="input-field" id="t-task-title" placeholder="Task title" /><div style={{ height: 10 }} /><input className="input-field" id="t-task-deadline" type="date" /><div style={{ height: 10 }} /><input className="input-field" id="t-task-xp" type="number" min="0" defaultValue="10" placeholder="XP" /><div style={{ height: 10 }} /><button className="btn btn-blue" onClick={addTask}>Add Task</button></div></div><div className="divider" /><div className="section-title">📋 Groups</div><div id="t-groups-wrap">{data.groups.map(g => <div className="card" key={g.id} style={{ marginBottom: 12 }}><div className="row" style={{ justifyContent: 'space-between' }}><div><b>{g.name}</b><div className="muted">{g.description}</div></div><div className="pill">{g.tasks?.length || 0} tasks</div></div><div className="divider" /><div className="row"><select className="input-field" id={`member-${g.id}`} style={{ maxWidth: 320 }}>{data.students.map(s => <option key={s.id} value={s.id}>{s.name} • Grade {s.gradeLevel}</option>)}</select><button className="btn btn-green btn-sm" onClick={() => addMember(g.id)}>Add Member</button></div></div>)}</div></div><TeacherLessonManager lessons={data.lessons} createLesson={createLesson} /><div className="card"><div className="section-title">👨‍🎓 Students (Monitoring Table)</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button><button className="btn btn-outline btn-sm" onClick={exportStudentsCSV}>⬇️ Export CSV</button><button className="btn btn-outline btn-sm" onClick={exportLogsCSV}>⬇️ Export Activity Logs</button><button className="btn btn-outline btn-sm" onClick={downloadSummaryReport}>🧾 Download Summary Report</button></div><div className="divider" /><div className="table"><div className="thead"><div>Student</div><div>XP</div><div>Lessons</div><div className="hide-sm">Progress</div><div className="hide-sm">Status</div></div><div id="t-students-table">{data.rows.map(r => <div className="trow" key={r.id}><div>{r.name}<div className="muted">{r.studentCode} • Grade {r.gradeLevel}</div></div><div>{r.xp}</div><div>{r.completed}/{r.totalLessons}</div><div className="hide-sm">{r.percent}%</div><div className="hide-sm">{r.status}</div></div>)}</div></div></div></div></>;
+function TeacherRedesignStyles() {
+  return (
+    <style>{`
+      .teacher-redesign-page {
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 4% 100%, rgba(46, 204, 113, 0.08), transparent 24%),
+          radial-gradient(circle at 96% 100%, rgba(46, 204, 113, 0.08), transparent 24%),
+          linear-gradient(180deg, #fbfefc 0%, #f5faf7 100%);
+        color: #17243b;
+        font-family: inherit;
+      }
+
+      .teacher-main-header {
+        height: 88px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid #e8efe9;
+        box-shadow: 0 10px 28px rgba(26, 75, 43, 0.055);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 36px;
+        position: sticky;
+        top: 0;
+        z-index: 40;
+      }
+
+      .teacher-brand-area {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        min-width: 0;
+      }
+
+      .teacher-brand-mark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-right: 28px;
+        border-right: 1px solid #dfe8e2;
+      }
+
+      .teacher-brand-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 17px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #f4ffe3, #dff9e8);
+        box-shadow: inset 0 0 0 1px rgba(39, 174, 96, 0.16);
+        font-size: 26px;
+      }
+
+      .teacher-brand-text strong {
+        display: block;
+        color: #12a05a;
+        font-size: 24px;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        font-weight: 950;
+      }
+
+      .teacher-brand-text small {
+        display: block;
+        color: #738277;
+        font-size: 11px;
+        margin-top: 5px;
+        font-weight: 800;
+      }
+
+      .teacher-nav-links {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .teacher-nav-links button {
+        border: 0;
+        background: transparent;
+        color: #26354d;
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-weight: 850;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.18s ease;
+      }
+
+      .teacher-nav-links button:hover,
+      .teacher-nav-links button.active {
+        background: #eaf8ef;
+        color: #07884b;
+      }
+
+      .teacher-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .teacher-profile-pill {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 176px;
+        padding: 10px 14px;
+        background: #ffffff;
+        border: 1px solid #dbeae1;
+        border-radius: 18px;
+        box-shadow: 0 8px 20px rgba(32, 93, 52, 0.06);
+      }
+
+      .teacher-profile-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        background: #fff7c9;
+        font-size: 24px;
+      }
+
+      .teacher-profile-text {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .teacher-profile-text strong {
+        display: block;
+        color: #193421;
+        font-size: 15px;
+        line-height: 1;
+      }
+
+      .teacher-profile-text small {
+        display: block;
+        color: #6d7d73;
+        font-size: 12px;
+        margin-top: 5px;
+      }
+
+      .teacher-logout-btn {
+        height: 52px;
+        border-radius: 16px;
+        padding: 0 24px;
+        border: 2px solid #0a9b53;
+        background: #ffffff;
+        color: #07884b;
+        font-weight: 950;
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+
+      .teacher-logout-btn:hover {
+        background: #eaf8ef;
+        transform: translateY(-1px);
+      }
+
+      .teacher-main-content {
+        max-width: 1370px;
+        margin: 0 auto;
+        padding: 34px 28px 28px;
+      }
+
+      .lms-page-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: flex-end;
+        margin-bottom: 22px;
+        position: relative;
+      }
+
+      .lms-title-copy h1 {
+        margin: 0;
+        color: #182237;
+        font-size: 40px;
+        letter-spacing: -0.045em;
+        font-weight: 950;
+      }
+
+      .lms-title-copy p {
+        margin: 8px 0 0;
+        color: #667668;
+        font-size: 16px;
+        line-height: 1.6;
+        max-width: 660px;
+      }
+
+      .lms-teacher-illustration {
+        min-width: 270px;
+        height: 130px;
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 72% 10%, #fff2ba 0 28%, transparent 29%),
+          linear-gradient(135deg, #fffdfa, #edf9f0);
+        border: 1px solid #e5eee8;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .lms-teacher-illustration::before {
+        content: '👩‍🏫';
+        position: absolute;
+        right: 92px;
+        top: 22px;
+        font-size: 66px;
+      }
+
+      .lms-teacher-illustration::after {
+        content: '🌿 📚';
+        position: absolute;
+        right: 20px;
+        bottom: 18px;
+        font-size: 34px;
+      }
+
+      .lms-overview-panel {
+        background: #ffffff;
+        border: 1px solid #e4eee8;
+        border-radius: 28px;
+        padding: 24px;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.06);
+        margin-bottom: 24px;
+      }
+
+      .lms-greeting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .lms-greeting-row h2 {
+        margin: 0;
+        color: #17243b;
+        font-size: 24px;
+        font-weight: 950;
+        letter-spacing: -0.03em;
+      }
+
+      .lms-greeting-row p {
+        margin: 6px 0 0;
+        color: #65766b;
+      }
+
+      .lms-view-button,
+      .lms-view-lessons-btn {
+        border: 1.8px solid #0a9b53;
+        color: #07884b;
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 12px 18px;
+        font-weight: 950;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.18s ease;
+      }
+
+      .lms-view-button:hover,
+      .lms-view-lessons-btn:hover {
+        background: #eaf8ef;
+        transform: translateY(-1px);
+      }
+
+      .lms-metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .lms-metric-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        border-radius: 22px;
+        border: 1px solid #e5eee8;
+        background: #fff;
+        min-height: 110px;
+      }
+
+      .lms-metric-card.green { background: linear-gradient(135deg, #f1fbf4, #ffffff); }
+      .lms-metric-card.yellow { background: linear-gradient(135deg, #fff8df, #ffffff); }
+      .lms-metric-card.blue { background: linear-gradient(135deg, #edf6ff, #ffffff); }
+      .lms-metric-card.purple { background: linear-gradient(135deg, #f6efff, #ffffff); }
+
+      .lms-metric-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+      }
+
+      .lms-metric-card.green .lms-metric-icon { background: #dff7e8; }
+      .lms-metric-card.yellow .lms-metric-icon { background: #fff0bd; }
+      .lms-metric-card.blue .lms-metric-icon { background: #dff0ff; }
+      .lms-metric-card.purple .lms-metric-icon { background: #efe3ff; }
+
+      .lms-metric-card span {
+        display: block;
+        font-weight: 850;
+        color: #253044;
+        margin-bottom: 4px;
+      }
+
+      .lms-metric-card strong {
+        display: block;
+        color: #17243b;
+        font-size: 30px;
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .lms-metric-card small {
+        display: block;
+        color: #728177;
+        font-weight: 700;
+        margin-top: 7px;
+      }
+
+      .lms-tip-strip {
+        margin-top: 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 18px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #eefaf2, #f9fffb);
+        border: 1px solid #dcefe2;
+      }
+
+      .lms-tip-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: #2fb86f;
+        color: white;
+        font-size: 24px;
+      }
+
+      .lms-tip-strip strong {
+        display: block;
+        color: #1f5632;
+        margin-bottom: 3px;
+      }
+
+      .lms-tip-strip p {
+        margin: 0;
+        color: #627569;
+      }
+
+      .teacher-builder-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.7fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .teacher-builder-main,
+      .teacher-builder-side {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .teacher-design-card,
+      .teacher-side-card {
+        background: #ffffff;
+        border: 1px solid #e4eee8;
+        border-radius: 26px;
+        padding: 24px;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.055);
+      }
+
+      .teacher-design-card.soft {
+        background: linear-gradient(180deg, #ffffff 0%, #fcfffd 100%);
+      }
+
+      .teacher-design-heading {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .teacher-design-step {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #149a57;
+        color: white;
+        font-weight: 950;
+        box-shadow: 0 8px 18px rgba(20, 154, 87, 0.2);
+        flex: 0 0 auto;
+      }
+
+      .teacher-design-heading h2 {
+        margin: 0;
+        color: #0c6a3b;
+        font-size: 21px;
+        font-weight: 950;
+        letter-spacing: -0.02em;
+      }
+
+      .teacher-design-heading p {
+        margin: 4px 0 0;
+        color: #6c7b72;
+        font-size: 13px;
+      }
+
+      .teacher-form-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .teacher-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .teacher-field label {
+        color: #17243b;
+        font-weight: 900;
+        font-size: 13px;
+      }
+
+      .teacher-field .input-field,
+      .teacher-design-card .input-field {
+        border: 1.5px solid #d8e6dc;
+        border-radius: 13px;
+        background: #ffffff;
+        min-height: 48px;
+        padding: 13px 15px;
+        font-weight: 700;
+        color: #213047;
+      }
+
+      .teacher-field textarea.input-field {
+        font-weight: 600;
+        line-height: 1.6;
+        min-height: 110px;
+      }
+
+      .lms-editor-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1.5px solid #d8e6dc;
+        border-bottom: 0;
+        border-radius: 14px 14px 0 0;
+        background: #fbfefd;
+      }
+
+      .lms-editor-toolbar button {
+        width: 30px;
+        height: 30px;
+        border: 0;
+        background: transparent;
+        border-radius: 9px;
+        cursor: default;
+        font-weight: 900;
+        color: #213047;
+      }
+
+      .lms-editor-area {
+        border-top-left-radius: 0 !important;
+        border-top-right-radius: 0 !important;
+      }
+
+      .lms-activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .teacher-activity-block {
+        border-radius: 16px;
+        border: 1px solid #e4eee8;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .teacher-activity-top {
+        display: grid;
+        grid-template-columns: 46px minmax(160px, 1fr) minmax(220px, 1.6fr) auto;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: linear-gradient(90deg, rgba(20,154,87,0.08), #ffffff);
+      }
+
+      .teacher-activity-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-weight: 950;
+      }
+
+      .teacher-activity-copy strong {
+        display: block;
+        color: #1d2d44;
+        font-weight: 950;
+      }
+
+      .teacher-activity-copy small {
+        color: #6d7b73;
+        font-weight: 700;
+      }
+
+      .teacher-activity-mini-preview {
+        font-size: 12px;
+        color: #6d7b73;
+        background: rgba(255,255,255,0.68);
+        border: 1px solid rgba(216,230,220,0.8);
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+
+      .teacher-activity-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .teacher-activity-action {
+        border: 1px solid #d8e6dc;
+        background: #ffffff;
+        color: #1d2d44;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-weight: 850;
+        cursor: pointer;
+      }
+
+      .teacher-activity-action:hover {
+        background: #f2faf5;
+      }
+
+      .teacher-activity-action.danger {
+        color: #e74c3c;
+      }
+
+      .teacher-activity-body {
+        padding: 12px;
+        background: #ffffff;
+        border-top: 1px solid #edf3ef;
+      }
+
+
+      .teacher-activity-row {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: start;
+        padding: 12px;
+        border: 1px solid #e4eee8;
+        border-radius: 16px;
+        background: linear-gradient(90deg, rgba(20,154,87,0.06), #ffffff);
+      }
+
+      .teacher-activity-row-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 13px;
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        font-weight: 950;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+      }
+
+      .teacher-activity-row-main {
+        min-width: 0;
+      }
+
+      .teacher-activity-row-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .teacher-activity-row-head strong {
+        color: #17243b;
+        font-weight: 950;
+      }
+
+      .teacher-activity-row-head small {
+        color: #6d7b73;
+        font-weight: 750;
+      }
+
+      .teacher-activity-row-fields {
+        display: grid;
+        gap: 10px;
+      }
+
+      .teacher-activity-row-fields.grid2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .teacher-inline-mcq,
+      .teacher-inline-pairs,
+      .teacher-inline-words {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .lms-side-activity .choice-infographic { background: #27ae60; }
+      .lms-side-activity .choice-vocabulary { background: #f4b942; }
+      .lms-side-activity .choice-matching { background: #3498db; }
+      .lms-side-activity .choice-mcq { background: #8e44ad; }
+      .lms-side-activity .choice-speech { background: #ec407a; }
+      .lms-side-activity .choice-writing { background: #16a9b7; }
+
+      .teacher-add-mini,
+      .lms-add-block-btn {
+        border: 1.5px dashed #b9dfc8;
+        background: #f7fdf9;
+        color: #0b8e4e;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font-weight: 950;
+        cursor: pointer;
+        width: 100%;
+        transition: 0.18s ease;
+      }
+
+      .teacher-add-mini:hover,
+      .lms-add-block-btn:hover {
+        background: #eaf8ef;
+      }
+
+      .lms-empty-activity {
+        padding: 22px;
+        border: 1.5px dashed #b9dfc8;
+        border-radius: 18px;
+        text-align: center;
+        background: linear-gradient(135deg, #fbfffd, #f1fbf4);
+        color: #587064;
+      }
+
+      .lms-empty-activity strong {
+        display: block;
+        color: #215a36;
+        margin-bottom: 6px;
+      }
+
+      .lms-add-choice-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .lms-add-choice {
+        min-height: 86px;
+        border-radius: 16px;
+        border: 1px solid #dfece4;
+        background: #ffffff;
+        color: #27344c;
+        font-weight: 900;
+        display: grid;
+        place-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+
+      .lms-add-choice span {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        display: grid;
+        place-items: center;
+        color: white;
+      }
+
+      .lms-add-choice:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(30, 71, 44, 0.08);
+      }
+
+      .choice-infographic span { background: #27ae60; }
+      .choice-vocabulary span { background: #f4b942; }
+      .choice-matching span { background: #3498db; }
+      .choice-mcq span { background: #8e44ad; }
+      .choice-speech span { background: #ec407a; }
+      .choice-writing span { background: #16a9b7; }
+
+      .lms-preview-card-inner {
+        border-radius: 22px;
+        border: 1px solid #dfece4;
+        background: linear-gradient(180deg, #ffffff, #fbfffc);
+        padding: 18px;
+      }
+
+      .lms-preview-badges,
+      .lms-preview-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .lms-preview-badge,
+      .lms-preview-stat {
+        padding: 9px 12px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid #dfece4;
+        color: #0b8e4e;
+        font-weight: 950;
+      }
+
+      .lms-preview-title {
+        color: #17243b;
+        font-size: 27px;
+        letter-spacing: -0.04em;
+        margin: 10px 0 14px;
+        font-weight: 950;
+      }
+
+      .lms-preview-illustration {
+        height: 160px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #eaf9ef, #f7fffa);
+        display: grid;
+        place-items: center;
+        font-size: 80px;
+        margin: 12px 0 16px;
+        border: 1px solid #e0eee5;
+      }
+
+      .lms-preview-textbox {
+        padding: 14px;
+        border: 1px solid #e0eee5;
+        border-radius: 14px;
+        color: #586b60;
+        line-height: 1.55;
+        background: #ffffff;
+        min-height: 74px;
+        white-space: pre-wrap;
+        margin-bottom: 12px;
+      }
+
+      .lms-student-preview-btn {
+        width: 100%;
+        border: 1.8px solid #0a9b53;
+        background: #ffffff;
+        color: #07884b;
+        border-radius: 14px;
+        padding: 14px;
+        font-weight: 950;
+        cursor: pointer;
+      }
+
+      .lms-side-activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+
+      .lms-side-activity {
+        display: grid;
+        grid-template-columns: 34px 28px 1fr 20px;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border: 1px solid #e5eee8;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #24324a;
+        font-weight: 850;
+      }
+
+      .lms-side-activity .icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-weight: 950;
+      }
+
+      .lms-side-activity .order {
+        color: #6d7b73;
+        font-weight: 950;
+        text-align: center;
+      }
+
+      .lms-recent-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border: 1px solid #e5eee8;
+        border-radius: 14px;
+      }
+
+      .lms-recent-table th {
+        text-align: left;
+        color: #52665a;
+        background: #fbfefd;
+        font-size: 12px;
+        padding: 12px;
+      }
+
+      .lms-recent-table td {
+        padding: 12px;
+        border-top: 1px solid #eef4f0;
+        color: #22324a;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .lms-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .lms-status.published {
+        background: #e8f8ef;
+        color: #0b8e4e;
+      }
+
+      .lms-status.draft {
+        background: #e9f3ff;
+        color: #2f80ed;
+      }
+
+      .lms-show-more {
+        border: 0;
+        background: transparent;
+        color: #0b8e4e;
+        font-weight: 950;
+        margin: 14px auto 0;
+        display: block;
+        cursor: pointer;
+      }
+
+      .lms-bottom-action-bar {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1.35fr;
+        gap: 16px;
+      }
+
+      .lms-action-secondary,
+      .lms-action-primary {
+        height: 58px;
+        border-radius: 16px;
+        font-weight: 950;
+        cursor: pointer;
+      }
+
+      .lms-action-secondary {
+        border: 1.8px solid #0a9b53;
+        background: #ffffff;
+        color: #07884b;
+      }
+
+      .lms-action-primary {
+        border: 0;
+        background: linear-gradient(135deg, #12a05a, #07884b);
+        color: #ffffff;
+        box-shadow: 0 12px 24px rgba(8, 136, 75, 0.18);
+      }
+
+      .lms-tips-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .lms-tip-item {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        color: #455b4e;
+        font-weight: 700;
+      }
+
+      .lms-tip-item span {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: #eef8f2;
+        flex: 0 0 auto;
+      }
+
+      .teacher-footer {
+        color: #7c8b82;
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 28px;
+        padding: 18px 4px 0;
+        border-top: 1px solid #e5eee8;
+      }
+
+
+      .lms-feature-section {
+        margin-top: 26px;
+        background: #ffffff;
+        border: 1px solid #e5eee8;
+        border-radius: 26px;
+        padding: 24px;
+        box-shadow: 0 16px 40px rgba(31, 73, 43, 0.06);
+      }
+
+      .lms-feature-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .lms-feature-head h2 {
+        margin: 4px 0 6px;
+        color: #17243b;
+        font-size: 24px;
+        letter-spacing: -0.03em;
+      }
+
+      .lms-feature-head p {
+        margin: 0;
+        color: #748378;
+        line-height: 1.6;
+        max-width: 760px;
+      }
+
+      .lms-section-label {
+        color: #079b55;
+        font-size: 12px;
+        font-weight: 950;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .lms-tools-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .lms-tool-card {
+        background: linear-gradient(180deg, #fbfffc, #f7fbf8);
+        border: 1px solid #e2ede6;
+        border-radius: 22px;
+        padding: 18px;
+      }
+
+      .lms-tool-card h3 {
+        margin: 0 0 6px;
+        color: #1a3b29;
+        font-size: 18px;
+      }
+
+      .lms-tool-card p {
+        margin: 0 0 14px;
+        color: #748378;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .lms-tool-card .input-field {
+        background: #ffffff;
+      }
+
+      .lms-form-gap {
+        height: 10px;
+      }
+
+      .lms-groups-list {
+        margin-top: 18px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .lms-group-card {
+        border: 1px solid #e5eee8;
+        border-radius: 20px;
+        background: #ffffff;
+        padding: 16px;
+      }
+
+      .lms-group-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-start;
+      }
+
+      .lms-group-top strong {
+        color: #17243b;
+      }
+
+      .lms-group-desc {
+        color: #748378;
+        font-size: 13px;
+        margin-top: 4px;
+      }
+
+      .lms-mini-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        background: #eefaf3;
+        color: #087c45;
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .lms-group-member-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #edf3ef;
+      }
+
+      .lms-monitor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .lms-monitor-actions button,
+      .lms-tool-card button,
+      .lms-group-member-row button {
+        cursor: pointer;
+      }
+
+      .lms-report-button {
+        border: 1px solid #dbe9e1;
+        background: #ffffff;
+        color: #157a45;
+        border-radius: 14px;
+        padding: 10px 12px;
+        font-weight: 900;
+      }
+
+      .lms-table-card {
+        overflow: hidden;
+      }
+
+      .lms-table-scroll {
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      .lms-recent-table.monitoring td,
+      .lms-recent-table.monitoring th {
+        white-space: nowrap;
+      }
+
+      .lms-status.neutral {
+        background: #eef6ff;
+        color: #2f80ed;
+      }
+
+      .lms-empty-line {
+        padding: 18px;
+        color: #748378;
+        background: #f8fcf9;
+        border: 1px dashed #d8e9df;
+        border-radius: 18px;
+      }
+
+      .lms-main-action {
+        height: 44px;
+        border: 0;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #11a85f, #06934e);
+        color: white;
+        padding: 0 16px;
+        font-weight: 950;
+        box-shadow: 0 10px 20px rgba(17, 168, 95, 0.18);
+      }
+
+      .lms-outline-action {
+        height: 44px;
+        border: 1px solid #dbe9e1;
+        border-radius: 14px;
+        background: white;
+        color: #117a45;
+        padding: 0 16px;
+        font-weight: 950;
+      }
+
+      @media (max-width: 920px) {
+        .lms-tools-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .lms-feature-head,
+        .lms-group-top,
+        .lms-group-member-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+
+
+      @media (max-width: 1120px) {
+        .teacher-builder-layout,
+        .teacher-form-row,
+        .lms-metric-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .lms-add-choice-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .lms-page-title {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .lms-teacher-illustration {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .teacher-main-header {
+          height: auto;
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 18px;
+          gap: 14px;
+        }
+
+        .teacher-brand-area,
+        .teacher-header-actions,
+        .teacher-nav-links {
+          flex-wrap: wrap;
+          width: 100%;
+        }
+
+        .teacher-main-content {
+          padding: 22px 14px;
+        }
+
+        .lms-title-copy h1 {
+          font-size: 30px;
+        }
+
+        .lms-add-choice-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .teacher-activity-top {
+          grid-template-columns: 42px 1fr;
+        }
+
+        .teacher-activity-mini-preview,
+        .teacher-activity-actions {
+          grid-column: 1 / -1;
+        }
+
+        .teacher-activity-row {
+          grid-template-columns: 42px 1fr;
+        }
+
+        .teacher-activity-actions {
+          grid-column: 1 / -1;
+          justify-content: flex-start;
+        }
+
+        .teacher-activity-row-fields.grid2 {
+          grid-template-columns: 1fr;
+        }
+
+        .lms-bottom-action-bar {
+          grid-template-columns: 1fr;
+        }
+
+        .lms-recent-table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+      /* Cleaner teacher workspace layout: keeps every feature, but groups them into tabs. */
+      .teacher-main-header-clean {
+        height: 74px;
+        padding: 0 28px;
+      }
+
+      .teacher-main-header-clean .teacher-brand-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 15px;
+        font-size: 23px;
+      }
+
+      .teacher-main-header-clean .teacher-brand-text strong {
+        font-size: 21px;
+      }
+
+      .teacher-main-header-clean .teacher-brand-text small {
+        font-size: 10px;
+      }
+
+      .teacher-main-header-clean .teacher-nav-links button {
+        padding: 10px 13px;
+        border-radius: 13px;
+        font-size: 13px;
+      }
+
+      .teacher-main-content-clean {
+        max-width: 1360px;
+        padding: 24px 28px 36px;
+      }
+
+      .teacher-clean-hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 22px 24px;
+        border-radius: 26px;
+        background:
+          radial-gradient(circle at 92% 20%, rgba(255, 218, 121, 0.24), transparent 22%),
+          linear-gradient(135deg, #ffffff 0%, #f3fbf6 100%);
+        border: 1px solid #e3efe8;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.055);
+      }
+
+      .teacher-clean-hero-copy h1 {
+        margin: 4px 0 8px;
+        color: #17243b;
+        font-size: clamp(30px, 3vw, 42px);
+        letter-spacing: -0.05em;
+        line-height: 1.05;
+      }
+
+      .teacher-clean-hero-copy p {
+        margin: 0;
+        max-width: 760px;
+        color: #64746b;
+        font-weight: 700;
+        line-height: 1.55;
+      }
+
+      .teacher-clean-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+        flex: 0 0 auto;
+      }
+
+      .teacher-logout-btn.light {
+        background: #ffffff;
+        color: #0c8d4f;
+        border: 1px solid #cfe9da;
+        box-shadow: none;
+      }
+
+      .teacher-clean-metrics {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .teacher-clean-metric {
+        min-height: 96px;
+        border: 1px solid #e5eee8;
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        text-align: left;
+        cursor: pointer;
+        box-shadow: 0 10px 24px rgba(30, 71, 44, 0.045);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      }
+
+      .teacher-clean-metric:hover {
+        transform: translateY(-2px);
+        border-color: #cfe9da;
+        box-shadow: 0 16px 30px rgba(30, 71, 44, 0.075);
+      }
+
+      .teacher-clean-metric .metric-icon {
+        width: 48px;
+        height: 48px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        font-size: 22px;
+        flex: 0 0 auto;
+      }
+
+      .teacher-clean-metric .metric-icon.green { background: #e8f8ef; }
+      .teacher-clean-metric .metric-icon.yellow { background: #fff6df; }
+      .teacher-clean-metric .metric-icon.blue { background: #eaf4ff; }
+      .teacher-clean-metric .metric-icon.purple { background: #f3edff; }
+
+      .teacher-clean-metric small {
+        display: block;
+        color: #75867b;
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .teacher-clean-metric strong {
+        display: block;
+        margin-top: 4px;
+        color: #17243b;
+        font-size: 30px;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .teacher-clean-tabs {
+        position: sticky;
+        top: 74px;
+        z-index: 25;
+        margin-top: 18px;
+        padding: 10px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(14px);
+        border: 1px solid #e1eee7;
+        border-radius: 22px;
+        box-shadow: 0 10px 26px rgba(30, 71, 44, 0.05);
+      }
+
+      .teacher-clean-tabs button {
+        border: 0;
+        background: transparent;
+        border-radius: 16px;
+        padding: 13px 14px;
+        color: #3d5145;
+        font-weight: 950;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        transition: 0.18s ease;
+      }
+
+      .teacher-clean-tabs button:hover,
+      .teacher-clean-tabs button.active {
+        background: linear-gradient(135deg, #149a57, #0a8a4b);
+        color: #ffffff;
+        box-shadow: 0 10px 20px rgba(20, 154, 87, 0.2);
+      }
+
+      .teacher-clean-panel {
+        margin-top: 18px;
+        animation: teacherPanelIn 0.18s ease;
+      }
+
+      @keyframes teacherPanelIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .teacher-clean-tools {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .lms-tool-card.compact {
+        padding: 18px;
+        border-radius: 22px;
+        box-shadow: 0 10px 24px rgba(30, 71, 44, 0.045);
+      }
+
+      .teacher-clean-subhead {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 14px;
+        margin: 22px 0 12px;
+        padding-top: 4px;
+      }
+
+      .teacher-clean-subhead h3 {
+        margin: 0;
+        color: #17243b;
+        font-size: 20px;
+        letter-spacing: -0.03em;
+      }
+
+      .teacher-clean-subhead p {
+        margin: 0;
+        color: #75867b;
+        font-weight: 700;
+      }
+
+      .teacher-clean-group-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .lms-group-card.clean {
+        margin: 0;
+        padding: 16px;
+        border-radius: 20px;
+        box-shadow: none;
+      }
+
+      .lms-feature-head.clean {
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .teacher-builder-layout {
+        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.55fr);
+      }
+
+      .teacher-design-card,
+      .teacher-side-card {
+        border-radius: 22px;
+        padding: 20px;
+        box-shadow: 0 10px 26px rgba(30, 71, 44, 0.045);
+      }
+
+      .teacher-design-heading {
+        margin-bottom: 14px;
+      }
+
+      .teacher-design-heading h2 {
+        font-size: 20px;
+      }
+
+      .teacher-design-heading p {
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .lms-add-choice-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .lms-add-choice {
+        min-height: 58px;
+        padding: 10px;
+      }
+
+      .teacher-activity-row {
+        padding: 15px;
+        border-radius: 20px;
+      }
+
+      .teacher-activity-row-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+      }
+
+      .teacher-activity-row-head {
+        margin-bottom: 10px;
+      }
+
+      .lms-recent-table th,
+      .lms-recent-table td {
+        padding: 12px 10px;
+      }
+
+      .lms-bottom-action-bar {
+        background: #ffffff;
+        border: 1px solid #e4eee8;
+        border-radius: 22px;
+        padding: 14px;
+        box-shadow: 0 10px 24px rgba(30, 71, 44, 0.045);
+      }
+
+      .lms-action-secondary,
+      .lms-action-primary {
+        height: 50px;
+      }
+
+      @media (max-width: 1120px) {
+        .teacher-clean-metrics,
+        .teacher-clean-tools,
+        .teacher-clean-group-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .teacher-builder-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-clean-tabs {
+          position: static;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .teacher-main-header-clean {
+          height: auto;
+          padding: 14px;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+
+        .teacher-main-content-clean {
+          padding: 16px;
+        }
+
+        .teacher-clean-hero,
+        .teacher-clean-subhead,
+        .lms-feature-head.clean {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .teacher-clean-actions {
+          width: 100%;
+          justify-content: stretch;
+        }
+
+        .teacher-clean-actions button {
+          flex: 1;
+        }
+
+        .teacher-clean-metrics,
+        .teacher-clean-tools,
+        .teacher-clean-group-list,
+        .teacher-clean-tabs,
+        .lms-add-choice-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+          /* Final cleanup for Group Manager and Student Monitoring panels */
+      .teacher-workspace-card {
+        margin-top: 18px;
+        background: #ffffff;
+        border: 1px solid #e3eee7;
+        border-radius: 26px;
+        padding: 24px;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.055);
+      }
+
+      .teacher-workspace-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .teacher-workspace-heading h2 {
+        margin: 4px 0 6px;
+        color: #17243b;
+        font-size: 26px;
+        letter-spacing: -0.04em;
+      }
+
+      .teacher-workspace-heading p {
+        margin: 0;
+        color: #6f8176;
+        font-weight: 700;
+        line-height: 1.55;
+      }
+
+      .teacher-group-layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1.22fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .teacher-group-tools {
+        display: grid;
+        gap: 14px;
+      }
+
+      .teacher-tool-box {
+        background: linear-gradient(180deg, #fbfffc 0%, #f7fbf8 100%);
+        border: 1px solid #e2ede6;
+        border-radius: 22px;
+        padding: 18px;
+        box-shadow: 0 10px 24px rgba(30, 71, 44, 0.04);
+      }
+
+      .teacher-tool-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 10px;
+        font-size: 20px;
+      }
+
+      .teacher-tool-icon.purple {
+        background: #f3edff;
+      }
+
+      .teacher-tool-icon.orange {
+        background: #fff4df;
+      }
+
+      .teacher-tool-box h3 {
+        margin: 0 0 6px;
+        color: #183523;
+        font-size: 20px;
+        letter-spacing: -0.03em;
+      }
+
+      .teacher-tool-box p {
+        margin: 0 0 14px;
+        color: #748378;
+        line-height: 1.5;
+        font-weight: 700;
+      }
+
+      .teacher-tool-box .input-field {
+        width: 100%;
+        margin-bottom: 10px;
+        min-height: 48px;
+      }
+
+      .teacher-two-fields {
+        display: grid;
+        grid-template-columns: 1fr 100px;
+        gap: 10px;
+      }
+
+      .lms-main-action.full,
+      .lms-outline-action.full {
+        width: 100%;
+      }
+
+      .teacher-groups-area {
+        min-width: 0;
+        background: #fbfefd;
+        border: 1px solid #e7f0ea;
+        border-radius: 22px;
+        padding: 18px;
+      }
+
+      .teacher-mini-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .teacher-mini-heading h3 {
+        margin: 0 0 4px;
+        color: #17243b;
+        font-size: 21px;
+        letter-spacing: -0.03em;
+      }
+
+      .teacher-mini-heading p {
+        margin: 0;
+        color: #75867b;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .teacher-groups-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .teacher-group-item {
+        border: 1px solid #e1eee7;
+        border-radius: 20px;
+        background: #ffffff;
+        padding: 15px;
+      }
+
+      .teacher-group-item-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .teacher-group-item strong {
+        color: #17243b;
+        font-size: 16px;
+      }
+
+      .teacher-group-item p {
+        margin: 4px 0 0;
+        color: #738177;
+        line-height: 1.45;
+      }
+
+      .teacher-add-member-row {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #edf3ef;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+      }
+
+      .teacher-add-member-row .input-field {
+        min-width: 0;
+      }
+
+      .teacher-empty-panel {
+        min-height: 160px;
+        border: 1px dashed #cfe7d8;
+        border-radius: 20px;
+        background: #f8fcf9;
+        color: #728277;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 22px;
+        grid-column: 1 / -1;
+      }
+
+      .teacher-empty-panel div {
+        font-size: 30px;
+      }
+
+      .teacher-empty-panel strong {
+        margin-top: 6px;
+        color: #1d3c29;
+      }
+
+      .teacher-empty-panel p {
+        margin: 4px 0 0;
+      }
+
+      .teacher-workspace-heading.monitor {
+        align-items: center;
+      }
+
+      .teacher-monitor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .teacher-monitor-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .teacher-monitor-summary div {
+        border: 1px solid #e5eee8;
+        background: #f9fcfa;
+        border-radius: 18px;
+        padding: 14px;
+      }
+
+      .teacher-monitor-summary span {
+        display: block;
+        color: #728277;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 950;
+      }
+
+      .teacher-monitor-summary strong {
+        display: block;
+        margin-top: 4px;
+        color: #17243b;
+        font-size: 25px;
+      }
+
+      .teacher-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid #e5eee8;
+        border-radius: 20px;
+        background: #ffffff;
+      }
+
+      .teacher-monitor-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+
+      .teacher-monitor-table th,
+      .teacher-monitor-table td {
+        padding: 15px 16px;
+        border-bottom: 1px solid #edf3ef;
+        text-align: left;
+        color: #17243b;
+      }
+
+      .teacher-monitor-table th {
+        background: #fbfefd;
+        color: #40554a;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .teacher-monitor-table td strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .teacher-monitor-table td small {
+        display: block;
+        margin-top: 4px;
+        color: #738177;
+      }
+
+      .teacher-progress-cell {
+        display: grid;
+        gap: 7px;
+        min-width: 150px;
+      }
+
+      .teacher-progress-cell span {
+        color: #173c27;
+        font-weight: 900;
+      }
+
+      .teacher-progress-track {
+        height: 8px;
+        border-radius: 999px;
+        background: #eaf4ee;
+        overflow: hidden;
+      }
+
+      .teacher-progress-track div {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #13a85f, #7fda95);
+      }
+
+      .teacher-empty-panel.table {
+        min-height: 180px;
+      }
+
+      @media (max-width: 1100px) {
+        .teacher-group-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-groups-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-workspace-heading.monitor {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .teacher-monitor-actions {
+          justify-content: flex-start;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .teacher-workspace-card {
+          padding: 16px;
+          border-radius: 22px;
+        }
+
+        .teacher-monitor-summary,
+        .teacher-two-fields,
+        .teacher-add-member-row {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-monitor-actions button {
+          width: 100%;
+        }
+      }
+
+
+      /* Fix monitoring action buttons so they are clearly clickable and never covered by nearby layout layers. */
+      .teacher-workspace-heading.monitor {
+        position: relative;
+        z-index: 5;
+      }
+
+      .teacher-monitor-actions {
+        position: relative;
+        z-index: 10;
+        pointer-events: auto;
+      }
+
+      .teacher-monitor-actions .lms-report-button {
+        position: relative;
+        z-index: 11;
+        pointer-events: auto;
+        cursor: pointer;
+        user-select: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .teacher-monitor-actions .lms-report-button:hover {
+        background: #eefaf3;
+        border-color: #9fd8b8;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(20, 154, 87, 0.1);
+      }
+
+      .teacher-monitor-actions .lms-report-button:active {
+        transform: translateY(0);
+      }
+    `}</style>
+  );
 }
+
+
+
+
+function TeacherDashboard({
+  user,
+  data,
+  logout,
+  reload,
+  createGroup,
+  addTask,
+  addMember,
+  createLesson,
+  exportStudentsCSV,
+  exportLogsCSV,
+  downloadSummaryReport
+}) {
+  const [teacherTab, setTeacherTab] = useState('lessons');
+
+  const lessons = data.lessons || [];
+  const groups = data.groups || [];
+  const students = data.students || [];
+  const rows = data.rows || [];
+  const stats = data.stats || {};
+  const teacherName = user?.displayName || 'Teacher 1';
+
+  const publishedLessons = lessons.filter(lesson => (lesson.status || 'published') === 'published').length;
+  const draftLessons = Math.max(0, lessons.length - publishedLessons);
+  const studentCount = stats.students || students.length || rows.length || 0;
+  const averageProgress = rows.length
+    ? Math.round(rows.reduce((sum, row) => sum + Number(row.percent || 0), 0) / rows.length)
+    : 0;
+
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
+  function openTab(tab, targetId = 'teacher-dashboard-workspace') {
+    setTeacherTab(tab);
+    setTimeout(() => scrollTo(targetId), 0);
+  }
+
+  function openLessonsList() {
+    setTeacherTab('lessons');
+    setTimeout(() => scrollTo('teacher-recent-lessons'), 0);
+  }
+
+  return (
+    <div className="teacher-redesign-page">
+      <TeacherRedesignStyles />
+
+      <header className="teacher-main-header teacher-main-header-clean">
+        <div className="teacher-brand-area">
+          <div className="teacher-brand-mark">
+            <div className="teacher-brand-icon">🌱</div>
+            <div className="teacher-brand-text">
+              <strong>Tuklas Talino</strong>
+              <small>Tuklasin. Matuto. Magningning.</small>
+            </div>
+          </div>
+
+          <nav className="teacher-nav-links" aria-label="Teacher navigation">
+            <button
+              className={teacherTab === 'lessons' ? 'active' : ''}
+              type="button"
+              onClick={() => openTab('lessons')}
+            >
+              📚 Lessons
+            </button>
+            <button
+              className={teacherTab === 'groups' ? 'active' : ''}
+              type="button"
+              onClick={() => openTab('groups')}
+            >
+              👥 Groups
+            </button>
+            <button
+              className={teacherTab === 'students' ? 'active' : ''}
+              type="button"
+              onClick={() => openTab('students')}
+            >
+              🎓 Students
+            </button>
+            <button type="button" onClick={downloadSummaryReport}>
+              📊 Report
+            </button>
+          </nav>
+        </div>
+
+        <div className="teacher-header-actions">
+          <div className="teacher-profile-pill">
+            <div className="teacher-profile-avatar">👩‍🏫</div>
+            <div className="teacher-profile-text">
+              <strong>{teacherName}</strong>
+              <small>Guro</small>
+            </div>
+            <span>⌄</span>
+          </div>
+
+          <button className="teacher-logout-btn" onClick={logout}>
+            ⇥ Logout
+          </button>
+        </div>
+      </header>
+
+      <main className="teacher-main-content teacher-main-content-clean" id="teacher-dashboard-top">
+        <section className="teacher-clean-hero">
+          <div className="teacher-clean-hero-copy">
+            <div className="lms-section-label">Teacher Workspace</div>
+            <h1>Teacher Dashboard</h1>
+          </div>
+
+          <div className="teacher-clean-actions">
+            <button className="lms-view-button" type="button" onClick={openLessonsList}>
+              📚 View Lessons
+            </button>
+            <button className="teacher-logout-btn light" type="button" onClick={() => openTab('students')}>
+              🎓 Monitor Students
+            </button>
+          </div>
+        </section>
+
+        <section className="teacher-clean-metrics" aria-label="Teacher quick stats">
+          <button className="teacher-clean-metric" type="button" onClick={() => openTab('lessons')}>
+            <span className="metric-icon green">📄</span>
+            <span>
+              <small>Draft Lessons</small>
+              <strong>{draftLessons || 0}</strong>
+            </span>
+          </button>
+
+          <button className="teacher-clean-metric" type="button" onClick={openLessonsList}>
+            <span className="metric-icon yellow">✅</span>
+            <span>
+              <small>Published Lessons</small>
+              <strong>{publishedLessons || lessons.length || 0}</strong>
+            </span>
+          </button>
+
+          <button className="teacher-clean-metric" type="button" onClick={() => openTab('students')}>
+            <span className="metric-icon blue">👥</span>
+            <span>
+              <small>Students</small>
+              <strong>{studentCount}</strong>
+            </span>
+          </button>
+
+          <button className="teacher-clean-metric" type="button" onClick={() => openTab('students')}>
+            <span className="metric-icon purple">⭐</span>
+            <span>
+              <small>Class Progress</small>
+              <strong>{averageProgress}%</strong>
+            </span>
+          </button>
+        </section>
+
+        <section className="teacher-clean-tabs" id="teacher-dashboard-workspace">
+          <button
+            className={teacherTab === 'lessons' ? 'active' : ''}
+            type="button"
+            onClick={() => openTab('lessons')}
+          >
+            <span>📚</span>
+            Lesson Builder
+          </button>
+          <button
+            className={teacherTab === 'groups' ? 'active' : ''}
+            type="button"
+            onClick={() => openTab('groups')}
+          >
+            <span>👥</span>
+            Group Manager
+          </button>
+          <button
+            className={teacherTab === 'students' ? 'active' : ''}
+            type="button"
+            onClick={() => openTab('students')}
+          >
+            <span>🎓</span>
+            Student Monitoring
+          </button>
+        </section>
+
+        {teacherTab === 'lessons' && (
+          <section className="teacher-clean-panel">
+            <TeacherLessonManager lessons={lessons} createLesson={createLesson} />
+          </section>
+        )}
+
+        {teacherTab === 'groups' && (
+          <section className="teacher-workspace-card clean-groups-panel" id="teacher-group-manager">
+            <div className="teacher-workspace-heading">
+              <div>
+                <div className="lms-section-label">Classroom Tools</div>
+                <h2>Group Manager</h2>
+                <p>Create groups, assign tasks, and add students to collaborative learning groups.</p>
+              </div>
+            </div>
+
+            <div className="teacher-group-layout">
+              <div className="teacher-group-tools">
+                <div className="teacher-tool-box">
+                  <div className="teacher-tool-icon purple">➕</div>
+                  <h3>Create Group</h3>
+                  <p>Set up a group, class section, or collaborative activity team.</p>
+
+                  <input className="input-field" id="t-group-name" placeholder="Group name" />
+                  <input className="input-field" id="t-group-section" placeholder="Description / Section" />
+
+                  <button className="lms-main-action full" onClick={createGroup}>
+                    Create Group
+                  </button>
+                </div>
+
+                <div className="teacher-tool-box">
+                  <div className="teacher-tool-icon orange">📝</div>
+                  <h3>Add Task</h3>
+                  <p>Assign collaborative work with a deadline and XP reward.</p>
+
+                  <select className="input-field" id="t-task-group">
+                    {groups.length ? (
+                      groups.map(group => (
+                        <option value={group.id} key={group.id}>{group.name}</option>
+                      ))
+                    ) : (
+                      <option value="">No groups yet</option>
+                    )}
+                  </select>
+
+                  <input className="input-field" id="t-task-title" placeholder="Task title" />
+
+                  <div className="teacher-two-fields">
+                    <input className="input-field" id="t-task-deadline" type="date" />
+                    <input className="input-field" id="t-task-xp" type="number" min="0" defaultValue="10" placeholder="XP" />
+                  </div>
+
+                  <button className="lms-outline-action full" onClick={addTask}>
+                    Add Task
+                  </button>
+                </div>
+              </div>
+
+              <div className="teacher-groups-area">
+                <div className="teacher-mini-heading">
+                  <div>
+                    <h3>Groups</h3>
+                    <p>Add students to existing groups and review assigned tasks.</p>
+                  </div>
+                  <span className="lms-mini-pill">{groups.length} group{groups.length === 1 ? '' : 's'}</span>
+                </div>
+
+                <div className="teacher-groups-grid">
+                  {groups.length ? groups.map(group => (
+                    <div className="teacher-group-item" key={group.id}>
+                      <div className="teacher-group-item-top">
+                        <div>
+                          <strong>{group.name}</strong>
+                          <p>{group.description || 'No description added.'}</p>
+                        </div>
+                        <span className="lms-mini-pill">✅ {group.tasks?.length || 0} tasks</span>
+                      </div>
+
+                      <div className="teacher-add-member-row">
+                        <select className="input-field" id={`member-${group.id}`}>
+                          {students.map(student => (
+                            <option key={student.id} value={student.id}>
+                              {student.name} • Grade {student.gradeLevel}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="lms-outline-action" onClick={() => addMember(group.id)}>
+                          Add Member
+                        </button>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="teacher-empty-panel">
+                      <div>👥</div>
+                      <strong>No groups yet.</strong>
+                      <p>Create your first group to start collaborative learning tasks.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {teacherTab === 'students' && (
+          <section className="teacher-workspace-card clean-students-panel" id="teacher-monitoring-table">
+            <div className="teacher-workspace-heading monitor">
+              <div>
+                <div className="lms-section-label">Learner Monitoring</div>
+                <h2>Students Monitoring Table</h2>
+                <p>Track XP, lesson completion, progress, and learner status.</p>
+              </div>
+
+              <div className="teacher-monitor-actions">
+                <button type="button" className="lms-report-button" onClick={reload}>Refresh</button>
+                <button type="button" className="lms-report-button" onClick={exportStudentsCSV}>⬇️ Export CSV</button>
+                <button type="button" className="lms-report-button" onClick={exportLogsCSV}>⬇️ Export Activity Logs</button>
+                <button type="button" className="lms-report-button" onClick={downloadSummaryReport}>🧾 Summary Report</button>
+              </div>
+            </div>
+
+            <div className="teacher-monitor-summary">
+              <div>
+                <span>Total Students</span>
+                <strong>{studentCount}</strong>
+              </div>
+              <div>
+                <span>Average Progress</span>
+                <strong>{averageProgress}%</strong>
+              </div>
+              <div>
+                <span>Lessons Available</span>
+                <strong>{lessons.length}</strong>
+              </div>
+            </div>
+
+            <div className="teacher-table-wrapper">
+              <table className="teacher-monitor-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>XP</th>
+                    <th>Lessons</th>
+                    <th>Progress</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.length ? rows.map(row => (
+                    <tr key={row.id}>
+                      <td>
+                        <strong>{row.name}</strong>
+                        <small>{row.studentCode} • Grade {row.gradeLevel}</small>
+                      </td>
+                      <td>{row.xp}</td>
+                      <td>{row.completed}/{row.totalLessons}</td>
+                      <td>
+                        <div className="teacher-progress-cell">
+                          <span>{row.percent}%</span>
+                          <div className="teacher-progress-track">
+                            <div style={{ width: `${Math.max(0, Math.min(100, Number(row.percent || 0)))}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="lms-status neutral">{row.status || 'Active'}</span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan="5">
+                        <div className="teacher-empty-panel table">
+                          <div>📭</div>
+                          <strong>No monitoring data yet.</strong>
+                          <p>Student progress will appear here after learners start completing lessons.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        <footer className="teacher-footer">
+          <span>© 2026 Tuklas Talino. All rights reserved.</span>
+          <span>Privacy Policy · Terms of Service · Help Center</span>
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+
+
+
 
 function TeacherLessonManager({ lessons, createLesson }) {
-  return <div className="card"><div className="section-title">📚 Lesson Manager (Teacher-Created)</div><div className="muted">Create Filipino lessons and activities for Grade 1–6. Lessons are saved in MySQL through the backend API.</div><div className="divider" /><div className="grid grid-2"><div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}><div className="section-title">➕ Create Lesson</div><select className="input-field" id="t-lesson-grade"><option value="1">Grade 1</option><option value="2">Grade 2</option><option value="3">Grade 3</option><option value="4">Grade 4</option><option value="5">Grade 5</option><option value="6">Grade 6</option></select><div style={{ height: 10 }} /><select className="input-field" id="t-lesson-subject">{SUBJECTS.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}</select><div style={{ height: 10 }} /><input className="input-field" id="t-lesson-title" placeholder="Lesson title" /><div style={{ height: 10 }} /><input className="input-field" id="t-lesson-xp" type="number" min="0" max="500" defaultValue="25" placeholder="XP reward" /><div style={{ height: 10 }} /><textarea className="input-field" id="t-lesson-instructions" placeholder="Instructions" /><div style={{ height: 10 }} /><textarea className="input-field" id="t-lesson-passage" placeholder="Passage / content text" /><div style={{ height: 10 }} /><input className="input-field" id="t-lesson-speechTarget" placeholder="Speech target" /></div><div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}><div className="section-title">🧩 Optional Activities</div><input className="input-field" id="t-mcq-q" placeholder="Question" /><div style={{ height: 10 }} /><input className="input-field" id="t-mcq-a" placeholder="Choice A" /><div style={{ height: 10 }} /><input className="input-field" id="t-mcq-b" placeholder="Choice B" /><div style={{ height: 10 }} /><input className="input-field" id="t-mcq-c" placeholder="Choice C" /><div style={{ height: 10 }} /><input className="input-field" id="t-mcq-d" placeholder="Choice D" /><div style={{ height: 10 }} /><select className="input-field" id="t-mcq-correct"><option value="0">Correct: A</option><option value="1">Correct: B</option><option value="2">Correct: C</option><option value="3">Correct: D</option></select><div className="divider" /><textarea className="input-field" id="t-writing-prompt" placeholder="Writing prompt" /><div className="divider" /><button className="btn btn-green" onClick={createLesson}>Create Lesson</button></div></div><div className="divider" /><div className="section-title">📋 Recently Created Lessons</div><div id="t-lessons-wrap">{lessons.slice(0, 8).map(l => <div className="lesson-card" key={l.id}><div className="lesson-icon">📘</div><div><b>{l.title}</b><div className="muted">Grade {l.gradeLevel} • {l.subject} • {l.xpReward} XP</div></div></div>)}</div></div>;
+  const [lessonDraft, setLessonDraft] = useState({
+    gradeLevel: 1,
+    subject: 'Pagbasa',
+    title: '',
+    xpReward: 25,
+    duration: '10 minuto',
+    instructions: '',
+    passage: ''
+  });
+
+  const [activities, setActivities] = useState([]);
+
+  function makeId() {
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function updateLesson(field, value) {
+    setLessonDraft(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  }
+
+  function addActivity(type) {
+    const base = {
+      id: makeId(),
+      type,
+      title: '',
+      instructions: ''
+    };
+
+    const activityMap = {
+      mcq: {
+        ...base,
+        title: 'MCQ Quiz',
+        questions: [
+          {
+            id: makeId(),
+            question: '',
+            options: [
+              { id: makeId(), text: '', isCorrect: true },
+              { id: makeId(), text: '', isCorrect: false },
+              { id: makeId(), text: '', isCorrect: false },
+              { id: makeId(), text: '', isCorrect: false }
+            ]
+          }
+        ]
+      },
+      writing: {
+        ...base,
+        title: 'Writing Prompt',
+        prompt: ''
+      },
+      speech: {
+        ...base,
+        title: 'Speech Practice',
+        targetText: ''
+      },
+      matching: {
+        ...base,
+        title: 'Matching',
+        pairs: [
+          { id: makeId(), left: '', right: '' },
+          { id: makeId(), left: '', right: '' }
+        ]
+      },
+      vocabulary: {
+        ...base,
+        title: 'Vocabulary',
+        words: [
+          { id: makeId(), word: '', meaning: '', example: '' }
+        ]
+      },
+      infographic: {
+        ...base,
+        title: 'Info Card',
+        content: ''
+      }
+    };
+
+    setActivities(prev => [...prev, activityMap[type]]);
+  }
+
+  function updateActivity(activityId, patch) {
+    setActivities(prev =>
+      prev.map(activity =>
+        activity.id === activityId
+          ? { ...activity, ...patch }
+          : activity
+      )
+    );
+  }
+
+  function removeActivity(activityId) {
+    setActivities(prev => prev.filter(activity => activity.id !== activityId));
+  }
+
+  function duplicateActivity(activityId) {
+    const original = activities.find(activity => activity.id === activityId);
+    if (!original) return;
+
+    const duplicate = {
+      ...JSON.parse(JSON.stringify(original)),
+      id: makeId(),
+      title: `${original.title || original.type} Copy`
+    };
+
+    if (duplicate.questions) {
+      duplicate.questions = duplicate.questions.map(question => ({
+        ...question,
+        id: makeId(),
+        options: question.options.map(option => ({
+          ...option,
+          id: makeId()
+        }))
+      }));
+    }
+
+    if (duplicate.pairs) {
+      duplicate.pairs = duplicate.pairs.map(pair => ({
+        ...pair,
+        id: makeId()
+      }));
+    }
+
+    if (duplicate.words) {
+      duplicate.words = duplicate.words.map(word => ({
+        ...word,
+        id: makeId()
+      }));
+    }
+
+    setActivities(prev => [...prev, duplicate]);
+  }
+
+  function updateMcqQuestion(activityId, questionId, patch) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          questions: activity.questions.map(question =>
+            question.id === questionId
+              ? { ...question, ...patch }
+              : question
+          )
+        };
+      })
+    );
+  }
+
+  function updateMcqOption(activityId, questionId, optionId, patch) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          questions: activity.questions.map(question => {
+            if (question.id !== questionId) return question;
+
+            return {
+              ...question,
+              options: question.options.map(option =>
+                option.id === optionId
+                  ? { ...option, ...patch }
+                  : patch.isCorrect
+                    ? { ...option, isCorrect: false }
+                    : option
+              )
+            };
+          })
+        };
+      })
+    );
+  }
+
+  function addMcqQuestion(activityId) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          questions: [
+            ...activity.questions,
+            {
+              id: makeId(),
+              question: '',
+              options: [
+                { id: makeId(), text: '', isCorrect: true },
+                { id: makeId(), text: '', isCorrect: false },
+                { id: makeId(), text: '', isCorrect: false },
+                { id: makeId(), text: '', isCorrect: false }
+              ]
+            }
+          ]
+        };
+      })
+    );
+  }
+
+  function updatePair(activityId, pairId, patch) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          pairs: activity.pairs.map(pair =>
+            pair.id === pairId
+              ? { ...pair, ...patch }
+              : pair
+          )
+        };
+      })
+    );
+  }
+
+  function addPair(activityId) {
+    setActivities(prev =>
+      prev.map(activity =>
+        activity.id === activityId
+          ? {
+              ...activity,
+              pairs: [
+                ...activity.pairs,
+                { id: makeId(), left: '', right: '' }
+              ]
+            }
+          : activity
+      )
+    );
+  }
+
+  function updateWord(activityId, wordId, patch) {
+    setActivities(prev =>
+      prev.map(activity => {
+        if (activity.id !== activityId) return activity;
+
+        return {
+          ...activity,
+          words: activity.words.map(item =>
+            item.id === wordId
+              ? { ...item, ...patch }
+              : item
+          )
+        };
+      })
+    );
+  }
+
+  function addWord(activityId) {
+    setActivities(prev =>
+      prev.map(activity =>
+        activity.id === activityId
+          ? {
+              ...activity,
+              words: [
+                ...activity.words,
+                { id: makeId(), word: '', meaning: '', example: '' }
+              ]
+            }
+          : activity
+      )
+    );
+  }
+
+  function cleanActivities() {
+    return activities
+      .map(activity => {
+        if (activity.type === 'mcq') {
+          const questions = (activity.questions || [])
+            .map(question => {
+              const options = (question.options || [])
+                .filter(option => option.text.trim())
+                .map(option => ({
+                  text: option.text.trim(),
+                  isCorrect: Boolean(option.isCorrect)
+                }));
+
+              if (!question.question.trim() || options.length < 2) return null;
+
+              if (!options.some(option => option.isCorrect)) {
+                options[0].isCorrect = true;
+              }
+
+              return {
+                question: question.question.trim(),
+                options
+              };
+            })
+            .filter(Boolean);
+
+          if (!questions.length) return null;
+
+          return {
+            type: 'mcq',
+            title: activity.title || 'MCQ Quiz',
+            instructions: activity.instructions || null,
+            questions
+          };
+        }
+
+        if (activity.type === 'writing') {
+          if (!activity.prompt?.trim()) return null;
+
+          return {
+            type: 'writing',
+            title: activity.title || 'Writing Prompt',
+            instructions: activity.instructions || null,
+            prompt: activity.prompt.trim()
+          };
+        }
+
+        if (activity.type === 'speech') {
+          if (!activity.targetText?.trim()) return null;
+
+          return {
+            type: 'speech',
+            title: activity.title || 'Speech Practice',
+            instructions: activity.instructions || null,
+            targetText: activity.targetText.trim()
+          };
+        }
+
+        if (activity.type === 'matching') {
+          const pairs = (activity.pairs || [])
+            .filter(pair => pair.left.trim() && pair.right.trim())
+            .map(pair => ({
+              left: pair.left.trim(),
+              right: pair.right.trim()
+            }));
+
+          if (pairs.length < 2) return null;
+
+          return {
+            type: 'matching',
+            title: activity.title || 'Matching',
+            instructions: activity.instructions || null,
+            pairs
+          };
+        }
+
+        if (activity.type === 'vocabulary') {
+          const words = (activity.words || [])
+            .filter(item => item.word.trim() && item.meaning.trim())
+            .map(item => ({
+              word: item.word.trim(),
+              meaning: item.meaning.trim(),
+              example: item.example?.trim() || null
+            }));
+
+          if (!words.length) return null;
+
+          return {
+            type: 'vocabulary',
+            title: activity.title || 'Vocabulary',
+            instructions: activity.instructions || null,
+            words
+          };
+        }
+
+        if (activity.type === 'infographic') {
+          if (!activity.content?.trim()) return null;
+
+          return {
+            type: 'infographic',
+            title: activity.title || 'Info Card',
+            instructions: activity.instructions || null,
+            content: activity.content.trim()
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+  }
+
+  async function submitLessonBuilder() {
+    if (!lessonDraft.title.trim()) {
+      alert('Please enter a lesson title.');
+      return;
+    }
+
+    const payload = {
+      gradeLevel: Number(lessonDraft.gradeLevel),
+      subject: lessonDraft.subject,
+      title: lessonDraft.title.trim(),
+      xpReward: Number(lessonDraft.xpReward || 25),
+      duration: lessonDraft.duration || '10 minuto',
+      instructions: lessonDraft.instructions || null,
+      passage: lessonDraft.passage || null,
+      activities: cleanActivities()
+    };
+
+    await createLesson(payload);
+
+    setLessonDraft({
+      gradeLevel: 1,
+      subject: 'Pagbasa',
+      title: '',
+      xpReward: 25,
+      duration: '10 minuto',
+      instructions: '',
+      passage: ''
+    });
+
+    setActivities([]);
+  }
+
+  const validActivities = cleanActivities();
+  const subjectMeta = SUBJECTS.find(s => s.name === lessonDraft.subject) || SUBJECTS[0];
+  const [showAllLessons, setShowAllLessons] = useState(false);
+
+  const allRecentLessons = [...(lessons || [])]
+    .sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+
+      if (dateA !== dateB) return dateB - dateA;
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const visibleRecentLessons = showAllLessons
+    ? allRecentLessons
+    : allRecentLessons.slice(0, 5);
+
+  const activityButtonMeta = [
+    { type: 'infographic', label: 'Info Card', icon: 'i', className: 'choice-infographic' },
+    { type: 'vocabulary', label: 'Vocabulary', icon: 'Aa', className: 'choice-vocabulary' },
+    { type: 'matching', label: 'Matching', icon: '⌘', className: 'choice-matching' },
+    { type: 'mcq', label: 'MCQ Quiz', icon: '?', className: 'choice-mcq' },
+    { type: 'speech', label: 'Speech Practice', icon: '🎙️', className: 'choice-speech' },
+    { type: 'writing', label: 'Writing Prompt', icon: '✎', className: 'choice-writing' }
+  ];
+
+  function scrollToRecentLessons() {
+    document.getElementById('teacher-recent-lessons')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
+  function toggleShowAllLessons() {
+    setShowAllLessons(prev => !prev);
+    setTimeout(scrollToRecentLessons, 0);
+  }
+
+  return (
+    <>
+      <div className="teacher-builder-layout">
+        <div className="teacher-builder-main">
+          <section className="teacher-design-card soft">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">1</div>
+              <div>
+                <h2>Lesson Information</h2>
+                <p>Provide the basic details for your lesson.</p>
+              </div>
+            </div>
+
+            <div className="teacher-form-row">
+              <div className="teacher-field">
+                <label>Grade Level</label>
+                <select
+                  className="input-field"
+                  value={lessonDraft.gradeLevel}
+                  onChange={(e) => updateLesson('gradeLevel', Number(e.target.value))}
+                >
+                  <option value="1">Grade 1</option>
+                  <option value="2">Grade 2</option>
+                  <option value="3">Grade 3</option>
+                  <option value="4">Grade 4</option>
+                  <option value="5">Grade 5</option>
+                  <option value="6">Grade 6</option>
+                </select>
+              </div>
+
+              <div className="teacher-field">
+                <label>Subject Area</label>
+                <select
+                  className="input-field"
+                  value={lessonDraft.subject}
+                  onChange={(e) => updateLesson('subject', e.target.value)}
+                >
+                  {SUBJECTS.map(subject => (
+                    <option key={subject.name} value={subject.name}>
+                      {subject.icon} {subject.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="teacher-field">
+                <label>XP Reward</label>
+                <input
+                  className="input-field"
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={lessonDraft.xpReward}
+                  onChange={(e) => updateLesson('xpReward', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="teacher-field" style={{ marginTop: 16 }}>
+              <label>Lesson Title</label>
+              <input
+                className="input-field"
+                value={lessonDraft.title}
+                onChange={(e) => updateLesson('title', e.target.value)}
+                placeholder="e.g. Pangngalan at mga Halimbawa"
+              />
+            </div>
+
+            <div className="teacher-field" style={{ marginTop: 16 }}>
+              <label>Estimated Duration</label>
+              <input
+                className="input-field"
+                value={lessonDraft.duration}
+                onChange={(e) => updateLesson('duration', e.target.value)}
+                placeholder="10 minuto"
+              />
+            </div>
+          </section>
+
+          <section className="teacher-design-card soft">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">2</div>
+              <div>
+                <h2>Learning Content</h2>
+                <p>Add instructions and the main content for your lesson.</p>
+              </div>
+            </div>
+
+            <div className="teacher-field">
+              <label>Instructions for Students</label>
+              <textarea
+                className="input-field"
+                value={lessonDraft.instructions}
+                onChange={(e) => updateLesson('instructions', e.target.value)}
+                placeholder="Write clear instructions for your students..."
+                rows="4"
+              />
+            </div>
+
+            <div className="teacher-field" style={{ marginTop: 16 }}>
+              <label>Main Passage / Story / Lesson Content</label>
+              <div className="lms-editor-toolbar" aria-hidden="true">
+                <button type="button">B</button>
+                <button type="button"><em>I</em></button>
+                <button type="button"><u>U</u></button>
+                <button type="button">☰</button>
+                <button type="button">🔗</button>
+                <button type="button">🖼️</button>
+                <button type="button">↶</button>
+                <button type="button">↷</button>
+              </div>
+              <textarea
+                className="input-field lms-editor-area"
+                value={lessonDraft.passage}
+                onChange={(e) => updateLesson('passage', e.target.value)}
+                placeholder="Write or paste your lesson content here..."
+                rows="7"
+              />
+            </div>
+          </section>
+
+          <section className="teacher-design-card soft">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">3</div>
+              <div>
+                <h2>Activity Builder</h2>
+                <p>Add activity blocks to build your lesson structure.</p>
+              </div>
+            </div>
+
+            <div className="lms-add-choice-grid">
+              {activityButtonMeta.map(item => (
+                <button
+                  key={item.type}
+                  type="button"
+                  className={`lms-add-choice ${item.className}`}
+                  onClick={() => addActivity(item.type)}
+                >
+                  <span>{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="lms-activity-list">
+              {activities.length ? (
+                activities.map((activity, activityIndex) => (
+                  <TeacherActivityBlock
+                    key={activity.id}
+                    activity={activity}
+                    activityIndex={activityIndex}
+                    updateActivity={updateActivity}
+                    removeActivity={removeActivity}
+                    duplicateActivity={duplicateActivity}
+                    updateMcqQuestion={updateMcqQuestion}
+                    updateMcqOption={updateMcqOption}
+                    addMcqQuestion={addMcqQuestion}
+                    updatePair={updatePair}
+                    addPair={addPair}
+                    updateWord={updateWord}
+                    addWord={addWord}
+                  />
+                ))
+              ) : (
+                <div className="lms-empty-activity">
+                  <strong>No activity blocks added yet.</strong>
+                  <p>Use the buttons above to add activities to your lesson.</p>
+                </div>
+              )}
+
+              <button className="lms-add-block-btn" type="button" onClick={() => addActivity('infographic')}>
+                ＋ Add Activity Block
+              </button>
+            </div>
+          </section>
+
+          <section className="teacher-design-card soft" id="teacher-recent-lessons">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">4</div>
+              <div>
+                <h2>Recently Created Lessons</h2>
+                <p>Your most recent lessons.</p>
+              </div>
+              <button className="lms-view-lessons-btn" type="button" onClick={toggleShowAllLessons}>
+                {showAllLessons ? 'Show Less' : 'View All Lessons'}
+              </button>
+            </div>
+
+            <table className="lms-recent-table">
+              <thead>
+                <tr>
+                  <th>Lesson Title</th>
+                  <th>Subject</th>
+                  <th>Grade</th>
+                  <th>Duration</th>
+                  <th>XP</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleRecentLessons.map(lesson => {
+                  const isPublished = (lesson.status || 'published') === 'published';
+
+                  return (
+                    <tr key={lesson.id}>
+                      <td>📘 {lesson.title}</td>
+                      <td>{lesson.subject}</td>
+                      <td>Grade {lesson.gradeLevel}</td>
+                      <td>{lesson.duration || '10 minuto'}</td>
+                      <td>{lesson.xpReward || 0}</td>
+                      <td>
+                        <span className={`lms-status ${isPublished ? 'published' : 'draft'}`}>
+                          ● {isPublished ? 'Published' : 'Draft'}
+                        </span>
+                      </td>
+                      <td>{fmtDate(lesson.updatedAt || lesson.createdAt)}</td>
+                    </tr>
+                  );
+                })}
+
+                {!visibleRecentLessons.length && (
+                  <tr>
+                    <td colSpan="7">No teacher-created lessons yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            {allRecentLessons.length > 5 && (
+              <button className="lms-show-more" type="button" onClick={toggleShowAllLessons}>
+                {showAllLessons ? 'Show less ↑' : 'Show more ↓'}
+              </button>
+            )}
+          </section>
+        </div>
+
+        <aside className="teacher-builder-side">
+          <section className="teacher-side-card lms-live-preview">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">👁</div>
+              <div>
+                <h2>Live Preview</h2>
+                <p>See how your lesson will appear to students.</p>
+              </div>
+            </div>
+
+            <div className="lms-preview-card-inner">
+              <div className="lms-preview-badges">
+                <span className="lms-preview-badge">{subjectMeta?.icon || '📘'} {lessonDraft.subject}</span>
+                <span className="lms-preview-badge">Grade {lessonDraft.gradeLevel}</span>
+              </div>
+
+              <div className="lms-preview-title">
+                {lessonDraft.title || 'Untitled Lesson'}
+              </div>
+
+              <div className="lms-preview-stats">
+                <span className="lms-preview-stat">⏱ {lessonDraft.duration || '10 minuto'}</span>
+                <span className="lms-preview-stat">⭐ {lessonDraft.xpReward || 0} XP</span>
+                <span className="lms-preview-stat">🧩 {validActivities.length} activities</span>
+              </div>
+
+              <div className="lms-preview-illustration">📖</div>
+
+              <strong>Instructions</strong>
+              <div className="lms-preview-textbox">
+                {lessonDraft.instructions || 'Instructions will appear here for students.'}
+              </div>
+
+              <button className="lms-student-preview-btn" type="button" onClick={() => document.querySelector('.lms-live-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                👥 Student Preview
+              </button>
+            </div>
+          </section>
+
+          <section className="teacher-side-card">
+            <div className="teacher-design-heading">
+              <div>
+                <h2>Activities in this Lesson</h2>
+                <p>Current lesson flow.</p>
+              </div>
+            </div>
+
+            <div className="lms-side-activity-list">
+              {(activities.length ? activities : validActivities).map((activity, index) => {
+                const meta = activityButtonMeta.find(item => item.type === activity.type) || activityButtonMeta[0];
+
+                return (
+                  <div className="lms-side-activity" key={activity.id || `${activity.type}-${index}`}>
+                    <span className={`icon ${meta.className}`}>{meta.icon}</span>
+                    <span className="order">{index + 1}</span>
+                    <span>{activity.title || meta.label}</span>
+                    <span>⋮</span>
+                  </div>
+                );
+              })}
+
+              {!activities.length && (
+                <div className="lms-empty-activity">
+                  <strong>No activities yet.</strong>
+                  <p>Add blocks to build your lesson flow.</p>
+                </div>
+              )}
+            </div>
+
+            <button className="lms-view-lessons-btn" type="button" onClick={scrollToRecentLessons} style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}>
+              📚 View Lessons
+            </button>
+          </section>
+
+          <section className="teacher-side-card">
+            <div className="teacher-design-heading">
+              <div>
+                <h2>💡 Tips for Great Lessons</h2>
+                <p>Quick reminders before publishing.</p>
+              </div>
+            </div>
+
+            <div className="lms-tips-list">
+              <div className="lms-tip-item">
+                <span>💬</span>
+                <p>Keep instructions short and student-friendly.</p>
+              </div>
+              <div className="lms-tip-item">
+                <span>📘</span>
+                <p>Use stories and examples from real life.</p>
+              </div>
+              <div className="lms-tip-item">
+                <span>🧩</span>
+                <p>Include a variety of activities to keep learners engaged.</p>
+              </div>
+              <div className="lms-tip-item">
+                <span>👁</span>
+                <p>Preview your lesson before publishing.</p>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <div className="lms-bottom-action-bar">
+        <button className="lms-action-secondary" type="button">
+          📋 Save Draft
+        </button>
+        <button className="lms-action-secondary" type="button" onClick={() => document.querySelector('.lms-live-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+          👁 Preview Lesson
+        </button>
+        <button className="lms-action-primary" type="button" onClick={submitLessonBuilder}>
+          🚀 Create Lesson
+        </button>
+      </div>
+    </>
+  );
 }
 
-function AdminDashboard({ data, logout, addStudent, addTeacher, archiveStudent, resetStudent, archiveTeacher, reload }) {
-  return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div><button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset</button><button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button></div>)}</div></div><div className="card"><div className="section-title">📋 Teachers</div><div className="divider" /><div id="admin-teachers-wrap">{data.teachers.map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">👩‍🏫</div><div style={{ flex: 1 }}><b>{t.name}</b><div className="muted">{t.employeeCode} • {t.status}</div></div><button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button></div>)}</div></div><div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
+
+
+function TeacherActivityBlock({
+  activity,
+  activityIndex,
+  updateActivity,
+  removeActivity,
+  duplicateActivity,
+  updateMcqQuestion,
+  updateMcqOption,
+  addMcqQuestion,
+  updatePair,
+  addPair,
+  updateWord,
+  addWord
+}) {
+  const typeMeta = {
+    mcq: {
+      label: 'MCQ Quiz',
+      desc: 'Multiple choice questions.',
+      icon: '?',
+      color: '#ec407a'
+    },
+    writing: {
+      label: 'Writing Prompt',
+      desc: 'Encourage creative writing.',
+      icon: '✎',
+      color: '#16a9b7'
+    },
+    speech: {
+      label: 'Speech Practice',
+      desc: 'Practice speaking and pronunciation.',
+      icon: '🎙️',
+      color: '#f47c20'
+    },
+    matching: {
+      label: 'Matching',
+      desc: 'Match items or concepts.',
+      icon: '⌘',
+      color: '#8e44ad'
+    },
+    vocabulary: {
+      label: 'Vocabulary',
+      desc: 'Teach important words and meanings.',
+      icon: 'Aa',
+      color: '#27ae60'
+    },
+    infographic: {
+      label: 'Info Card',
+      desc: 'Introduce a concept or key information.',
+      icon: 'i',
+      color: '#2e86de'
+    }
+  };
+
+  const meta = typeMeta[activity.type] || {
+    label: activity.type,
+    desc: 'Activity block.',
+    icon: '•',
+    color: '#95a5a6'
+  };
+
+  return (
+    <div className="teacher-activity-row">
+      <div className="teacher-activity-row-icon" style={{ background: meta.color }}>
+        {meta.icon}
+      </div>
+
+      <div className="teacher-activity-row-main">
+        <div className="teacher-activity-row-head">
+          <div>
+            <strong>{activity.title || meta.label}</strong>
+            <small> · {meta.desc}</small>
+          </div>
+          <small>Block {activityIndex + 1}</small>
+        </div>
+
+        <div className="teacher-activity-row-fields grid2">
+          <input
+            className="input-field"
+            value={activity.title}
+            onChange={(e) => updateActivity(activity.id, { title: e.target.value })}
+            placeholder="Activity title"
+          />
+
+          <input
+            className="input-field"
+            value={activity.instructions}
+            onChange={(e) => updateActivity(activity.id, { instructions: e.target.value })}
+            placeholder="Activity instructions"
+          />
+        </div>
+
+        <div style={{ height: 10 }} />
+
+        {activity.type === 'mcq' && (
+          <div className="teacher-inline-mcq">
+            {activity.questions.map((question, qIndex) => (
+              <div key={question.id} className="teacher-activity-row-fields">
+                <input
+                  className="input-field"
+                  value={question.question}
+                  onChange={(e) => updateMcqQuestion(activity.id, question.id, { question: e.target.value })}
+                  placeholder={`Question ${qIndex + 1}`}
+                />
+
+                <div className="teacher-activity-row-fields grid2">
+                  {question.options.map((option, oIndex) => (
+                    <div key={option.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input
+                        type="radio"
+                        name={`correct-${activity.id}-${question.id}`}
+                        checked={option.isCorrect}
+                        onChange={() => updateMcqOption(activity.id, question.id, option.id, { isCorrect: true })}
+                      />
+                      <input
+                        className="input-field"
+                        value={option.text}
+                        onChange={(e) => updateMcqOption(activity.id, question.id, option.id, { text: e.target.value })}
+                        placeholder={`Choice ${String.fromCharCode(65 + oIndex)}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <button className="teacher-add-mini" onClick={() => addMcqQuestion(activity.id)} type="button">
+              + Add MCQ Question
+            </button>
+          </div>
+        )}
+
+        {activity.type === 'writing' && (
+          <textarea
+            className="input-field"
+            value={activity.prompt}
+            onChange={(e) => updateActivity(activity.id, { prompt: e.target.value })}
+            placeholder="Writing prompt, e.g. Sumulat ng dalawang pangungusap tungkol sa iyong pamilya."
+            rows="3"
+          />
+        )}
+
+        {activity.type === 'speech' && (
+          <textarea
+            className="input-field"
+            value={activity.targetText}
+            onChange={(e) => updateActivity(activity.id, { targetText: e.target.value })}
+            placeholder="Speech target, e.g. Ang bata ay masayang nagbabasa."
+            rows="3"
+          />
+        )}
+
+        {activity.type === 'matching' && (
+          <div className="teacher-inline-pairs">
+            {activity.pairs.map((pair, pairIndex) => (
+              <div key={pair.id} className="teacher-activity-row-fields grid2">
+                <input
+                  className="input-field"
+                  value={pair.left}
+                  onChange={(e) => updatePair(activity.id, pair.id, { left: e.target.value })}
+                  placeholder={`Left item ${pairIndex + 1}`}
+                />
+
+                <input
+                  className="input-field"
+                  value={pair.right}
+                  onChange={(e) => updatePair(activity.id, pair.id, { right: e.target.value })}
+                  placeholder={`Right match ${pairIndex + 1}`}
+                />
+              </div>
+            ))}
+
+            <button className="teacher-add-mini" onClick={() => addPair(activity.id)} type="button">
+              + Add Pair
+            </button>
+          </div>
+        )}
+
+        {activity.type === 'vocabulary' && (
+          <div className="teacher-inline-words">
+            {activity.words.map((item, wordIndex) => (
+              <div key={item.id} className="teacher-activity-row-fields">
+                <div className="teacher-activity-row-fields grid2">
+                  <input
+                    className="input-field"
+                    value={item.word}
+                    onChange={(e) => updateWord(activity.id, item.id, { word: e.target.value })}
+                    placeholder={`Word ${wordIndex + 1}`}
+                  />
+
+                  <input
+                    className="input-field"
+                    value={item.meaning}
+                    onChange={(e) => updateWord(activity.id, item.id, { meaning: e.target.value })}
+                    placeholder="Meaning"
+                  />
+                </div>
+
+                <input
+                  className="input-field"
+                  value={item.example}
+                  onChange={(e) => updateWord(activity.id, item.id, { example: e.target.value })}
+                  placeholder="Example sentence"
+                />
+              </div>
+            ))}
+
+            <button className="teacher-add-mini" onClick={() => addWord(activity.id)} type="button">
+              + Add Word
+            </button>
+          </div>
+        )}
+
+        {activity.type === 'infographic' && (
+          <textarea
+            className="input-field"
+            value={activity.content}
+            onChange={(e) => updateActivity(activity.id, { content: e.target.value })}
+            placeholder="Short info card content. Example: Ang pangngalan ay salita na tumutukoy sa tao, bagay, hayop, lugar, o pangyayari."
+            rows="3"
+          />
+        )}
+      </div>
+
+      <div className="teacher-activity-actions">
+        <button className="teacher-activity-action" type="button">
+          Edit
+        </button>
+        <button className="teacher-activity-action" onClick={() => duplicateActivity(activity.id)} type="button">
+          Duplicate
+        </button>
+        <button className="teacher-activity-action danger" onClick={() => removeActivity(activity.id)} type="button">
+          Remove
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+function AdminDashboard({
+  data,
+  logout,
+  addStudent,
+  addTeacher,
+  archiveStudent,
+  reactivateStudent,
+  resetStudentPassword,
+  resetStudent,
+  resetTeacherPassword,
+  archiveTeacher,
+  reactivateTeacher,
+  reload
+}) {
+  return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div>
+ <button
+  className="btn btn-outline btn-sm"
+  onClick={() => resetStudentPassword(s.id, s.name)}
+>
+  Reset Password
+</button>
+
+<button
+  className="btn btn-outline btn-sm"
+  onClick={() => resetStudent(s.id)}
+>
+  Reset Progress
+</button>
+
+<button
+  className="btn btn-danger btn-sm"
+  onClick={() => archiveStudent(s.id)}
+>
+  Archive
+</button>
+  </div>)}</div></div>
+  <div className="card">
+  <div className="section-title">🗃️ Archived Students</div>
+
+  <div className="muted">
+    Archived students cannot log in, but their records are still saved.
+    Use Reactivate if an account was archived by mistake.
+  </div>
+
+  <div className="divider" />
+
+  <div id="admin-archived-students-wrap">
+    {(data.archivedStudents || []).map(s => (
+      <div className="lesson-card" key={s.id}>
+        <div className="lesson-icon">{s.avatar || '👨‍🎓'}</div>
+
+        <div style={{ flex: 1 }}>
+          <b>{s.name}</b>
+          <div className="muted">
+            {s.studentCode} • Grade {s.gradeLevel} • {s.section} • Archived
+          </div>
+        </div>
+
+        <button
+          className="btn btn-green btn-sm"
+          onClick={() => reactivateStudent(s.id)}
+        >
+          Reactivate
+        </button>
+      </div>
+    ))}
+
+    {!(data.archivedStudents || []).length && (
+      <div className="muted">
+        No archived students.
+      </div>
+    )}
+  </div>
+</div>
+  <div className="card"><div className="section-title">📋 Teachers</div><div className="divider" /><div id="admin-teachers-wrap">{data.teachers.map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">👩‍🏫</div><div style={{ flex: 1 }}><b>{t.name}</b><div className="muted">{t.employeeCode} • {t.status}</div></div>
+  <button
+  className="btn btn-outline btn-sm"
+  onClick={() => resetTeacherPassword(t.id, t.name)}
+>
+  Reset Password
+</button>
+
+<button
+  className="btn btn-danger btn-sm"
+  onClick={() => archiveTeacher(t.id)}
+>
+  Archive
+</button>
+
+  </div>)}</div></div>
+
+  <div className="card">
+  <div className="section-title">🗃️ Archived Teachers</div>
+
+  <div className="muted">
+    Archived teachers cannot log in, but their records are still saved.
+    Use Reactivate if an account was archived by mistake.
+  </div>
+
+  <div className="divider" />
+
+  <div id="admin-archived-teachers-wrap">
+    {(data.archivedTeachers || []).map(t => (
+      <div className="lesson-card" key={t.id}>
+        <div className="lesson-icon">👩‍🏫</div>
+
+        <div style={{ flex: 1 }}>
+          <b>{t.name}</b>
+          <div className="muted">
+            {t.employeeCode} • Archived
+          </div>
+        </div>
+
+        <button
+          className="btn btn-green btn-sm"
+          onClick={() => reactivateTeacher(t.id)}
+        >
+          Reactivate
+        </button>
+      </div>
+    ))}
+
+    {!(data.archivedTeachers || []).length && (
+      <div className="muted">
+        No archived teachers.
+      </div>
+    )}
+  </div>
+</div>
+  
+  <div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
 }

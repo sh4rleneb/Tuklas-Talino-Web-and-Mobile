@@ -6,14 +6,45 @@ export const Role = sequelize.define('Role', {
 }, { tableName: 'roles' });
 
 export const User = sequelize.define('User', {
-  roleId: { type: DataTypes.INTEGER, allowNull: false },
-  username: { type: DataTypes.STRING(80), allowNull: false, unique: true },
-  email: { type: DataTypes.STRING(160), allowNull: true, unique: true },
-  passwordHash: { type: DataTypes.STRING(255), allowNull: false },
-  displayName: { type: DataTypes.STRING(160), allowNull: false },
-  status: { type: DataTypes.ENUM('active', 'archived'), allowNull: false, defaultValue: 'active' },
-  lastLoginAt: { type: DataTypes.DATE, allowNull: true }
-}, { tableName: 'users' });
+  roleId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  username: {
+    type: DataTypes.STRING(80),
+    allowNull: false,
+    unique: true
+  },
+  email: {
+    type: DataTypes.STRING(160),
+    allowNull: true,
+    unique: true
+  },
+  passwordHash: {
+    type: DataTypes.STRING(255),
+    allowNull: false
+  },
+  displayName: {
+    type: DataTypes.STRING(160),
+    allowNull: false
+  },
+  status: {
+    type: DataTypes.ENUM('active', 'archived'),
+    allowNull: false,
+    defaultValue: 'active'
+  },
+  mustChangePassword: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  lastLoginAt: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }
+}, {
+  tableName: 'users'
+});
 
 export const Student = sequelize.define('Student', {
   userId: { type: DataTypes.INTEGER, allowNull: false, unique: true },
@@ -55,9 +86,32 @@ export const Lesson = sequelize.define('Lesson', {
 
 export const LessonActivity = sequelize.define('LessonActivity', {
   lessonId: { type: DataTypes.INTEGER, allowNull: false },
-  type: { type: DataTypes.ENUM('mcq', 'writing', 'speech'), allowNull: false },
-  title: { type: DataTypes.STRING(220), allowNull: false },
-  sortOrder: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 }
+
+  type: {
+    type: DataTypes.STRING(40),
+    allowNull: false
+  },
+
+  title: {
+    type: DataTypes.STRING(220),
+    allowNull: false
+  },
+
+  instructions: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+
+  dataJson: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
+
+  sortOrder: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1
+  }
 }, { tableName: 'lesson_activities' });
 
 export const MCQQuestion = sequelize.define('MCQQuestion', {

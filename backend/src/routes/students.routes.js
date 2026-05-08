@@ -1,14 +1,20 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { Op } from 'sequelize';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, GroupMember, Group, GroupTask, GroupTaskCompletion } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
 
+function generateTemporaryPin() {
+  return Array.from({ length: 6 }, () => crypto.randomInt(2, 10)).join('');
+}
+
 const router = Router();
 router.use(authenticate);
+router.use(requirePasswordChanged);
 
 async function getStudentForRequest(req, idParam) {
   if (req.role === 'student') return req.student;
@@ -52,16 +58,17 @@ router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const body = validate(studentSchema, req.body);
     const role = await Role.findOne({ where: { name: 'student' } });
     const user = await User.create({
-      roleId: role.id,
-      username: body.studentCode,
-      displayName: body.name,
-      passwordHash: await bcrypt.hash(body.password || process.env.DEMO_STUDENT_PASSWORD || 'student123', 12)
-    });
+  roleId: role.id,
+  username: body.studentCode,
+  displayName: body.name,
+  passwordHash: await bcrypt.hash(body.password || process.env.DEMO_STUDENT_PASSWORD || 'student123', 12),
+  mustChangePassword: true
+});
     const student = await Student.create({ userId: user.id, ...body });
     await audit(req.user.id, 'student.create', 'student', student.id);
     res.status(201).json({ student });
@@ -102,7 +109,7 @@ router.get('/:id/badges', requireRole('admin', 'teacher', 'student'), async (req
   } catch (err) { next(err); }
 });
 
-router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
@@ -118,7 +125,7 @@ router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => 
   } catch (err) { next(err); }
 });
 
-router.patch('/:id/avatar', requireRole('admin', 'teacher', 'student'), async (req, res, next) => {
+router.patch('/:id/avatar', requireRole('admin', 'student'), async (req, res, next) => {
   try {
     const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
@@ -129,7 +136,7 @@ router.patch('/:id/avatar', requireRole('admin', 'teacher', 'student'), async (r
   } catch (err) { next(err); }
 });
 
-router.post('/:id/archive', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
@@ -141,7 +148,7 @@ router.post('/:id/archive', requireRole('admin', 'teacher'), async (req, res, ne
   } catch (err) { next(err); }
 });
 
-router.post('/:id/reactivate', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
@@ -153,7 +160,51 @@ router.post('/:id/reactivate', requireRole('admin', 'teacher'), async (req, res,
   } catch (err) { next(err); }
 });
 
-router.post('/:id/reset-progress', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) => {
+  try {
+    const student = await Student.findByPk(req.params.id, {
+      include: [User]
+    });
+
+    if (!student || !student.User) {
+      return res.status(404).json({
+        message: 'Student account not found.'
+      });
+    }
+
+    if (student.status !== 'active' || student.User.status !== 'active') {
+      return res.status(422).json({
+        message: 'Reactivate the student account before resetting the password.'
+      });
+    }
+
+    const temporaryPin = req.body.temporaryPin?.trim() || generateTemporaryPin();
+
+    if (!/^[2-9]{6}$/.test(temporaryPin)) {
+      return res.status(422).json({
+        message: 'Temporary PIN must be exactly 6 digits using numbers 2-9.'
+      });
+    }
+
+    student.User.passwordHash = await bcrypt.hash(temporaryPin, 12);
+    student.User.mustChangePassword = true;
+
+    await student.User.save();
+
+    await audit(req.user.id, 'student.reset_password', 'student', student.id, {
+      forcedPasswordChange: true
+    });
+
+    res.json({
+      message: 'Student password reset successfully.',
+      temporaryPin
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
