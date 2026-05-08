@@ -2039,9 +2039,2356 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go }) {
   return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo">👤 Profile</div><div /></div><div className="scroll"><div className="card"><div className="section-title">Avatar</div><div className="muted">Palitan ang avatar mo (saved sa account).</div><div className="divider" /><div className="avatar-grid" id="profile-avatar-grid">{AVATARS.map(a => <button key={a} className={`avatar-circle ${selectedAvatar === a ? 'selected' : ''}`} onClick={() => updateAvatar(a)}>{a}</button>)}</div></div><div className="card"><div className="section-title">📊 Summary</div><div id="profile-summary"><div className="grid grid-3"><Stat icon="👤" label="Name" value={s?.name || '—'} /><Stat icon="🎒" label="Grade" value={s?.gradeLevel || '—'} /><Stat icon="⚡" label="XP" value={s?.xp || 0} /></div></div></div></div></>;
 }
 
-function TeacherDashboard({ user, data, logout, reload, createGroup, addTask, addMember, createLesson, exportStudentsCSV, exportLogsCSV, downloadSummaryReport }) {
-  return <><div className="top-nav"><div className="logo">👩‍🏫 Teacher Dashboard</div><div className="row"><div className="pill">🏫 <span id="t-name">{user?.displayName || 'Teacher'}</span></div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,#2980B9,#3498DB)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>📌 Monitoring</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Tingnan ang progreso, engagement, group participation, at reports.</div></div><div className="card"><div className="section-title">📈 Quick Stats</div><div className="grid grid-3" id="t-stats"><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="📚" label="Lessons" value={data.stats?.lessons || 0} /><Stat icon="👥" label="Groups" value={data.stats?.groups || 0} /></div></div><div className="card"><div className="section-title">👥 Group Manager</div><div className="muted">Gumawa ng grupo, mag-assign ng members, at maglagay ng tasks + deadline.</div><div className="divider" /><div className="grid grid-2"><div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}><div className="section-title">➕ Create Group</div><input className="input-field" id="t-group-name" placeholder="Group name" /><div style={{ height: 10 }} /><input className="input-field" id="t-group-section" placeholder="Description / Section" /><div style={{ height: 10 }} /><button className="btn btn-green" onClick={createGroup}>Create</button></div><div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}><div className="section-title">➕ Add Task</div><select className="input-field" id="t-task-group">{data.groups.map(g => <option value={g.id} key={g.id}>{g.name}</option>)}</select><div style={{ height: 10 }} /><input className="input-field" id="t-task-title" placeholder="Task title" /><div style={{ height: 10 }} /><input className="input-field" id="t-task-deadline" type="date" /><div style={{ height: 10 }} /><input className="input-field" id="t-task-xp" type="number" min="0" defaultValue="10" placeholder="XP" /><div style={{ height: 10 }} /><button className="btn btn-blue" onClick={addTask}>Add Task</button></div></div><div className="divider" /><div className="section-title">📋 Groups</div><div id="t-groups-wrap">{data.groups.map(g => <div className="card" key={g.id} style={{ marginBottom: 12 }}><div className="row" style={{ justifyContent: 'space-between' }}><div><b>{g.name}</b><div className="muted">{g.description}</div></div><div className="pill">{g.tasks?.length || 0} tasks</div></div><div className="divider" /><div className="row"><select className="input-field" id={`member-${g.id}`} style={{ maxWidth: 320 }}>{data.students.map(s => <option key={s.id} value={s.id}>{s.name} • Grade {s.gradeLevel}</option>)}</select><button className="btn btn-green btn-sm" onClick={() => addMember(g.id)}>Add Member</button></div></div>)}</div></div><TeacherLessonManager lessons={data.lessons} createLesson={createLesson} /><div className="card"><div className="section-title">👨‍🎓 Students (Monitoring Table)</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button><button className="btn btn-outline btn-sm" onClick={exportStudentsCSV}>⬇️ Export CSV</button><button className="btn btn-outline btn-sm" onClick={exportLogsCSV}>⬇️ Export Activity Logs</button><button className="btn btn-outline btn-sm" onClick={downloadSummaryReport}>🧾 Download Summary Report</button></div><div className="divider" /><div className="table"><div className="thead"><div>Student</div><div>XP</div><div>Lessons</div><div className="hide-sm">Progress</div><div className="hide-sm">Status</div></div><div id="t-students-table">{data.rows.map(r => <div className="trow" key={r.id}><div>{r.name}<div className="muted">{r.studentCode} • Grade {r.gradeLevel}</div></div><div>{r.xp}</div><div>{r.completed}/{r.totalLessons}</div><div className="hide-sm">{r.percent}%</div><div className="hide-sm">{r.status}</div></div>)}</div></div></div></div></>;
+function TeacherRedesignStyles() {
+  return (
+    <style>{`
+      .teacher-redesign-page {
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 4% 100%, rgba(46, 204, 113, 0.08), transparent 24%),
+          radial-gradient(circle at 96% 100%, rgba(46, 204, 113, 0.08), transparent 24%),
+          linear-gradient(180deg, #fbfefc 0%, #f5faf7 100%);
+        color: #17243b;
+        font-family: inherit;
+      }
+
+      .teacher-main-header {
+        height: 88px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid #e8efe9;
+        box-shadow: 0 10px 28px rgba(26, 75, 43, 0.055);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 36px;
+        position: sticky;
+        top: 0;
+        z-index: 40;
+      }
+
+      .teacher-brand-area {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        min-width: 0;
+      }
+
+      .teacher-brand-mark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-right: 28px;
+        border-right: 1px solid #dfe8e2;
+      }
+
+      .teacher-brand-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 17px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #f4ffe3, #dff9e8);
+        box-shadow: inset 0 0 0 1px rgba(39, 174, 96, 0.16);
+        font-size: 26px;
+      }
+
+      .teacher-brand-text strong {
+        display: block;
+        color: #12a05a;
+        font-size: 24px;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        font-weight: 950;
+      }
+
+      .teacher-brand-text small {
+        display: block;
+        color: #738277;
+        font-size: 11px;
+        margin-top: 5px;
+        font-weight: 800;
+      }
+
+      .teacher-nav-links {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .teacher-nav-links button {
+        border: 0;
+        background: transparent;
+        color: #26354d;
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-weight: 850;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.18s ease;
+      }
+
+      .teacher-nav-links button:hover,
+      .teacher-nav-links button.active {
+        background: #eaf8ef;
+        color: #07884b;
+      }
+
+      .teacher-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .teacher-profile-pill {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 176px;
+        padding: 10px 14px;
+        background: #ffffff;
+        border: 1px solid #dbeae1;
+        border-radius: 18px;
+        box-shadow: 0 8px 20px rgba(32, 93, 52, 0.06);
+      }
+
+      .teacher-profile-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        background: #fff7c9;
+        font-size: 24px;
+      }
+
+      .teacher-profile-text {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .teacher-profile-text strong {
+        display: block;
+        color: #193421;
+        font-size: 15px;
+        line-height: 1;
+      }
+
+      .teacher-profile-text small {
+        display: block;
+        color: #6d7d73;
+        font-size: 12px;
+        margin-top: 5px;
+      }
+
+      .teacher-logout-btn {
+        height: 52px;
+        border-radius: 16px;
+        padding: 0 24px;
+        border: 2px solid #0a9b53;
+        background: #ffffff;
+        color: #07884b;
+        font-weight: 950;
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+
+      .teacher-logout-btn:hover {
+        background: #eaf8ef;
+        transform: translateY(-1px);
+      }
+
+      .teacher-main-content {
+        max-width: 1370px;
+        margin: 0 auto;
+        padding: 34px 28px 28px;
+      }
+
+      .lms-page-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: flex-end;
+        margin-bottom: 22px;
+        position: relative;
+      }
+
+      .lms-title-copy h1 {
+        margin: 0;
+        color: #182237;
+        font-size: 40px;
+        letter-spacing: -0.045em;
+        font-weight: 950;
+      }
+
+      .lms-title-copy p {
+        margin: 8px 0 0;
+        color: #667668;
+        font-size: 16px;
+        line-height: 1.6;
+        max-width: 660px;
+      }
+
+      .lms-teacher-illustration {
+        min-width: 270px;
+        height: 130px;
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 72% 10%, #fff2ba 0 28%, transparent 29%),
+          linear-gradient(135deg, #fffdfa, #edf9f0);
+        border: 1px solid #e5eee8;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .lms-teacher-illustration::before {
+        content: '👩‍🏫';
+        position: absolute;
+        right: 92px;
+        top: 22px;
+        font-size: 66px;
+      }
+
+      .lms-teacher-illustration::after {
+        content: '🌿 📚';
+        position: absolute;
+        right: 20px;
+        bottom: 18px;
+        font-size: 34px;
+      }
+
+      .lms-overview-panel {
+        background: #ffffff;
+        border: 1px solid #e4eee8;
+        border-radius: 28px;
+        padding: 24px;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.06);
+        margin-bottom: 24px;
+      }
+
+      .lms-greeting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .lms-greeting-row h2 {
+        margin: 0;
+        color: #17243b;
+        font-size: 24px;
+        font-weight: 950;
+        letter-spacing: -0.03em;
+      }
+
+      .lms-greeting-row p {
+        margin: 6px 0 0;
+        color: #65766b;
+      }
+
+      .lms-view-button,
+      .lms-view-lessons-btn {
+        border: 1.8px solid #0a9b53;
+        color: #07884b;
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 12px 18px;
+        font-weight: 950;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.18s ease;
+      }
+
+      .lms-view-button:hover,
+      .lms-view-lessons-btn:hover {
+        background: #eaf8ef;
+        transform: translateY(-1px);
+      }
+
+      .lms-metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .lms-metric-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        border-radius: 22px;
+        border: 1px solid #e5eee8;
+        background: #fff;
+        min-height: 110px;
+      }
+
+      .lms-metric-card.green { background: linear-gradient(135deg, #f1fbf4, #ffffff); }
+      .lms-metric-card.yellow { background: linear-gradient(135deg, #fff8df, #ffffff); }
+      .lms-metric-card.blue { background: linear-gradient(135deg, #edf6ff, #ffffff); }
+      .lms-metric-card.purple { background: linear-gradient(135deg, #f6efff, #ffffff); }
+
+      .lms-metric-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+      }
+
+      .lms-metric-card.green .lms-metric-icon { background: #dff7e8; }
+      .lms-metric-card.yellow .lms-metric-icon { background: #fff0bd; }
+      .lms-metric-card.blue .lms-metric-icon { background: #dff0ff; }
+      .lms-metric-card.purple .lms-metric-icon { background: #efe3ff; }
+
+      .lms-metric-card span {
+        display: block;
+        font-weight: 850;
+        color: #253044;
+        margin-bottom: 4px;
+      }
+
+      .lms-metric-card strong {
+        display: block;
+        color: #17243b;
+        font-size: 30px;
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .lms-metric-card small {
+        display: block;
+        color: #728177;
+        font-weight: 700;
+        margin-top: 7px;
+      }
+
+      .lms-tip-strip {
+        margin-top: 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 18px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #eefaf2, #f9fffb);
+        border: 1px solid #dcefe2;
+      }
+
+      .lms-tip-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: #2fb86f;
+        color: white;
+        font-size: 24px;
+      }
+
+      .lms-tip-strip strong {
+        display: block;
+        color: #1f5632;
+        margin-bottom: 3px;
+      }
+
+      .lms-tip-strip p {
+        margin: 0;
+        color: #627569;
+      }
+
+      .teacher-builder-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(330px, 0.7fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .teacher-builder-main,
+      .teacher-builder-side {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .teacher-design-card,
+      .teacher-side-card {
+        background: #ffffff;
+        border: 1px solid #e4eee8;
+        border-radius: 26px;
+        padding: 24px;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.055);
+      }
+
+      .teacher-design-card.soft {
+        background: linear-gradient(180deg, #ffffff 0%, #fcfffd 100%);
+      }
+
+      .teacher-design-heading {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .teacher-design-step {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #149a57;
+        color: white;
+        font-weight: 950;
+        box-shadow: 0 8px 18px rgba(20, 154, 87, 0.2);
+        flex: 0 0 auto;
+      }
+
+      .teacher-design-heading h2 {
+        margin: 0;
+        color: #0c6a3b;
+        font-size: 21px;
+        font-weight: 950;
+        letter-spacing: -0.02em;
+      }
+
+      .teacher-design-heading p {
+        margin: 4px 0 0;
+        color: #6c7b72;
+        font-size: 13px;
+      }
+
+      .teacher-form-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .teacher-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .teacher-field label {
+        color: #17243b;
+        font-weight: 900;
+        font-size: 13px;
+      }
+
+      .teacher-field .input-field,
+      .teacher-design-card .input-field {
+        border: 1.5px solid #d8e6dc;
+        border-radius: 13px;
+        background: #ffffff;
+        min-height: 48px;
+        padding: 13px 15px;
+        font-weight: 700;
+        color: #213047;
+      }
+
+      .teacher-field textarea.input-field {
+        font-weight: 600;
+        line-height: 1.6;
+        min-height: 110px;
+      }
+
+      .lms-editor-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1.5px solid #d8e6dc;
+        border-bottom: 0;
+        border-radius: 14px 14px 0 0;
+        background: #fbfefd;
+      }
+
+      .lms-editor-toolbar button {
+        width: 30px;
+        height: 30px;
+        border: 0;
+        background: transparent;
+        border-radius: 9px;
+        cursor: default;
+        font-weight: 900;
+        color: #213047;
+      }
+
+      .lms-editor-area {
+        border-top-left-radius: 0 !important;
+        border-top-right-radius: 0 !important;
+      }
+
+      .lms-activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .teacher-activity-block {
+        border-radius: 16px;
+        border: 1px solid #e4eee8;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .teacher-activity-top {
+        display: grid;
+        grid-template-columns: 46px minmax(160px, 1fr) minmax(220px, 1.6fr) auto;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: linear-gradient(90deg, rgba(20,154,87,0.08), #ffffff);
+      }
+
+      .teacher-activity-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-weight: 950;
+      }
+
+      .teacher-activity-copy strong {
+        display: block;
+        color: #1d2d44;
+        font-weight: 950;
+      }
+
+      .teacher-activity-copy small {
+        color: #6d7b73;
+        font-weight: 700;
+      }
+
+      .teacher-activity-mini-preview {
+        font-size: 12px;
+        color: #6d7b73;
+        background: rgba(255,255,255,0.68);
+        border: 1px solid rgba(216,230,220,0.8);
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+
+      .teacher-activity-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .teacher-activity-action {
+        border: 1px solid #d8e6dc;
+        background: #ffffff;
+        color: #1d2d44;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-weight: 850;
+        cursor: pointer;
+      }
+
+      .teacher-activity-action:hover {
+        background: #f2faf5;
+      }
+
+      .teacher-activity-action.danger {
+        color: #e74c3c;
+      }
+
+      .teacher-activity-body {
+        padding: 12px;
+        background: #ffffff;
+        border-top: 1px solid #edf3ef;
+      }
+
+
+      .teacher-activity-row {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: start;
+        padding: 12px;
+        border: 1px solid #e4eee8;
+        border-radius: 16px;
+        background: linear-gradient(90deg, rgba(20,154,87,0.06), #ffffff);
+      }
+
+      .teacher-activity-row-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 13px;
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        font-weight: 950;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+      }
+
+      .teacher-activity-row-main {
+        min-width: 0;
+      }
+
+      .teacher-activity-row-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .teacher-activity-row-head strong {
+        color: #17243b;
+        font-weight: 950;
+      }
+
+      .teacher-activity-row-head small {
+        color: #6d7b73;
+        font-weight: 750;
+      }
+
+      .teacher-activity-row-fields {
+        display: grid;
+        gap: 10px;
+      }
+
+      .teacher-activity-row-fields.grid2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .teacher-inline-mcq,
+      .teacher-inline-pairs,
+      .teacher-inline-words {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .lms-side-activity .choice-infographic { background: #27ae60; }
+      .lms-side-activity .choice-vocabulary { background: #f4b942; }
+      .lms-side-activity .choice-matching { background: #3498db; }
+      .lms-side-activity .choice-mcq { background: #8e44ad; }
+      .lms-side-activity .choice-speech { background: #ec407a; }
+      .lms-side-activity .choice-writing { background: #16a9b7; }
+
+      .teacher-add-mini,
+      .lms-add-block-btn {
+        border: 1.5px dashed #b9dfc8;
+        background: #f7fdf9;
+        color: #0b8e4e;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font-weight: 950;
+        cursor: pointer;
+        width: 100%;
+        transition: 0.18s ease;
+      }
+
+      .teacher-add-mini:hover,
+      .lms-add-block-btn:hover {
+        background: #eaf8ef;
+      }
+
+      .lms-empty-activity {
+        padding: 22px;
+        border: 1.5px dashed #b9dfc8;
+        border-radius: 18px;
+        text-align: center;
+        background: linear-gradient(135deg, #fbfffd, #f1fbf4);
+        color: #587064;
+      }
+
+      .lms-empty-activity strong {
+        display: block;
+        color: #215a36;
+        margin-bottom: 6px;
+      }
+
+      .lms-add-choice-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .lms-add-choice {
+        min-height: 86px;
+        border-radius: 16px;
+        border: 1px solid #dfece4;
+        background: #ffffff;
+        color: #27344c;
+        font-weight: 900;
+        display: grid;
+        place-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+
+      .lms-add-choice span {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        display: grid;
+        place-items: center;
+        color: white;
+      }
+
+      .lms-add-choice:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(30, 71, 44, 0.08);
+      }
+
+      .choice-infographic span { background: #27ae60; }
+      .choice-vocabulary span { background: #f4b942; }
+      .choice-matching span { background: #3498db; }
+      .choice-mcq span { background: #8e44ad; }
+      .choice-speech span { background: #ec407a; }
+      .choice-writing span { background: #16a9b7; }
+
+      .lms-preview-card-inner {
+        border-radius: 22px;
+        border: 1px solid #dfece4;
+        background: linear-gradient(180deg, #ffffff, #fbfffc);
+        padding: 18px;
+      }
+
+      .lms-preview-badges,
+      .lms-preview-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .lms-preview-badge,
+      .lms-preview-stat {
+        padding: 9px 12px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid #dfece4;
+        color: #0b8e4e;
+        font-weight: 950;
+      }
+
+      .lms-preview-title {
+        color: #17243b;
+        font-size: 27px;
+        letter-spacing: -0.04em;
+        margin: 10px 0 14px;
+        font-weight: 950;
+      }
+
+      .lms-preview-illustration {
+        height: 160px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #eaf9ef, #f7fffa);
+        display: grid;
+        place-items: center;
+        font-size: 80px;
+        margin: 12px 0 16px;
+        border: 1px solid #e0eee5;
+      }
+
+      .lms-preview-textbox {
+        padding: 14px;
+        border: 1px solid #e0eee5;
+        border-radius: 14px;
+        color: #586b60;
+        line-height: 1.55;
+        background: #ffffff;
+        min-height: 74px;
+        white-space: pre-wrap;
+        margin-bottom: 12px;
+      }
+
+      .lms-student-preview-btn {
+        width: 100%;
+        border: 1.8px solid #0a9b53;
+        background: #ffffff;
+        color: #07884b;
+        border-radius: 14px;
+        padding: 14px;
+        font-weight: 950;
+        cursor: pointer;
+      }
+
+      .lms-side-activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+
+      .lms-side-activity {
+        display: grid;
+        grid-template-columns: 34px 28px 1fr 20px;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border: 1px solid #e5eee8;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #24324a;
+        font-weight: 850;
+      }
+
+      .lms-side-activity .icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-weight: 950;
+      }
+
+      .lms-side-activity .order {
+        color: #6d7b73;
+        font-weight: 950;
+        text-align: center;
+      }
+
+      .lms-recent-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border: 1px solid #e5eee8;
+        border-radius: 14px;
+      }
+
+      .lms-recent-table th {
+        text-align: left;
+        color: #52665a;
+        background: #fbfefd;
+        font-size: 12px;
+        padding: 12px;
+      }
+
+      .lms-recent-table td {
+        padding: 12px;
+        border-top: 1px solid #eef4f0;
+        color: #22324a;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .lms-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .lms-status.published {
+        background: #e8f8ef;
+        color: #0b8e4e;
+      }
+
+      .lms-status.draft {
+        background: #e9f3ff;
+        color: #2f80ed;
+      }
+
+      .lms-show-more {
+        border: 0;
+        background: transparent;
+        color: #0b8e4e;
+        font-weight: 950;
+        margin: 14px auto 0;
+        display: block;
+        cursor: pointer;
+      }
+
+      .lms-bottom-action-bar {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1.35fr;
+        gap: 16px;
+      }
+
+      .lms-action-secondary,
+      .lms-action-primary {
+        height: 58px;
+        border-radius: 16px;
+        font-weight: 950;
+        cursor: pointer;
+      }
+
+      .lms-action-secondary {
+        border: 1.8px solid #0a9b53;
+        background: #ffffff;
+        color: #07884b;
+      }
+
+      .lms-action-primary {
+        border: 0;
+        background: linear-gradient(135deg, #12a05a, #07884b);
+        color: #ffffff;
+        box-shadow: 0 12px 24px rgba(8, 136, 75, 0.18);
+      }
+
+      .lms-tips-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .lms-tip-item {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        color: #455b4e;
+        font-weight: 700;
+      }
+
+      .lms-tip-item span {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: #eef8f2;
+        flex: 0 0 auto;
+      }
+
+      .teacher-footer {
+        color: #7c8b82;
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 28px;
+        padding: 18px 4px 0;
+        border-top: 1px solid #e5eee8;
+      }
+
+
+      .lms-feature-section {
+        margin-top: 26px;
+        background: #ffffff;
+        border: 1px solid #e5eee8;
+        border-radius: 26px;
+        padding: 24px;
+        box-shadow: 0 16px 40px rgba(31, 73, 43, 0.06);
+      }
+
+      .lms-feature-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .lms-feature-head h2 {
+        margin: 4px 0 6px;
+        color: #17243b;
+        font-size: 24px;
+        letter-spacing: -0.03em;
+      }
+
+      .lms-feature-head p {
+        margin: 0;
+        color: #748378;
+        line-height: 1.6;
+        max-width: 760px;
+      }
+
+      .lms-section-label {
+        color: #079b55;
+        font-size: 12px;
+        font-weight: 950;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .lms-tools-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .lms-tool-card {
+        background: linear-gradient(180deg, #fbfffc, #f7fbf8);
+        border: 1px solid #e2ede6;
+        border-radius: 22px;
+        padding: 18px;
+      }
+
+      .lms-tool-card h3 {
+        margin: 0 0 6px;
+        color: #1a3b29;
+        font-size: 18px;
+      }
+
+      .lms-tool-card p {
+        margin: 0 0 14px;
+        color: #748378;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .lms-tool-card .input-field {
+        background: #ffffff;
+      }
+
+      .lms-form-gap {
+        height: 10px;
+      }
+
+      .lms-groups-list {
+        margin-top: 18px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .lms-group-card {
+        border: 1px solid #e5eee8;
+        border-radius: 20px;
+        background: #ffffff;
+        padding: 16px;
+      }
+
+      .lms-group-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-start;
+      }
+
+      .lms-group-top strong {
+        color: #17243b;
+      }
+
+      .lms-group-desc {
+        color: #748378;
+        font-size: 13px;
+        margin-top: 4px;
+      }
+
+      .lms-mini-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        background: #eefaf3;
+        color: #087c45;
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .lms-group-member-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #edf3ef;
+      }
+
+      .lms-monitor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .lms-monitor-actions button,
+      .lms-tool-card button,
+      .lms-group-member-row button {
+        cursor: pointer;
+      }
+
+      .lms-report-button {
+        border: 1px solid #dbe9e1;
+        background: #ffffff;
+        color: #157a45;
+        border-radius: 14px;
+        padding: 10px 12px;
+        font-weight: 900;
+      }
+
+      .lms-table-card {
+        overflow: hidden;
+      }
+
+      .lms-table-scroll {
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      .lms-recent-table.monitoring td,
+      .lms-recent-table.monitoring th {
+        white-space: nowrap;
+      }
+
+      .lms-status.neutral {
+        background: #eef6ff;
+        color: #2f80ed;
+      }
+
+      .lms-empty-line {
+        padding: 18px;
+        color: #748378;
+        background: #f8fcf9;
+        border: 1px dashed #d8e9df;
+        border-radius: 18px;
+      }
+
+      .lms-main-action {
+        height: 44px;
+        border: 0;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #11a85f, #06934e);
+        color: white;
+        padding: 0 16px;
+        font-weight: 950;
+        box-shadow: 0 10px 20px rgba(17, 168, 95, 0.18);
+      }
+
+      .lms-outline-action {
+        height: 44px;
+        border: 1px solid #dbe9e1;
+        border-radius: 14px;
+        background: white;
+        color: #117a45;
+        padding: 0 16px;
+        font-weight: 950;
+      }
+
+      @media (max-width: 920px) {
+        .lms-tools-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .lms-feature-head,
+        .lms-group-top,
+        .lms-group-member-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+
+
+      @media (max-width: 1120px) {
+        .teacher-builder-layout,
+        .teacher-form-row,
+        .lms-metric-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .lms-add-choice-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .lms-page-title {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .lms-teacher-illustration {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .teacher-main-header {
+          height: auto;
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 18px;
+          gap: 14px;
+        }
+
+        .teacher-brand-area,
+        .teacher-header-actions,
+        .teacher-nav-links {
+          flex-wrap: wrap;
+          width: 100%;
+        }
+
+        .teacher-main-content {
+          padding: 22px 14px;
+        }
+
+        .lms-title-copy h1 {
+          font-size: 30px;
+        }
+
+        .lms-add-choice-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .teacher-activity-top {
+          grid-template-columns: 42px 1fr;
+        }
+
+        .teacher-activity-mini-preview,
+        .teacher-activity-actions {
+          grid-column: 1 / -1;
+        }
+
+        .teacher-activity-row {
+          grid-template-columns: 42px 1fr;
+        }
+
+        .teacher-activity-actions {
+          grid-column: 1 / -1;
+          justify-content: flex-start;
+        }
+
+        .teacher-activity-row-fields.grid2 {
+          grid-template-columns: 1fr;
+        }
+
+        .lms-bottom-action-bar {
+          grid-template-columns: 1fr;
+        }
+
+        .lms-recent-table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+      /* Cleaner teacher workspace layout: keeps every feature, but groups them into tabs. */
+      .teacher-main-header-clean {
+        height: 74px;
+        padding: 0 28px;
+      }
+
+      .teacher-main-header-clean .teacher-brand-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 15px;
+        font-size: 23px;
+      }
+
+      .teacher-main-header-clean .teacher-brand-text strong {
+        font-size: 21px;
+      }
+
+      .teacher-main-header-clean .teacher-brand-text small {
+        font-size: 10px;
+      }
+
+      .teacher-main-header-clean .teacher-nav-links button {
+        padding: 10px 13px;
+        border-radius: 13px;
+        font-size: 13px;
+      }
+
+      .teacher-main-content-clean {
+        max-width: 1360px;
+        padding: 24px 28px 36px;
+      }
+
+      .teacher-clean-hero {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 22px 24px;
+        border-radius: 26px;
+        background:
+          radial-gradient(circle at 92% 20%, rgba(255, 218, 121, 0.24), transparent 22%),
+          linear-gradient(135deg, #ffffff 0%, #f3fbf6 100%);
+        border: 1px solid #e3efe8;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.055);
+      }
+
+      .teacher-clean-hero-copy h1 {
+        margin: 4px 0 8px;
+        color: #17243b;
+        font-size: clamp(30px, 3vw, 42px);
+        letter-spacing: -0.05em;
+        line-height: 1.05;
+      }
+
+      .teacher-clean-hero-copy p {
+        margin: 0;
+        max-width: 760px;
+        color: #64746b;
+        font-weight: 700;
+        line-height: 1.55;
+      }
+
+      .teacher-clean-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+        flex: 0 0 auto;
+      }
+
+      .teacher-logout-btn.light {
+        background: #ffffff;
+        color: #0c8d4f;
+        border: 1px solid #cfe9da;
+        box-shadow: none;
+      }
+
+      .teacher-clean-metrics {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .teacher-clean-metric {
+        min-height: 96px;
+        border: 1px solid #e5eee8;
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        text-align: left;
+        cursor: pointer;
+        box-shadow: 0 10px 24px rgba(30, 71, 44, 0.045);
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      }
+
+      .teacher-clean-metric:hover {
+        transform: translateY(-2px);
+        border-color: #cfe9da;
+        box-shadow: 0 16px 30px rgba(30, 71, 44, 0.075);
+      }
+
+      .teacher-clean-metric .metric-icon {
+        width: 48px;
+        height: 48px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        font-size: 22px;
+        flex: 0 0 auto;
+      }
+
+      .teacher-clean-metric .metric-icon.green { background: #e8f8ef; }
+      .teacher-clean-metric .metric-icon.yellow { background: #fff6df; }
+      .teacher-clean-metric .metric-icon.blue { background: #eaf4ff; }
+      .teacher-clean-metric .metric-icon.purple { background: #f3edff; }
+
+      .teacher-clean-metric small {
+        display: block;
+        color: #75867b;
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .teacher-clean-metric strong {
+        display: block;
+        margin-top: 4px;
+        color: #17243b;
+        font-size: 30px;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      .teacher-clean-tabs {
+        position: sticky;
+        top: 74px;
+        z-index: 25;
+        margin-top: 18px;
+        padding: 10px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(14px);
+        border: 1px solid #e1eee7;
+        border-radius: 22px;
+        box-shadow: 0 10px 26px rgba(30, 71, 44, 0.05);
+      }
+
+      .teacher-clean-tabs button {
+        border: 0;
+        background: transparent;
+        border-radius: 16px;
+        padding: 13px 14px;
+        color: #3d5145;
+        font-weight: 950;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        transition: 0.18s ease;
+      }
+
+      .teacher-clean-tabs button:hover,
+      .teacher-clean-tabs button.active {
+        background: linear-gradient(135deg, #149a57, #0a8a4b);
+        color: #ffffff;
+        box-shadow: 0 10px 20px rgba(20, 154, 87, 0.2);
+      }
+
+      .teacher-clean-panel {
+        margin-top: 18px;
+        animation: teacherPanelIn 0.18s ease;
+      }
+
+      @keyframes teacherPanelIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .teacher-clean-tools {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .lms-tool-card.compact {
+        padding: 18px;
+        border-radius: 22px;
+        box-shadow: 0 10px 24px rgba(30, 71, 44, 0.045);
+      }
+
+      .teacher-clean-subhead {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 14px;
+        margin: 22px 0 12px;
+        padding-top: 4px;
+      }
+
+      .teacher-clean-subhead h3 {
+        margin: 0;
+        color: #17243b;
+        font-size: 20px;
+        letter-spacing: -0.03em;
+      }
+
+      .teacher-clean-subhead p {
+        margin: 0;
+        color: #75867b;
+        font-weight: 700;
+      }
+
+      .teacher-clean-group-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .lms-group-card.clean {
+        margin: 0;
+        padding: 16px;
+        border-radius: 20px;
+        box-shadow: none;
+      }
+
+      .lms-feature-head.clean {
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .teacher-builder-layout {
+        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.55fr);
+      }
+
+      .teacher-design-card,
+      .teacher-side-card {
+        border-radius: 22px;
+        padding: 20px;
+        box-shadow: 0 10px 26px rgba(30, 71, 44, 0.045);
+      }
+
+      .teacher-design-heading {
+        margin-bottom: 14px;
+      }
+
+      .teacher-design-heading h2 {
+        font-size: 20px;
+      }
+
+      .teacher-design-heading p {
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .lms-add-choice-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .lms-add-choice {
+        min-height: 58px;
+        padding: 10px;
+      }
+
+      .teacher-activity-row {
+        padding: 15px;
+        border-radius: 20px;
+      }
+
+      .teacher-activity-row-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+      }
+
+      .teacher-activity-row-head {
+        margin-bottom: 10px;
+      }
+
+      .lms-recent-table th,
+      .lms-recent-table td {
+        padding: 12px 10px;
+      }
+
+      .lms-bottom-action-bar {
+        background: #ffffff;
+        border: 1px solid #e4eee8;
+        border-radius: 22px;
+        padding: 14px;
+        box-shadow: 0 10px 24px rgba(30, 71, 44, 0.045);
+      }
+
+      .lms-action-secondary,
+      .lms-action-primary {
+        height: 50px;
+      }
+
+      @media (max-width: 1120px) {
+        .teacher-clean-metrics,
+        .teacher-clean-tools,
+        .teacher-clean-group-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .teacher-builder-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-clean-tabs {
+          position: static;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .teacher-main-header-clean {
+          height: auto;
+          padding: 14px;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+
+        .teacher-main-content-clean {
+          padding: 16px;
+        }
+
+        .teacher-clean-hero,
+        .teacher-clean-subhead,
+        .lms-feature-head.clean {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .teacher-clean-actions {
+          width: 100%;
+          justify-content: stretch;
+        }
+
+        .teacher-clean-actions button {
+          flex: 1;
+        }
+
+        .teacher-clean-metrics,
+        .teacher-clean-tools,
+        .teacher-clean-group-list,
+        .teacher-clean-tabs,
+        .lms-add-choice-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+          /* Final cleanup for Group Manager and Student Monitoring panels */
+      .teacher-workspace-card {
+        margin-top: 18px;
+        background: #ffffff;
+        border: 1px solid #e3eee7;
+        border-radius: 26px;
+        padding: 24px;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.055);
+      }
+
+      .teacher-workspace-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .teacher-workspace-heading h2 {
+        margin: 4px 0 6px;
+        color: #17243b;
+        font-size: 26px;
+        letter-spacing: -0.04em;
+      }
+
+      .teacher-workspace-heading p {
+        margin: 0;
+        color: #6f8176;
+        font-weight: 700;
+        line-height: 1.55;
+      }
+
+      .teacher-group-layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1.22fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .teacher-group-tools {
+        display: grid;
+        gap: 14px;
+      }
+
+      .teacher-tool-box {
+        background: linear-gradient(180deg, #fbfffc 0%, #f7fbf8 100%);
+        border: 1px solid #e2ede6;
+        border-radius: 22px;
+        padding: 18px;
+        box-shadow: 0 10px 24px rgba(30, 71, 44, 0.04);
+      }
+
+      .teacher-tool-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 10px;
+        font-size: 20px;
+      }
+
+      .teacher-tool-icon.purple {
+        background: #f3edff;
+      }
+
+      .teacher-tool-icon.orange {
+        background: #fff4df;
+      }
+
+      .teacher-tool-box h3 {
+        margin: 0 0 6px;
+        color: #183523;
+        font-size: 20px;
+        letter-spacing: -0.03em;
+      }
+
+      .teacher-tool-box p {
+        margin: 0 0 14px;
+        color: #748378;
+        line-height: 1.5;
+        font-weight: 700;
+      }
+
+      .teacher-tool-box .input-field {
+        width: 100%;
+        margin-bottom: 10px;
+        min-height: 48px;
+      }
+
+      .teacher-two-fields {
+        display: grid;
+        grid-template-columns: 1fr 100px;
+        gap: 10px;
+      }
+
+      .lms-main-action.full,
+      .lms-outline-action.full {
+        width: 100%;
+      }
+
+      .teacher-groups-area {
+        min-width: 0;
+        background: #fbfefd;
+        border: 1px solid #e7f0ea;
+        border-radius: 22px;
+        padding: 18px;
+      }
+
+      .teacher-mini-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .teacher-mini-heading h3 {
+        margin: 0 0 4px;
+        color: #17243b;
+        font-size: 21px;
+        letter-spacing: -0.03em;
+      }
+
+      .teacher-mini-heading p {
+        margin: 0;
+        color: #75867b;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .teacher-groups-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .teacher-group-item {
+        border: 1px solid #e1eee7;
+        border-radius: 20px;
+        background: #ffffff;
+        padding: 15px;
+      }
+
+      .teacher-group-item-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .teacher-group-item strong {
+        color: #17243b;
+        font-size: 16px;
+      }
+
+      .teacher-group-item p {
+        margin: 4px 0 0;
+        color: #738177;
+        line-height: 1.45;
+      }
+
+      .teacher-add-member-row {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #edf3ef;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+      }
+
+      .teacher-add-member-row .input-field {
+        min-width: 0;
+      }
+
+      .teacher-empty-panel {
+        min-height: 160px;
+        border: 1px dashed #cfe7d8;
+        border-radius: 20px;
+        background: #f8fcf9;
+        color: #728277;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 22px;
+        grid-column: 1 / -1;
+      }
+
+      .teacher-empty-panel div {
+        font-size: 30px;
+      }
+
+      .teacher-empty-panel strong {
+        margin-top: 6px;
+        color: #1d3c29;
+      }
+
+      .teacher-empty-panel p {
+        margin: 4px 0 0;
+      }
+
+      .teacher-workspace-heading.monitor {
+        align-items: center;
+      }
+
+      .teacher-monitor-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .teacher-monitor-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .teacher-monitor-summary div {
+        border: 1px solid #e5eee8;
+        background: #f9fcfa;
+        border-radius: 18px;
+        padding: 14px;
+      }
+
+      .teacher-monitor-summary span {
+        display: block;
+        color: #728277;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 950;
+      }
+
+      .teacher-monitor-summary strong {
+        display: block;
+        margin-top: 4px;
+        color: #17243b;
+        font-size: 25px;
+      }
+
+      .teacher-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid #e5eee8;
+        border-radius: 20px;
+        background: #ffffff;
+      }
+
+      .teacher-monitor-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+
+      .teacher-monitor-table th,
+      .teacher-monitor-table td {
+        padding: 15px 16px;
+        border-bottom: 1px solid #edf3ef;
+        text-align: left;
+        color: #17243b;
+      }
+
+      .teacher-monitor-table th {
+        background: #fbfefd;
+        color: #40554a;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .teacher-monitor-table td strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .teacher-monitor-table td small {
+        display: block;
+        margin-top: 4px;
+        color: #738177;
+      }
+
+      .teacher-progress-cell {
+        display: grid;
+        gap: 7px;
+        min-width: 150px;
+      }
+
+      .teacher-progress-cell span {
+        color: #173c27;
+        font-weight: 900;
+      }
+
+      .teacher-progress-track {
+        height: 8px;
+        border-radius: 999px;
+        background: #eaf4ee;
+        overflow: hidden;
+      }
+
+      .teacher-progress-track div {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #13a85f, #7fda95);
+      }
+
+      .teacher-empty-panel.table {
+        min-height: 180px;
+      }
+
+      @media (max-width: 1100px) {
+        .teacher-group-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-groups-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-workspace-heading.monitor {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .teacher-monitor-actions {
+          justify-content: flex-start;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .teacher-workspace-card {
+          padding: 16px;
+          border-radius: 22px;
+        }
+
+        .teacher-monitor-summary,
+        .teacher-two-fields,
+        .teacher-add-member-row {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-monitor-actions button {
+          width: 100%;
+        }
+      }
+
+
+      /* Fix monitoring action buttons so they are clearly clickable and never covered by nearby layout layers. */
+      .teacher-workspace-heading.monitor {
+        position: relative;
+        z-index: 5;
+      }
+
+      .teacher-monitor-actions {
+        position: relative;
+        z-index: 10;
+        pointer-events: auto;
+      }
+
+      .teacher-monitor-actions .lms-report-button {
+        position: relative;
+        z-index: 11;
+        pointer-events: auto;
+        cursor: pointer;
+        user-select: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .teacher-monitor-actions .lms-report-button:hover {
+        background: #eefaf3;
+        border-color: #9fd8b8;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(20, 154, 87, 0.1);
+      }
+
+      .teacher-monitor-actions .lms-report-button:active {
+        transform: translateY(0);
+      }
+    `}</style>
+  );
 }
+
+
+
+
+function TeacherDashboard({
+  user,
+  data,
+  logout,
+  reload,
+  createGroup,
+  addTask,
+  addMember,
+  createLesson,
+  exportStudentsCSV,
+  exportLogsCSV,
+  downloadSummaryReport
+}) {
+  const [teacherTab, setTeacherTab] = useState('lessons');
+
+  const lessons = data.lessons || [];
+  const groups = data.groups || [];
+  const students = data.students || [];
+  const rows = data.rows || [];
+  const stats = data.stats || {};
+  const teacherName = user?.displayName || 'Teacher 1';
+
+  const publishedLessons = lessons.filter(lesson => (lesson.status || 'published') === 'published').length;
+  const draftLessons = Math.max(0, lessons.length - publishedLessons);
+  const studentCount = stats.students || students.length || rows.length || 0;
+  const averageProgress = rows.length
+    ? Math.round(rows.reduce((sum, row) => sum + Number(row.percent || 0), 0) / rows.length)
+    : 0;
+
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
+  function openTab(tab, targetId = 'teacher-dashboard-workspace') {
+    setTeacherTab(tab);
+    setTimeout(() => scrollTo(targetId), 0);
+  }
+
+  function openLessonsList() {
+    setTeacherTab('lessons');
+    setTimeout(() => scrollTo('teacher-recent-lessons'), 0);
+  }
+
+  return (
+    <div className="teacher-redesign-page">
+      <TeacherRedesignStyles />
+
+      <header className="teacher-main-header teacher-main-header-clean">
+        <div className="teacher-brand-area">
+          <div className="teacher-brand-mark">
+            <div className="teacher-brand-icon">🌱</div>
+            <div className="teacher-brand-text">
+              <strong>Tuklas Talino</strong>
+              <small>Tuklasin. Matuto. Magningning.</small>
+            </div>
+          </div>
+
+          <nav className="teacher-nav-links" aria-label="Teacher navigation">
+            <button
+              className={teacherTab === 'lessons' ? 'active' : ''}
+              type="button"
+              onClick={() => openTab('lessons')}
+            >
+              📚 Lessons
+            </button>
+            <button
+              className={teacherTab === 'groups' ? 'active' : ''}
+              type="button"
+              onClick={() => openTab('groups')}
+            >
+              👥 Groups
+            </button>
+            <button
+              className={teacherTab === 'students' ? 'active' : ''}
+              type="button"
+              onClick={() => openTab('students')}
+            >
+              🎓 Students
+            </button>
+            <button type="button" onClick={downloadSummaryReport}>
+              📊 Report
+            </button>
+          </nav>
+        </div>
+
+        <div className="teacher-header-actions">
+          <div className="teacher-profile-pill">
+            <div className="teacher-profile-avatar">👩‍🏫</div>
+            <div className="teacher-profile-text">
+              <strong>{teacherName}</strong>
+              <small>Guro</small>
+            </div>
+            <span>⌄</span>
+          </div>
+
+          <button className="teacher-logout-btn" onClick={logout}>
+            ⇥ Logout
+          </button>
+        </div>
+      </header>
+
+      <main className="teacher-main-content teacher-main-content-clean" id="teacher-dashboard-top">
+        <section className="teacher-clean-hero">
+          <div className="teacher-clean-hero-copy">
+            <div className="lms-section-label">Teacher Workspace</div>
+            <h1>Teacher Dashboard</h1>
+          </div>
+
+          <div className="teacher-clean-actions">
+            <button className="lms-view-button" type="button" onClick={openLessonsList}>
+              📚 View Lessons
+            </button>
+            <button className="teacher-logout-btn light" type="button" onClick={() => openTab('students')}>
+              🎓 Monitor Students
+            </button>
+          </div>
+        </section>
+
+        <section className="teacher-clean-metrics" aria-label="Teacher quick stats">
+          <button className="teacher-clean-metric" type="button" onClick={() => openTab('lessons')}>
+            <span className="metric-icon green">📄</span>
+            <span>
+              <small>Draft Lessons</small>
+              <strong>{draftLessons || 0}</strong>
+            </span>
+          </button>
+
+          <button className="teacher-clean-metric" type="button" onClick={openLessonsList}>
+            <span className="metric-icon yellow">✅</span>
+            <span>
+              <small>Published Lessons</small>
+              <strong>{publishedLessons || lessons.length || 0}</strong>
+            </span>
+          </button>
+
+          <button className="teacher-clean-metric" type="button" onClick={() => openTab('students')}>
+            <span className="metric-icon blue">👥</span>
+            <span>
+              <small>Students</small>
+              <strong>{studentCount}</strong>
+            </span>
+          </button>
+
+          <button className="teacher-clean-metric" type="button" onClick={() => openTab('students')}>
+            <span className="metric-icon purple">⭐</span>
+            <span>
+              <small>Class Progress</small>
+              <strong>{averageProgress}%</strong>
+            </span>
+          </button>
+        </section>
+
+        <section className="teacher-clean-tabs" id="teacher-dashboard-workspace">
+          <button
+            className={teacherTab === 'lessons' ? 'active' : ''}
+            type="button"
+            onClick={() => openTab('lessons')}
+          >
+            <span>📚</span>
+            Lesson Builder
+          </button>
+          <button
+            className={teacherTab === 'groups' ? 'active' : ''}
+            type="button"
+            onClick={() => openTab('groups')}
+          >
+            <span>👥</span>
+            Group Manager
+          </button>
+          <button
+            className={teacherTab === 'students' ? 'active' : ''}
+            type="button"
+            onClick={() => openTab('students')}
+          >
+            <span>🎓</span>
+            Student Monitoring
+          </button>
+        </section>
+
+        {teacherTab === 'lessons' && (
+          <section className="teacher-clean-panel">
+            <TeacherLessonManager lessons={lessons} createLesson={createLesson} />
+          </section>
+        )}
+
+        {teacherTab === 'groups' && (
+          <section className="teacher-workspace-card clean-groups-panel" id="teacher-group-manager">
+            <div className="teacher-workspace-heading">
+              <div>
+                <div className="lms-section-label">Classroom Tools</div>
+                <h2>Group Manager</h2>
+                <p>Create groups, assign tasks, and add students to collaborative learning groups.</p>
+              </div>
+            </div>
+
+            <div className="teacher-group-layout">
+              <div className="teacher-group-tools">
+                <div className="teacher-tool-box">
+                  <div className="teacher-tool-icon purple">➕</div>
+                  <h3>Create Group</h3>
+                  <p>Set up a group, class section, or collaborative activity team.</p>
+
+                  <input className="input-field" id="t-group-name" placeholder="Group name" />
+                  <input className="input-field" id="t-group-section" placeholder="Description / Section" />
+
+                  <button className="lms-main-action full" onClick={createGroup}>
+                    Create Group
+                  </button>
+                </div>
+
+                <div className="teacher-tool-box">
+                  <div className="teacher-tool-icon orange">📝</div>
+                  <h3>Add Task</h3>
+                  <p>Assign collaborative work with a deadline and XP reward.</p>
+
+                  <select className="input-field" id="t-task-group">
+                    {groups.length ? (
+                      groups.map(group => (
+                        <option value={group.id} key={group.id}>{group.name}</option>
+                      ))
+                    ) : (
+                      <option value="">No groups yet</option>
+                    )}
+                  </select>
+
+                  <input className="input-field" id="t-task-title" placeholder="Task title" />
+
+                  <div className="teacher-two-fields">
+                    <input className="input-field" id="t-task-deadline" type="date" />
+                    <input className="input-field" id="t-task-xp" type="number" min="0" defaultValue="10" placeholder="XP" />
+                  </div>
+
+                  <button className="lms-outline-action full" onClick={addTask}>
+                    Add Task
+                  </button>
+                </div>
+              </div>
+
+              <div className="teacher-groups-area">
+                <div className="teacher-mini-heading">
+                  <div>
+                    <h3>Groups</h3>
+                    <p>Add students to existing groups and review assigned tasks.</p>
+                  </div>
+                  <span className="lms-mini-pill">{groups.length} group{groups.length === 1 ? '' : 's'}</span>
+                </div>
+
+                <div className="teacher-groups-grid">
+                  {groups.length ? groups.map(group => (
+                    <div className="teacher-group-item" key={group.id}>
+                      <div className="teacher-group-item-top">
+                        <div>
+                          <strong>{group.name}</strong>
+                          <p>{group.description || 'No description added.'}</p>
+                        </div>
+                        <span className="lms-mini-pill">✅ {group.tasks?.length || 0} tasks</span>
+                      </div>
+
+                      <div className="teacher-add-member-row">
+                        <select className="input-field" id={`member-${group.id}`}>
+                          {students.map(student => (
+                            <option key={student.id} value={student.id}>
+                              {student.name} • Grade {student.gradeLevel}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="lms-outline-action" onClick={() => addMember(group.id)}>
+                          Add Member
+                        </button>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="teacher-empty-panel">
+                      <div>👥</div>
+                      <strong>No groups yet.</strong>
+                      <p>Create your first group to start collaborative learning tasks.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {teacherTab === 'students' && (
+          <section className="teacher-workspace-card clean-students-panel" id="teacher-monitoring-table">
+            <div className="teacher-workspace-heading monitor">
+              <div>
+                <div className="lms-section-label">Learner Monitoring</div>
+                <h2>Students Monitoring Table</h2>
+                <p>Track XP, lesson completion, progress, and learner status.</p>
+              </div>
+
+              <div className="teacher-monitor-actions">
+                <button type="button" className="lms-report-button" onClick={reload}>Refresh</button>
+                <button type="button" className="lms-report-button" onClick={exportStudentsCSV}>⬇️ Export CSV</button>
+                <button type="button" className="lms-report-button" onClick={exportLogsCSV}>⬇️ Export Activity Logs</button>
+                <button type="button" className="lms-report-button" onClick={downloadSummaryReport}>🧾 Summary Report</button>
+              </div>
+            </div>
+
+            <div className="teacher-monitor-summary">
+              <div>
+                <span>Total Students</span>
+                <strong>{studentCount}</strong>
+              </div>
+              <div>
+                <span>Average Progress</span>
+                <strong>{averageProgress}%</strong>
+              </div>
+              <div>
+                <span>Lessons Available</span>
+                <strong>{lessons.length}</strong>
+              </div>
+            </div>
+
+            <div className="teacher-table-wrapper">
+              <table className="teacher-monitor-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>XP</th>
+                    <th>Lessons</th>
+                    <th>Progress</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.length ? rows.map(row => (
+                    <tr key={row.id}>
+                      <td>
+                        <strong>{row.name}</strong>
+                        <small>{row.studentCode} • Grade {row.gradeLevel}</small>
+                      </td>
+                      <td>{row.xp}</td>
+                      <td>{row.completed}/{row.totalLessons}</td>
+                      <td>
+                        <div className="teacher-progress-cell">
+                          <span>{row.percent}%</span>
+                          <div className="teacher-progress-track">
+                            <div style={{ width: `${Math.max(0, Math.min(100, Number(row.percent || 0)))}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="lms-status neutral">{row.status || 'Active'}</span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan="5">
+                        <div className="teacher-empty-panel table">
+                          <div>📭</div>
+                          <strong>No monitoring data yet.</strong>
+                          <p>Student progress will appear here after learners start completing lessons.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        <footer className="teacher-footer">
+          <span>© 2026 Tuklas Talino. All rights reserved.</span>
+          <span>Privacy Policy · Terms of Service · Help Center</span>
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+
+
+
 
 function TeacherLessonManager({ lessons, createLesson }) {
   const [lessonDraft, setLessonDraft] = useState({
@@ -2078,7 +4425,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
     const activityMap = {
       mcq: {
         ...base,
-        title: 'Multiple Choice Quiz',
+        title: 'MCQ Quiz',
         questions: [
           {
             id: makeId(),
@@ -2094,7 +4441,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
       },
       writing: {
         ...base,
-        title: 'Writing Activity',
+        title: 'Writing Prompt',
         prompt: ''
       },
       speech: {
@@ -2104,7 +4451,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
       },
       matching: {
         ...base,
-        title: 'Matching Game',
+        title: 'Matching',
         pairs: [
           { id: makeId(), left: '', right: '' },
           { id: makeId(), left: '', right: '' }
@@ -2112,7 +4459,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
       },
       vocabulary: {
         ...base,
-        title: 'Vocabulary Cards',
+        title: 'Vocabulary',
         words: [
           { id: makeId(), word: '', meaning: '', example: '' }
         ]
@@ -2139,6 +4486,44 @@ function TeacherLessonManager({ lessons, createLesson }) {
 
   function removeActivity(activityId) {
     setActivities(prev => prev.filter(activity => activity.id !== activityId));
+  }
+
+  function duplicateActivity(activityId) {
+    const original = activities.find(activity => activity.id === activityId);
+    if (!original) return;
+
+    const duplicate = {
+      ...JSON.parse(JSON.stringify(original)),
+      id: makeId(),
+      title: `${original.title || original.type} Copy`
+    };
+
+    if (duplicate.questions) {
+      duplicate.questions = duplicate.questions.map(question => ({
+        ...question,
+        id: makeId(),
+        options: question.options.map(option => ({
+          ...option,
+          id: makeId()
+        }))
+      }));
+    }
+
+    if (duplicate.pairs) {
+      duplicate.pairs = duplicate.pairs.map(pair => ({
+        ...pair,
+        id: makeId()
+      }));
+    }
+
+    if (duplicate.words) {
+      duplicate.words = duplicate.words.map(word => ({
+        ...word,
+        id: makeId()
+      }));
+    }
+
+    setActivities(prev => [...prev, duplicate]);
   }
 
   function updateMcqQuestion(activityId, questionId, patch) {
@@ -2305,7 +4690,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
 
           return {
             type: 'mcq',
-            title: activity.title || 'Multiple Choice Quiz',
+            title: activity.title || 'MCQ Quiz',
             instructions: activity.instructions || null,
             questions
           };
@@ -2316,7 +4701,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
 
           return {
             type: 'writing',
-            title: activity.title || 'Writing Activity',
+            title: activity.title || 'Writing Prompt',
             instructions: activity.instructions || null,
             prompt: activity.prompt.trim()
           };
@@ -2345,7 +4730,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
 
           return {
             type: 'matching',
-            title: activity.title || 'Matching Game',
+            title: activity.title || 'Matching',
             instructions: activity.instructions || null,
             pairs
           };
@@ -2364,7 +4749,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
 
           return {
             type: 'vocabulary',
-            title: activity.title || 'Vocabulary Cards',
+            title: activity.title || 'Vocabulary',
             instructions: activity.instructions || null,
             words
           };
@@ -2418,216 +4803,409 @@ function TeacherLessonManager({ lessons, createLesson }) {
     setActivities([]);
   }
 
+  const validActivities = cleanActivities();
+  const subjectMeta = SUBJECTS.find(s => s.name === lessonDraft.subject) || SUBJECTS[0];
+  const [showAllLessons, setShowAllLessons] = useState(false);
+
+  const allRecentLessons = [...(lessons || [])]
+    .sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+
+      if (dateA !== dateB) return dateB - dateA;
+
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  const visibleRecentLessons = showAllLessons
+    ? allRecentLessons
+    : allRecentLessons.slice(0, 5);
+
+  const activityButtonMeta = [
+    { type: 'infographic', label: 'Info Card', icon: 'i', className: 'choice-infographic' },
+    { type: 'vocabulary', label: 'Vocabulary', icon: 'Aa', className: 'choice-vocabulary' },
+    { type: 'matching', label: 'Matching', icon: '⌘', className: 'choice-matching' },
+    { type: 'mcq', label: 'MCQ Quiz', icon: '?', className: 'choice-mcq' },
+    { type: 'speech', label: 'Speech Practice', icon: '🎙️', className: 'choice-speech' },
+    { type: 'writing', label: 'Writing Prompt', icon: '✎', className: 'choice-writing' }
+  ];
+
+  function scrollToRecentLessons() {
+    document.getElementById('teacher-recent-lessons')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
+  function toggleShowAllLessons() {
+    setShowAllLessons(prev => !prev);
+    setTimeout(scrollToRecentLessons, 0);
+  }
+
   return (
-    <div className="card">
-      <div className="section-title">🧩 Flexible Lesson Builder</div>
-      <div className="muted">
-        Create grade-appropriate Filipino lessons with custom activity blocks for reading, vocabulary, literature, speech, and writing.
-      </div>
+    <>
+      <div className="teacher-builder-layout">
+        <div className="teacher-builder-main">
+          <section className="teacher-design-card soft">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">1</div>
+              <div>
+                <h2>Lesson Information</h2>
+                <p>Provide the basic details for your lesson.</p>
+              </div>
+            </div>
 
-      <div className="divider" />
+            <div className="teacher-form-row">
+              <div className="teacher-field">
+                <label>Grade Level</label>
+                <select
+                  className="input-field"
+                  value={lessonDraft.gradeLevel}
+                  onChange={(e) => updateLesson('gradeLevel', Number(e.target.value))}
+                >
+                  <option value="1">Grade 1</option>
+                  <option value="2">Grade 2</option>
+                  <option value="3">Grade 3</option>
+                  <option value="4">Grade 4</option>
+                  <option value="5">Grade 5</option>
+                  <option value="6">Grade 6</option>
+                </select>
+              </div>
 
-      <div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}>
-        <div className="section-title">1. Lesson Information</div>
+              <div className="teacher-field">
+                <label>Subject Area</label>
+                <select
+                  className="input-field"
+                  value={lessonDraft.subject}
+                  onChange={(e) => updateLesson('subject', e.target.value)}
+                >
+                  {SUBJECTS.map(subject => (
+                    <option key={subject.name} value={subject.name}>
+                      {subject.icon} {subject.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        <div className="grid grid-3">
-          <div>
-            <label className="muted">Grade Level</label>
-            <select
-              className="input-field"
-              value={lessonDraft.gradeLevel}
-              onChange={(e) => updateLesson('gradeLevel', Number(e.target.value))}
-            >
-              <option value="1">Grade 1</option>
-              <option value="2">Grade 2</option>
-              <option value="3">Grade 3</option>
-              <option value="4">Grade 4</option>
-              <option value="5">Grade 5</option>
-              <option value="6">Grade 6</option>
-            </select>
-          </div>
+              <div className="teacher-field">
+                <label>XP Reward</label>
+                <input
+                  className="input-field"
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={lessonDraft.xpReward}
+                  onChange={(e) => updateLesson('xpReward', e.target.value)}
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="muted">Subject Area</label>
-            <select
-              className="input-field"
-              value={lessonDraft.subject}
-              onChange={(e) => updateLesson('subject', e.target.value)}
-            >
-              {SUBJECTS.map(subject => (
-                <option key={subject.name} value={subject.name}>
-                  {subject.icon} {subject.name}
-                </option>
+            <div className="teacher-field" style={{ marginTop: 16 }}>
+              <label>Lesson Title</label>
+              <input
+                className="input-field"
+                value={lessonDraft.title}
+                onChange={(e) => updateLesson('title', e.target.value)}
+                placeholder="e.g. Pangngalan at mga Halimbawa"
+              />
+            </div>
+
+            <div className="teacher-field" style={{ marginTop: 16 }}>
+              <label>Estimated Duration</label>
+              <input
+                className="input-field"
+                value={lessonDraft.duration}
+                onChange={(e) => updateLesson('duration', e.target.value)}
+                placeholder="10 minuto"
+              />
+            </div>
+          </section>
+
+          <section className="teacher-design-card soft">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">2</div>
+              <div>
+                <h2>Learning Content</h2>
+                <p>Add instructions and the main content for your lesson.</p>
+              </div>
+            </div>
+
+            <div className="teacher-field">
+              <label>Instructions for Students</label>
+              <textarea
+                className="input-field"
+                value={lessonDraft.instructions}
+                onChange={(e) => updateLesson('instructions', e.target.value)}
+                placeholder="Write clear instructions for your students..."
+                rows="4"
+              />
+            </div>
+
+            <div className="teacher-field" style={{ marginTop: 16 }}>
+              <label>Main Passage / Story / Lesson Content</label>
+              <div className="lms-editor-toolbar" aria-hidden="true">
+                <button type="button">B</button>
+                <button type="button"><em>I</em></button>
+                <button type="button"><u>U</u></button>
+                <button type="button">☰</button>
+                <button type="button">🔗</button>
+                <button type="button">🖼️</button>
+                <button type="button">↶</button>
+                <button type="button">↷</button>
+              </div>
+              <textarea
+                className="input-field lms-editor-area"
+                value={lessonDraft.passage}
+                onChange={(e) => updateLesson('passage', e.target.value)}
+                placeholder="Write or paste your lesson content here..."
+                rows="7"
+              />
+            </div>
+          </section>
+
+          <section className="teacher-design-card soft">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">3</div>
+              <div>
+                <h2>Activity Builder</h2>
+                <p>Add activity blocks to build your lesson structure.</p>
+              </div>
+            </div>
+
+            <div className="lms-add-choice-grid">
+              {activityButtonMeta.map(item => (
+                <button
+                  key={item.type}
+                  type="button"
+                  className={`lms-add-choice ${item.className}`}
+                  onClick={() => addActivity(item.type)}
+                >
+                  <span>{item.icon}</span>
+                  {item.label}
+                </button>
               ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="muted">XP Reward</label>
-            <input
-              className="input-field"
-              type="number"
-              min="1"
-              max="500"
-              value={lessonDraft.xpReward}
-              onChange={(e) => updateLesson('xpReward', e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div style={{ height: 10 }} />
-
-        <input
-          className="input-field"
-          value={lessonDraft.title}
-          onChange={(e) => updateLesson('title', e.target.value)}
-          placeholder="Lesson title, e.g. Pangngalan at mga Halimbawa"
-        />
-
-        <div style={{ height: 10 }} />
-
-        <input
-          className="input-field"
-          value={lessonDraft.duration}
-          onChange={(e) => updateLesson('duration', e.target.value)}
-          placeholder="Duration, e.g. 10 minuto"
-        />
-      </div>
-
-      <div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}>
-        <div className="section-title">2. Learning Content</div>
-
-        <textarea
-          className="input-field"
-          value={lessonDraft.instructions}
-          onChange={(e) => updateLesson('instructions', e.target.value)}
-          placeholder="Instructions for students"
-          rows="3"
-        />
-
-        <div style={{ height: 10 }} />
-
-        <textarea
-          className="input-field"
-          value={lessonDraft.passage}
-          onChange={(e) => updateLesson('passage', e.target.value)}
-          placeholder="Main passage / story / lesson content"
-          rows="6"
-        />
-      </div>
-
-      <div className="card" style={{ boxShadow: 'none', background: 'var(--bg)' }}>
-        <div className="section-title">3. Activity Builder</div>
-        <div className="muted">
-          Add any activity blocks needed for this lesson. Empty or incomplete activity blocks will be ignored.
-        </div>
-
-        <div className="divider" />
-
-        <div className="row">
-          <button className="btn btn-outline btn-sm" onClick={() => addActivity('mcq')}>+ MCQ</button>
-          <button className="btn btn-outline btn-sm" onClick={() => addActivity('writing')}>+ Writing</button>
-          <button className="btn btn-outline btn-sm" onClick={() => addActivity('speech')}>+ Speech</button>
-          <button className="btn btn-outline btn-sm" onClick={() => addActivity('matching')}>+ Matching</button>
-          <button className="btn btn-outline btn-sm" onClick={() => addActivity('vocabulary')}>+ Vocabulary</button>
-          <button className="btn btn-outline btn-sm" onClick={() => addActivity('infographic')}>+ Info Card</button>
-        </div>
-
-        <div className="divider" />
-
-        {activities.length === 0 && (
-          <div className="muted">
-            No activities added yet. You can still create a reading-only lesson, or add activities above.
-          </div>
-        )}
-
-        {activities.map((activity, activityIndex) => (
-          <TeacherActivityBlock
-            key={activity.id}
-            activity={activity}
-            activityIndex={activityIndex}
-            updateActivity={updateActivity}
-            removeActivity={removeActivity}
-            updateMcqQuestion={updateMcqQuestion}
-            updateMcqOption={updateMcqOption}
-            addMcqQuestion={addMcqQuestion}
-            updatePair={updatePair}
-            addPair={addPair}
-            updateWord={updateWord}
-            addWord={addWord}
-          />
-        ))}
-      </div>
-
-      <div className="card" style={{ boxShadow: 'none', background: '#F8FAFF', border: '1px solid #E1E7FF' }}>
-        <div className="section-title">4. Student Preview</div>
-
-        <div className="lesson-card">
-          <div className="lesson-icon">
-            {SUBJECTS.find(s => s.name === lessonDraft.subject)?.icon || '📘'}
-          </div>
-
-          <div style={{ flex: 1 }}>
-            <b>{lessonDraft.title || 'Untitled Lesson'}</b>
-            <div className="muted">
-              Grade {lessonDraft.gradeLevel} • {lessonDraft.subject} • {lessonDraft.xpReward || 0} XP
             </div>
-            <div className="muted">
-              {cleanActivities().length} valid activity block{cleanActivities().length === 1 ? '' : 's'}
+
+            <div className="lms-activity-list">
+              {activities.length ? (
+                activities.map((activity, activityIndex) => (
+                  <TeacherActivityBlock
+                    key={activity.id}
+                    activity={activity}
+                    activityIndex={activityIndex}
+                    updateActivity={updateActivity}
+                    removeActivity={removeActivity}
+                    duplicateActivity={duplicateActivity}
+                    updateMcqQuestion={updateMcqQuestion}
+                    updateMcqOption={updateMcqOption}
+                    addMcqQuestion={addMcqQuestion}
+                    updatePair={updatePair}
+                    addPair={addPair}
+                    updateWord={updateWord}
+                    addWord={addWord}
+                  />
+                ))
+              ) : (
+                <div className="lms-empty-activity">
+                  <strong>No activity blocks added yet.</strong>
+                  <p>Use the buttons above to add activities to your lesson.</p>
+                </div>
+              )}
+
+              <button className="lms-add-block-btn" type="button" onClick={() => addActivity('infographic')}>
+                ＋ Add Activity Block
+              </button>
             </div>
-          </div>
+          </section>
+
+          <section className="teacher-design-card soft" id="teacher-recent-lessons">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">4</div>
+              <div>
+                <h2>Recently Created Lessons</h2>
+                <p>Your most recent lessons.</p>
+              </div>
+              <button className="lms-view-lessons-btn" type="button" onClick={toggleShowAllLessons}>
+                {showAllLessons ? 'Show Less' : 'View All Lessons'}
+              </button>
+            </div>
+
+            <table className="lms-recent-table">
+              <thead>
+                <tr>
+                  <th>Lesson Title</th>
+                  <th>Subject</th>
+                  <th>Grade</th>
+                  <th>Duration</th>
+                  <th>XP</th>
+                  <th>Status</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleRecentLessons.map(lesson => {
+                  const isPublished = (lesson.status || 'published') === 'published';
+
+                  return (
+                    <tr key={lesson.id}>
+                      <td>📘 {lesson.title}</td>
+                      <td>{lesson.subject}</td>
+                      <td>Grade {lesson.gradeLevel}</td>
+                      <td>{lesson.duration || '10 minuto'}</td>
+                      <td>{lesson.xpReward || 0}</td>
+                      <td>
+                        <span className={`lms-status ${isPublished ? 'published' : 'draft'}`}>
+                          ● {isPublished ? 'Published' : 'Draft'}
+                        </span>
+                      </td>
+                      <td>{fmtDate(lesson.updatedAt || lesson.createdAt)}</td>
+                    </tr>
+                  );
+                })}
+
+                {!visibleRecentLessons.length && (
+                  <tr>
+                    <td colSpan="7">No teacher-created lessons yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            {allRecentLessons.length > 5 && (
+              <button className="lms-show-more" type="button" onClick={toggleShowAllLessons}>
+                {showAllLessons ? 'Show less ↑' : 'Show more ↓'}
+              </button>
+            )}
+          </section>
         </div>
 
-        <div className="divider" />
+        <aside className="teacher-builder-side">
+          <section className="teacher-side-card lms-live-preview">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">👁</div>
+              <div>
+                <h2>Live Preview</h2>
+                <p>See how your lesson will appear to students.</p>
+              </div>
+            </div>
 
-        <button className="btn btn-green" onClick={submitLessonBuilder}>
-          ✅ Create Lesson
+            <div className="lms-preview-card-inner">
+              <div className="lms-preview-badges">
+                <span className="lms-preview-badge">{subjectMeta?.icon || '📘'} {lessonDraft.subject}</span>
+                <span className="lms-preview-badge">Grade {lessonDraft.gradeLevel}</span>
+              </div>
+
+              <div className="lms-preview-title">
+                {lessonDraft.title || 'Untitled Lesson'}
+              </div>
+
+              <div className="lms-preview-stats">
+                <span className="lms-preview-stat">⏱ {lessonDraft.duration || '10 minuto'}</span>
+                <span className="lms-preview-stat">⭐ {lessonDraft.xpReward || 0} XP</span>
+                <span className="lms-preview-stat">🧩 {validActivities.length} activities</span>
+              </div>
+
+              <div className="lms-preview-illustration">📖</div>
+
+              <strong>Instructions</strong>
+              <div className="lms-preview-textbox">
+                {lessonDraft.instructions || 'Instructions will appear here for students.'}
+              </div>
+
+              <button className="lms-student-preview-btn" type="button" onClick={() => document.querySelector('.lms-live-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                👥 Student Preview
+              </button>
+            </div>
+          </section>
+
+          <section className="teacher-side-card">
+            <div className="teacher-design-heading">
+              <div>
+                <h2>Activities in this Lesson</h2>
+                <p>Current lesson flow.</p>
+              </div>
+            </div>
+
+            <div className="lms-side-activity-list">
+              {(activities.length ? activities : validActivities).map((activity, index) => {
+                const meta = activityButtonMeta.find(item => item.type === activity.type) || activityButtonMeta[0];
+
+                return (
+                  <div className="lms-side-activity" key={activity.id || `${activity.type}-${index}`}>
+                    <span className={`icon ${meta.className}`}>{meta.icon}</span>
+                    <span className="order">{index + 1}</span>
+                    <span>{activity.title || meta.label}</span>
+                    <span>⋮</span>
+                  </div>
+                );
+              })}
+
+              {!activities.length && (
+                <div className="lms-empty-activity">
+                  <strong>No activities yet.</strong>
+                  <p>Add blocks to build your lesson flow.</p>
+                </div>
+              )}
+            </div>
+
+            <button className="lms-view-lessons-btn" type="button" onClick={scrollToRecentLessons} style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}>
+              📚 View Lessons
+            </button>
+          </section>
+
+          <section className="teacher-side-card">
+            <div className="teacher-design-heading">
+              <div>
+                <h2>💡 Tips for Great Lessons</h2>
+                <p>Quick reminders before publishing.</p>
+              </div>
+            </div>
+
+            <div className="lms-tips-list">
+              <div className="lms-tip-item">
+                <span>💬</span>
+                <p>Keep instructions short and student-friendly.</p>
+              </div>
+              <div className="lms-tip-item">
+                <span>📘</span>
+                <p>Use stories and examples from real life.</p>
+              </div>
+              <div className="lms-tip-item">
+                <span>🧩</span>
+                <p>Include a variety of activities to keep learners engaged.</p>
+              </div>
+              <div className="lms-tip-item">
+                <span>👁</span>
+                <p>Preview your lesson before publishing.</p>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <div className="lms-bottom-action-bar">
+        <button className="lms-action-secondary" type="button">
+          📋 Save Draft
+        </button>
+        <button className="lms-action-secondary" type="button" onClick={() => document.querySelector('.lms-live-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+          👁 Preview Lesson
+        </button>
+        <button className="lms-action-primary" type="button" onClick={submitLessonBuilder}>
+          🚀 Create Lesson
         </button>
       </div>
-
-      <div className="divider" />
-
-      <div className="section-title">Recently Created Lessons</div>
-
-      <div id="t-lessons-wrap">
-        {[...lessons]
-          .sort((a, b) => {
-            const dateA = new Date(a.createdAt || 0).getTime();
-            const dateB = new Date(b.createdAt || 0).getTime();
-
-            if (dateA !== dateB) return dateB - dateA;
-
-            return Number(b.id || 0) - Number(a.id || 0);
-          })
-          .slice(0, 8)
-          .map(lesson => (
-            <div className="lesson-card" key={lesson.id}>
-              <div className="lesson-icon">
-                {SUBJECTS.find(s => s.name === lesson.subject)?.icon || '📘'}
-              </div>
-
-              <div>
-                <b>{lesson.title}</b>
-                <div className="muted">
-                  Grade {lesson.gradeLevel} • {lesson.subject} • {lesson.xpReward} XP
-                </div>
-              </div>
-            </div>
-          ))}
-
-        {!lessons.length && (
-          <div className="muted">No teacher-created lessons yet.</div>
-        )}
-      </div>
-    </div>
+    </>
   );
 }
+
+
 
 function TeacherActivityBlock({
   activity,
   activityIndex,
   updateActivity,
   removeActivity,
+  duplicateActivity,
   updateMcqQuestion,
   updateMcqOption,
   addMcqQuestion,
@@ -2636,195 +5214,230 @@ function TeacherActivityBlock({
   updateWord,
   addWord
 }) {
-  const typeLabel = {
-    mcq: 'Multiple Choice Quiz',
-    writing: 'Writing Activity',
-    speech: 'Speech Practice',
-    matching: 'Matching Game',
-    vocabulary: 'Vocabulary Cards',
-    infographic: 'Info Card'
+  const typeMeta = {
+    mcq: {
+      label: 'MCQ Quiz',
+      desc: 'Multiple choice questions.',
+      icon: '?',
+      color: '#ec407a'
+    },
+    writing: {
+      label: 'Writing Prompt',
+      desc: 'Encourage creative writing.',
+      icon: '✎',
+      color: '#16a9b7'
+    },
+    speech: {
+      label: 'Speech Practice',
+      desc: 'Practice speaking and pronunciation.',
+      icon: '🎙️',
+      color: '#f47c20'
+    },
+    matching: {
+      label: 'Matching',
+      desc: 'Match items or concepts.',
+      icon: '⌘',
+      color: '#8e44ad'
+    },
+    vocabulary: {
+      label: 'Vocabulary',
+      desc: 'Teach important words and meanings.',
+      icon: 'Aa',
+      color: '#27ae60'
+    },
+    infographic: {
+      label: 'Info Card',
+      desc: 'Introduce a concept or key information.',
+      icon: 'i',
+      color: '#2e86de'
+    }
+  };
+
+  const meta = typeMeta[activity.type] || {
+    label: activity.type,
+    desc: 'Activity block.',
+    icon: '•',
+    color: '#95a5a6'
   };
 
   return (
-    <div className="card" style={{ boxShadow: 'none', background: '#FFFFFF', border: '1px solid #E8E8E8', marginBottom: 14 }}>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="section-title">
-          Activity {activityIndex + 1}: {typeLabel[activity.type] || activity.type}
+    <div className="teacher-activity-row">
+      <div className="teacher-activity-row-icon" style={{ background: meta.color }}>
+        {meta.icon}
+      </div>
+
+      <div className="teacher-activity-row-main">
+        <div className="teacher-activity-row-head">
+          <div>
+            <strong>{activity.title || meta.label}</strong>
+            <small> · {meta.desc}</small>
+          </div>
+          <small>Block {activityIndex + 1}</small>
         </div>
 
-        <button className="btn btn-danger btn-sm" onClick={() => removeActivity(activity.id)}>
+        <div className="teacher-activity-row-fields grid2">
+          <input
+            className="input-field"
+            value={activity.title}
+            onChange={(e) => updateActivity(activity.id, { title: e.target.value })}
+            placeholder="Activity title"
+          />
+
+          <input
+            className="input-field"
+            value={activity.instructions}
+            onChange={(e) => updateActivity(activity.id, { instructions: e.target.value })}
+            placeholder="Activity instructions"
+          />
+        </div>
+
+        <div style={{ height: 10 }} />
+
+        {activity.type === 'mcq' && (
+          <div className="teacher-inline-mcq">
+            {activity.questions.map((question, qIndex) => (
+              <div key={question.id} className="teacher-activity-row-fields">
+                <input
+                  className="input-field"
+                  value={question.question}
+                  onChange={(e) => updateMcqQuestion(activity.id, question.id, { question: e.target.value })}
+                  placeholder={`Question ${qIndex + 1}`}
+                />
+
+                <div className="teacher-activity-row-fields grid2">
+                  {question.options.map((option, oIndex) => (
+                    <div key={option.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input
+                        type="radio"
+                        name={`correct-${activity.id}-${question.id}`}
+                        checked={option.isCorrect}
+                        onChange={() => updateMcqOption(activity.id, question.id, option.id, { isCorrect: true })}
+                      />
+                      <input
+                        className="input-field"
+                        value={option.text}
+                        onChange={(e) => updateMcqOption(activity.id, question.id, option.id, { text: e.target.value })}
+                        placeholder={`Choice ${String.fromCharCode(65 + oIndex)}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <button className="teacher-add-mini" onClick={() => addMcqQuestion(activity.id)} type="button">
+              + Add MCQ Question
+            </button>
+          </div>
+        )}
+
+        {activity.type === 'writing' && (
+          <textarea
+            className="input-field"
+            value={activity.prompt}
+            onChange={(e) => updateActivity(activity.id, { prompt: e.target.value })}
+            placeholder="Writing prompt, e.g. Sumulat ng dalawang pangungusap tungkol sa iyong pamilya."
+            rows="3"
+          />
+        )}
+
+        {activity.type === 'speech' && (
+          <textarea
+            className="input-field"
+            value={activity.targetText}
+            onChange={(e) => updateActivity(activity.id, { targetText: e.target.value })}
+            placeholder="Speech target, e.g. Ang bata ay masayang nagbabasa."
+            rows="3"
+          />
+        )}
+
+        {activity.type === 'matching' && (
+          <div className="teacher-inline-pairs">
+            {activity.pairs.map((pair, pairIndex) => (
+              <div key={pair.id} className="teacher-activity-row-fields grid2">
+                <input
+                  className="input-field"
+                  value={pair.left}
+                  onChange={(e) => updatePair(activity.id, pair.id, { left: e.target.value })}
+                  placeholder={`Left item ${pairIndex + 1}`}
+                />
+
+                <input
+                  className="input-field"
+                  value={pair.right}
+                  onChange={(e) => updatePair(activity.id, pair.id, { right: e.target.value })}
+                  placeholder={`Right match ${pairIndex + 1}`}
+                />
+              </div>
+            ))}
+
+            <button className="teacher-add-mini" onClick={() => addPair(activity.id)} type="button">
+              + Add Pair
+            </button>
+          </div>
+        )}
+
+        {activity.type === 'vocabulary' && (
+          <div className="teacher-inline-words">
+            {activity.words.map((item, wordIndex) => (
+              <div key={item.id} className="teacher-activity-row-fields">
+                <div className="teacher-activity-row-fields grid2">
+                  <input
+                    className="input-field"
+                    value={item.word}
+                    onChange={(e) => updateWord(activity.id, item.id, { word: e.target.value })}
+                    placeholder={`Word ${wordIndex + 1}`}
+                  />
+
+                  <input
+                    className="input-field"
+                    value={item.meaning}
+                    onChange={(e) => updateWord(activity.id, item.id, { meaning: e.target.value })}
+                    placeholder="Meaning"
+                  />
+                </div>
+
+                <input
+                  className="input-field"
+                  value={item.example}
+                  onChange={(e) => updateWord(activity.id, item.id, { example: e.target.value })}
+                  placeholder="Example sentence"
+                />
+              </div>
+            ))}
+
+            <button className="teacher-add-mini" onClick={() => addWord(activity.id)} type="button">
+              + Add Word
+            </button>
+          </div>
+        )}
+
+        {activity.type === 'infographic' && (
+          <textarea
+            className="input-field"
+            value={activity.content}
+            onChange={(e) => updateActivity(activity.id, { content: e.target.value })}
+            placeholder="Short info card content. Example: Ang pangngalan ay salita na tumutukoy sa tao, bagay, hayop, lugar, o pangyayari."
+            rows="3"
+          />
+        )}
+      </div>
+
+      <div className="teacher-activity-actions">
+        <button className="teacher-activity-action" type="button">
+          Edit
+        </button>
+        <button className="teacher-activity-action" onClick={() => duplicateActivity(activity.id)} type="button">
+          Duplicate
+        </button>
+        <button className="teacher-activity-action danger" onClick={() => removeActivity(activity.id)} type="button">
           Remove
         </button>
       </div>
-
-      <div className="grid grid-2">
-        <input
-          className="input-field"
-          value={activity.title}
-          onChange={(e) => updateActivity(activity.id, { title: e.target.value })}
-          placeholder="Activity title"
-        />
-
-        <input
-          className="input-field"
-          value={activity.instructions}
-          onChange={(e) => updateActivity(activity.id, { instructions: e.target.value })}
-          placeholder="Activity instructions"
-        />
-      </div>
-
-      <div className="divider" />
-
-      {activity.type === 'mcq' && (
-        <>
-          {activity.questions.map((question, qIndex) => (
-            <div key={question.id} style={{ padding: 12, borderRadius: 14, background: '#F8FAFF', marginBottom: 12 }}>
-              <div className="pill" style={{ marginBottom: 10 }}>
-                Question {qIndex + 1}
-              </div>
-
-              <input
-                className="input-field"
-                value={question.question}
-                onChange={(e) => updateMcqQuestion(activity.id, question.id, { question: e.target.value })}
-                placeholder="Question"
-              />
-
-              <div style={{ height: 10 }} />
-
-              <div className="grid grid-2">
-                {question.options.map((option, oIndex) => (
-                  <div key={option.id} className="row" style={{ alignItems: 'center' }}>
-                    <input
-                      type="radio"
-                      name={`correct-${activity.id}-${question.id}`}
-                      checked={option.isCorrect}
-                      onChange={() => updateMcqOption(activity.id, question.id, option.id, { isCorrect: true })}
-                    />
-
-                    <input
-                      className="input-field"
-                      value={option.text}
-                      onChange={(e) => updateMcqOption(activity.id, question.id, option.id, { text: e.target.value })}
-                      placeholder={`Choice ${String.fromCharCode(65 + oIndex)}`}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          <button className="btn btn-outline btn-sm" onClick={() => addMcqQuestion(activity.id)}>
-            + Add MCQ Question
-          </button>
-        </>
-      )}
-
-      {activity.type === 'writing' && (
-        <textarea
-          className="input-field"
-          value={activity.prompt}
-          onChange={(e) => updateActivity(activity.id, { prompt: e.target.value })}
-          placeholder="Writing prompt, e.g. Sumulat ng dalawang pangungusap tungkol sa iyong pamilya."
-          rows="4"
-        />
-      )}
-
-      {activity.type === 'speech' && (
-        <textarea
-          className="input-field"
-          value={activity.targetText}
-          onChange={(e) => updateActivity(activity.id, { targetText: e.target.value })}
-          placeholder="Speech target, e.g. Ang bata ay masayang nagbabasa."
-          rows="4"
-        />
-      )}
-
-      {activity.type === 'matching' && (
-        <>
-          <div className="muted">Create at least two matching pairs.</div>
-          <div style={{ height: 10 }} />
-
-          {activity.pairs.map((pair, pairIndex) => (
-            <div key={pair.id} className="grid grid-2" style={{ marginBottom: 10 }}>
-              <input
-                className="input-field"
-                value={pair.left}
-                onChange={(e) => updatePair(activity.id, pair.id, { left: e.target.value })}
-                placeholder={`Left item ${pairIndex + 1}`}
-              />
-
-              <input
-                className="input-field"
-                value={pair.right}
-                onChange={(e) => updatePair(activity.id, pair.id, { right: e.target.value })}
-                placeholder={`Right match ${pairIndex + 1}`}
-              />
-            </div>
-          ))}
-
-          <button className="btn btn-outline btn-sm" onClick={() => addPair(activity.id)}>
-            + Add Pair
-          </button>
-        </>
-      )}
-
-      {activity.type === 'vocabulary' && (
-        <>
-          <div className="muted">Add words with meanings and optional example sentences.</div>
-          <div style={{ height: 10 }} />
-
-          {activity.words.map((item, wordIndex) => (
-            <div key={item.id} style={{ padding: 12, borderRadius: 14, background: '#F8FAFF', marginBottom: 12 }}>
-              <div className="pill" style={{ marginBottom: 10 }}>
-                Word {wordIndex + 1}
-              </div>
-
-              <div className="grid grid-2">
-                <input
-                  className="input-field"
-                  value={item.word}
-                  onChange={(e) => updateWord(activity.id, item.id, { word: e.target.value })}
-                  placeholder="Word"
-                />
-
-                <input
-                  className="input-field"
-                  value={item.meaning}
-                  onChange={(e) => updateWord(activity.id, item.id, { meaning: e.target.value })}
-                  placeholder="Meaning"
-                />
-              </div>
-
-              <div style={{ height: 10 }} />
-
-              <input
-                className="input-field"
-                value={item.example}
-                onChange={(e) => updateWord(activity.id, item.id, { example: e.target.value })}
-                placeholder="Example sentence"
-              />
-            </div>
-          ))}
-
-          <button className="btn btn-outline btn-sm" onClick={() => addWord(activity.id)}>
-            + Add Word
-          </button>
-        </>
-      )}
-
-      {activity.type === 'infographic' && (
-        <textarea
-          className="input-field"
-          value={activity.content}
-          onChange={(e) => updateActivity(activity.id, { content: e.target.value })}
-          placeholder="Short info card content. Example: Ang pangngalan ay salita na tumutukoy sa tao, bagay, hayop, lugar, o pangyayari."
-          rows="5"
-        />
-      )}
     </div>
   );
 }
+
 
 function AdminDashboard({ data, logout, addStudent, addTeacher, archiveStudent, resetStudent, archiveTeacher, reload }) {
   return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div><button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset</button><button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button></div>)}</div></div><div className="card"><div className="section-title">📋 Teachers</div><div className="divider" /><div id="admin-teachers-wrap">{data.teachers.map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">👩‍🏫</div><div style={{ flex: 1 }}><b>{t.name}</b><div className="muted">{t.employeeCode} • {t.status}</div></div><button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button></div>)}</div></div><div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
