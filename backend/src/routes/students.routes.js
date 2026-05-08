@@ -53,7 +53,7 @@ router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const body = validate(studentSchema, req.body);
     const role = await Role.findOne({ where: { name: 'student' } });
@@ -104,7 +104,7 @@ router.get('/:id/badges', requireRole('admin', 'teacher', 'student'), async (req
   } catch (err) { next(err); }
 });
 
-router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
@@ -120,7 +120,7 @@ router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => 
   } catch (err) { next(err); }
 });
 
-router.patch('/:id/avatar', requireRole('admin', 'teacher', 'student'), async (req, res, next) => {
+router.patch('/:id/avatar', requireRole('admin', 'student'), async (req, res, next) => {
   try {
     const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
@@ -131,7 +131,7 @@ router.patch('/:id/avatar', requireRole('admin', 'teacher', 'student'), async (r
   } catch (err) { next(err); }
 });
 
-router.post('/:id/archive', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
@@ -143,7 +143,7 @@ router.post('/:id/archive', requireRole('admin', 'teacher'), async (req, res, ne
   } catch (err) { next(err); }
 });
 
-router.post('/:id/reactivate', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
@@ -155,7 +155,7 @@ router.post('/:id/reactivate', requireRole('admin', 'teacher'), async (req, res,
   } catch (err) { next(err); }
 });
 
-router.post('/:id/reset-progress', requireRole('admin', 'teacher'), async (req, res, next) => {
+router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });

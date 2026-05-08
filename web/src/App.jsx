@@ -55,7 +55,13 @@ export default function App() {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [lessonFeedback, setLessonFeedback] = useState('');
   const [teacherData, setTeacherData] = useState({ stats: null, rows: [], groups: [], students: [], lessons: [] });
-  const [adminData, setAdminData] = useState({ stats: null, students: [], teachers: [], logs: [] });
+const [adminData, setAdminData] = useState({
+  stats: null,
+  students: [],
+  archivedStudents: [],
+  teachers: [],
+  logs: []
+});
   const [loading, setLoading] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState('ALL');
 
@@ -117,7 +123,13 @@ export default function App() {
     setStudentDash(null);
     setSelectedLesson(null);
     setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [] });
-    setAdminData({ stats: null, students: [], teachers: [], logs: [] });
+    setAdminData({
+  stats: null,
+  students: [],
+  archivedStudents: [],
+  teachers: [],
+  logs: []
+});
     go('screen-landing');
   }
 
@@ -443,21 +455,23 @@ if (role === 'admin') {
   });
 }
 
-  async function loadAdminDashboard() {
-    const [stats, students, teachers, logs] = await Promise.all([
-      api('/admin/stats'),
-      api('/students?status=active'),
-      api('/teachers'),
-      api('/admin/audit-logs?limit=50')
-    ]);
+ async function loadAdminDashboard() {
+  const [stats, students, archivedStudents, teachers, logs] = await Promise.all([
+    api('/admin/stats'),
+    api('/students?status=active'),
+    api('/students?status=archived'),
+    api('/teachers'),
+    api('/admin/audit-logs?limit=50')
+  ]);
 
-    setAdminData({
-      stats: stats.stats,
-      students: students.students || [],
-      teachers: teachers.teachers || [],
-      logs: logs.logs || []
-    });
-  }
+  setAdminData({
+    stats: stats.stats,
+    students: students.students || [],
+    archivedStudents: archivedStudents.students || [],
+    teachers: teachers.teachers || [],
+    logs: logs.logs || []
+  });
+}
 
   async function adminAddStudent() {
     await safeRun(async () => {
@@ -496,13 +510,34 @@ if (role === 'admin') {
   }
 
   async function archiveStudent(id) {
-    await safeRun(async () => {
-      await api(`/students/${id}/archive`, { method: 'POST' });
-      notify('Student archived.');
-      await loadAdminDashboard();
-      await loadTeacherDashboard().catch(() => null);
-    });
-  }
+  const confirmed = window.confirm(
+    'Archive this student account? The student will not be able to log in until reactivated.'
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    await api(`/students/${id}/archive`, { method: 'POST' });
+    notify('Student archived. You can restore this account from Archived Students.');
+    await loadAdminDashboard();
+    await loadTeacherDashboard().catch(() => null);
+  });
+}
+
+async function reactivateStudent(id) {
+  const confirmed = window.confirm(
+    'Reactivate this student account? The student will be able to log in again.'
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    await api(`/students/${id}/reactivate`, { method: 'POST' });
+    notify('Student reactivated.');
+    await loadAdminDashboard();
+    await loadTeacherDashboard().catch(() => null);
+  });
+}
 
   async function resetStudent(id) {
     await safeRun(async () => {
@@ -693,15 +728,16 @@ if (role === 'admin') {
 
       <Screen id="screen-admin" active={screen === 'screen-admin'}>
         <AdminDashboard
-          data={adminData}
-          logout={doLogout}
-          addStudent={adminAddStudent}
-          addTeacher={adminAddTeacher}
-          archiveStudent={archiveStudent}
-          resetStudent={resetStudent}
-          archiveTeacher={archiveTeacher}
-          reload={() => safeRun(loadAdminDashboard)}
-        />
+  data={adminData}
+  logout={doLogout}
+  addStudent={adminAddStudent}
+  addTeacher={adminAddTeacher}
+  archiveStudent={archiveStudent}
+  reactivateStudent={reactivateStudent}
+  resetStudent={resetStudent}
+  archiveTeacher={archiveTeacher}
+  reload={() => safeRun(loadAdminDashboard)}
+/>
       </Screen>
     </>
   );
@@ -5645,6 +5681,55 @@ function TeacherActivityBlock({
 }
 
 
-function AdminDashboard({ data, logout, addStudent, addTeacher, archiveStudent, resetStudent, archiveTeacher, reload }) {
-  return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div><button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset</button><button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button></div>)}</div></div><div className="card"><div className="section-title">📋 Teachers</div><div className="divider" /><div id="admin-teachers-wrap">{data.teachers.map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">👩‍🏫</div><div style={{ flex: 1 }}><b>{t.name}</b><div className="muted">{t.employeeCode} • {t.status}</div></div><button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button></div>)}</div></div><div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
+function AdminDashboard({
+  data,
+  logout,
+  addStudent,
+  addTeacher,
+  archiveStudent,
+  reactivateStudent,
+  resetStudent,
+  archiveTeacher,
+  reload
+}) {
+  return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div><button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset</button><button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button></div>)}</div></div>
+  <div className="card">
+  <div className="section-title">🗃️ Archived Students</div>
+
+  <div className="muted">
+    Archived students cannot log in, but their records are still saved.
+    Use Reactivate if an account was archived by mistake.
+  </div>
+
+  <div className="divider" />
+
+  <div id="admin-archived-students-wrap">
+    {(data.archivedStudents || []).map(s => (
+      <div className="lesson-card" key={s.id}>
+        <div className="lesson-icon">{s.avatar || '👨‍🎓'}</div>
+
+        <div style={{ flex: 1 }}>
+          <b>{s.name}</b>
+          <div className="muted">
+            {s.studentCode} • Grade {s.gradeLevel} • {s.section} • Archived
+          </div>
+        </div>
+
+        <button
+          className="btn btn-green btn-sm"
+          onClick={() => reactivateStudent(s.id)}
+        >
+          Reactivate
+        </button>
+      </div>
+    ))}
+
+    {!(data.archivedStudents || []).length && (
+      <div className="muted">
+        No archived students.
+      </div>
+    )}
+  </div>
+</div>
+  <div className="card"><div className="section-title">📋 Teachers</div><div className="divider" /><div id="admin-teachers-wrap">{data.teachers.map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">👩‍🏫</div><div style={{ flex: 1 }}><b>{t.name}</b><div className="muted">{t.employeeCode} • {t.status}</div></div><button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button></div>)}</div></div><div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
 }
