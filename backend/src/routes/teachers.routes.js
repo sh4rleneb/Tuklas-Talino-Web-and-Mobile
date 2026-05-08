@@ -14,8 +14,6 @@ const router = Router();
 router.use(authenticate);
 router.use(requirePasswordChanged);
 
-//hey
-
 router.get('/', requireRole('admin'), async (req, res, next) => {
   try {
     const where = {};
