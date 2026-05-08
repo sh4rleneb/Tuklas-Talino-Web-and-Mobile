@@ -570,6 +570,28 @@ async function resetStudentPassword(id, name = 'student') {
     });
   }
 
+  async function resetTeacherPassword(id, name = 'teacher') {
+  const confirmed = window.confirm(
+    `Reset password for ${name}? The system will generate a temporary 6-digit PIN. The teacher must change it after logging in.`
+  );
+
+  if (!confirmed) return;
+
+  await safeRun(async () => {
+    const data = await api(`/teachers/${id}/reset-password`, {
+      method: 'POST',
+      body: {}
+    });
+
+    window.alert(
+      `Temporary PIN for ${name}:\n\n${data.temporaryPin}\n\nGive this PIN to the teacher. They will be required to change their password after logging in.`
+    );
+
+    notify('Teacher password reset. Temporary PIN was shown to admin.');
+    await loadAdminDashboard();
+  }, 'Hindi na-reset ang teacher password.');
+}
+
   async function archiveTeacher(id) {
     await safeRun(async () => {
       await api(`/teachers/${id}/archive`, { method: 'POST' });
@@ -757,6 +779,7 @@ async function resetStudentPassword(id, name = 'student') {
   archiveStudent={archiveStudent}
   reactivateStudent={reactivateStudent}
   resetStudentPassword={resetStudentPassword}
+  resetTeacherPassword={resetTeacherPassword}
   resetStudent={resetStudent}
   archiveTeacher={archiveTeacher}
   reload={() => safeRun(loadAdminDashboard)}
@@ -5713,6 +5736,7 @@ function AdminDashboard({
   reactivateStudent,
   resetStudentPassword,
   resetStudent,
+  resetTeacherPassword,
   archiveTeacher,
   reload
 }) {
@@ -5776,5 +5800,19 @@ function AdminDashboard({
     )}
   </div>
 </div>
-  <div className="card"><div className="section-title">📋 Teachers</div><div className="divider" /><div id="admin-teachers-wrap">{data.teachers.map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">👩‍🏫</div><div style={{ flex: 1 }}><b>{t.name}</b><div className="muted">{t.employeeCode} • {t.status}</div></div><button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button></div>)}</div></div><div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
+  <div className="card"><div className="section-title">📋 Teachers</div><div className="divider" /><div id="admin-teachers-wrap">{data.teachers.map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">👩‍🏫</div><div style={{ flex: 1 }}><b>{t.name}</b><div className="muted">{t.employeeCode} • {t.status}</div></div>
+  <button
+  className="btn btn-outline btn-sm"
+  onClick={() => resetTeacherPassword(t.id, t.name)}
+>
+  Reset Password
+</button>
+
+<button
+  className="btn btn-danger btn-sm"
+  onClick={() => archiveTeacher(t.id)}
+>
+  Archive
+</button>
+  </div>)}</div></div><div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
 }
