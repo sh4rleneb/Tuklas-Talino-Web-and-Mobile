@@ -21,6 +21,13 @@ async function getStudentForRequest(req, idParam) {
   return Student.findByPk(idParam);
 }
 
+function studentOwnsRequestedRecord(req, idParam) {
+  if (req.role !== 'student') return true;
+
+  const requestedId = Number(idParam);
+  return Number.isInteger(requestedId) && requestedId === req.student?.id;
+}
+
 async function dashboardPayload(student) {
   const lessons = await Lesson.findAll({
     where: { gradeLevel: student.gradeLevel, status: 'published' },
@@ -89,6 +96,9 @@ router.get('/:id/dashboard', requireRole('admin', 'teacher'), async (req, res, n
 
 router.get('/:id/progress', requireRole('admin', 'teacher', 'student'), async (req, res, next) => {
   try {
+    if (!studentOwnsRequestedRecord(req, req.params.id)) {
+  return res.status(403).json({ message: 'Access denied.' });
+}
     const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
     if (req.role === 'student' && student.id !== req.student.id) return res.status(403).json({ message: 'Access denied.' });
@@ -100,6 +110,10 @@ router.get('/:id/progress', requireRole('admin', 'teacher', 'student'), async (r
 
 router.get('/:id/badges', requireRole('admin', 'teacher', 'student'), async (req, res, next) => {
   try {
+    if (!studentOwnsRequestedRecord(req, req.params.id)) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
     const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
     if (req.role === 'student' && student.id !== req.student.id) return res.status(403).json({ message: 'Access denied.' });
@@ -127,6 +141,10 @@ router.patch('/:id', requireRole('admin'), async (req, res, next) => {
 
 router.patch('/:id/avatar', requireRole('admin', 'student'), async (req, res, next) => {
   try {
+    if (!studentOwnsRequestedRecord(req, req.params.id)) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
+
     const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
     if (req.role === 'student' && student.id !== req.student.id) return res.status(403).json({ message: 'Access denied.' });
