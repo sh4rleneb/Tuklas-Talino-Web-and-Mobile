@@ -4,11 +4,11 @@ import { useAuth } from './contexts/AuthContext';
 
 const AVATARS = ['🦊', '🐼', '🐯', '🐸', '🐵', '🦄', '🐰', '🧒'];
 const SUBJECTS = [
-  { name: 'Pagbasa', icon: '📖', tone: 'green', desc: 'Pag-unawa sa mga kuwento at teksto.' },
-  { name: 'Bokabularyo', icon: '🔤', tone: 'blue', desc: 'Pagpapalawak ng talasalitaan.' },
-  { name: 'Panitikan', icon: '📜', tone: 'purple', desc: 'Tula, kuwento, at aral ng akda.' },
-  { name: 'Oral Comm', icon: '🎙️', tone: 'yellow', desc: 'Pakikinig at pagsasalita.' },
-  { name: 'Pagsulat', icon: '✍️', tone: 'pink', desc: 'Pangungusap, talata, sanaysay.' }
+  { name: 'Pagbasa', icon: '📖', tone: 'green' },
+  { name: 'Bokabularyo', icon: '🔤', tone: 'blue'},
+  { name: 'Panitikan', icon: '📜', tone: 'purple' },
+  { name: 'Oral Comm', icon: '🎙️', tone: 'yellow' },
+  { name: 'Pagsulat', icon: '✍️', tone: 'pink'}
 ];
 
 function read(id) {
@@ -737,6 +737,7 @@ async function archiveTeacher(id) {
           setSubjectFilter={setSubjectFilter}
           go={go}
           openLesson={openLesson}
+          data={studentDash}
         />
       </Screen>
 
@@ -750,6 +751,7 @@ async function archiveTeacher(id) {
             submitMcq={submitMcq}
             submitWriting={submitWriting}
             submitSpeech={submitSpeech}
+            data={studentDash}
           />
         )}
       </Screen>
@@ -1145,6 +1147,19 @@ function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLes
     if (tab === 'profile') return go('screen-stu-profile');
   };
 
+  if (early) {
+  return (
+    <EarlyStudentDashboard
+      data={data}
+      openLesson={openLesson}
+      openFirstSubjectLesson={openFirstSubjectLesson}
+      goStudentTab={goStudentTab}
+      logout={logout}
+      refresh={refresh}
+    />
+  );
+}
+
   return <>
     <div className="top-nav student-topbar">
       <div className="logo">🌟 Tuklas Talino</div>
@@ -1189,96 +1204,696 @@ function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLes
   </>;
 }
 
-function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStudentTab }) {
+function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStudentTab, logout, refresh }) {
   const s = data?.student || {};
   const stats = subjectStatsFor(data);
   const dailyLesson = pickDailyLesson(data);
-  const badges = asArray(data?.badges);
-  const stars = Math.min(6, Math.max(1, (data?.progress?.completedLessons || 0) + badges.length + Math.floor((s.xp || 0) / 60)));
-  const groups = asArray(data?.groups);
-  const upcoming = getGroupTasks(data).slice(0, 3);
-  const badgeShelf = badges.length ? badges.slice(0, 5) : [
-    { icon: '🏅', name: 'First Steps' }, { icon: '📚', name: 'Reader' }, { icon: '⭐', name: 'Star Learner' }, { icon: '🎙️', name: 'Speaker' }, { icon: '✍️', name: 'Writer' }
-  ];
+  const level = levelForXp(s.xp);
+  const xpPct = xpPercent(s.xp);
+
+  const mainSubjects = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Oral Comm', 'Pagsulat'];
+  const mainStats = mainSubjects.map((subjectName) => {
+    const found = stats.find((item) => item.subj === subjectName);
+    const subjectInfo = SUBJECTS.find((item) => item.name === subjectName) || {};
+
+    return found || {
+      subj: subjectName,
+      icon: subjectInfo.icon || '📚',
+      tone: subjectInfo.tone || 'green',
+      done: 0,
+      total: 0,
+      pct: 0
+    };
+  });
+
+  const quickContinue = () => {
+    if (dailyLesson) openLesson(dailyLesson);
+    else openFirstSubjectLesson('Pagbasa');
+  };
+
+  const safeRefresh = () => {
+    if (typeof refresh === 'function') refresh();
+    else window.location.reload();
+  };
+
+  const safeLogout = () => {
+    if (typeof logout === 'function') {
+      logout();
+      return;
+    }
+
+    localStorage.removeItem('tuklas_user');
+    localStorage.removeItem('tuklas_token');
+    window.location.reload();
+  };
 
   return <>
-    <section className="kid-stage">
-      <div className="kid-stage-head">
-        <div>
-          <div className="kid-stage-title">🎉 Tara, {s.name || 'Mag-aaral'}!</div>
-          <div className="kid-stage-sub">Maliliit na hakbang, maraming bituin, masayang pagkatuto.</div>
+    <style>{`
+      .g12-page {
+        min-height: 100vh;
+        padding-bottom: 116px;
+        background:
+          radial-gradient(circle at 3% 22%, rgba(147, 197, 253, 0.10), transparent 24%),
+          radial-gradient(circle at 95% 74%, rgba(253, 230, 138, 0.15), transparent 22%),
+          linear-gradient(180deg, #fffdf7 0%, #f7fbff 48%, #fff8ef 100%);
+        color: #24324a;
+      }
+
+      .g12-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        min-height: 88px;
+        padding: 16px 28px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(30, 160, 92, 0.08);
+        box-shadow: 0 8px 20px rgba(32, 90, 54, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .g12-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #15965a;
+        font-size: 29px;
+        font-weight: 950;
+        letter-spacing: -0.045em;
+        white-space: nowrap;
+      }
+
+      .g12-brand-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: #fff6dc;
+        box-shadow: inset 0 0 0 2px rgba(238, 202, 95, 0.22);
+        font-size: 28px;
+      }
+
+      .g12-top-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .g12-pill,
+      .g12-action-btn {
+        min-height: 52px;
+        border-radius: 20px;
+        padding: 0 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        font-size: 17px;
+        font-weight: 950;
+      }
+
+      .g12-pill {
+        background: #fff5cf;
+        border: 1px solid #f7dfa0;
+        color: #22324a;
+      }
+
+      .g12-action-btn {
+        border: 2px solid #2fbf73;
+        background: #ffffff;
+        color: #14975a;
+        cursor: pointer;
+        box-shadow: 0 8px 16px rgba(47, 191, 115, 0.08);
+      }
+
+      .g12-shell {
+        padding: 22px 24px 132px;
+      }
+
+      .g12-hero {
+        min-height: 430px;
+        display: grid;
+        grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
+        gap: 30px;
+        align-items: center;
+        padding: 32px 44px;
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 16% 24%, rgba(255, 239, 187, 0.65), transparent 34%),
+          radial-gradient(circle at 84% 24%, rgba(224, 242, 254, 0.62), transparent 35%),
+          linear-gradient(115deg, #fff4d7 0%, #fff7f0 48%, #eef8ff 100%);
+        border: 1px solid rgba(46, 184, 127, 0.12);
+        box-shadow: 0 18px 36px rgba(31, 73, 61, 0.08);
+        overflow: hidden;
+      }
+
+      .g12-hero-art {
+        position: relative;
+        min-height: 320px;
+        border-radius: 32px;
+        display: grid;
+        place-items: end center;
+        background:
+          radial-gradient(circle at 17% 18%, rgba(255, 255, 255, 0.85), transparent 16%),
+          radial-gradient(circle at 55% 62%, rgba(186, 230, 253, 0.28), transparent 36%),
+          linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.10));
+      }
+
+      .g12-hero-art::before,
+      .g12-hero-art::after {
+        content: '';
+        position: absolute;
+        border-radius: 999px;
+        background: rgba(133, 210, 156, 0.18);
+      }
+
+      .g12-hero-art::before {
+        width: 78%;
+        height: 84px;
+        left: 11%;
+        bottom: 20px;
+      }
+
+      .g12-hero-art::after {
+        width: 60px;
+        height: 60px;
+        right: 15%;
+        top: 18%;
+        background: rgba(255, 235, 156, 0.42);
+      }
+
+      .g12-star {
+        position: absolute;
+        font-size: 34px;
+        filter: drop-shadow(0 10px 12px rgba(245, 158, 11, 0.16));
+      }
+
+      .g12-star.one { left: 8%; top: 22%; }
+      .g12-star.two { right: 16%; top: 36%; font-size: 25px; }
+      .g12-star.three { left: 18%; bottom: 20%; font-size: 20px; }
+
+      .g12-kids-group {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+        gap: 0;
+        transform: translateY(-4px);
+      }
+
+      .g12-kid {
+        width: 106px;
+        height: 132px;
+        border-radius: 48px 48px 28px 28px;
+        display: grid;
+        place-items: center;
+        font-size: 58px;
+        box-shadow: 0 16px 22px rgba(50, 80, 70, 0.10);
+        border: 5px solid rgba(255, 255, 255, 0.80);
+      }
+
+      .g12-kid.left {
+        background: #fde9a8;
+        transform: rotate(-5deg) translateX(12px);
+      }
+
+      .g12-kid.center {
+        width: 128px;
+        height: 152px;
+        background: #ffd6e5;
+        z-index: 3;
+      }
+
+      .g12-kid.right {
+        background: #d7f1df;
+        transform: rotate(5deg) translateX(-12px);
+      }
+
+        .g12-hero-img {
+  position: relative;
+  z-index: 2;
+  width: min(92%, 520px);
+  max-height: 330px;
+  object-fit: contain;
+  object-position: center bottom;
+  transform: translateY(18px);
+  filter: drop-shadow(0 18px 24px rgba(50, 80, 70, 0.12));
+}
+
+      .g12-hero-content {
+        position: relative;
+        z-index: 2;
+        max-width: 620px;
+      }
+
+      .g12-welcome-copy h1 {
+        margin: 0 0 10px;
+        color: #16a362;
+        font-size: clamp(48px, 6vw, 76px);
+        line-height: 0.95;
+        font-weight: 1000;
+        letter-spacing: -0.06em;
+      }
+
+      .g12-welcome-copy p {
+        margin: 0 0 24px;
+        color: #385075;
+        max-width: 620px;
+        font-size: 21px;
+        line-height: 1.45;
+        font-weight: 850;
+      }
+
+      .g12-progress-card {
+  position: relative;
+  width: min(560px, 100%);
+  margin-top: 18px;
+  padding: 28px 30px;
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(255, 226, 120, 0.34), transparent 20%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 252, 238, 0.9));
+  border: 2px solid rgba(255, 217, 102, 0.35);
+  box-shadow: 0 18px 34px rgba(58, 82, 84, 0.08);
+  overflow: hidden;
+}
+
+.g12-progress-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 18px;
+  color: #14223b;
+  font-size: clamp(34px, 3.5vw, 46px);
+  font-weight: 1000;
+  letter-spacing: -0.045em;
+  text-align: center;
+}
+
+.g12-progress-coin {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #fff2bd;
+  box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.18);
+  font-size: 32px;
+  flex: 0 0 auto;
+}
+
+.g12-progress-divider {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f6c453;
+  box-shadow: 0 0 0 6px rgba(246, 196, 83, 0.16);
+  flex: 0 0 auto;
+}
+
+.g12-progress-deco {
+  position: absolute;
+  font-size: 22px;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.g12-progress-deco.one {
+  top: 14px;
+  right: 24px;
+}
+
+.g12-progress-deco.two {
+  bottom: 16px;
+  left: 24px;
+}
+
+      .g12-progress-track {
+        height: 14px;
+        width: 100%;
+        border-radius: 999px;
+        background: #eef7f1;
+        overflow: hidden;
+        border: 1px solid #d8efe0;
+      }
+
+      .g12-progress-fill {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #45c985, #9be8ba);
+      }
+
+      .g12-progress-card small {
+        display: block;
+        margin-top: 12px;
+        color: #486083;
+        font-size: 15px;
+        font-weight: 850;
+      }
+
+      .g12-primary-actions {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .g12-primary-btn,
+      .g12-soft-link {
+        border: 0;
+        min-height: 66px;
+        padding: 0 32px;
+        border-radius: 26px;
+        font-size: 22px;
+        font-weight: 1000;
+        cursor: pointer;
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+      }
+
+      .g12-primary-btn {
+        background: linear-gradient(135deg, #47ce87, #1f9c60);
+        color: white;
+        box-shadow: 0 14px 22px rgba(32, 156, 96, 0.18);
+      }
+
+      .g12-soft-link {
+        background: #f5f1ff;
+        color: #7a42c3;
+      }
+
+      .g12-primary-btn:hover,
+      .g12-soft-link:hover,
+      .g12-action-btn:hover,
+      .g12-subject-card:hover {
+        transform: translateY(-2px);
+      }
+
+      .g12-section-card {
+        margin-top: 28px;
+        padding: 30px;
+        border-radius: 32px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(31, 154, 92, 0.06);
+        box-shadow: 0 16px 32px rgba(39, 87, 63, 0.06);
+      }
+
+      .g12-section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+        color: #15965a;
+        font-size: 31px;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+      }
+
+      .g12-section-subtitle {
+        margin: 6px 0 22px;
+        color: #425a7c;
+        font-size: 16px;
+        font-weight: 850;
+      }
+
+      .g12-subject-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .g12-subject-card {
+        min-height: 182px;
+        padding: 20px 22px;
+        border-radius: 28px;
+        border: 1px solid rgba(48, 120, 100, 0.08);
+        display: grid;
+        grid-template-columns: 128px minmax(0, 1fr) 56px;
+        gap: 20px;
+        align-items: center;
+        text-align: left;
+        cursor: pointer;
+        box-shadow: 0 12px 22px rgba(47, 78, 84, 0.05);
+        transition: 0.16s ease;
+      }
+
+      .g12-subject-card.green { background: #edf9f0; }
+      .g12-subject-card.blue { background: #eef7ff; }
+      .g12-subject-card.purple { background: #f6f0ff; }
+      .g12-subject-card.yellow { background: #fff7dd; }
+      .g12-subject-card.pink { background: #fff0f5; }
+
+      .g12-subject-illustration {
+        width: 112px;
+        height: 112px;
+        border-radius: 26px;
+        display: grid;
+        place-items: center;
+        font-size: 56px;
+        background: rgba(255, 255, 255, 0.68);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+      }
+
+      .g12-subject-card h3 {
+        margin: 0 0 6px;
+        color: #22324a;
+        font-size: 29px;
+        line-height: 1;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+      }
+
+      .g12-subject-card p {
+        margin: 0 0 12px;
+        color: #526988;
+        font-size: 15px;
+        font-weight: 850;
+      }
+
+      .g12-module-progress {
+        width: 100%;
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        overflow: hidden;
+      }
+
+      .g12-module-progress span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #45c985, #9be8ba);
+      }
+
+      .g12-card-arrow {
+        width: 52px;
+        height: 52px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.82);
+        color: #15965a;
+        font-size: 28px;
+        font-weight: 1000;
+      }
+
+      .g12-nav {
+        position: fixed;
+        left: 50%;
+        bottom: 22px;
+        transform: translateX(-50%);
+        width: min(1120px, calc(100vw - 40px));
+        z-index: 80;
+        min-height: 82px;
+        padding: 10px 20px;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        border-radius: 34px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(39, 174, 96, 0.08);
+        box-shadow: 0 14px 30px rgba(25, 78, 54, 0.09);
+        backdrop-filter: blur(16px);
+      }
+
+      .g12-nav button {
+        border: 0;
+        background: transparent;
+        border-radius: 24px;
+        color: #203451;
+        font-size: 16px;
+        font-weight: 950;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .g12-nav button.active {
+        background: #edf8f1;
+        color: #15965a;
+      }
+
+      .g12-nav-icon {
+        font-size: 34px;
+        line-height: 1;
+      }
+
+      @media (max-width: 1180px) {
+        .g12-hero { grid-template-columns: 1fr; }
+        .g12-hero-content { max-width: none; }
+        .g12-subject-grid { grid-template-columns: 1fr; }
+        .g12-subject-card { grid-template-columns: 120px minmax(0, 1fr) 52px; }
+      }
+
+      @media (max-width: 760px) {
+        .g12-topbar {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 16px;
+        }
+
+        .g12-top-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .g12-pill,
+        .g12-action-btn {
+          min-height: 48px;
+          font-size: 14px;
+          padding: 0 14px;
+        }
+
+        .g12-shell { padding: 14px 14px 120px; }
+        .g12-hero { padding: 20px; }
+        .g12-hero-art { min-height: 250px; }
+        .g12-kid { width: 84px; height: 108px; font-size: 46px; }
+        .g12-kid.center { width: 100px; height: 126px; }
+        .g12-welcome-copy h1 { font-size: 44px; }
+        .g12-welcome-copy p { font-size: 18px; }
+        .g12-primary-actions { align-items: stretch; flex-direction: column; }
+        .g12-primary-btn, .g12-soft-link { width: 100%; }
+        .g12-subject-card {
+          grid-template-columns: 86px minmax(0, 1fr) 42px;
+          min-height: 174px;
+          padding: 18px;
+        }
+        .g12-subject-illustration { width: 82px; height: 82px; font-size: 44px; }
+        .g12-subject-card h3 { font-size: 24px; }
+        .g12-nav {
+          width: calc(100vw - 18px);
+          bottom: 10px;
+          border-radius: 24px;
+          padding: 8px;
+          gap: 4px;
+        }
+        .g12-nav button { flex-direction: column; gap: 2px; font-size: 11px; }
+        .g12-nav-icon { font-size: 26px; }
+      }
+    `}</style>
+
+    <div className="g12-page">
+      <header className="g12-topbar">
+        <div className="g12-brand">
+          <span className="g12-brand-icon">☀️</span>
+          <span>Tuklas Talino</span>
         </div>
-        <div className="kid-star-meter">
-          <div className="kid-star-label">Learning Stars</div>
-          <div className="kid-stars-row"><StarRow count={stars} /></div>
+
+        <div className="g12-top-actions">
+          <div className="g12-pill">🌸 Grade {s.gradeLevel || '—'} • {s.section || '—'}</div>
+          <div className="g12-pill">⚡ {s.xp || 0} XP</div>
+          <button type="button" className="g12-action-btn" onClick={safeRefresh}>🔄 Refresh</button>
+          <button type="button" className="g12-action-btn" onClick={safeLogout}>🚪 Logout</button>
         </div>
-      </div>
+      </header>
 
-      <div className="kid-hero-grid">
-        <div className="kid-hero-card kid-reward-card">
-          <div className="kid-card-kicker">Reward Chest</div>
-          <div className="kid-card-title">🪙 {s.xp || 0} XP • Level {levelForXp(s.xp)}</div>
-          <div className="kid-card-copy">Kumuha ng XP sa lessons, quiz, at group quests.</div>
-          <div className="kid-mini-progress"><span style={{ width: `${xpPercent(s.xp)}%` }} /></div>
-          <button className="btn btn-green kid-cta" onClick={() => openFirstSubjectLesson('Pagbasa')}>🎮 Maglaro ng Quiz</button>
-        </div>
+      <main className="g12-shell">
+        <section className="g12-hero">
+          <div className="g12-hero-art" aria-hidden="true">
+  <span className="g12-star one">⭐</span>
+  <span className="g12-star two">✨</span>
+  <span className="g12-star three">🌼</span>
 
-        <div className="kid-hero-card kid-mission-card-main">
-          <div className="kid-card-kicker">Mission of the Day</div>
-          <div className="kid-card-title">{dailyLesson ? `${subjectTheme(dailyLesson.subject).icon} ${dailyLesson.title}` : '📚 Pili ng lesson'}</div>
-          <div className="kid-card-copy">{dailyLesson ? `Tapusin ang ${dailyLesson.subject} mission at kunin ang +${lessonXp(dailyLesson)} XP.` : 'Magdagdag ng lesson para sa daily mission.'}</div>
-          <button className="btn btn-blue kid-cta" disabled={!dailyLesson} onClick={() => dailyLesson && openLesson(dailyLesson)}>🚀 Simulan</button>
-        </div>
+  <img
+    src="/grade12-hero.png"
+    alt=""
+    className="g12-hero-img"
+  />
+</div>
 
-        <div className="kid-hero-card kid-sticker-card">
-          <div className="kid-card-kicker">Sticker Board</div>
-          <div className="kid-card-title">🏅 {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked</div>
-          <div className="kid-card-copy">Mangolekta ng rewards habang natututo.</div>
-          <button className="btn btn-purple kid-cta" onClick={() => goStudentTab('badges')}>🌟 Tingnan ang Badges</button>
-        </div>
-      </div>
-    </section>
+          <div className="g12-hero-content">
+            <div className="g12-welcome-copy">
+              <h1>Kamusta, {s.name || 'Learner'}! 👋</h1>
+            </div>
 
-    <section className="kid-panel">
-      <div className="section-title">🧭 Learning Worlds</div>
-      <div className="kid-subject-grid">
-        {stats.map(item => <button key={item.subj} className="kid-subject-card" style={{ '--kid-bg': item.theme.bg, '--kid-accent': item.theme.accent }} onClick={() => openFirstSubjectLesson(item.subj)}>
-          <div className="kid-subject-top"><span className="kid-subject-icon">{item.theme.icon}</span><span className="kid-subject-tag">{item.theme.tag}</span></div>
-          <div className="kid-subject-name">{item.subj}</div>
-          <div className="kid-subject-meta">{item.done}/{item.total} tapos</div>
-          <div className="kid-mini-progress"><span style={{ width: `${item.pct}%` }} /></div>
-        </button>)}
-        <button className="kid-subject-card" style={{ '--kid-bg': '#EFE5FF', '--kid-accent': '#9B59B6' }} onClick={() => goStudentTab('groups')}>
-          <div className="kid-subject-top"><span className="kid-subject-icon">👥</span><span className="kid-subject-tag">Quest</span></div>
-          <div className="kid-subject-name">Grupo</div>
-          <div className="kid-subject-meta">{groups.length} group{groups.length === 1 ? '' : 's'}</div>
-          <div className="kid-mini-progress"><span style={{ width: groups.length ? '100%' : '20%' }} /></div>
-        </button>
-      </div>
-    </section>
+            <div className="g12-progress-card">
 
-    <section className="kid-panel">
-      <div className="section-title">🎯 Fun Missions</div>
-      <div className="kid-mission-grid">
-        <div className="kid-mission-box sunshine"><div className="kid-mission-emoji">🧩</div><div className="kid-mission-name">Mini Quiz</div><div className="kid-mission-copy">Mabilis na tanong para sa stars at XP.</div><button className="btn btn-yellow kid-cta" onClick={() => openFirstSubjectLesson('Bokabularyo')}>Play Quiz</button></div>
-        <div className="kid-mission-box mint"><div className="kid-mission-emoji">📚</div><div className="kid-mission-name">Lesson Trail</div><div className="kid-mission-copy">{data?.progress?.completedLessons || 0} lesson completed na!</div><button className="btn btn-green kid-cta" onClick={() => goStudentTab('lessons')}>Open Lessons</button></div>
-        <div className="kid-mission-box berry"><div className="kid-mission-emoji">🏆</div><div className="kid-mission-name">Star Race</div><div className="kid-mission-copy">Tingnan ang badges at rewards.</div><button className="btn btn-purple kid-cta" onClick={() => goStudentTab('badges')}>See Rewards</button></div>
-      </div>
-    </section>
+<div className="g12-progress-title">
+  <span className="g12-progress-coin">🪙</span>
+  <span>{s.xp || 0} XP</span>
+  <span className="g12-progress-divider" />
+  <span>Level {level}</span>
+</div>
+              <div className="g12-progress-track">
+                <span className="g12-progress-fill" style={{ width: `${xpPct}%` }} />
+              </div>
+            </div>
 
-    <section className="kid-panel kid-dual-grid">
-      <div className="kid-mini-board"><div className="section-title">⭐ My Progress Path</div><div className="kid-progress-stack">
-        {stats.map(item => <div className="kid-progress-row" key={item.subj} onClick={() => openFirstSubjectLesson(item.subj)}><div className="kid-progress-subject">{item.theme.icon} {item.subj}</div><div className="kid-progress-stars"><StarRow count={item.pct > 0 ? Math.max(1, Math.round(item.pct / 34)) : 0} max={3} /></div><div className="kid-chip">{item.pct}%</div></div>)}
-      </div></div>
-      <div className="kid-mini-board"><div className="section-title">🎁 Sticker Shelf</div><div className="kid-badge-shelf">
-        {badgeShelf.map((b, idx) => <div className={`kid-badge-pill ${badges.length ? 'owned' : idx === 0 ? 'owned' : 'locked'}`} key={b.name || idx} onClick={() => goStudentTab('badges')}><span className="kid-badge-icon">{b.icon || '🏅'}</span><span>{badges.length || idx === 0 ? b.name : 'Locked Badge'}</span></div>)}
-      </div><div className="kid-mini-stats"><div className="kid-chip">📝 Lessons: {data?.progress?.completedLessons || 0}</div><div className="kid-chip">🏅 Badges: {badges.length}</div><div className="kid-chip">⭐ Stars: {stars}</div></div></div>
-    </section>
+            
+          </div>
+        </section>
 
-    <section className="kid-panel kid-dual-grid">
-      <div className="kid-mini-board"><div className="section-title">🏁 Top Star Racers</div><div className="kid-rank-row"><div className="kid-rank-left"><span className="kid-rank-badge">🥇</span><span>{s.avatar || '👤'} {s.name || 'Ikaw'} • Ikaw</span></div><div className="kid-chip">{s.xp || 0} XP</div></div></div>
-      <div className="kid-mini-board"><div className="section-title">⏰ Upcoming Quests</div>{upcoming.length ? upcoming.map(t => <div className="kid-task-row" key={t.id} onClick={() => goStudentTab('groups')}><div><div className="kid-task-title">{t.title}</div><div className="kid-task-copy">{t.groupName} • {displayDue(t.dueAt)}</div></div><div className="kid-chip">+{t.xpReward || 0} XP</div></div>) : <div className="kid-empty">Wala pang paparating na group quests. Nice! 🎉</div>}</div>
-    </section>
+        <section className="g12-section-card">
+          <h2 className="g12-section-title">🌎 Learning Worlds ⭐</h2>
+          <p className="g12-section-subtitle">Piliin ang iyong paboritong aralin.</p>
+
+          <div className="g12-subject-grid">
+            {mainStats.map((item) => {
+              const subjectInfo = SUBJECTS.find((subj) => subj.name === item.subj) || {};
+              const tone = item.tone || subjectInfo.tone || 'green';
+              const icon = item.icon || subjectInfo.icon || '📚';
+              const desc = subjectInfo.desc || 'Buksan ang module na ito.';
+              const pct = Math.max(0, Math.min(100, item.pct || 0));
+
+              return (
+                <button
+                  type="button"
+                  key={item.subj}
+                  className={`g12-subject-card ${tone}`}
+                  onClick={() => openFirstSubjectLesson(item.subj)}
+                >
+                  <div className="g12-subject-illustration">{icon}</div>
+                  <div>
+                    <h3>{item.subj}</h3>
+                    <p>{item.done || 0}/{item.total || 0} tapos • {desc}</p>
+                    <div className="g12-module-progress"><span style={{ width: `${pct}%` }} /></div>
+                  </div>
+                  <div className="g12-card-arrow">›</div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      </main>
+
+      <nav className="g12-nav" aria-label="Student navigation">
+        <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
+        <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+        <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
+        <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
+        <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
+      </nav>
+    </div>
   </>;
 }
 
@@ -1394,7 +2009,798 @@ function SubjectCards({ lessonsBySubject, openLesson }) {
   return <div className="grid grid-3">{lessonsBySubject.map(item => <button className="module-card" key={item.name} onClick={() => item.lessons[0] && openLesson(item.lessons[0])}><div style={{ fontSize: 36 }}>{item.icon}</div><h3>{item.name}</h3><p>{item.lessons.length} lessons</p><ProgressBar value={item.lessons.length ? Math.round((item.lessons.filter(l => l.completed).length / item.lessons.length) * 100) : 0} /></button>)}</div>;
 }
 
-function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesson }) {
+
+function EarlyStudentSubpageStyles() {
+  return (
+    <style>{`
+      .g12-page {
+        min-height: 100vh;
+        padding-bottom: 116px;
+        background:
+          radial-gradient(circle at 3% 22%, rgba(147, 197, 253, 0.10), transparent 24%),
+          radial-gradient(circle at 95% 74%, rgba(253, 230, 138, 0.15), transparent 22%),
+          linear-gradient(180deg, #fffdf7 0%, #f7fbff 48%, #fff8ef 100%);
+        color: #24324a;
+      }
+
+      .g12-topbar {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        min-height: 88px;
+        padding: 16px 28px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(30, 160, 92, 0.08);
+        box-shadow: 0 8px 20px rgba(32, 90, 54, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .g12-brand {
+        border: 0;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #15965a;
+        font-size: 29px;
+        font-weight: 950;
+        letter-spacing: -0.045em;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .g12-brand-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: #fff6dc;
+        box-shadow: inset 0 0 0 2px rgba(238, 202, 95, 0.22);
+        font-size: 28px;
+      }
+
+      .g12-top-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .g12-pill,
+      .g12-action-btn {
+        min-height: 52px;
+        border-radius: 20px;
+        padding: 0 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        font-size: 17px;
+        font-weight: 950;
+      }
+
+      .g12-pill {
+        background: #fff5cf;
+        border: 1px solid #f7dfa0;
+        color: #22324a;
+      }
+
+      .g12-action-btn {
+        border: 2px solid #2fbf73;
+        background: #ffffff;
+        color: #14975a;
+        cursor: pointer;
+        box-shadow: 0 8px 16px rgba(47, 191, 115, 0.08);
+      }
+
+      .g12-shell {
+        padding: 22px 24px 132px;
+      }
+
+      .g12-subpage-shell {
+        max-width: 1380px;
+        margin: 0 auto;
+      }
+
+      .g12-subpage-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 22px;
+        padding: 28px 32px;
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 8% 18%, rgba(255, 239, 187, 0.65), transparent 28%),
+          radial-gradient(circle at 90% 20%, rgba(224, 242, 254, 0.70), transparent 34%),
+          linear-gradient(115deg, #fff4d7 0%, #fff8f2 48%, #eef8ff 100%);
+        border: 1px solid rgba(46, 184, 127, 0.12);
+        box-shadow: 0 18px 36px rgba(31, 73, 61, 0.08);
+      }
+
+      .g12-subpage-title {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .g12-subpage-icon {
+        width: 76px;
+        height: 76px;
+        border-radius: 26px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 42px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+      }
+
+      .g12-subpage-title h1 {
+        margin: 0;
+        color: #16a362;
+        font-size: clamp(38px, 4vw, 58px);
+        line-height: 0.95;
+        font-weight: 1000;
+        letter-spacing: -0.055em;
+      }
+
+      .g12-subpage-title p {
+        margin: 10px 0 0;
+        color: #425a7c;
+        font-size: 18px;
+        font-weight: 850;
+      }
+
+      .g12-mini-progress {
+        min-width: 300px;
+        padding: 20px 22px;
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.86);
+        border: 2px solid rgba(255, 217, 102, 0.28);
+        box-shadow: 0 14px 28px rgba(58, 82, 84, 0.06);
+      }
+
+      .g12-mini-progress strong {
+        display: block;
+        color: #14223b;
+        font-size: 28px;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+        margin-bottom: 12px;
+      }
+
+      .g12-progress-track,
+      .g12-module-progress {
+        width: 100%;
+        border-radius: 999px;
+        background: #eef7f1;
+        overflow: hidden;
+        border: 1px solid #d8efe0;
+      }
+
+      .g12-progress-track {
+        height: 14px;
+      }
+
+      .g12-module-progress {
+        height: 12px;
+        background: rgba(255, 255, 255, 0.75);
+      }
+
+      .g12-progress-fill,
+      .g12-module-progress span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #45c985, #9be8ba);
+      }
+
+      .g12-section-card {
+        margin-top: 22px;
+        padding: 30px;
+        border-radius: 32px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(31, 154, 92, 0.06);
+        box-shadow: 0 16px 32px rgba(39, 87, 63, 0.06);
+      }
+
+      .g12-section-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .g12-section-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+        color: #15965a;
+        font-size: 31px;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+      }
+
+      .g12-section-subtitle {
+        margin: 6px 0 0;
+        color: #425a7c;
+        font-size: 16px;
+        font-weight: 850;
+      }
+
+      .g12-filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .g12-chip {
+        border: 0;
+        min-height: 48px;
+        padding: 0 18px;
+        border-radius: 18px;
+        background: #ffffff;
+        color: #203451;
+        font-size: 15px;
+        font-weight: 950;
+        cursor: pointer;
+        box-shadow: inset 0 0 0 1px rgba(31, 154, 92, 0.10);
+      }
+
+      .g12-chip.active {
+        background: #edf8f1;
+        color: #15965a;
+        box-shadow: inset 0 0 0 2px rgba(39, 174, 96, 0.18);
+      }
+
+      .g12-card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .g12-tile {
+        border: 0;
+        min-height: 168px;
+        padding: 20px 22px;
+        border-radius: 28px;
+        background: #ffffff;
+        color: #22324a;
+        text-align: left;
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr) 50px;
+        gap: 18px;
+        align-items: center;
+        cursor: pointer;
+        box-shadow: 0 12px 22px rgba(47, 78, 84, 0.05);
+        border: 1px solid rgba(48, 120, 100, 0.08);
+        transition: 0.16s ease;
+      }
+
+      .g12-tile:hover,
+      .g12-action-btn:hover,
+      .g12-chip:hover {
+        transform: translateY(-2px);
+      }
+
+      .g12-tile.green { background: #edf9f0; }
+      .g12-tile.blue { background: #eef7ff; }
+      .g12-tile.purple { background: #f6f0ff; }
+      .g12-tile.yellow { background: #fff7dd; }
+      .g12-tile.pink { background: #fff0f5; }
+
+      .g12-tile-icon {
+        width: 86px;
+        height: 86px;
+        border-radius: 24px;
+        display: grid;
+        place-items: center;
+        font-size: 42px;
+        background: rgba(255, 255, 255, 0.70);
+      }
+
+      .g12-tile h3 {
+        margin: 0 0 8px;
+        color: #22324a;
+        font-size: 27px;
+        line-height: 1.05;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+      }
+
+      .g12-tile p,
+      .g12-muted {
+        margin: 0;
+        color: #526988;
+        font-size: 15px;
+        line-height: 1.45;
+        font-weight: 850;
+      }
+
+      .g12-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        width: max-content;
+        min-height: 34px;
+        padding: 0 12px;
+        margin-top: 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        color: #15965a;
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .g12-arrow {
+        width: 50px;
+        height: 50px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.82);
+        color: #15965a;
+        font-size: 28px;
+        font-weight: 1000;
+      }
+
+      .g12-empty {
+        padding: 28px;
+        border-radius: 26px;
+        background: #ffffff;
+        border: 1px dashed rgba(31, 154, 92, 0.18);
+        color: #526988;
+        font-weight: 900;
+        text-align: center;
+      }
+
+      .g12-group-card,
+      .g12-profile-card,
+      .g12-badge-card,
+      .g12-lesson-panel {
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(31, 154, 92, 0.07);
+        box-shadow: 0 14px 26px rgba(47, 78, 84, 0.05);
+        padding: 22px;
+      }
+
+      .g12-group-card h3,
+      .g12-profile-card h3,
+      .g12-badge-card h3,
+      .g12-lesson-panel h3 {
+        margin: 0 0 8px;
+        color: #22324a;
+        font-size: 25px;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+      }
+
+      .g12-task-card {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        padding: 16px;
+        border-radius: 22px;
+        background: #f8fcff;
+        border: 1px solid #e2f0ff;
+      }
+
+      .g12-task-icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        background: #fff5cf;
+      }
+
+      .g12-main-btn {
+        min-height: 50px;
+        border: 0;
+        padding: 0 20px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #47ce87, #1f9c60);
+        color: white;
+        font-size: 15px;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 12px 18px rgba(32, 156, 96, 0.16);
+      }
+
+      .g12-outline-btn {
+        min-height: 50px;
+        border: 2px solid #2fbf73;
+        padding: 0 20px;
+        border-radius: 18px;
+        background: #ffffff;
+        color: #14975a;
+        font-size: 15px;
+        font-weight: 1000;
+        cursor: pointer;
+      }
+
+      .g12-badge-grid,
+      .g12-avatar-grid,
+      .g12-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .g12-badge-card {
+        min-height: 150px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+      }
+
+      .g12-badge-big {
+        font-size: 54px;
+        line-height: 1;
+        filter: drop-shadow(0 10px 12px rgba(122, 66, 195, 0.14));
+      }
+
+      .g12-badge-card strong {
+        display: block;
+        margin-top: 10px;
+        color: #6f42c1;
+        font-size: 17px;
+        font-weight: 1000;
+      }
+
+      .g12-avatar-choice {
+        min-height: 112px;
+        border: 0;
+        border-radius: 28px;
+        background: #ffffff;
+        font-size: 46px;
+        cursor: pointer;
+        box-shadow: inset 0 0 0 1px rgba(31, 154, 92, 0.10), 0 12px 22px rgba(47, 78, 84, 0.04);
+      }
+
+      .g12-avatar-choice.selected {
+        background: #edf8f1;
+        box-shadow: inset 0 0 0 3px rgba(39, 174, 96, 0.26), 0 14px 26px rgba(47, 78, 84, 0.06);
+      }
+
+      .g12-summary-box {
+        padding: 20px;
+        border-radius: 24px;
+        background: #ffffff;
+        border: 1px solid rgba(31, 154, 92, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .g12-summary-box span {
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        background: #fff5cf;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+      }
+
+      .g12-summary-box b {
+        display: block;
+        color: #14223b;
+        font-size: 24px;
+        font-weight: 1000;
+      }
+
+      .g12-summary-box small {
+        display: block;
+        color: #526988;
+        font-weight: 850;
+      }
+
+      .g12-lesson-layout {
+        display: grid;
+        gap: 18px;
+      }
+
+      .g12-reading-box {
+        padding: 22px;
+        border-radius: 24px;
+        background: #f8fcff;
+        border: 1px solid #e1eefe;
+        color: #26354d;
+        font-size: 22px;
+        line-height: 1.85;
+        font-weight: 750;
+      }
+
+      .g12-nav {
+        position: fixed;
+        left: 50%;
+        bottom: 22px;
+        transform: translateX(-50%);
+        width: min(1120px, calc(100vw - 40px));
+        z-index: 80;
+        min-height: 82px;
+        padding: 10px 20px;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        border-radius: 34px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(39, 174, 96, 0.08);
+        box-shadow: 0 14px 30px rgba(25, 78, 54, 0.09);
+        backdrop-filter: blur(16px);
+      }
+
+      .g12-nav button {
+        border: 0;
+        background: transparent;
+        border-radius: 24px;
+        color: #203451;
+        font-size: 16px;
+        font-weight: 950;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .g12-nav button.active {
+        background: #edf8f1;
+        color: #15965a;
+      }
+
+      .g12-nav-icon {
+        font-size: 34px;
+        line-height: 1;
+      }
+
+      @media (max-width: 1000px) {
+        .g12-subpage-hero,
+        .g12-card-grid,
+        .g12-badge-grid,
+        .g12-avatar-grid,
+        .g12-summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .g12-mini-progress {
+          min-width: 0;
+        }
+
+        .g12-tile {
+          grid-template-columns: 86px minmax(0, 1fr) 42px;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .g12-topbar {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 16px;
+        }
+
+        .g12-top-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .g12-pill,
+        .g12-action-btn {
+          min-height: 48px;
+          font-size: 14px;
+          padding: 0 14px;
+        }
+
+        .g12-shell {
+          padding: 14px 14px 120px;
+        }
+
+        .g12-subpage-hero {
+          padding: 22px;
+          border-radius: 28px;
+        }
+
+        .g12-subpage-title {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .g12-subpage-title h1 {
+          font-size: 40px;
+        }
+
+        .g12-section-card {
+          padding: 20px;
+        }
+
+        .g12-tile {
+          grid-template-columns: 76px minmax(0, 1fr);
+        }
+
+        .g12-arrow {
+          display: none;
+        }
+
+        .g12-task-card {
+          grid-template-columns: 1fr;
+        }
+
+        .g12-nav {
+          width: calc(100vw - 18px);
+          bottom: 10px;
+          border-radius: 24px;
+          padding: 8px;
+          gap: 4px;
+        }
+
+        .g12-nav button {
+          flex-direction: column;
+          gap: 2px;
+          font-size: 11px;
+        }
+
+        .g12-nav-icon {
+          font-size: 26px;
+        }
+      }
+    `}</style>
+  );
+}
+
+function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, children, showProgress = true }) {
+  const s = data?.student || {};
+  const level = levelForXp(s.xp);
+  const xpPct = xpPercent(s.xp);
+
+  const goStudentTab = (tab) => {
+    if (tab === 'home') return go('screen-student');
+    if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'groups') return go('screen-stu-groups');
+    if (tab === 'badges') return go('screen-stu-badges');
+    if (tab === 'profile') return go('screen-stu-profile');
+  };
+
+  return (
+    <>
+      <EarlyStudentSubpageStyles />
+      <div className="g12-page">
+        <header className="g12-topbar">
+          <button type="button" className="g12-brand" onClick={() => goStudentTab('home')}>
+            <span className="g12-brand-icon">☀️</span>
+            <span>Tuklas Talino</span>
+          </button>
+
+          <div className="g12-top-actions">
+            <div className="g12-pill">🌸 Grade {s.gradeLevel || '—'} • {s.section || '—'}</div>
+            <div className="g12-pill">⚡ {s.xp || 0} XP</div>
+            <button type="button" className="g12-action-btn" onClick={() => goStudentTab('home')}>🏠 Home</button>
+          </div>
+        </header>
+
+        <main className="g12-shell g12-subpage-shell">
+          <section className="g12-subpage-hero">
+            <div className="g12-subpage-title">
+              <span className="g12-subpage-icon">{icon}</span>
+              <div>
+                <h1>{title}</h1>
+                <p>{subtitle}</p>
+              </div>
+            </div>
+
+            {showProgress && (
+              <div className="g12-mini-progress">
+                <strong>🪙 {s.xp || 0} XP • Level {level}</strong>
+                <div className="g12-progress-track">
+                  <span className="g12-progress-fill" style={{ width: `${xpPct}%` }} />
+                </div>
+              </div>
+            )}
+          </section>
+
+          {children}
+        </main>
+
+        <nav className="g12-nav" aria-label="Student navigation">
+          <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
+          <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+          <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
+          <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
+          <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
+        </nav>
+      </div>
+    </>
+  );
+}
+
+function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesson, data }) {
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="lessons"
+      go={go}
+      icon="📖"
+      title="Mga Aralin"
+      subtitle="Pumili ng module o lesson na gusto mong simulan."
+    >
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">📚 Lesson Library</h2>
+            <p className="g12-section-subtitle">{lessons.length} lesson{lessons.length === 1 ? '' : 's'} available for your grade.</p>
+          </div>
+        </div>
+
+        <div className="g12-filter-row">
+          <button className={`g12-chip ${subjectFilter === 'ALL' ? 'active' : ''}`} onClick={() => setSubjectFilter('ALL')}>🌎 All</button>
+          {SUBJECTS.map(subject => (
+            <button
+              key={subject.name}
+              className={`g12-chip ${subjectFilter === subject.name ? 'active' : ''}`}
+              onClick={() => setSubjectFilter(subject.name)}
+            >
+              {subject.icon} {subject.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="g12-card-grid">
+          {lessons.map(lesson => {
+            const meta = subjectTheme(lesson.subject);
+            const subjectInfo = SUBJECTS.find(subject => subject.name === lesson.subject) || {};
+            const tone = subjectInfo.tone || 'green';
+
+            return (
+              <button type="button" className={`g12-tile ${tone}`} key={lesson.id} onClick={() => openLesson(lesson)}>
+                <div className="g12-tile-icon">{meta.icon}</div>
+                <div>
+                  <h3>{lesson.title}</h3>
+                  <p>{lesson.subject} • Grade {lesson.gradeLevel} • +{lesson.xpReward || 0} XP</p>
+                  <span className="g12-status-pill">{lesson.completed ? '✅ Done' : '▶ Start'}</span>
+                </div>
+                <div className="g12-arrow">›</div>
+              </button>
+            );
+          })}
+        </div>
+
+        {!lessons.length && (
+          <div className="g12-empty">No lessons found for this filter yet.</div>
+        )}
+      </section>
+    </EarlyStudentChrome>
+  );
+}
+
+function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesson, data }) {
+  const early = Number(data?.student?.gradeLevel || lessons?.[0]?.gradeLevel || 4) <= 2;
+
+  if (early) {
+    return (
+      <EarlyLessonsScreen
+        lessons={lessons}
+        subjectFilter={subjectFilter}
+        setSubjectFilter={setSubjectFilter}
+        go={go}
+        openLesson={openLesson}
+        data={data}
+      />
+    );
+  }
+
   return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo" id="lessons-title">📚 Lessons</div><div className="pill">📌 <span id="lessons-count">{lessons.length}</span></div></div><div className="scroll"><div className="card"><div className="muted" id="lessons-sub">Mga aralin para sa iyong baitang.</div><div className="divider" /><div className="row"><button className={`btn btn-sm ${subjectFilter === 'ALL' ? 'btn-green' : 'btn-outline'}`} onClick={() => setSubjectFilter('ALL')}>All</button>{SUBJECTS.map(s => <button key={s.name} className={`btn btn-sm ${subjectFilter === s.name ? 'btn-green' : 'btn-outline'}`} onClick={() => setSubjectFilter(s.name)}>{s.icon} {s.name}</button>)}</div></div><div id="lessons-wrap">{lessons.map(l => <div className="lesson-card" key={l.id} onClick={() => openLesson(l)}><div className="lesson-icon">{SUBJECTS.find(s => s.name === l.subject)?.icon || '📘'}</div><div style={{ flex: 1 }}><b>{l.title}</b><div className="muted">{l.subject} • Grade {l.gradeLevel} • {l.xpReward} XP</div></div><div className="pill">{l.completed ? '✅ Done' : '▶ Start'}</div></div>)}{!lessons.length && <div className="card"><div className="muted">No lessons found.</div></div>}</div></div></>;
 }
 
@@ -1448,10 +2854,25 @@ function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
-function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech }) {
+function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data }) {
   const activities = lesson?.activities || [];
   const theme = subjectTheme(lesson?.subject);
   const isEarlyGrade = Number(lesson?.gradeLevel || 4) <= 2;
+
+  if (isEarlyGrade) {
+    return (
+      <EarlyLessonScreen
+        lesson={lesson}
+        feedback={feedback}
+        go={go}
+        completeLesson={completeLesson}
+        submitMcq={submitMcq}
+        submitWriting={submitWriting}
+        submitSpeech={submitSpeech}
+        data={data}
+      />
+    );
+  }
 
   function speakLesson() {
     const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`;
@@ -1645,6 +3066,113 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
         </div>
       </div>
     </>
+  );
+}
+
+
+function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data }) {
+  const activities = lesson?.activities || [];
+  const theme = subjectTheme(lesson?.subject);
+
+  function speakLesson() {
+    const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  }
+
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="lessons"
+      go={go}
+      icon={theme.icon || '📘'}
+      title={lesson?.title || 'Lesson'}
+      subtitle={`${lesson?.subject || 'Filipino'} • Grade ${lesson?.gradeLevel || '—'} • +${lesson?.xpReward || 0} XP`}
+    >
+      <div className="g12-lesson-layout">
+        <section className="g12-lesson-panel" style={{ background: `linear-gradient(135deg, ${theme.bg}, #ffffff)` }}>
+          <div className="g12-section-head">
+            <div>
+              <h2 className="g12-section-title">🌟 Learning Mission</h2>
+              <p className="g12-section-subtitle">Makinig, magbasa, at sagutin ang gawain. Kaya mo ito!</p>
+            </div>
+            <button type="button" className="g12-outline-btn" onClick={() => go('screen-lessons')}>← Back to Lessons</button>
+          </div>
+
+          <div className="g12-summary-grid">
+            <div className="g12-summary-box"><span>📖</span><div><b>{theme.tag || 'Aralin'}</b><small>Type</small></div></div>
+            <div className="g12-summary-box"><span>🎯</span><div><b>{activities.length}</b><small>Activities</small></div></div>
+            <div className="g12-summary-box"><span>⚡</span><div><b>+{lesson?.xpReward || 0}</b><small>Reward</small></div></div>
+            <div className="g12-summary-box"><span>{theme.icon || '📘'}</span><div><b>{lesson?.subject || 'Filipino'}</b><small>Module</small></div></div>
+          </div>
+        </section>
+
+        <section className="g12-lesson-panel">
+          <div className="g12-section-head">
+            <div>
+              <h2 className="g12-section-title">1️⃣ Makinig at Basahin</h2>
+              <p className="g12-section-subtitle">Basahin ang panuto at passage. Maaari mo ring pakinggan ito.</p>
+            </div>
+          </div>
+
+          {lesson?.instructions && (
+            <div className="g12-group-card" style={{ background: '#FFF8CF', marginBottom: 14 }}>
+              <b>Panuto:</b> {lesson.instructions}
+            </div>
+          )}
+
+          {lesson?.passage ? (
+            <div className="g12-reading-box">
+              {lesson.passage}
+            </div>
+          ) : (
+            <div className="g12-empty">No passage added for this lesson yet.</div>
+          )}
+
+          <div className="g12-filter-row" style={{ marginTop: 18, marginBottom: 0 }}>
+            <button className="g12-main-btn" onClick={speakLesson}>🔊 Pakinggan</button>
+            <button className="g12-outline-btn" onClick={() => speechSynthesis.cancel()}>⏹ Stop</button>
+          </div>
+        </section>
+
+        {feedback && (
+          <section className="g12-lesson-panel" style={{ border: feedback.includes('Tama') || feedback.includes('Na-save') || feedback.includes('Naisumite') ? '2px solid #2ECC71' : '2px solid #E67E22' }}>
+            <h2 className="g12-section-title">⭐ Feedback</h2>
+            <p className="g12-section-subtitle" style={{ fontSize: 19 }}>{feedback}</p>
+          </section>
+        )}
+
+        <section className="g12-lesson-panel">
+          <div className="g12-section-head">
+            <div>
+              <h2 className="g12-section-title">2️⃣ Sagutan ang Activities</h2>
+              <p className="g12-section-subtitle">
+                {activities.length ? 'Piliin, isulat, o bigkasin ang iyong sagot.' : 'Wala pang activities para sa lesson na ito.'}
+              </p>
+            </div>
+          </div>
+
+          {activities.map((activity, index) => (
+            <ActivityCard
+              key={activity.id || index}
+              activity={activity}
+              index={index}
+              total={activities.length}
+              isEarlyGrade={true}
+              submitMcq={submitMcq}
+              submitWriting={submitWriting}
+              submitSpeech={submitSpeech}
+            />
+          ))}
+        </section>
+
+        <section className="g12-lesson-panel" style={{ background: '#F0FFF5', border: '2px solid #2ECC71' }}>
+          <h2 className="g12-section-title">3️⃣ Tapusin ang Lesson</h2>
+          <p className="g12-section-subtitle">Kapag tapos ka na, pindutin ito para maitala ang iyong progress at XP.</p>
+          <button className="g12-main-btn" onClick={completeLesson}>✅ Mark as Completed</button>
+        </section>
+      </div>
+    </EarlyStudentChrome>
   );
 }
 
@@ -2338,16 +3866,183 @@ function InfographicActivity({ activity, index, total, isEarlyGrade, activityBox
   );
 }
 
+
+function EarlyGroupsScreen({ data, go, completeGroupTask }) {
+  const groups = data?.groups || [];
+
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="groups"
+      go={go}
+      icon="👥"
+      title="Mga Grupo"
+      subtitle="Tingnan ang iyong group tasks at tapusin ang collaborative activities."
+    >
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">👥 Group Tasks</h2>
+            <p className="g12-section-subtitle">Gawin ang tasks bago ang deadline para makakuha ng XP.</p>
+          </div>
+        </div>
+
+        <div className="g12-card-grid">
+          {groups.map(group => (
+            <div className="g12-group-card" key={group.id}>
+              <h3>👥 {group.name}</h3>
+              <p className="g12-muted">{group.description || 'Walang description.'}</p>
+
+              {(group.tasks || []).map(task => (
+                <div className="g12-task-card" key={task.id}>
+                  <div className="g12-task-icon">✅</div>
+                  <div>
+                    <h3 style={{ fontSize: 20, marginBottom: 4 }}>{task.title}</h3>
+                    <p className="g12-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
+                  </div>
+                  <button type="button" className="g12-main-btn" onClick={() => completeGroupTask(task.id)}>
+                    Complete
+                  </button>
+                </div>
+              ))}
+
+              {!(group.tasks || []).length && (
+                <div className="g12-empty" style={{ marginTop: 14 }}>No tasks yet for this group.</div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {!groups.length && (
+          <div className="g12-empty">No group tasks yet.</div>
+        )}
+      </section>
+    </EarlyStudentChrome>
+  );
+}
+
 function StudentGroups({ data, go, completeGroupTask }) {
+  const early = Number(data?.student?.gradeLevel || 4) <= 2;
+
+  if (early) {
+    return <EarlyGroupsScreen data={data} go={go} completeGroupTask={completeGroupTask} />;
+  }
+
   const groups = data?.groups || [];
   return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo">👥 Mga Grupo</div><div /></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--orange),#E67E22)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Group Tasks</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Gawin ang tasks bago ang deadline.</div></div><div id="stu-groups-wrap">{groups.map(g => <div className="card" key={g.id}><div className="section-title">👥 {g.name}</div><div className="muted">{g.description}</div><div className="divider" />{(g.tasks || []).map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">✅</div><div style={{ flex: 1 }}><b>{t.title}</b><div className="muted">Due: {fmtDate(t.dueAt)} • {t.xpReward} XP</div></div><button className="btn btn-green btn-sm" onClick={() => completeGroupTask(t.id)}>Complete</button></div>)}</div>)}{!groups.length && <div className="card"><div className="muted">No group tasks yet.</div></div>}</div></div></>;
 }
 
+function EarlyBadgesScreen({ data, go }) {
+  const badges = data?.badges || [];
+  const s = data?.student || {};
+
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="badges"
+      go={go}
+      icon="🏅"
+      title="Badges"
+      subtitle="Makikita dito ang rewards na nakuha mo sa lessons at activities."
+    >
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">🌟 Achievements</h2>
+            <p className="g12-section-subtitle">{badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {s.xp || 0} XP</p>
+          </div>
+        </div>
+
+        {badges.length ? (
+          <div className="g12-badge-grid">
+            {badges.map(badge => (
+              <div className="g12-badge-card" key={badge.id || badge.name}>
+                <div>
+                  <div className="g12-badge-big">{badge.icon || '🏅'}</div>
+                  <strong>{badge.name || 'Badge'}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="g12-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
+        )}
+      </section>
+    </EarlyStudentChrome>
+  );
+}
+
 function StudentBadges({ data, go }) {
+  const early = Number(data?.student?.gradeLevel || 4) <= 2;
+
+  if (early) {
+    return <EarlyBadgesScreen data={data} go={go} />;
+  }
+
   return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo">🏅 Badges</div><div className="pill">⚡ <span id="badge-xp">{data?.student?.xp || 0}</span></div></div><div className="scroll"><div className="card"><div className="section-title">🌟 Achievements</div><div id="badges-wrap" className="kid-badge-shelf">{(data?.badges || []).map(b => <div className="kid-badge-pill owned" key={b.id}><span className="kid-badge-icon">{b.icon || '🏅'}</span>{b.name}</div>)}{!(data?.badges || []).length && <div className="muted">Wala pang badge. Tapusin ang lessons para makakuha!</div>}</div></div></div></>;
 }
 
+function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
+  const s = data?.student || {};
+
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="profile"
+      go={go}
+      icon="🐰"
+      title="Profile"
+      subtitle="Piliin ang avatar mo at tingnan ang learning summary."
+    >
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">🐰 Avatar</h2>
+            <p className="g12-section-subtitle">Piliin ang avatar na gusto mong gamitin sa account mo.</p>
+          </div>
+        </div>
+
+        <div className="g12-avatar-grid">
+          {AVATARS.map(avatar => (
+            <button
+              key={avatar}
+              type="button"
+              className={`g12-avatar-choice ${selectedAvatar === avatar ? 'selected' : ''}`}
+              onClick={() => updateAvatar(avatar)}
+              aria-label={`Choose avatar ${avatar}`}
+            >
+              {avatar}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">📊 Summary</h2>
+            <p className="g12-section-subtitle">Basic profile and progress information.</p>
+          </div>
+        </div>
+
+        <div className="g12-summary-grid">
+          <div className="g12-summary-box"><span>👤</span><div><b>{s.name || '—'}</b><small>Name</small></div></div>
+          <div className="g12-summary-box"><span>🎒</span><div><b>Grade {s.gradeLevel || '—'}</b><small>Grade</small></div></div>
+          <div className="g12-summary-box"><span>🌸</span><div><b>{s.section || '—'}</b><small>Section</small></div></div>
+          <div className="g12-summary-box"><span>⚡</span><div><b>{s.xp || 0} XP</b><small>XP</small></div></div>
+        </div>
+      </section>
+    </EarlyStudentChrome>
+  );
+}
+
 function StudentProfile({ data, selectedAvatar, updateAvatar, go }) {
+  const early = Number(data?.student?.gradeLevel || 4) <= 2;
+
+  if (early) {
+    return <EarlyProfileScreen data={data} selectedAvatar={selectedAvatar} updateAvatar={updateAvatar} go={go} />;
+  }
+
   const s = data?.student;
   return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo">👤 Profile</div><div /></div><div className="scroll"><div className="card"><div className="section-title">Avatar</div><div className="muted">Palitan ang avatar mo (saved sa account).</div><div className="divider" /><div className="avatar-grid" id="profile-avatar-grid">{AVATARS.map(a => <button key={a} className={`avatar-circle ${selectedAvatar === a ? 'selected' : ''}`} onClick={() => updateAvatar(a)}>{a}</button>)}</div></div><div className="card"><div className="section-title">📊 Summary</div><div id="profile-summary"><div className="grid grid-3"><Stat icon="👤" label="Name" value={s?.name || '—'} /><Stat icon="🎒" label="Grade" value={s?.gradeLevel || '—'} /><Stat icon="⚡" label="XP" value={s?.xp || 0} /></div></div></div></div></>;
 }
