@@ -244,19 +244,36 @@ if (role === 'admin') {
   async function openLesson(lesson) {
     await safeRun(async () => {
       const data = await api(`/lessons/${lesson.id}`);
-      setSelectedLesson(data.lesson);
+      setSelectedLesson({
+        ...data.lesson,
+        completed: Boolean(lesson?.completed || data.lesson?.completed)
+      });
       setLessonFeedback('');
       go('screen-lesson');
     });
   }
 
-  async function completeLesson() {
-    if (!selectedLesson) return;
-    await safeRun(async () => {
+  async function completeLesson(options = {}) {
+    if (!selectedLesson) return null;
+
+    const { stay = false, silent = false } = options || {};
+
+    return await safeRun(async () => {
       const data = await api(`/lessons/${selectedLesson.id}/complete`, { method: 'POST', body: {} });
-      notify(data.xpAwarded ? `🎉 Natapos! +${data.xpAwarded} XP` : 'Nagawa mo na ang lesson na ito.');
+
+      setSelectedLesson(prev => prev ? { ...prev, completed: true } : prev);
+
+      if (!silent) {
+        notify(data.xpAwarded ? `🎉 Natapos! +${data.xpAwarded} XP` : 'Nagawa mo na ang lesson na ito.');
+      }
+
       await loadStudentDashboard();
-      go('screen-student');
+
+      if (!stay) {
+        go('screen-student');
+      }
+
+      return data;
     });
   }
 
@@ -672,6 +689,51 @@ async function archiveTeacher(id) {
 
   return (
     <>
+      <style>{`
+        .notif-wrap {
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 500 !important;
+          display: grid !important;
+          place-items: center !important;
+          padding: 24px !important;
+          pointer-events: none !important;
+          background: transparent !important;
+        }
+
+        .notif {
+          pointer-events: auto !important;
+          max-width: min(560px, calc(100vw - 40px)) !important;
+          min-width: min(420px, calc(100vw - 40px)) !important;
+          padding: 24px 28px !important;
+          border-radius: 28px !important;
+          background: rgba(255, 255, 255, 0.96) !important;
+          color: #14223b !important;
+          border: 3px solid rgba(255, 217, 102, 0.55) !important;
+          box-shadow: 0 24px 70px rgba(20, 34, 59, 0.22) !important;
+          text-align: center !important;
+          font-size: clamp(20px, 2.4vw, 28px) !important;
+          font-weight: 1000 !important;
+          line-height: 1.35 !important;
+          animation: centerNotifPop 0.22s ease-out both !important;
+        }
+
+        .notif.bad {
+          border-color: rgba(239, 68, 68, 0.55) !important;
+          background: #fff8f8 !important;
+        }
+
+        .notif.warn {
+          border-color: rgba(245, 158, 11, 0.62) !important;
+          background: #fffbeb !important;
+        }
+
+        @keyframes centerNotifPop {
+          from { opacity: 0; transform: scale(0.92) translateY(12px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
+
       <Notification notice={notice} />
 
       {loading && (
@@ -752,6 +814,7 @@ async function archiveTeacher(id) {
             submitWriting={submitWriting}
             submitSpeech={submitSpeech}
             data={studentDash}
+            openLesson={openLesson}
           />
         )}
       </Screen>
@@ -2769,7 +2832,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
                 <div>
                   <h3>{lesson.title}</h3>
                   <p>{lesson.subject} • Grade {lesson.gradeLevel} • +{lesson.xpReward || 0} XP</p>
-                  <span className="g12-status-pill">{lesson.completed ? '✅ Done' : '▶ Start'}</span>
+                  <span className="g12-status-pill">{lesson.completed ? '✅ Summary' : '▶ Start'}</span>
                 </div>
                 <div className="g12-arrow">›</div>
               </button>
@@ -2854,7 +2917,7 @@ function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
-function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data }) {
+function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data, openLesson }) {
   const activities = lesson?.activities || [];
   const theme = subjectTheme(lesson?.subject);
   const isEarlyGrade = Number(lesson?.gradeLevel || 4) <= 2;
@@ -2870,6 +2933,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
         submitWriting={submitWriting}
         submitSpeech={submitSpeech}
         data={data}
+        openLesson={openLesson}
       />
     );
   }
@@ -3070,14 +3134,368 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
 }
 
 
-function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data }) {
+
+function cleanLessonTextForKids(text = '') {
+  return String(text || '')
+    .replace(/\r/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractSectionFromLessonPlan(raw = '', startLabels = [], endLabels = []) {
+  const text = cleanLessonTextForKids(raw);
+  if (!text) return '';
+
+  const lower = text.toLowerCase();
+  let startIndex = -1;
+  let matchedLabel = '';
+
+  for (const label of startLabels) {
+    const idx = lower.indexOf(label.toLowerCase());
+    if (idx !== -1 && (startIndex === -1 || idx < startIndex)) {
+      startIndex = idx;
+      matchedLabel = label;
+    }
+  }
+
+  if (startIndex === -1) return '';
+
+  let contentStart = startIndex + matchedLabel.length;
+  if (text[contentStart] === ':') contentStart += 1;
+
+  let endIndex = text.length;
+  const afterStart = lower.slice(contentStart);
+
+  for (const label of endLabels) {
+    const idx = afterStart.indexOf(label.toLowerCase());
+    if (idx !== -1) {
+      endIndex = Math.min(endIndex, contentStart + idx);
+    }
+  }
+
+  return cleanLessonTextForKids(text.slice(contentStart, endIndex));
+}
+
+function makeStudentFriendlyPassage(lesson) {
+  const raw = cleanLessonTextForKids(lesson?.passage || lesson?.instructions || lesson?.title || '');
+  if (!raw) return 'Makinig, magbasa, at sagutin ang gawain. Kaya mo ito!';
+
+  const extracted = extractSectionFromLessonPlan(
+    raw,
+    ['Main Lesson / Passage', 'Main Lesson', 'Passage', 'Lesson Content'],
+    ['Vocabulary Words', 'Mini Quiz', 'Matching Activity', 'Writing Activity', 'Speech Practice', 'Teacher Notes']
+  );
+
+  const source = extracted || raw
+    .replace(/TUKLAS TALINO SAMPLE LESSON PLAN/gi, '')
+    .replace(/Subject:\s*[^.\n]+/gi, '')
+    .replace(/Grade Level:\s*[^.\n]+/gi, '')
+    .replace(/Module:\s*[^.\n]+/gi, '')
+    .replace(/Lesson Title:\s*/gi, '')
+    .replace(/Estimated Duration:\s*[^.\n]+/gi, '')
+    .replace(/XP Reward:\s*[^.\n]+/gi, '')
+    .replace(/Learning Objectives:\s*/gi, '');
+
+  const sentences = cleanLessonTextForKids(source)
+    .replace(/\n+/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .map(item => item.trim())
+    .filter(Boolean)
+    .filter(item => !/^(pagkatapos|teacher notes|correct answer|question\s*\d+)/i.test(item));
+
+  const shortText = sentences.slice(0, 4).join(' ');
+  const fallback = cleanLessonTextForKids(source).split('\n').slice(0, 4).join(' ');
+
+  return cleanLessonTextForKids(shortText || fallback || source).slice(0, 520);
+}
+
+function activityMissionMeta(activity, index = 0) {
+  const map = {
+    infographic: { icon: '🖼️', label: 'Tingnan' },
+    vocabulary: { icon: '🔤', label: 'Salita' },
+    matching: { icon: '🧩', label: 'Pares' },
+    mcq: { icon: '🎮', label: 'Quiz' },
+    speech: { icon: '🎤', label: 'Bigkas' },
+    writing: { icon: '✍️', label: 'Sulatin' }
+  };
+
+  return map[activity?.type] || { icon: ['⭐', '🌟', '✨'][index % 3], label: 'Gawain' };
+}
+
+function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data, openLesson }) {
   const activities = lesson?.activities || [];
   const theme = subjectTheme(lesson?.subject);
+  const [missionStep, setMissionStep] = useState(0);
+  const [rewardModal, setRewardModal] = useState(null);
+  const [rewardClaimed, setRewardClaimed] = useState(Boolean(lesson?.completed));
+
+  useEffect(() => {
+    setMissionStep(0);
+    setRewardModal(null);
+    setRewardClaimed(Boolean(lesson?.completed));
+  }, [lesson?.id, lesson?.completed]);
+
+  const kidPassage = makeStudentFriendlyPassage(lesson);
+  const isReviewMode = Boolean(lesson?.completed || rewardClaimed);
+  const missionSteps = [
+    { type: 'listen', icon: '👂', label: 'Makinig' },
+    { type: 'read', icon: '📖', label: 'Basahin' },
+    ...activities.map((activity, index) => ({
+      type: 'activity',
+      activity,
+      activityIndex: index,
+      ...activityMissionMeta(activity, index)
+    })),
+    { type: 'finish', icon: isReviewMode ? '✅' : '⭐', label: isReviewMode ? 'Review' : 'Tapos' }
+  ];
+
+  const safeStep = Math.min(missionStep, missionSteps.length - 1);
+  const currentStep = missionSteps[safeStep];
+  const progress = Math.round(((safeStep + 1) / Math.max(1, missionSteps.length)) * 100);
+
+  function goNext() {
+    if (rewardModal) return;
+    setMissionStep(step => Math.min(step + 1, missionSteps.length - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goBackStep() {
+    if (rewardModal || rewardClaimed) return;
+    setMissionStep(step => Math.max(step - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function findNextLesson() {
+    const lessons = asArray(data?.lessons);
+    const currentId = Number(lesson?.id || 0);
+    const pending = lessons.filter(item => !item.completed && Number(item.id || 0) !== currentId);
+    return pending.find(item => item.subject === lesson?.subject) || pending[0] || null;
+  }
+
+  async function claimReward() {
+    if (rewardClaimed) return;
+
+    const result = await completeLesson({ stay: true, silent: true });
+    if (!result) return;
+
+    const xpEarned = Number(result.xpAwarded ?? lesson?.xpReward ?? 0);
+    setRewardClaimed(true);
+    setMissionStep(missionSteps.length - 1);
+    speechSynthesis.cancel();
+    setRewardModal({ xp: xpEarned });
+  }
+
+  function goHomeAfterReward() {
+    setRewardModal(null);
+    go('screen-student');
+  }
+
+  function goNextAfterReward() {
+    const nextLesson = findNextLesson();
+    setRewardModal(null);
+
+    if (nextLesson && typeof openLesson === 'function') {
+      openLesson(nextLesson);
+      return;
+    }
+
+    go('screen-student');
+  }
 
   function speakLesson() {
-    const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`;
+    const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${kidPassage}`;
     speechSynthesis.cancel();
     speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  }
+
+  if (lesson?.completed && !rewardModal) {
+    const nextLesson = findNextLesson();
+    const summaryItems = [
+      { icon: theme.icon || '📘', label: lesson?.subject || 'Filipino' },
+      { icon: '⚡', label: `${lesson?.xpReward || 0} XP earned` },
+      { icon: '🎯', label: `${activities.length} activit${activities.length === 1 ? 'y' : 'ies'}` }
+    ];
+
+    return (
+      <EarlyStudentChrome
+        data={data}
+        activeTab="lessons"
+        go={go}
+        icon="✅"
+        title="Lesson Summary"
+        subtitle="Completed lesson only. Step-by-step mission is closed."
+      >
+        <style>{`
+          .g12-complete-summary {
+            max-width: 980px;
+            margin: 0 auto;
+            display: grid;
+            gap: 18px;
+          }
+
+          .g12-complete-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 38px;
+            padding: 38px 34px;
+            background:
+              radial-gradient(circle at 14% 18%, rgba(255, 236, 163, 0.78), transparent 28%),
+              radial-gradient(circle at 88% 18%, rgba(219, 234, 254, 0.74), transparent 30%),
+              linear-gradient(135deg, #ffffff, #f0fff5);
+            border: 3px solid rgba(71, 206, 135, 0.28);
+            box-shadow: 0 20px 46px rgba(39, 87, 63, 0.09);
+            text-align: center;
+          }
+
+          .g12-complete-badge {
+            width: 128px;
+            height: 128px;
+            margin: 0 auto 18px;
+            border-radius: 42px;
+            display: grid;
+            place-items: center;
+            background: #fff3bd;
+            font-size: 76px;
+            box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.22), 0 18px 34px rgba(245, 158, 11, 0.13);
+          }
+
+          .g12-complete-hero h2 {
+            margin: 0;
+            color: #15965a;
+            font-size: clamp(42px, 5vw, 66px);
+            line-height: 0.95;
+            letter-spacing: -0.06em;
+            font-weight: 1000;
+          }
+
+          .g12-complete-hero p {
+            margin: 12px auto 0;
+            max-width: 720px;
+            color: #425a7c;
+            font-size: 20px;
+            font-weight: 900;
+            line-height: 1.5;
+          }
+
+          .g12-summary-chip-row {
+            margin-top: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+          }
+
+          .g12-summary-chip {
+            min-height: 56px;
+            padding: 0 20px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid rgba(246, 196, 83, 0.34);
+            color: #14223b;
+            font-size: 17px;
+            font-weight: 1000;
+          }
+
+          .g12-summary-card {
+            padding: 30px;
+            border-radius: 34px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(31, 154, 92, 0.08);
+            box-shadow: 0 16px 34px rgba(39, 87, 63, 0.07);
+          }
+
+          .g12-summary-card h3 {
+            margin: 0 0 14px;
+            color: #15965a;
+            font-size: clamp(28px, 3.2vw, 42px);
+            letter-spacing: -0.045em;
+            font-weight: 1000;
+          }
+
+          .g12-summary-text {
+            border-radius: 28px;
+            padding: 24px;
+            background: #f8fcff;
+            border: 1px solid #e1eefe;
+            color: #1f2d45;
+            font-size: clamp(22px, 2.5vw, 32px);
+            line-height: 1.55;
+            font-weight: 950;
+          }
+
+          .g12-summary-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+          }
+
+          .g12-summary-btn {
+            border: 0;
+            min-height: 64px;
+            padding: 0 28px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, #47ce87, #1f9c60);
+            color: white;
+            font-size: 20px;
+            font-weight: 1000;
+            cursor: pointer;
+            box-shadow: 0 14px 22px rgba(32, 156, 96, 0.16);
+          }
+
+          .g12-summary-btn.secondary {
+            background: #ffffff;
+            color: #14975a;
+            border: 2px solid #2fbf73;
+            box-shadow: none;
+          }
+
+          .g12-summary-btn.purple {
+            background: linear-gradient(135deg, #a770ef, #7b4fd6);
+          }
+        `}</style>
+
+        <div className="g12-complete-summary">
+          <section className="g12-complete-hero">
+            <div className="g12-complete-badge">✅</div>
+            <h2>Lesson Completed!</h2>
+            <p>{lesson?.title || 'Natapos mo na ang lesson na ito.'}</p>
+            <div className="g12-summary-chip-row">
+              {summaryItems.map(item => (
+                <span className="g12-summary-chip" key={item.label}>
+                  <span>{item.icon}</span>
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          <section className="g12-summary-card">
+            <h3>Maikling Summary</h3>
+            <div className="g12-summary-text">
+              {kidPassage}
+            </div>
+          </section>
+
+          <div className="g12-summary-actions">
+            {nextLesson && (
+              <button type="button" className="g12-summary-btn purple" onClick={() => openLesson(nextLesson)}>
+                Susunod na Lesson →
+              </button>
+            )}
+            <button type="button" className="g12-summary-btn" onClick={() => go('screen-student')}>
+              🏠 Home
+            </button>
+            <button type="button" className="g12-summary-btn secondary" onClick={() => go('screen-lessons')}>
+              📖 More Lessons
+            </button>
+          </div>
+        </div>
+      </EarlyStudentChrome>
+    );
   }
 
   return (
@@ -3086,90 +3504,651 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
       activeTab="lessons"
       go={go}
       icon={theme.icon || '📘'}
-      title={lesson?.title || 'Lesson'}
-      subtitle={`${lesson?.subject || 'Filipino'} • Grade ${lesson?.gradeLevel || '—'} • +${lesson?.xpReward || 0} XP`}
+      title="Learning Mission"
+      subtitle={`${lesson?.subject || 'Filipino'} • Grade ${lesson?.gradeLevel || '—'} • ${isReviewMode ? 'Review Mode' : `+${lesson?.xpReward || 0} XP`}`}
     >
-      <div className="g12-lesson-layout">
-        <section className="g12-lesson-panel" style={{ background: `linear-gradient(135deg, ${theme.bg}, #ffffff)` }}>
-          <div className="g12-section-head">
-            <div>
-              <h2 className="g12-section-title">🌟 Learning Mission</h2>
-              <p className="g12-section-subtitle">Makinig, magbasa, at sagutin ang gawain. Kaya mo ito!</p>
+      <style>{`
+        .g12-mission-wrap {
+          display: grid;
+          gap: 18px;
+        }
+
+        .g12-mission-banner {
+          position: relative;
+          overflow: hidden;
+          border-radius: 34px;
+          padding: 26px 30px;
+          background:
+            radial-gradient(circle at 8% 22%, rgba(255, 236, 163, 0.72), transparent 30%),
+            radial-gradient(circle at 88% 18%, rgba(219, 234, 254, 0.75), transparent 32%),
+            linear-gradient(135deg, ${theme.bg || '#eaf8ef'}, #ffffff);
+          border: 1px solid rgba(31, 154, 92, 0.10);
+          box-shadow: 0 16px 32px rgba(39, 87, 63, 0.06);
+        }
+
+        .g12-mission-banner::after {
+          content: '✨';
+          position: absolute;
+          right: 28px;
+          top: 20px;
+          font-size: 34px;
+          opacity: 0.85;
+        }
+
+        .g12-mission-topline {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 18px;
+        }
+
+        .g12-mission-topline h2 {
+          margin: 0;
+          color: #15965a;
+          font-size: clamp(34px, 4vw, 54px);
+          line-height: 0.95;
+          letter-spacing: -0.06em;
+          font-weight: 1000;
+        }
+
+        .g12-mission-topline p {
+          margin: 8px 0 0;
+          color: #425a7c;
+          font-size: 17px;
+          font-weight: 900;
+        }
+
+        .g12-mission-xp {
+          min-width: 150px;
+          min-height: 62px;
+          padding: 0 20px;
+          border-radius: 24px;
+          display: grid;
+          place-items: center;
+          background: rgba(255, 255, 255, 0.82);
+          color: #14223b;
+          font-size: 23px;
+          font-weight: 1000;
+          border: 2px solid rgba(255, 217, 102, 0.35);
+        }
+
+        .g12-mission-path {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+          gap: 10px;
+          margin-top: 16px;
+        }
+
+        .g12-mission-dot {
+          border: 0;
+          min-height: 74px;
+          border-radius: 22px;
+          background: rgba(255, 255, 255, 0.74);
+          color: #24324a;
+          display: grid;
+          place-items: center;
+          gap: 3px;
+          cursor: pointer;
+          box-shadow: inset 0 0 0 1px rgba(31, 154, 92, 0.08);
+        }
+
+        .g12-mission-dot span {
+          font-size: 28px;
+          line-height: 1;
+        }
+
+        .g12-mission-dot small {
+          font-size: 12px;
+          font-weight: 1000;
+        }
+
+        .g12-mission-dot.done {
+          background: #e9fbef;
+          color: #0d8b4e;
+        }
+
+        .g12-mission-dot.active {
+          background: #fff4c7;
+          color: #14223b;
+          box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.28), 0 10px 18px rgba(245, 158, 11, 0.10);
+        }
+
+        .g12-mission-card {
+          min-height: 420px;
+          border-radius: 36px;
+          padding: 34px;
+          background: rgba(255, 255, 255, 0.96);
+          border: 1px solid rgba(31, 154, 92, 0.08);
+          box-shadow: 0 16px 34px rgba(39, 87, 63, 0.07);
+          display: grid;
+          gap: 22px;
+        }
+
+        .g12-mission-step-head {
+          display: grid;
+          grid-template-columns: 92px minmax(0, 1fr);
+          gap: 20px;
+          align-items: center;
+        }
+
+        .g12-mission-big-icon {
+          width: 92px;
+          height: 92px;
+          border-radius: 30px;
+          display: grid;
+          place-items: center;
+          font-size: 50px;
+          background: #fff5cf;
+          box-shadow: inset 0 0 0 2px rgba(246, 196, 83, 0.20);
+        }
+
+        .g12-mission-step-head h3 {
+          margin: 0;
+          color: #15965a;
+          font-size: clamp(34px, 4vw, 52px);
+          line-height: 0.95;
+          letter-spacing: -0.055em;
+          font-weight: 1000;
+        }
+
+        .g12-mission-step-head p {
+          margin: 8px 0 0;
+          color: #425a7c;
+          font-size: 18px;
+          font-weight: 900;
+        }
+
+        .g12-mission-text-card {
+          border-radius: 30px;
+          padding: 26px;
+          background:
+            radial-gradient(circle at 94% 12%, rgba(255, 231, 128, 0.34), transparent 20%),
+            #f8fcff;
+          border: 1px solid #e1eefe;
+          color: #1f2d45;
+          font-size: clamp(26px, 3vw, 38px);
+          line-height: 1.55;
+          font-weight: 950;
+        }
+
+        .g12-mission-note {
+          border-radius: 24px;
+          padding: 18px 20px;
+          background: #fff8cf;
+          color: #27344c;
+          font-size: 18px;
+          line-height: 1.5;
+          font-weight: 850;
+        }
+
+        .g12-mission-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .g12-mission-actions-left,
+        .g12-mission-actions-right {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .g12-mission-btn {
+          border: 0;
+          min-height: 64px;
+          padding: 0 28px;
+          border-radius: 24px;
+          background: linear-gradient(135deg, #47ce87, #1f9c60);
+          color: white;
+          font-size: 20px;
+          font-weight: 1000;
+          cursor: pointer;
+          box-shadow: 0 14px 22px rgba(32, 156, 96, 0.16);
+        }
+
+        .g12-mission-btn.secondary {
+          background: #ffffff;
+          color: #14975a;
+          border: 2px solid #2fbf73;
+          box-shadow: none;
+        }
+
+        .g12-mission-btn.purple {
+          background: linear-gradient(135deg, #a770ef, #7b4fd6);
+        }
+
+        .g12-mission-activity {
+          border-radius: 30px;
+          overflow: hidden;
+        }
+
+        .g12-mission-activity .card {
+          margin: 0 !important;
+          border-radius: 30px !important;
+          box-shadow: none !important;
+        }
+
+        .g12-mission-feedback {
+          padding: 16px 18px;
+          border-radius: 22px;
+          background: #e9fbef;
+          color: #0d7f48;
+          font-size: 20px;
+          font-weight: 1000;
+          border: 1px solid #bfeacb;
+        }
+
+        .g12-finish-card {
+          min-height: 260px;
+          border-radius: 32px;
+          display: grid;
+          place-items: center;
+          text-align: center;
+          padding: 28px;
+          background:
+            radial-gradient(circle at 50% 18%, rgba(255, 235, 156, 0.58), transparent 30%),
+            linear-gradient(135deg, #f0fff5, #ffffff);
+          border: 2px solid #8ce0ae;
+        }
+
+        .g12-finish-card .big {
+          font-size: 78px;
+          line-height: 1;
+          margin-bottom: 12px;
+        }
+
+        .g12-finish-card h3 {
+          margin: 0;
+          color: #15965a;
+          font-size: clamp(34px, 4vw, 54px);
+          letter-spacing: -0.055em;
+        }
+
+        .g12-finish-card p {
+          margin: 10px 0 0;
+          color: #425a7c;
+          font-size: 20px;
+          font-weight: 900;
+        }
+
+        .g12-reward-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 250;
+          display: grid;
+          place-items: center;
+          padding: 24px;
+          background: rgba(18, 28, 48, 0.40);
+          backdrop-filter: blur(10px);
+        }
+
+        .g12-reward-modal {
+          position: relative;
+          width: min(620px, 100%);
+          overflow: hidden;
+          border-radius: 40px;
+          padding: 42px 36px 34px;
+          text-align: center;
+          background:
+            radial-gradient(circle at 20% 18%, rgba(255, 241, 179, 0.92), transparent 26%),
+            radial-gradient(circle at 82% 22%, rgba(219, 234, 254, 0.90), transparent 26%),
+            linear-gradient(135deg, #ffffff, #fff8dd 58%, #f0fff5);
+          border: 3px solid rgba(255, 217, 102, 0.72);
+          box-shadow: 0 28px 70px rgba(20, 34, 59, 0.24);
+          animation: g12RewardPop 0.35s ease-out both;
+        }
+
+        .g12-reward-modal::before,
+        .g12-reward-modal::after {
+          content: '';
+          position: absolute;
+          width: 170px;
+          height: 170px;
+          border-radius: 999px;
+          background: rgba(255, 224, 102, 0.25);
+          pointer-events: none;
+        }
+
+        .g12-reward-modal::before {
+          left: -72px;
+          top: -62px;
+        }
+
+        .g12-reward-modal::after {
+          right: -78px;
+          bottom: -82px;
+          background: rgba(71, 206, 135, 0.18);
+        }
+
+        .g12-reward-big {
+          position: relative;
+          z-index: 2;
+          width: 132px;
+          height: 132px;
+          margin: 0 auto 16px;
+          border-radius: 42px;
+          display: grid;
+          place-items: center;
+          background: #fff3bd;
+          font-size: 78px;
+          box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.25), 0 18px 34px rgba(245, 158, 11, 0.14);
+          animation: g12RewardBounce 0.95s ease-in-out infinite;
+        }
+
+        .g12-reward-modal h3 {
+          position: relative;
+          z-index: 2;
+          margin: 0;
+          color: #15965a;
+          font-size: clamp(42px, 5vw, 64px);
+          line-height: 0.95;
+          letter-spacing: -0.06em;
+          font-weight: 1000;
+        }
+
+        .g12-reward-modal p {
+          position: relative;
+          z-index: 2;
+          margin: 12px 0 0;
+          color: #31486b;
+          font-size: 20px;
+          font-weight: 900;
+        }
+
+        .g12-reward-xp {
+          position: relative;
+          z-index: 2;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          min-height: 76px;
+          margin: 22px auto 20px;
+          padding: 0 34px;
+          border-radius: 28px;
+          background: #ffffff;
+          color: #14223b;
+          font-size: 35px;
+          font-weight: 1000;
+          box-shadow: 0 14px 30px rgba(20, 34, 59, 0.10);
+          border: 2px solid rgba(255, 217, 102, 0.50);
+        }
+
+        .g12-reward-actions {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .g12-confetti-piece {
+          position: absolute;
+          z-index: 1;
+          top: -20px;
+          font-size: 28px;
+          animation: g12ConfettiFall 2.8s linear infinite;
+          pointer-events: none;
+        }
+
+        .g12-confetti-piece:nth-child(1) { left: 8%; animation-delay: 0s; }
+        .g12-confetti-piece:nth-child(2) { left: 20%; animation-delay: 0.35s; }
+        .g12-confetti-piece:nth-child(3) { left: 34%; animation-delay: 0.7s; }
+        .g12-confetti-piece:nth-child(4) { left: 48%; animation-delay: 0.15s; }
+        .g12-confetti-piece:nth-child(5) { left: 64%; animation-delay: 0.55s; }
+        .g12-confetti-piece:nth-child(6) { left: 78%; animation-delay: 0.95s; }
+        .g12-confetti-piece:nth-child(7) { left: 90%; animation-delay: 0.25s; }
+
+        @keyframes g12RewardPop {
+          from { opacity: 0; transform: scale(0.88) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes g12RewardBounce {
+          0%, 100% { transform: translateY(0) rotate(-2deg); }
+          50% { transform: translateY(-8px) rotate(2deg); }
+        }
+
+        @keyframes g12ConfettiFall {
+          0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
+          12% { opacity: 1; }
+          100% { transform: translateY(620px) rotate(360deg); opacity: 0; }
+        }
+
+        @media (max-width: 760px) {
+          .g12-mission-banner,
+          .g12-mission-card {
+            padding: 22px;
+            border-radius: 28px;
+          }
+
+          .g12-mission-topline,
+          .g12-mission-step-head {
+            grid-template-columns: 1fr;
+          }
+
+          .g12-mission-step-head {
+            gap: 12px;
+          }
+
+          .g12-mission-big-icon {
+            width: 76px;
+            height: 76px;
+            font-size: 40px;
+            border-radius: 24px;
+          }
+
+          .g12-mission-actions,
+          .g12-mission-actions-left,
+          .g12-mission-actions-right {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .g12-mission-btn {
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      <div className="g12-mission-wrap">
+        {rewardModal && (
+          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Mission reward">
+            <div className="g12-reward-modal">
+              {['🎊', '⭐', '✨', '🌟', '🎉', '💛', '🌈'].map((piece, index) => (
+                <span className="g12-confetti-piece" key={index}>{piece}</span>
+              ))}
+
+              <div className="g12-reward-big">🏆</div>
+              <h3>Mission Complete!</h3>
+              <p>Ang galing mo! Natapos mo ang aralin.</p>
+              <div className="g12-reward-xp">⚡ +{rewardModal.xp || 0} XP</div>
+
+              <div className="g12-reward-actions">
+                <button type="button" className="g12-mission-btn purple" onClick={goNextAfterReward}>
+                  Susunod na Lesson →
+                </button>
+                <button type="button" className="g12-mission-btn secondary" onClick={goHomeAfterReward}>
+                  🏠 Home
+                </button>
+              </div>
             </div>
-            <button type="button" className="g12-outline-btn" onClick={() => go('screen-lessons')}>← Back to Lessons</button>
           </div>
-
-          <div className="g12-summary-grid">
-            <div className="g12-summary-box"><span>📖</span><div><b>{theme.tag || 'Aralin'}</b><small>Type</small></div></div>
-            <div className="g12-summary-box"><span>🎯</span><div><b>{activities.length}</b><small>Activities</small></div></div>
-            <div className="g12-summary-box"><span>⚡</span><div><b>+{lesson?.xpReward || 0}</b><small>Reward</small></div></div>
-            <div className="g12-summary-box"><span>{theme.icon || '📘'}</span><div><b>{lesson?.subject || 'Filipino'}</b><small>Module</small></div></div>
-          </div>
-        </section>
-
-        <section className="g12-lesson-panel">
-          <div className="g12-section-head">
-            <div>
-              <h2 className="g12-section-title">1️⃣ Makinig at Basahin</h2>
-              <p className="g12-section-subtitle">Basahin ang panuto at passage. Maaari mo ring pakinggan ito.</p>
-            </div>
-          </div>
-
-          {lesson?.instructions && (
-            <div className="g12-group-card" style={{ background: '#FFF8CF', marginBottom: 14 }}>
-              <b>Panuto:</b> {lesson.instructions}
-            </div>
-          )}
-
-          {lesson?.passage ? (
-            <div className="g12-reading-box">
-              {lesson.passage}
-            </div>
-          ) : (
-            <div className="g12-empty">No passage added for this lesson yet.</div>
-          )}
-
-          <div className="g12-filter-row" style={{ marginTop: 18, marginBottom: 0 }}>
-            <button className="g12-main-btn" onClick={speakLesson}>🔊 Pakinggan</button>
-            <button className="g12-outline-btn" onClick={() => speechSynthesis.cancel()}>⏹ Stop</button>
-          </div>
-        </section>
-
-        {feedback && (
-          <section className="g12-lesson-panel" style={{ border: feedback.includes('Tama') || feedback.includes('Na-save') || feedback.includes('Naisumite') ? '2px solid #2ECC71' : '2px solid #E67E22' }}>
-            <h2 className="g12-section-title">⭐ Feedback</h2>
-            <p className="g12-section-subtitle" style={{ fontSize: 19 }}>{feedback}</p>
-          </section>
         )}
 
-        <section className="g12-lesson-panel">
-          <div className="g12-section-head">
+        <section className="g12-mission-banner">
+          <div className="g12-mission-topline">
             <div>
-              <h2 className="g12-section-title">2️⃣ Sagutan ang Activities</h2>
-              <p className="g12-section-subtitle">
-                {activities.length ? 'Piliin, isulat, o bigkasin ang iyong sagot.' : 'Wala pang activities para sa lesson na ito.'}
-              </p>
+              <h2>{lesson?.title || 'Aralin'} 🌟</h2>
+              <p>{lesson?.subject || 'Filipino'} mission • Step {safeStep + 1} of {missionSteps.length}</p>
             </div>
+            <div className="g12-mission-xp">⚡ +{lesson?.xpReward || 0} XP</div>
           </div>
 
-          {activities.map((activity, index) => (
-            <ActivityCard
-              key={activity.id || index}
-              activity={activity}
-              index={index}
-              total={activities.length}
-              isEarlyGrade={true}
-              submitMcq={submitMcq}
-              submitWriting={submitWriting}
-              submitSpeech={submitSpeech}
-            />
-          ))}
+          <div className="g12-progress-track">
+            <span className="g12-progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+
+          <div className="g12-mission-path" aria-label="Mission steps">
+            {missionSteps.map((step, index) => (
+              <button
+                type="button"
+                key={`${step.type}-${index}`}
+                className={`g12-mission-dot ${index < safeStep ? 'done' : ''} ${index === safeStep ? 'active' : ''}`}
+                onClick={() => !rewardClaimed && !rewardModal && setMissionStep(index)}
+              >
+                <span>{step.icon}</span>
+                <small>{step.label}</small>
+              </button>
+            ))}
+          </div>
         </section>
 
-        <section className="g12-lesson-panel" style={{ background: '#F0FFF5', border: '2px solid #2ECC71' }}>
-          <h2 className="g12-section-title">3️⃣ Tapusin ang Lesson</h2>
-          <p className="g12-section-subtitle">Kapag tapos ka na, pindutin ito para maitala ang iyong progress at XP.</p>
-          <button className="g12-main-btn" onClick={completeLesson}>✅ Mark as Completed</button>
+        <section className="g12-mission-card">
+          {currentStep.type === 'listen' && (
+            <>
+              <div className="g12-mission-step-head">
+                <div className="g12-mission-big-icon">👂</div>
+                <div>
+                  <h3>Makinig muna</h3>
+                  <p>Pindutin ang speaker. Pakinggan ang aralin bago sumagot.</p>
+                </div>
+              </div>
+
+              {lesson?.instructions && (
+                <div className="g12-mission-note">
+                  <b>Panuto:</b> {lesson.instructions}
+                </div>
+              )}
+
+              <div className="g12-mission-text-card">
+                {lesson?.title || 'Handa ka na bang matuto?'}
+              </div>
+
+              <div className="g12-mission-actions">
+                <div className="g12-mission-actions-left">
+                  <button className="g12-mission-btn" onClick={speakLesson}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn secondary" onClick={() => speechSynthesis.cancel()}>⏹ Stop</button>
+                </div>
+                <div className="g12-mission-actions-right">
+                  <button className="g12-mission-btn purple" onClick={goNext}>Susunod →</button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep.type === 'read' && (
+            <>
+              <div className="g12-mission-step-head">
+                <div className="g12-mission-big-icon">📖</div>
+                <div>
+                  <h3>Basahin natin</h3>
+                  <p>Maikli lang ito. Basahin nang dahan-dahan.</p>
+                </div>
+              </div>
+
+              <div className="g12-mission-text-card">
+                {kidPassage}
+              </div>
+
+              <div className="g12-mission-actions">
+                <div className="g12-mission-actions-left">
+                  <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
+                  <button className="g12-mission-btn" onClick={speakLesson}>🔊 Pakinggan</button>
+                </div>
+                <div className="g12-mission-actions-right">
+                  <button className="g12-mission-btn purple" onClick={goNext}>
+                    Gawin ang Activity →
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep.type === 'activity' && (
+            <>
+              <div className="g12-mission-step-head">
+                <div className="g12-mission-big-icon">{currentStep.icon}</div>
+                <div>
+                  <h3>{currentStep.label}</h3>
+                  <p>Tapikin ang sagot o gawin ang gawain. Kaya mo ito!</p>
+                </div>
+              </div>
+
+              {feedback && (
+                <div className="g12-mission-feedback">
+                  {feedback.includes('+') ? feedback : `${feedback} ⭐`}
+                </div>
+              )}
+
+              <div className="g12-mission-activity">
+                <ActivityCard
+                  activity={currentStep.activity}
+                  index={currentStep.activityIndex}
+                  total={activities.length}
+                  isEarlyGrade={true}
+                  submitMcq={submitMcq}
+                  submitWriting={submitWriting}
+                  submitSpeech={submitSpeech}
+                />
+              </div>
+
+              <div className="g12-mission-actions">
+                <div className="g12-mission-actions-left">
+                  <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
+                </div>
+                <div className="g12-mission-actions-right">
+                  <button className="g12-mission-btn purple" onClick={goNext}>
+                    {safeStep >= missionSteps.length - 2 ? 'Tapusin →' : 'Susunod →'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep.type === 'finish' && (
+            <>
+              <div className="g12-finish-card">
+                <div>
+                  <div className="big">{isReviewMode ? '✅' : '🎉'}</div>
+                  <h3>{isReviewMode ? 'Review Complete!' : 'Mission Complete!'}</h3>
+                  <p>
+                    {isReviewMode
+                      ? 'Natapos mo na ang lesson na ito. Maaari kang bumalik sa Home o pumili ng ibang lesson.'
+                      : `Kunin ang reward mo: +${lesson?.xpReward || 0} XP`}
+                  </p>
+                </div>
+              </div>
+
+              {feedback && (
+                <div className="g12-mission-feedback">
+                  {feedback}
+                </div>
+              )}
+
+              <div className="g12-mission-actions">
+                {!isReviewMode && (
+                  <div className="g12-mission-actions-left">
+                    <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
+                  </div>
+                )}
+
+                <div className="g12-mission-actions-right">
+                  {!isReviewMode ? (
+                    <button className="g12-mission-btn" onClick={claimReward}>⭐ Claim XP</button>
+                  ) : (
+                    <button className="g12-mission-btn purple" onClick={() => go('screen-student')}>🏠 Go Home</button>
+                  )}
+                  <button className="g12-mission-btn secondary" onClick={() => go('screen-lessons')}>📖 More Lessons</button>
+                </div>
+              </div>
+            </>
+          )}
         </section>
       </div>
     </EarlyStudentChrome>
@@ -6410,6 +7389,11 @@ function TeacherLessonManager({ lessons, createLesson }) {
   });
 
   const [activities, setActivities] = useState([]);
+  const [lessonPlanText, setLessonPlanText] = useState('');
+  const [aiDraftNotice, setAiDraftNotice] = useState('');
+  const [lessonPlanFile, setLessonPlanFile] = useState(null);
+  const [lessonPlanFilePreview, setLessonPlanFilePreview] = useState('');
+  const [lessonPlanFileStatus, setLessonPlanFileStatus] = useState('');
 
   function makeId() {
     return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -6668,6 +7652,119 @@ function TeacherLessonManager({ lessons, createLesson }) {
     );
   }
 
+  function formatLessonPlanFileSize(size = 0) {
+    const bytes = Number(size || 0);
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function extractReadablePdfText(rawText = '') {
+    const cleaned = String(rawText || '')
+      .replace(/\r/g, '\n')
+      .replace(/[^\x09\x0A\x0D\x20-\x7EÀ-žñÑ]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const noiseWords = [
+      'obj', 'endobj', 'stream', 'endstream', 'xref', 'trailer', 'startxref', 'Type',
+      'Font', 'Length', 'Filter', 'FlateDecode', 'Pages', 'Catalog', 'MediaBox'
+    ];
+
+    const withoutNoise = noiseWords.reduce(
+      (value, word) => value.replace(new RegExp(`\\b${word}\\b`, 'gi'), ' '),
+      cleaned
+    );
+
+    return withoutNoise
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 5000);
+  }
+
+  async function handleLessonPlanFileUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const lowerName = file.name.toLowerCase();
+    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+    const isText = file.type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name);
+    const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf');
+
+    setLessonPlanFile({
+      name: file.name,
+      type: file.type || 'Unknown file type',
+      size: formatLessonPlanFileSize(file.size)
+    });
+    setLessonPlanFilePreview('');
+    setLessonPlanFileStatus('Reading uploaded lesson plan...');
+    setAiDraftNotice('');
+
+    try {
+      if (isImage) {
+        const previewUrl = URL.createObjectURL(file);
+        setLessonPlanFilePreview(previewUrl);
+        setLessonPlanFileStatus(
+          'Image uploaded. This is ready for the OCR/AI extraction step. For now, paste the readable lesson text below, then generate the draft.'
+        );
+        setAiDraftNotice('Photo selected. Next step is connecting OCR/backend extraction for scanned lesson plans.');
+        return;
+      }
+
+      if (isText) {
+        const text = await file.text();
+        const cleaned = text.trim();
+
+        if (!cleaned) {
+          setLessonPlanFileStatus('The uploaded text file is empty. Please choose another file or paste the lesson plan.');
+          return;
+        }
+
+        setLessonPlanText(cleaned);
+        setLessonPlanFileStatus('Text extracted successfully. You can review it, edit it, then generate a lesson draft.');
+        setAiDraftNotice('Lesson plan text was extracted from the uploaded file. Please review before generating.');
+        return;
+      }
+
+      if (isPdf) {
+        const rawText = await file.text();
+        const readableText = extractReadablePdfText(rawText);
+
+        if (readableText && readableText.length >= 120) {
+          setLessonPlanText(readableText);
+          setLessonPlanFileStatus(
+            'Basic PDF text extraction completed. Please review the text because PDF extraction may include extra spacing or missing words.'
+          );
+          setAiDraftNotice('A basic draft source was extracted from the PDF. Please review before generating.');
+        } else {
+          setLessonPlanFileStatus(
+            'PDF selected, but the browser could not read enough text. If this is scanned or picture-based, it needs OCR/backend extraction. Paste the lesson text below for now.'
+          );
+          setAiDraftNotice('PDF selected. Scanned lesson plans need OCR/backend extraction before AI generation.');
+        }
+        return;
+      }
+
+      setLessonPlanFileStatus(
+        'File selected, but this type needs backend extraction. Please upload TXT/PDF/image or paste the lesson plan text below.'
+      );
+    } catch (err) {
+      setLessonPlanFileStatus('Could not read the uploaded file. Please try another file or paste the lesson plan text.');
+      setAiDraftNotice(err?.message || 'File reading failed.');
+    }
+  }
+
+  function clearLessonPlanSource() {
+    setLessonPlanText('');
+    setAiDraftNotice('');
+    setLessonPlanFile(null);
+    setLessonPlanFilePreview('');
+    setLessonPlanFileStatus('');
+
+    const input = document.getElementById('teacher-lesson-plan-file');
+    if (input) input.value = '';
+  }
+
   function cleanActivities() {
     return activities
       .map(activity => {
@@ -6779,6 +7876,151 @@ function TeacherLessonManager({ lessons, createLesson }) {
       .filter(Boolean);
   }
 
+  function getLineAfterLabel(text, labels = []) {
+    const lines = String(text || '').split(/\n+/).map(line => line.trim()).filter(Boolean);
+
+    for (const label of labels) {
+      const found = lines.find(line => line.toLowerCase().startsWith(label.toLowerCase()));
+      if (found) {
+        return found.replace(new RegExp(`^${label}\\s*[:\\-]?\\s*`, 'i'), '').trim();
+      }
+    }
+
+    return '';
+  }
+
+  function guessSubjectFromPlan(text) {
+    const lower = String(text || '').toLowerCase();
+
+    if (/oral|bigkas|pagbigkas|talumpati|speech|pronunciation|salita nang malinaw/.test(lower)) return 'Oral Comm';
+    if (/sulat|pagsulat|pangungusap|sanaysay|liham|tulaing isusulat/.test(lower)) return 'Pagsulat';
+    if (/panitikan|tula|alamat|pabula|maikling kwento|kuwento/.test(lower)) return 'Panitikan';
+    if (/bokabularyo|talasalitaan|kahulugan|salitang|vocabulary/.test(lower)) return 'Bokabularyo';
+    if (/pagbasa|basa|reading|komprehensyon|unawa|story/.test(lower)) return 'Pagbasa';
+
+    return 'Pagbasa';
+  }
+
+  function guessGradeFromPlan(text) {
+    const match = String(text || '').match(/grade\s*([1-6])|baitang\s*([1-6])/i);
+    return Number(match?.[1] || match?.[2] || lessonDraft.gradeLevel || 1);
+  }
+
+  function getCleanSentences(text) {
+    return String(text || '')
+      .replace(/\s+/g, ' ')
+      .split(/(?<=[.!?])\s+/)
+      .map(sentence => sentence.trim())
+      .filter(sentence => sentence.length > 20);
+  }
+
+  function getKeywordsFromPlan(text) {
+    const stopWords = new Set([
+      'ang', 'mga', 'para', 'with', 'that', 'this', 'from', 'lesson', 'grade', 'baitang',
+      'student', 'students', 'teacher', 'learning', 'objective', 'objectives', 'activity',
+      'filipino', 'aralin', 'gawain', 'panuto', 'pagkatapos', 'maaaring', 'dapat', 'will',
+      'able', 'identify', 'understand', 'explain', 'write', 'read', 'using'
+    ]);
+
+    const words = String(text || '')
+      .toLowerCase()
+      .replace(/[^a-zA-ZÀ-žñÑ\s]/g, ' ')
+      .split(/\s+/)
+      .map(word => word.trim())
+      .filter(word => word.length >= 5 && !stopWords.has(word));
+
+    return Array.from(new Set(words)).slice(0, 6);
+  }
+
+  function generateFromLessonPlan() {
+    const rawPlan = lessonPlanText.trim();
+
+    if (!rawPlan) {
+      setAiDraftNotice('Please upload a lesson plan file or paste the teacher lesson plan first.');
+      return;
+    }
+
+    const lines = rawPlan.split(/\n+/).map(line => line.trim()).filter(Boolean);
+    const titleFromLabel = getLineAfterLabel(rawPlan, ['Title', 'Lesson Title', 'Paksa', 'Aralin', 'Topic']);
+    const firstShortLine = lines.find(line => line.length >= 8 && line.length <= 90) || '';
+    const generatedTitle = titleFromLabel || firstShortLine || 'Generated Filipino Lesson';
+    const generatedSubject = guessSubjectFromPlan(rawPlan);
+    const generatedGrade = guessGradeFromPlan(rawPlan);
+    const sentences = getCleanSentences(rawPlan);
+    const keywords = getKeywordsFromPlan(rawPlan);
+    const mainPassage = sentences.slice(0, 5).join('\n\n') || rawPlan.slice(0, 900);
+    const vocabularyWords = (keywords.length ? keywords : ['salita', 'kahulugan', 'aralin']).slice(0, 4);
+    const firstSentence = sentences[0] || generatedTitle;
+
+    const generatedActivities = [
+      {
+        id: makeId(),
+        type: 'infographic',
+        title: 'Info Card',
+        instructions: 'Basahin ang maikling gabay bago sagutan ang gawain.',
+        content: `Paksa: ${generatedTitle}\n\nMahahalagang ideya:\n- Basahin at unawain ang aralin.\n- Sagutan ang mga gawain pagkatapos magbasa.\n- Humingi ng gabay sa guro kung may hindi malinaw.`
+      },
+      {
+        id: makeId(),
+        type: 'vocabulary',
+        title: 'Mga Bagong Salita',
+        instructions: 'Pag-aralan ang salita, kahulugan, at halimbawa.',
+        words: vocabularyWords.map(word => ({
+          id: makeId(),
+          word: word.charAt(0).toUpperCase() + word.slice(1),
+          meaning: 'Ilagay o iwasto ang kahulugan ng salitang ito.',
+          example: `Halimbawa ng gamit ng ${word} sa pangungusap.`
+        }))
+      },
+      {
+        id: makeId(),
+        type: 'mcq',
+        title: 'Mini Quiz',
+        instructions: 'Piliin ang pinakaangkop na sagot.',
+        questions: [
+          {
+            id: makeId(),
+            question: `Ano ang pangunahing paksa ng aralin na "${generatedTitle}"?`,
+            options: [
+              { id: makeId(), text: generatedSubject, isCorrect: true },
+              { id: makeId(), text: 'Matematika', isCorrect: false },
+              { id: makeId(), text: 'Agham', isCorrect: false },
+              { id: makeId(), text: 'Araling Panlipunan', isCorrect: false }
+            ]
+          }
+        ]
+      },
+      {
+        id: makeId(),
+        type: 'writing',
+        title: 'Writing Prompt',
+        instructions: 'Sumulat ng maikling sagot batay sa aralin.',
+        prompt: `Ano ang natutuhan mo tungkol sa ${generatedTitle}? Sumulat ng 2 hanggang 3 pangungusap.`
+      },
+      {
+        id: makeId(),
+        type: 'speech',
+        title: 'Speech Practice',
+        instructions: 'Basahin nang malinaw ang pangungusap.',
+        targetText: firstSentence.slice(0, 180)
+      }
+    ];
+
+    setLessonDraft(prev => ({
+      ...prev,
+      gradeLevel: generatedGrade,
+      subject: generatedSubject,
+      title: generatedTitle,
+      xpReward: prev.xpReward || 25,
+      duration: prev.duration || '10 minuto',
+      instructions: 'Basahin ang aralin, pakinggan kung kailangan, at sagutan ang mga gawain.',
+      passage: mainPassage
+    }));
+
+    setActivities(generatedActivities);
+    setAiDraftNotice('Generated a lesson draft. Please review and edit everything before publishing.');
+  }
+
   async function submitLessonBuilder() {
     if (!lessonDraft.title.trim()) {
       alert('Please enter a lesson title.');
@@ -6854,6 +8096,80 @@ function TeacherLessonManager({ lessons, createLesson }) {
     <>
       <div className="teacher-builder-layout">
         <div className="teacher-builder-main">
+          <section className="teacher-design-card soft" style={{ border: '2px solid #dcefe2', background: 'linear-gradient(135deg, #fbfffd, #f3fbf6)' }}>
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">AI</div>
+              <div>
+                <h2>AI-Assisted Lesson Builder</h2>
+                <p>Upload a lesson plan file or paste the content, then generate a Tuklas Talino draft. Teacher review is still required before publishing.</p>
+              </div>
+            </div>
+
+            <div className="teacher-field">
+              <label>Upload Lesson Plan File</label>
+              <input
+                id="teacher-lesson-plan-file"
+                className="input-field"
+                type="file"
+                accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg,.webp,text/plain,application/pdf,image/*"
+                onChange={handleLessonPlanFileUpload}
+              />
+              <small style={{ color: '#6d7b73', fontWeight: 750, marginTop: 6 }}>
+                Accepted starter files: TXT, PDF, PNG, JPG, JPEG, WEBP. Text files can be extracted now. Scanned PDFs/images are prepared for OCR/backend extraction.
+              </small>
+            </div>
+
+            {lessonPlanFile && (
+              <div className="lms-empty-line" style={{ marginTop: 12, background: '#ffffff', color: '#264136' }}>
+                <strong>Selected file:</strong> {lessonPlanFile.name} • {lessonPlanFile.size}
+                <br />
+                <span>{lessonPlanFileStatus}</span>
+              </div>
+            )}
+
+            {lessonPlanFilePreview && (
+              <div style={{ marginTop: 12, padding: 12, borderRadius: 18, background: '#ffffff', border: '1px solid #dcefe2' }}>
+                <div style={{ color: '#0b8e4e', fontWeight: 950, marginBottom: 8 }}>Image Preview</div>
+                <img
+                  src={lessonPlanFilePreview}
+                  alt="Uploaded lesson plan preview"
+                  style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 14, background: '#f8fcf9' }}
+                />
+              </div>
+            )}
+
+            <div className="teacher-field" style={{ marginTop: 16 }}>
+              <label>Lesson Plan Text / Extracted Content</label>
+              <textarea
+                className="input-field"
+                value={lessonPlanText}
+                onChange={(e) => setLessonPlanText(e.target.value)}
+                placeholder={"Upload a lesson plan file above, or paste here.\n\nExample:\nGrade 1 Filipino\nPaksa: Mga Pangngalan\nLayunin: Natutukoy ang pangngalan sa pangungusap.\nGawain: Basahin ang maikling kwento at sagutan ang tanong."}
+                rows="7"
+                style={{ minHeight: 190, lineHeight: 1.55 }}
+              />
+            </div>
+
+            <div className="row" style={{ marginTop: 14, gap: 10 }}>
+              <button className="lms-main-action" type="button" onClick={generateFromLessonPlan}>
+                ✨ Generate Draft from Lesson Plan
+              </button>
+              <button
+                className="lms-outline-action"
+                type="button"
+                onClick={clearLessonPlanSource}
+              >
+                Clear
+              </button>
+            </div>
+
+            {aiDraftNotice && (
+              <div className="lms-empty-line" style={{ marginTop: 12, background: '#fff8df', color: '#6b4b00' }}>
+                {aiDraftNotice}
+              </div>
+            )}
+          </section>
+
           <section className="teacher-design-card soft">
             <div className="teacher-design-heading">
               <div className="teacher-design-step">1</div>
