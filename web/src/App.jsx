@@ -11,6 +11,103 @@ const SUBJECTS = [
   { name: 'Pagsulat', icon: '✍️', tone: 'pink'}
 ];
 
+const MISSION_GAMES = [
+  {
+    id: 'word-match',
+    title: 'Word Match',
+    icon: '🧩',
+    module: 'Bokabularyo',
+    xp: 15,
+    baseStatus: 'Available',
+    short: 'Itugma ang salitang Filipino sa tamang kahulugan o larawan.',
+    instruction: 'Hanapin ang tamang pares. Basahin ang salita, tingnan ang larawan o kahulugan, at piliin ang magkapareha.',
+    sample: 'aso → larawan ng aso, bahay → larawan ng bahay',
+    reward: 'Bokabularyo Star progress',
+    tone: 'sky'
+  },
+  {
+    id: 'letter-pop',
+    title: 'Letter Pop',
+    icon: '🎈',
+    module: 'Pagbasa',
+    xp: 12,
+    baseStatus: 'Available',
+    short: 'Tapikin ang tamang titik o pantig para mabuo ang salitang Filipino.',
+    instruction: 'Piliin ang nawawalang titik o pantig. Kapag tama, bubuo ang salita at may XP reward.',
+    sample: 'ba + ___ = bata',
+    reward: 'Reading streak progress',
+    tone: 'sun'
+  },
+  {
+    id: 'picture-guess',
+    title: 'Picture Guess',
+    icon: '🖼️',
+    module: 'Bokabularyo',
+    xp: 12,
+    baseStatus: 'Available',
+    short: 'Tingnan ang larawan at piliin ang tamang salitang Filipino.',
+    instruction: 'Pagmasdan ang picture card, pagkatapos piliin ang salitang tumutukoy dito.',
+    sample: 'larawan ng pusa → pusa',
+    reward: 'Vocabulary confidence',
+    tone: 'mint'
+  },
+  {
+    id: 'sentence-builder',
+    title: 'Sentence Builder',
+    icon: '🧱',
+    module: 'Pagsulat',
+    xp: 18,
+    baseStatus: 'Available',
+    short: 'Ayusin ang mga salita para makabuo ng wastong pangungusap.',
+    instruction: 'Ilagay ang mga salita sa tamang ayos hanggang makabuo ng malinaw na pangungusap.',
+    sample: 'Ako / ay / bata.',
+    reward: 'Pagsulat Builder badge progress',
+    tone: 'pink'
+  },
+  {
+    id: 'story-quest',
+    title: 'Story Quest',
+    icon: '📖',
+    module: 'Panitikan',
+    xp: 20,
+    baseStatus: 'Available',
+    short: 'Basahin ang maikling kuwento at sagutin ang simpleng tanong.',
+    instruction: 'Basahin ang story card. Sagutin ang tanong tungkol sa tauhan, tagpuan, o pangyayari.',
+    sample: 'Sino ang pangunahing tauhan?',
+    reward: 'Pag-unawa Quest progress',
+    tone: 'violet'
+  },
+  {
+    id: 'sound-and-say',
+    title: 'Sound and Say',
+    icon: '🎙️',
+    module: 'Oral Comm',
+    xp: 15,
+    baseStatus: 'Practice',
+    short: 'Magsanay bumigkas ng salitang Filipino o maikling parirala.',
+    instruction: 'Pakinggan ang salita, pagkatapos bigkasin ito nang malinaw. Speech checking can be connected later.',
+    sample: 'Magandang umaga po.',
+    reward: 'Oral practice confidence',
+    tone: 'rose',
+    future: true
+  },
+  {
+    id: 'badge-challenge',
+    title: 'Badge Challenge',
+    icon: '🏅',
+    module: 'Rewards',
+    xp: 25,
+    baseStatus: 'Locked',
+    short: 'Kumpletuhin ang mini-game streak para maka-unlock ng badge.',
+    instruction: 'Tapusin ang 3 vocabulary or reading games para ma-unlock ang special badge.',
+    sample: '3 games = Bokabularyo Star',
+    reward: 'Bokabularyo Star badge',
+    tone: 'orange',
+    minCompleted: 3
+  }
+];
+
+
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';
 }
@@ -53,6 +150,7 @@ export default function App() {
   const [selectedAvatar, setSelectedAvatar] = useState('🦊');
   const [studentDash, setStudentDash] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [selectedMissionGameId, setSelectedMissionGameId] = useState('word-match');
   const [lessonFeedback, setLessonFeedback] = useState('');
   const [teacherData, setTeacherData] = useState({ stats: null, rows: [], groups: [], students: [], lessons: [] });
 const [adminData, setAdminData] = useState({
@@ -789,6 +887,7 @@ async function archiveTeacher(id) {
           logout={doLogout}
           refresh={refreshStudent}
           openLesson={openLesson}
+          selectedAvatar={selectedAvatar}
         />
       </Screen>
 
@@ -817,6 +916,26 @@ async function archiveTeacher(id) {
             openLesson={openLesson}
           />
         )}
+      </Screen>
+
+      <Screen id="screen-stu-missions" active={screen === 'screen-stu-missions'}>
+        <StudentMissions
+          data={studentDash}
+          go={go}
+          onPlayMission={(gameId) => {
+            setSelectedMissionGameId(gameId);
+            go('screen-stu-mission-play');
+          }}
+        />
+      </Screen>
+
+      <Screen id="screen-stu-mission-play" active={screen === 'screen-stu-mission-play'}>
+        <StudentMissionPlay
+          data={studentDash}
+          go={go}
+          selectedGameId={selectedMissionGameId}
+          onBack={() => go('screen-stu-missions')}
+        />
       </Screen>
 
       <Screen id="screen-stu-groups" active={screen === 'screen-stu-groups'}>
@@ -1190,10 +1309,8 @@ function StarRow({ count = 0, max = 6 }) {
   return <>{Array.from({ length: max }).map((_, idx) => <span key={idx} className={`kid-star ${idx < count ? 'on' : ''}`}>⭐</span>)}</>;
 }
 
-function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLesson }) {
+function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLesson, selectedAvatar }) {
   const s = data?.student;
-  const level = data?.level || levelForXp(s?.xp);
-  const pct = xpPercent(s?.xp);
   const early = Number(s?.gradeLevel || 4) <= 2;
 
   const openFirstSubjectLesson = (subject) => {
@@ -1205,72 +1322,42 @@ function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLes
   const goStudentTab = (tab) => {
     if (tab === 'home') return go('screen-student');
     if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'badges') return go('screen-stu-badges');
     if (tab === 'profile') return go('screen-stu-profile');
   };
 
   if (early) {
+    return (
+      <EarlyStudentDashboard
+        data={data}
+        openLesson={openLesson}
+        openFirstSubjectLesson={openFirstSubjectLesson}
+        goStudentTab={goStudentTab}
+        logout={logout}
+        refresh={refresh}
+        selectedAvatar={selectedAvatar}
+      />
+    );
+  }
+
   return (
-    <EarlyStudentDashboard
+    <Grade46StudentDashboard
       data={data}
       openLesson={openLesson}
       openFirstSubjectLesson={openFirstSubjectLesson}
       goStudentTab={goStudentTab}
       logout={logout}
-      refresh={refresh}
+      selectedAvatar={selectedAvatar}
     />
   );
 }
 
-  return <>
-    <div className="top-nav student-topbar">
-      <div className="logo">🌟 Tuklas Talino</div>
-      <div className="row">
-        <div className="pill">⚡ <span id="stu-xp">{s?.xp || 0}</span> XP</div>
-        <div className="pill grade46-level-pill">🏅 Level <span id="stu-level-top">{level}</span></div>
-        <button className="btn btn-outline btn-sm" onClick={logout}>Logout</button>
-      </div>
-    </div>
 
-    <div className="scroll student-scroll">
-      <div className="hero" id="student-hero">
-        <div className="ava" id="stu-ava">{s?.avatar || '🦊'}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: 'Fredoka One, cursive', fontSize: 20 }} id="stu-greet">Mabuhay, {s?.name || 'Mag-aaral'}! 👋</div>
-          <div className="muted" id="stu-meta">Baitang {s?.gradeLevel || '—'} • {s?.section || '—'}</div>
-          <div style={{ marginTop: 10 }}>
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div className="muted" style={{ color: 'white', opacity: .9 }}>Level <span id="stu-level">{level}</span></div>
-              <div className="muted" style={{ color: 'white', opacity: .9 }}><span id="stu-xp-pct">{pct}%</span></div>
-            </div>
-            <ProgressBar value={pct} />
-          </div>
-        </div>
-      </div>
-
-      <div id="grade12-dashboard" className="grade12-zone" hidden={!early}>
-        <EarlyStudentDashboard data={data} openLesson={openLesson} openFirstSubjectLesson={openFirstSubjectLesson} goStudentTab={goStudentTab} />
-      </div>
-      <div id="student-standard-sections" className="grade46-dashboard" hidden={early}>
-        <Grade46StudentDashboard data={data} openLesson={openLesson} openFirstSubjectLesson={openFirstSubjectLesson} goStudentTab={goStudentTab} logout={logout} />
-      </div>
-    </div>
-
-    <div className="bottom-nav">
-      <button id="bnav-stu-home" className="bnav-item active" onClick={() => goStudentTab('home')}><span className="ni">🏠</span>Home</button>
-      <button id="bnav-stu-lessons" className="bnav-item" onClick={() => goStudentTab('lessons')}><span className="ni">📚</span>Lessons</button>
-      <button id="bnav-stu-groups" className="bnav-item" onClick={() => goStudentTab('groups')}><span className="ni">👥</span>Groups</button>
-      <button id="bnav-stu-badges" className="bnav-item" onClick={() => goStudentTab('badges')}><span className="ni">🏅</span>Badges</button>
-      <button id="bnav-stu-profile" className="bnav-item" onClick={() => goStudentTab('profile')}><span className="ni">👤</span>Profile</button>
-    </div>
-  </>;
-}
-
-function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStudentTab, logout, refresh }) {
+function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, logout }) {
   const s = data?.student || {};
   const stats = subjectStatsFor(data);
-  const dailyLesson = pickDailyLesson(data);
   const level = levelForXp(s.xp);
   const xpPct = xpPercent(s.xp);
 
@@ -1289,15 +1376,7 @@ function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStu
     };
   });
 
-  const quickContinue = () => {
-    if (dailyLesson) openLesson(dailyLesson);
-    else openFirstSubjectLesson('Pagbasa');
-  };
 
-  const safeRefresh = () => {
-    if (typeof refresh === 'function') refresh();
-    else window.location.reload();
-  };
 
   const safeLogout = () => {
     if (typeof logout === 'function') {
@@ -1525,11 +1604,26 @@ function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStu
         letter-spacing: -0.06em;
       }
 
+      .g12-greeting-avatar {
+        width: clamp(58px, 7vw, 86px);
+        height: clamp(58px, 7vw, 86px);
+        margin: 0 10px;
+        border-radius: 28px;
+        display: inline-grid;
+        place-items: center;
+        vertical-align: middle;
+        background: #ffffff;
+        border: 3px solid rgba(255, 217, 102, 0.52);
+        box-shadow: inset 0 0 0 2px rgba(71, 206, 135, 0.10), 0 14px 24px rgba(39, 87, 63, 0.10);
+        font-size: clamp(34px, 4.6vw, 56px);
+        line-height: 1;
+      }
+
       .g12-welcome-copy p {
-        margin: 0 0 24px;
-        color: #385075;
+        margin: 8px 0 22px;
+        color: #334155;
         max-width: 620px;
-        font-size: 21px;
+        font-size: clamp(18px, 1.7vw, 22px);
         line-height: 1.45;
         font-weight: 850;
       }
@@ -1811,6 +1905,437 @@ function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStu
         line-height: 1;
       }
 
+      /* Grade 1-2 Kid Curious style: bigger, playful, and game-like while keeping Tuklas colors. */
+      .g12-page {
+        background:
+          radial-gradient(circle at 12% 14%, rgba(255, 245, 207, 0.95), transparent 22%),
+          radial-gradient(circle at 84% 16%, rgba(237, 248, 241, 0.95), transparent 24%),
+          linear-gradient(135deg, #e8fff1 0%, #fffdf7 45%, #fff5cf 100%);
+      }
+
+      .g12-page::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at 18% 72%, rgba(21, 150, 90, 0.14), transparent 18%),
+          radial-gradient(circle at 86% 68%, rgba(246, 196, 83, 0.16), transparent 20%);
+      }
+
+      .g12-topbar {
+        width: min(1280px, calc(100vw - 32px));
+        margin: 14px auto 0;
+        border-radius: 34px;
+        border: 3px solid rgba(21, 150, 90, 0.12);
+        box-shadow: 0 14px 0 rgba(21, 150, 90, 0.08), 0 22px 42px rgba(21, 150, 90, 0.10);
+      }
+
+      .g12-brand {
+        font-size: 34px;
+      }
+
+      .g12-brand-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 24px;
+        font-size: 38px;
+        background: #fff5cf;
+      }
+
+      .g12-pill,
+      .g12-action-btn {
+        min-height: 60px;
+        border-radius: 24px;
+        font-size: 19px;
+      }
+
+      .g12-shell {
+        width: min(1280px, calc(100vw - 32px));
+        margin: 0 auto;
+      }
+
+      .g12-hero {
+        min-height: 520px;
+        border-radius: 46px;
+        border: 4px solid rgba(21, 150, 90, 0.16);
+        box-shadow: 0 18px 0 rgba(21, 150, 90, 0.08), 0 30px 58px rgba(21, 150, 90, 0.13);
+        background:
+          radial-gradient(circle at 15% 18%, rgba(255, 245, 207, 0.95), transparent 28%),
+          radial-gradient(circle at 78% 16%, rgba(255, 255, 255, 0.72), transparent 18%),
+          linear-gradient(135deg, #28c98a 0%, #15965a 42%, #edf8f1 43%, #fffdf7 100%);
+      }
+
+      .g12-hero-art {
+        min-height: 410px;
+        border-radius: 42px;
+        background:
+          radial-gradient(circle at 42% 40%, #dff3ff 0 24%, transparent 25%),
+          radial-gradient(circle at 24% 72%, rgba(255, 245, 207, 0.86), transparent 24%),
+          linear-gradient(160deg, rgba(255,255,255,0.24), rgba(255,255,255,0.06));
+      }
+
+      .g12-hero-art::before {
+        width: 30px;
+        height: 74%;
+        left: 42px;
+        bottom: 44px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #fff9dc 0 24%, #f59e0b 24% 100%);
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.45);
+      }
+
+      .g12-hero-art::after {
+        content: '🐵';
+        width: 84px;
+        height: 84px;
+        right: 64px;
+        top: 54px;
+        display: grid;
+        place-items: center;
+        background: #fff5cf;
+        font-size: 46px;
+        box-shadow: 0 12px 24px rgba(20, 34, 59, 0.12);
+      }
+
+      .g12-hero-img {
+        width: min(88%, 560px);
+        max-height: 390px;
+        transform: translateY(22px);
+      }
+
+      .g12-welcome-copy h1 {
+        color: #14223b;
+        text-shadow: none;
+        font-size: clamp(58px, 6.8vw, 92px);
+        line-height: 0.92;
+      }
+
+      .g12-hero-content {
+        padding: 26px 28px;
+        border-radius: 38px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 3px solid rgba(255, 245, 207, 0.72);
+        box-shadow: 0 16px 36px rgba(20, 34, 59, 0.10);
+        backdrop-filter: blur(8px);
+      }
+
+      .g12-greeting-avatar {
+        display: inline-grid;
+        place-items: center;
+        width: 74px;
+        height: 74px;
+        margin: 0 14px 0 4px;
+        border-radius: 26px;
+        background: #fff5cf;
+        color: #14223b;
+        font-size: 46px;
+        vertical-align: middle;
+        box-shadow: 0 8px 0 #f6c453, 0 16px 24px rgba(20, 34, 59, 0.12);
+        text-shadow: none;
+      }
+
+      .g12-progress-card {
+        padding: 32px;
+        border-radius: 38px;
+        border: 4px solid rgba(255, 245, 207, 0.76);
+        box-shadow: 0 10px 0 rgba(246, 196, 83, 0.60), 0 22px 38px rgba(20, 34, 59, 0.12);
+      }
+
+      .g12-progress-title {
+        font-size: clamp(38px, 4vw, 56px);
+      }
+
+      .g12-progress-track {
+        height: 22px;
+        border: 3px solid #d8efe0;
+      }
+
+      .g12-game-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+        margin-top: 28px;
+      }
+
+      .g12-game-start-btn,
+      .g12-game-soft-btn {
+        border: 0;
+        min-height: 76px;
+        padding: 0 38px;
+        border-radius: 28px;
+        font-size: 26px;
+        font-weight: 1000;
+        cursor: pointer;
+        transition: transform 0.14s ease, box-shadow 0.14s ease;
+      }
+
+      .g12-game-start-btn {
+        background: linear-gradient(180deg, #ffe46c, #ffc928);
+        color: #14223b;
+        text-shadow: none;
+        box-shadow: 0 9px 0 #e7a90f, 0 18px 28px rgba(245, 158, 11, 0.20);
+      }
+
+      .g12-game-soft-btn {
+        background: #ffffff;
+        color: #15965a;
+        border: 3px solid rgba(21, 150, 90, 0.18);
+        box-shadow: 0 8px 0 rgba(21, 150, 90, 0.14), 0 16px 26px rgba(21, 150, 90, 0.10);
+      }
+
+      .g12-game-start-btn:active,
+      .g12-game-soft-btn:active {
+        transform: translateY(5px);
+        box-shadow: 0 4px 0 #e7a90f, 0 10px 18px rgba(245, 158, 11, 0.16);
+      }
+
+      .g12-section-card {
+        border-radius: 42px;
+        padding: 36px;
+        border: 4px solid rgba(21, 150, 90, 0.11);
+        box-shadow: 0 14px 0 rgba(21, 150, 90, 0.07), 0 26px 46px rgba(21, 150, 90, 0.10);
+      }
+
+      .g12-section-title {
+        font-size: clamp(38px, 4vw, 58px);
+      }
+
+      .g12-section-subtitle {
+        font-size: 22px;
+      }
+
+      .g12-subject-grid {
+        gap: 24px;
+      }
+
+      .g12-subject-card {
+        min-height: 230px;
+        grid-template-columns: 148px minmax(0, 1fr) 66px;
+        padding: 28px;
+        border-radius: 38px;
+        border: 4px solid rgba(255, 255, 255, 0.72);
+        box-shadow: 0 10px 0 rgba(21, 150, 90, 0.10), 0 22px 34px rgba(21, 150, 90, 0.10);
+      }
+
+      .g12-subject-illustration {
+        width: 128px;
+        height: 128px;
+        border-radius: 38px;
+        font-size: 72px;
+      }
+
+      .g12-subject-card h3 {
+        font-size: 38px;
+      }
+
+      .g12-subject-card p {
+        font-size: 20px;
+      }
+
+      .g12-module-progress {
+        height: 18px;
+        border: 2px solid rgba(255,255,255,0.60);
+      }
+
+      .g12-card-arrow {
+        width: 64px;
+        height: 64px;
+        font-size: 38px;
+      }
+
+      .g12-nav {
+        min-height: 96px;
+        border-radius: 42px;
+        border: 4px solid rgba(21, 150, 90, 0.10);
+        box-shadow: 0 12px 0 rgba(21, 150, 90, 0.10), 0 22px 34px rgba(20, 34, 59, 0.12);
+      }
+
+      .g12-nav button {
+        border-radius: 32px;
+        font-size: 19px;
+      }
+
+      .g12-nav button.active {
+        background: #fff5cf;
+        color: #0f7d49;
+        box-shadow: inset 0 0 0 2px rgba(246, 196, 83, 0.28);
+      }
+
+      .g12-nav-icon {
+        font-size: 40px;
+      }
+
+      /* Grade 1-2 readability safeguard: avoid white text on light/green gradients. */
+
+      .g12-game-start-btn,
+      .g12-main-btn {
+        color: #14223b !important;
+        text-shadow: none !important;
+      }
+
+      .g12-welcome-copy h1,
+      .g12-subpage-title h1 {
+        color: #14223b !important;
+        text-shadow: none !important;
+      }
+
+      .g12-subpage-title p {
+        color: #334155 !important;
+        text-shadow: none !important;
+      }
+
+
+      /* Grade 1-2 balanced font sizing: playful, readable, and not oversized. */
+      .g12-brand {
+        font-size: 28px;
+      }
+
+      .g12-brand-icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 20px;
+        font-size: 32px;
+      }
+
+      .g12-pill,
+      .g12-action-btn {
+        min-height: 50px;
+        border-radius: 20px;
+        font-size: 16px;
+        padding: 0 16px;
+      }
+
+      .g12-hero {
+        min-height: 460px;
+      }
+
+      .g12-hero-art {
+        min-height: 340px;
+      }
+
+      .g12-hero-art::after {
+        width: 68px;
+        height: 68px;
+        font-size: 38px;
+      }
+
+      .g12-hero-img {
+        max-height: 335px;
+      }
+
+      .g12-hero-content {
+        padding: 22px 24px;
+      }
+
+      .g12-welcome-copy h1 {
+        font-size: clamp(38px, 4.8vw, 58px);
+        line-height: 1;
+      }
+
+      .g12-greeting-avatar {
+        width: 58px;
+        height: 58px;
+        margin: 0 10px 0 4px;
+        border-radius: 20px;
+        font-size: 36px;
+      }
+
+      .g12-progress-card {
+        padding: 24px;
+        border-radius: 32px;
+      }
+
+      .g12-progress-title {
+        gap: 12px;
+        font-size: clamp(26px, 2.8vw, 36px);
+      }
+
+      .g12-progress-coin {
+        width: 46px;
+        height: 46px;
+        font-size: 26px;
+      }
+
+      .g12-progress-track {
+        height: 14px;
+        border-width: 2px;
+      }
+
+      .g12-game-start-btn,
+      .g12-game-soft-btn {
+        min-height: 58px;
+        padding: 0 28px;
+        border-radius: 22px;
+        font-size: 18px;
+      }
+
+      .g12-section-card {
+        padding: 28px;
+        border-radius: 34px;
+      }
+
+      .g12-section-title {
+        font-size: clamp(28px, 3vw, 38px);
+      }
+
+      .g12-section-subtitle {
+        font-size: 17px;
+      }
+
+      .g12-subject-grid {
+        gap: 20px;
+      }
+
+      .g12-subject-card {
+        min-height: 180px;
+        grid-template-columns: 112px minmax(0, 1fr) 52px;
+        gap: 18px;
+        padding: 22px;
+        border-radius: 30px;
+      }
+
+      .g12-subject-illustration {
+        width: 96px;
+        height: 96px;
+        border-radius: 28px;
+        font-size: 52px;
+      }
+
+      .g12-subject-card h3 {
+        font-size: 28px;
+        line-height: 1.05;
+      }
+
+      .g12-subject-card p {
+        font-size: 16px;
+      }
+
+      .g12-module-progress {
+        height: 12px;
+      }
+
+      .g12-card-arrow {
+        width: 52px;
+        height: 52px;
+        font-size: 30px;
+      }
+
+      .g12-nav {
+        min-height: 78px;
+        border-radius: 34px;
+      }
+
+      .g12-nav button {
+        border-radius: 26px;
+        font-size: 15px;
+      }
+
+      .g12-nav-icon {
+        font-size: 30px;
+      }
+
       @media (max-width: 1180px) {
         .g12-hero { grid-template-columns: 1fr; }
         .g12-hero-content { max-width: none; }
@@ -1874,8 +2399,6 @@ function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStu
 
         <div className="g12-top-actions">
           <div className="g12-pill">🌸 Grade {s.gradeLevel || '—'} • {s.section || '—'}</div>
-          <div className="g12-pill">⚡ {s.xp || 0} XP</div>
-          <button type="button" className="g12-action-btn" onClick={safeRefresh}>🔄 Refresh</button>
           <button type="button" className="g12-action-btn" onClick={safeLogout}>🚪 Logout</button>
         </div>
       </header>
@@ -1897,6 +2420,7 @@ function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStu
           <div className="g12-hero-content">
             <div className="g12-welcome-copy">
               <h1>Kamusta, {s.name || 'Learner'}! 👋</h1>
+              <p>Ready ka na ba sa learning adventure today?</p>
             </div>
 
             <div className="g12-progress-card">
@@ -1912,7 +2436,6 @@ function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStu
               </div>
             </div>
 
-            
           </div>
         </section>
 
@@ -1952,121 +2475,987 @@ function EarlyStudentDashboard({ data, openLesson, openFirstSubjectLesson, goStu
       <nav className="g12-nav" aria-label="Student navigation">
         <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
         <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+        <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
         <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-        <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
         <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
       </nav>
     </div>
   </>;
 }
 
-function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goStudentTab, logout }) {
+function Grade46ReferenceStyles() {
+  return (
+    <style>{`
+      .g46-ref-page {
+        --tt-green: #15965a;
+        --tt-green-dark: #0f7d49;
+        --tt-green-soft: #edf8f1;
+        --tt-yellow: #fff5cf;
+        --tt-yellow-deep: #f6c453;
+        --tt-purple: #7b4fd6;
+        --tt-sky: #eef8ff;
+        --tt-cream: #fffdf7;
+        --tt-ink: #203451;
+        --tt-muted: #526988;
+        min-height: 100vh;
+        padding: 28px;
+        background:
+          radial-gradient(circle at 12% 12%, rgba(255, 245, 207, 0.90), transparent 28%),
+          radial-gradient(circle at 92% 82%, rgba(237, 248, 241, 0.88), transparent 30%),
+          linear-gradient(135deg, #fffdf7 0%, #eef8ff 52%, #edf8f1 100%);
+        color: var(--tt-ink);
+      }
+
+      .g46-ref-frame {
+        width: min(1240px, calc(100vw - 44px));
+        min-height: min(760px, calc(100vh - 56px));
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 214px minmax(0, 1fr);
+        overflow: hidden;
+        border-radius: 34px;
+        background: #ffffff;
+        border: 7px solid var(--tt-green);
+        box-shadow: 0 28px 70px rgba(21, 150, 90, 0.20);
+      }
+
+      .g46-ref-sidebar {
+        position: relative;
+        padding: 24px 18px;
+        background: linear-gradient(180deg, var(--tt-green) 0%, var(--tt-green-dark) 100%);
+        color: #ffffff;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .g46-ref-brand {
+        display: grid;
+        justify-items: center;
+        gap: 9px;
+        margin-bottom: 6px;
+        color: #ffffff;
+        font-weight: 1000;
+        letter-spacing: -0.035em;
+      }
+
+      .g46-ref-brand span:first-child {
+        width: 50px;
+        height: 50px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: var(--tt-yellow);
+        color: var(--tt-green-dark);
+        font-size: 28px;
+        box-shadow: 0 12px 26px rgba(5, 77, 42, 0.26);
+      }
+
+      .g46-ref-menu {
+        display: grid;
+        gap: 10px;
+      }
+
+      .g46-ref-menu button,
+      .g46-ref-logout {
+        border: 0;
+        width: 100%;
+        min-height: 46px;
+        padding: 0 15px;
+        border-radius: 999px;
+        color: rgba(255, 255, 255, 0.90);
+        background: transparent;
+        text-align: left;
+        font-size: 14px;
+        font-weight: 1000;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+      }
+
+      .g46-ref-menu button:hover,
+      .g46-ref-logout:hover {
+        transform: translateX(3px);
+        background: rgba(255, 255, 255, 0.13);
+      }
+
+      .g46-ref-menu button.active {
+        color: var(--tt-green-dark);
+        background: var(--tt-yellow);
+        box-shadow: 0 10px 22px rgba(5, 77, 42, 0.18);
+      }
+
+      .g46-ref-progress-mini {
+        margin-top: auto;
+        border-radius: 24px;
+        padding: 16px 12px;
+        background: rgba(255, 255, 255, 0.14);
+        text-align: center;
+      }
+
+      .g46-ref-ring {
+        width: 78px;
+        height: 78px;
+        margin: 0 auto 10px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+      }
+
+      .g46-ref-ring span {
+        width: 56px;
+        height: 56px;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: var(--tt-green-dark);
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 1000;
+      }
+
+      .g46-ref-progress-mini b,
+      .g46-ref-progress-mini small {
+        display: block;
+      }
+
+      .g46-ref-progress-mini small {
+        opacity: 0.82;
+        margin-top: 4px;
+        font-weight: 800;
+      }
+
+      .g46-ref-logout {
+        margin-top: 0;
+        background: rgba(255, 255, 255, 0.12);
+        justify-content: center;
+      }
+
+      .g46-ref-main {
+        min-width: 0;
+        padding: 24px 26px 30px;
+        background:
+          radial-gradient(circle at 90% 16%, rgba(255, 245, 207, 0.54), transparent 24%),
+          linear-gradient(180deg, #ffffff 0%, #fbfefc 100%);
+        overflow: auto;
+      }
+
+      .g46-ref-topbar {
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .g46-ref-student-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .g46-ref-avatar-small {
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: var(--tt-yellow);
+        font-size: 30px;
+        box-shadow: inset 0 0 0 2px rgba(246, 196, 83, 0.28);
+      }
+
+      .g46-ref-student-pill b {
+        display: block;
+        color: var(--tt-ink);
+        font-size: 20px;
+        font-weight: 1000;
+        letter-spacing: -0.035em;
+      }
+
+      .g46-ref-student-pill small {
+        display: block;
+        color: var(--tt-muted);
+        font-weight: 850;
+      }
+
+      .g46-ref-top-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .g46-ref-pill,
+      .g46-ref-soft-btn {
+        border: 0;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 999px;
+        background: var(--tt-green-soft);
+        color: var(--tt-green-dark);
+        font-size: 14px;
+        font-weight: 1000;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .g46-ref-soft-btn {
+        cursor: pointer;
+        background: #ffffff;
+        border: 2px solid rgba(21, 150, 90, 0.18);
+      }
+
+      .g46-ref-title-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 18px;
+        padding: 24px 26px;
+        border-radius: 30px;
+        background:
+          radial-gradient(circle at 14% 14%, rgba(255, 245, 207, 0.82), transparent 34%),
+          linear-gradient(135deg, #edf8f1, #ffffff 55%, #eef8ff);
+        border: 1px solid rgba(21, 150, 90, 0.10);
+        box-shadow: 0 14px 28px rgba(31, 73, 61, 0.07);
+      }
+
+      .g46-ref-title-left {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .g46-ref-title-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 24px;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        font-size: 40px;
+        box-shadow: inset 0 0 0 2px rgba(21, 150, 90, 0.10);
+      }
+
+      .g46-ref-title-card h1 {
+        margin: 0;
+        color: var(--tt-green);
+        font-size: clamp(34px, 4vw, 54px);
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+        font-weight: 1000;
+      }
+
+      .g46-ref-title-card p {
+        margin: 8px 0 0;
+        color: var(--tt-muted);
+        font-size: 17px;
+        font-weight: 850;
+        line-height: 1.45;
+      }
+
+      .g46-ref-title-side {
+        min-width: 190px;
+        border-radius: 24px;
+        padding: 18px;
+        background: #ffffff;
+        border: 1px solid rgba(246, 196, 83, 0.30);
+      }
+
+      .g46-ref-level-line {
+        display: grid;
+        grid-template-columns: auto auto minmax(110px, 1fr);
+        align-items: center;
+        gap: 10px;
+        color: var(--tt-ink);
+        font-weight: 1000;
+      }
+
+      .g46-ref-level-line strong {
+        color: var(--tt-green-dark);
+        font-size: 18px;
+        font-weight: 1000;
+        white-space: nowrap;
+      }
+
+      .g46-ref-level-line i,
+      .g46-ref-mini-track,
+      .g46-ref-module-progress,
+      .g46-ref-stat-track {
+        display: block;
+        height: 12px;
+        width: 100%;
+        border-radius: 999px;
+        background: #e5efe9;
+        overflow: hidden;
+      }
+
+      .g46-ref-level-line i span,
+      .g46-ref-mini-track span,
+      .g46-ref-module-progress span,
+      .g46-ref-stat-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--tt-green), var(--tt-yellow-deep));
+      }
+
+      .g46-ref-content {
+        display: grid;
+        gap: 18px;
+      }
+
+      .g46-ref-dashboard-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .g46-ref-column {
+        display: grid;
+        gap: 18px;
+      }
+
+      .g46-ref-panel {
+        border-radius: 28px;
+        padding: 22px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(21, 150, 90, 0.08);
+        box-shadow: 0 14px 28px rgba(31, 73, 61, 0.06);
+      }
+
+      .g46-ref-panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+
+      .g46-ref-panel h2,
+      .g46-ref-panel h3 {
+        margin: 0;
+        color: var(--tt-ink);
+        font-size: 25px;
+        letter-spacing: -0.04em;
+        font-weight: 1000;
+      }
+
+      .g46-ref-panel p,
+      .g46-ref-muted {
+        color: var(--tt-muted);
+        font-size: 15px;
+        line-height: 1.5;
+        font-weight: 850;
+      }
+
+      .g46-ref-panel-link {
+        border: 0;
+        background: transparent;
+        color: var(--tt-green);
+        font-weight: 1000;
+        cursor: pointer;
+      }
+
+      .g46-ref-plan-grid,
+      .g46-ref-card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .g46-ref-plan-card,
+      .g46-ref-card {
+        border: 0;
+        min-height: 148px;
+        padding: 18px;
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        text-align: left;
+        cursor: pointer;
+        color: var(--tt-ink);
+        background: var(--tt-sky);
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+        box-shadow: 0 10px 20px rgba(31, 73, 61, 0.05);
+      }
+
+      .g46-ref-plan-card:hover,
+      .g46-ref-card:hover,
+      .g46-ref-soft-btn:hover,
+      .g46-ref-primary-btn:hover {
+        transform: translateY(-2px);
+      }
+
+      .g46-ref-plan-card.green,
+      .g46-ref-card.green { background: #edf8f1; }
+      .g46-ref-plan-card.yellow,
+      .g46-ref-card.yellow { background: #fff5cf; }
+      .g46-ref-plan-card.blue,
+      .g46-ref-card.blue { background: #eef8ff; }
+      .g46-ref-plan-card.purple,
+      .g46-ref-card.purple { background: #f5f1ff; }
+      .g46-ref-plan-card.pink,
+      .g46-ref-card.pink { background: #fff0f5; }
+
+      .g46-ref-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .g46-ref-card-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.75);
+        font-size: 34px;
+      }
+
+      .g46-ref-card h4 {
+        margin: 12px 0 6px;
+        color: var(--tt-ink);
+        font-size: 22px;
+        line-height: 1.05;
+        font-weight: 1000;
+        letter-spacing: -0.035em;
+      }
+
+      .g46-ref-tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--tt-green-dark);
+        font-size: 12px;
+        font-weight: 1000;
+      }
+
+      .g46-ref-primary-btn {
+        border: 0;
+        min-height: 42px;
+        padding: 0 18px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--tt-green), var(--tt-green-dark));
+        color: #ffffff;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 10px 18px rgba(21, 150, 90, 0.16);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .g46-ref-start-pill {
+        width: max-content;
+        min-width: 92px;
+        margin-top: 8px;
+      }
+
+      .g46-ref-primary-btn.secondary {
+        background: #ffffff;
+        color: var(--tt-green-dark);
+        border: 2px solid rgba(21, 150, 90, 0.18);
+        box-shadow: none;
+      }
+
+      .g46-ref-stat-row {
+        display: grid;
+        gap: 12px;
+      }
+
+      .g46-ref-stat-item {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr) 46px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .g46-ref-stat-item span {
+        color: var(--tt-muted);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .g46-ref-stat-item b {
+        color: var(--tt-ink);
+        font-size: 14px;
+        font-weight: 1000;
+        text-align: right;
+      }
+
+      .g46-ref-badge-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .g46-ref-badge {
+        min-height: 94px;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        background: var(--tt-green-soft);
+        color: var(--tt-ink);
+        font-weight: 1000;
+      }
+
+      .g46-ref-badge span {
+        display: block;
+        font-size: 34px;
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+
+      .g46-ref-badge strong {
+        display: block;
+        color: var(--tt-ink);
+        font-size: 15px;
+        line-height: 1.1;
+        font-weight: 1000;
+      }
+
+      .g46-ref-badge-status {
+        display: block;
+        margin-top: 6px;
+        color: var(--tt-green-dark);
+        font-size: 11px;
+        line-height: 1.25;
+        font-weight: 900;
+      }
+
+      .g46-ref-badge.locked {
+        background: #f8fafc;
+        color: #64748b;
+        border: 1px dashed rgba(100, 116, 139, 0.32);
+      }
+
+      .g46-ref-badge.locked span {
+        opacity: 0.82;
+        filter: grayscale(0.35);
+      }
+
+      .g46-ref-badge.locked strong {
+        color: #475569;
+      }
+
+      .g46-ref-badge.locked .g46-ref-badge-status {
+        color: #64748b;
+      }
+
+      .g46-ref-task-row,
+      .g46-ref-list-row {
+        display: grid;
+        grid-template-columns: 58px minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        padding: 16px;
+        border-radius: 22px;
+        background: #fbfefc;
+        border: 1px solid rgba(21, 150, 90, 0.08);
+        margin-bottom: 12px;
+      }
+
+      .g46-ref-empty {
+        padding: 24px;
+        border-radius: 22px;
+        background: #fbfefc;
+        border: 1px dashed rgba(21, 150, 90, 0.20);
+        color: var(--tt-muted);
+        font-weight: 900;
+        text-align: center;
+      }
+
+      .g46-ref-filter-row,
+      .g46-ref-action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .g46-ref-filter-row button,
+      .g46-ref-choice {
+        border: 0;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 999px;
+        background: #ffffff;
+        color: var(--tt-ink);
+        box-shadow: inset 0 0 0 1px rgba(21, 150, 90, 0.12);
+        font-weight: 1000;
+        cursor: pointer;
+      }
+
+      .g46-ref-filter-row button.active,
+      .g46-ref-choice.selected {
+        background: var(--tt-green-soft);
+        color: var(--tt-green-dark);
+        box-shadow: inset 0 0 0 2px rgba(21, 150, 90, 0.20);
+      }
+
+      .g46-ref-avatar-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .g46-ref-avatar-choice {
+        border: 0;
+        min-height: 92px;
+        border-radius: 24px;
+        background: #ffffff;
+        font-size: 42px;
+        cursor: pointer;
+        box-shadow: inset 0 0 0 1px rgba(21, 150, 90, 0.12), 0 10px 20px rgba(31, 73, 61, 0.04);
+      }
+
+      .g46-ref-avatar-choice.selected {
+        background: var(--tt-yellow);
+        box-shadow: inset 0 0 0 3px rgba(21, 150, 90, 0.25), 0 12px 24px rgba(31, 73, 61, 0.07);
+      }
+
+      .missions-wrap.standard {
+        padding: 0 !important;
+      }
+
+      .g46-ref-page .missions-bottom-nav {
+        display: none !important;
+      }
+
+      @media (max-width: 980px) {
+        .g46-ref-page { padding: 12px; }
+        .g46-ref-frame {
+          width: calc(100vw - 24px);
+          min-height: calc(100vh - 24px);
+          grid-template-columns: 1fr;
+        }
+        .g46-ref-sidebar {
+          flex-direction: row;
+          align-items: center;
+          overflow-x: auto;
+          padding: 14px;
+        }
+        .g46-ref-brand { display: none; }
+        .g46-ref-menu {
+          grid-auto-flow: column;
+          grid-auto-columns: max-content;
+          display: grid;
+        }
+        .g46-ref-menu button { width: auto; white-space: nowrap; }
+        .g46-ref-progress-mini,
+        .g46-ref-logout { display: none; }
+        .g46-ref-dashboard-grid,
+        .g46-ref-title-card,
+        .g46-ref-plan-grid,
+        .g46-ref-card-grid {
+          grid-template-columns: 1fr;
+        }
+        .g46-ref-main { padding: 18px; }
+        .g46-ref-topbar { align-items: flex-start; flex-direction: column; }
+        .g46-ref-title-side { min-width: 0; }
+      }
+    `}</style>
+  );
+}
+
+function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logout, title, subtitle, icon = '☀️', children, titleAction }) {
   const s = data?.student || {};
+  const xp = Number(s.xp || 0);
+  const level = levelForXp(xp);
+  const pct = xpPercent(xp);
+  const avatar = s.avatar || '👤';
+
+  const openTab = (tab) => {
+    if (typeof goStudentTab === 'function') return goStudentTab(tab);
+    if (!go) return;
+    if (tab === 'home') return go('screen-student');
+    if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'missions') return go('screen-stu-missions');
+    if (tab === 'groups') return go('screen-stu-groups');
+    if (tab === 'badges') return go('screen-stu-badges');
+    if (tab === 'profile') return go('screen-stu-profile');
+  };
+
+  const navItems = [
+    { id: 'home', icon: '🏠', label: 'Home' },
+    { id: 'lessons', icon: '📚', label: 'Lessons' },
+    { id: 'missions', icon: '🎮', label: 'Missions' },
+    { id: 'groups', icon: '👥', label: 'Groups' },
+    { id: 'profile', icon: '👤', label: 'Profile' }
+  ];
+
+  return (
+    <>
+      <Grade46ReferenceStyles />
+      <div className="g46-ref-page">
+        <div className="g46-ref-frame">
+          <aside className="g46-ref-sidebar" aria-label="Grade 3 to 6 student navigation">
+            <div className="g46-ref-brand">
+              <span>☀️</span>
+              <strong>Tuklas Talino</strong>
+            </div>
+
+            <nav className="g46-ref-menu">
+              {navItems.map(item => (
+                <button
+                  type="button"
+                  key={item.id}
+                  className={activeTab === item.id ? 'active' : ''}
+                  onClick={() => openTab(item.id)}
+                >
+                  <span>{item.icon}</span>{item.label}
+                </button>
+              ))}
+            </nav>
+
+            <div className="g46-ref-progress-mini">
+              <div className="g46-ref-ring" style={{ background: `conic-gradient(var(--tt-yellow-deep) ${pct * 3.6}deg, rgba(255,255,255,0.20) 0deg)` }}>
+                <span>{pct}%</span>
+              </div>
+              <b>Level {level}</b>
+              <small>{xp} XP earned</small>
+            </div>
+
+            {typeof logout === 'function' && (
+              <button type="button" className="g46-ref-logout" onClick={logout}>↩ Logout</button>
+            )}
+          </aside>
+
+          <main className="g46-ref-main">
+            <header className="g46-ref-topbar">
+              <div className="g46-ref-student-pill">
+                <span className="g46-ref-avatar-small">{avatar}</span>
+                <div>
+                  <b>{s.name || 'Mag-aaral'}</b>
+                  <small>Grade {s.gradeLevel || '—'} • {s.section || '—'}</small>
+                </div>
+              </div>
+
+              <div className="g46-ref-top-actions">
+                <span className="g46-ref-pill">⚡ {xp} XP</span>
+                <span className="g46-ref-pill">🏅 Level {level}</span>
+                {titleAction}
+              </div>
+            </header>
+
+            <section className="g46-ref-title-card">
+              <div className="g46-ref-title-left">
+                <span className="g46-ref-title-icon">{icon}</span>
+                <div>
+                  <h1>{title || `Hi ${s.name || 'Learner'}!`}</h1>
+                  <p>{subtitle || 'Ready ka na ba sa learning adventure today?'}</p>
+                </div>
+              </div>
+
+              <div className="g46-ref-title-side">
+                <div className="g46-ref-level-line">
+                  <span>XP Points</span>
+                  <strong>{xp} XP</strong>
+                  <i><span style={{ width: `${Math.max(6, pct)}%` }} /></i>
+                </div>
+                <p className="g46-ref-muted" style={{ margin: '10px 0 0' }}>Mayroon kang <b>{xp} XP</b>. {100 - pct} XP pa bago ang next level.</p>
+              </div>
+            </section>
+
+            <div className="g46-ref-content">
+              {children}
+            </div>
+          </main>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goStudentTab, logout, selectedAvatar }) {
+  const s = data?.student || {};
+  const studentAvatar = s.avatar || selectedAvatar || '👤';
   const stats = subjectStatsFor(data);
   const nextLesson = pickDailyLesson(data);
-  const currentSubject = nextLesson?.subject || 'Bokabularyo';
   const badges = asArray(data?.badges);
   const groups = asArray(data?.groups);
   const tasks = getGroupTasks(data);
-  const group = groups[0];
+  const completedLessons = asArray(data?.lessons).filter(lesson => lesson?.completed).length;
+  const totalLessons = asArray(data?.lessons).length;
+  const completionPct = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
   const groupTask = tasks[0];
-  const totalPct = data?.progress?.percent || 0;
-  const streak = Math.max(1, Math.min(7, Math.floor((s.xp || 0) / 40) + 1));
-  const nextGoal = Math.max(0, (data?.nextLevelXp || 100) - (s.xp || 0));
-  const stars = Math.min(12, (data?.progress?.completedLessons || 0) + badges.length + Math.floor((s.xp || 0) / 50));
-  const locked = [{ icon: '🏅', name: 'Reader' }, { icon: '🎙️', name: 'Speaker' }];
-  const rewardBadges = badges.length ? badges.slice(0, 3) : locked;
+  const badgeCatalog = [
+    { icon: '🌟', name: 'Reader', requirement: 'Complete a reading lesson' },
+    { icon: '🔤', name: 'Words', requirement: 'Practice vocabulary lessons' },
+    { icon: '🎙️', name: 'Speaker', requirement: 'Finish oral communication practice' },
+    { icon: '🏆', name: 'Champion', requirement: 'Complete more learning missions' },
+    { icon: '📖', name: 'Story', requirement: 'Finish a Panitikan lesson' },
+    { icon: '✨', name: 'Talino', requirement: 'Keep earning XP and badges' }
+  ];
+  const normalizeBadgeName = (value = '') => String(value || '').trim().toLowerCase();
+  const unlockedBadgeNames = new Set(badges.map(badge => normalizeBadgeName(badge.name)));
+  const unlockedBadges = badges.map(badge => ({
+    ...badge,
+    locked: false,
+    statusText: 'Unlocked'
+  }));
+  const lockedBadges = badgeCatalog
+    .filter(badge => !unlockedBadgeNames.has(normalizeBadgeName(badge.name)))
+    .map(badge => ({ ...badge, locked: true, statusText: badge.requirement }));
+  const badgePreview = [...unlockedBadges, ...lockedBadges].slice(0, 6);
 
-  return <div className="g46-lite-shell">
-    <aside className="g46-lite-sidebar" aria-label="Grade 4 to 6 student navigation">
-      <div className="g46-lite-brand"><span>☀️</span><strong>Tuklas<br />Talino</strong></div>
-      <nav className="g46-lite-menu">
-        <button className="active" onClick={() => goStudentTab('home')}><span>🏠</span>Dashboard</button>
-        <button onClick={() => goStudentTab('lessons')}><span>📚</span>Mga Aralin</button>
-        <button onClick={() => openFirstSubjectLesson('Oral Comm')}><span>🤖</span>AI Practice</button>
-        <button onClick={() => goStudentTab('groups')}><span>👥</span>Pangkatang Gawain</button>
-        <button onClick={() => goStudentTab('badges')}><span>🏅</span>Badges</button>
-        <button onClick={() => goStudentTab('badges')}><span>🏆</span>Leaderboard</button>
-        <button onClick={() => goStudentTab('profile')}><span>👤</span>Profile</button>
-      </nav>
-      <button className="g46-lite-logout" onClick={logout}>↩ Logout</button>
-    </aside>
+  const planCards = [
+    {
+      icon: '🎧',
+      title: nextLesson?.title || 'Listening Practice',
+      meta: nextLesson?.subject || 'Pagbasa',
+      tone: 'blue',
+      action: () => nextLesson ? openLesson(nextLesson) : openFirstSubjectLesson('Pagbasa')
+    },
+    { icon: '📖', title: 'Reading', meta: 'Pagbasa', tone: 'pink', action: () => openFirstSubjectLesson('Pagbasa') },
+    { icon: '🔤', title: 'Learn Words', meta: 'Bokabularyo', tone: 'purple', action: () => openFirstSubjectLesson('Bokabularyo') },
+    { icon: '📜', title: 'Story Quest', meta: 'Panitikan', tone: 'yellow', action: () => openFirstSubjectLesson('Panitikan') }
+  ];
 
-    <main className="g46-lite-main">
-      <header className="g46-lite-topbar">
-        <label className="g46-lite-search"><span>🔍</span><input placeholder="Search" aria-label="Search" /></label>
-        <div className="g46-lite-student"><span>{s.avatar || '👤'}</span><div><b>{s.name || 'Mag-aaral'}</b><small>Baitang {s.gradeLevel || '—'} • {s.section || '—'}</small></div></div>
-        <button className="g46-lite-pill">⚡ {s.xp || 0} XP</button>
-        <button className="g46-lite-pill">📊 Level {levelForXp(s.xp)}</button>
-        <button className="btn btn-outline btn-sm" onClick={logout}>Logout</button>
-      </header>
+  return (
+    <Grade46StudentChrome
+      data={{ ...data, student: { ...s, avatar: studentAvatar } }}
+      activeTab="home"
+      goStudentTab={goStudentTab}
+      logout={logout}
+      icon={studentAvatar}
+      title={`Hi ${s.name || 'Learner'}!`}
+      subtitle="Ready ka na ba sa learning adventure today?"
+    >
+      <div className="g46-ref-dashboard-grid">
+        <div className="g46-ref-column">
+          <section className="g46-ref-panel">
+            <div className="g46-ref-panel-head">
+              <div>
+                <h2>Your lessons</h2>
+                <p className="g46-ref-muted">Pumili ng lesson para magpatuloy sa iyong Filipino learning journey.</p>
+              </div>
+              <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('lessons')}>All lessons →</button>
+            </div>
 
-      <section className="g46-lite-hero">
-        <div className="g46-lite-avatar"><span>{s.avatar || '👤'}</span></div>
-        <div className="g46-lite-hero-copy">
-          <h1>Mabuhay, {s.name || 'Mag-aaral'}! 👋</h1>
-          <div className="g46-lite-level"><b>Level {levelForXp(s.xp)}</b><i><span style={{ width: `${xpPercent(s.xp)}%` }} /></i><em>{xpPercent(s.xp)}%</em></div>
+            <div className="g46-ref-plan-grid">
+              {planCards.map(card => (
+                <button type="button" className={`g46-ref-plan-card g46-ref-card ${card.tone}`} key={card.title} onClick={card.action}>
+                  <div>
+                    <div className="g46-ref-card-top">
+                      <span className="g46-ref-card-icon">{card.icon}</span>
+                      <span className="g46-ref-tag">{card.meta}</span>
+                    </div>
+                    <h4>{card.title}</h4>
+                    </div>
+                  <span className="g46-ref-primary-btn g46-ref-start-pill">Start</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="g46-ref-panel">
+            <div className="g46-ref-panel-head">
+              <div>
+                <h2>Your group tasks</h2>
+                <p className="g46-ref-muted">Tingnan ang assigned group work at collaborative Filipino activities.</p>
+              </div>
+              <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('groups')}>Open groups →</button>
+            </div>
+
+            {groupTask ? (
+              <div className="g46-ref-task-row">
+                <span className="g46-ref-card-icon">👥</span>
+                <div>
+                  <h3 style={{ fontSize: 28 }}>{groupTask.title}</h3>
+                  <p className="g46-ref-muted" style={{ margin: 0 }}>Due {displayDue(groupTask.dueAt)} • +{groupTask.xpReward || 0} XP</p>
+                </div>
+                <button type="button" className="g46-ref-primary-btn" onClick={() => goStudentTab('groups')}>Continue</button>
+              </div>
+            ) : (
+              <div className="g46-ref-empty">Wala pang group task. Nice! 🎉</div>
+            )}
+          </section>
         </div>
-        <div className="g46-lite-hero-stats"><span>⚡ {s.xp || 0} XP</span><span>⭐ {stars} Stars</span><span>🏅 {badges.length} Badges</span></div>
-      </section>
 
-      <section className="g46-lite-section compact">
-        <div className="g46-lite-section-head"><div><h3>📚 Mga Aralin sa Filipino</h3></div><button onClick={() => goStudentTab('lessons')}>Tingnan lahat →</button></div>
-        <div className="g46-lite-module-grid">
-          {stats.map(item => <button className={`g46-lite-module-card ${item.subj === currentSubject ? 'current' : ''}`} key={item.subj} style={{ '--module-bg': item.theme.bg, '--module-accent': item.theme.accent }} onClick={() => openFirstSubjectLesson(item.subj)}>
-            <div className="g46-lite-module-top"><span className="g46-lite-module-icon">{item.theme.icon}</span><small>{item.theme.tag}</small></div>
-            <h4>{item.subj}</h4>
-            <p>{item.done >= item.total && item.total > 0 ? 'Tapos na ang module' : `Susunod: ${item.theme.tag}`}</p>
-            <div className="g46-lite-module-footer"><span>{item.done}/{item.total || 0} lessons</span><i><b style={{ width: `${item.pct}%` }} /></i><strong>{item.pct}%</strong></div>
-          </button>)}
+        <div className="g46-ref-column">
+          <section className="g46-ref-panel">
+            <div className="g46-ref-panel-head">
+              <div>
+                <h2>Badges</h2>
+                <p className="g46-ref-muted">{unlockedBadges.length}/{badgeCatalog.length} badges unlocked. Tingnan ang locked badges para alam mo ang next goal.</p>
+              </div>
+            </div>
+
+            <div className="g46-ref-badge-grid">
+              {badgePreview.map((badge, index) => (
+                <div className={`g46-ref-badge ${badge.locked ? 'locked' : 'unlocked'}`} key={badge.id || badge.name || index}>
+                  <div>
+                    <span>{badge.locked ? '🔒' : (badge.icon || '🏅')}</span>
+                    <strong>{badge.name || 'Badge'}</strong>
+                    <small className="g46-ref-badge-status">{badge.statusText || (badge.locked ? 'Locked' : 'Unlocked')}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="g46-ref-panel">
+            <div className="g46-ref-panel-head">
+              <div>
+                <h2>Statistics</h2>
+                <p className="g46-ref-muted">XP, badges, and subject progress.</p>
+              </div>
+            </div>
+
+            <div className="g46-ref-stat-row">
+              <div className="g46-ref-stat-item"><span>Total XP</span><div className="g46-ref-stat-track"><span style={{ width: `${Math.max(8, xpPercent(s.xp))}%` }} /></div><b>{s.xp || 0}</b></div>
+              <div className="g46-ref-stat-item"><span>Badges</span><div className="g46-ref-stat-track"><span style={{ width: `${Math.min(100, (unlockedBadges.length / Math.max(1, badgeCatalog.length)) * 100)}%` }} /></div><b>{unlockedBadges.length}</b></div>
+              <div className="g46-ref-stat-item"><span>Lessons</span><div className="g46-ref-stat-track"><span style={{ width: `${completionPct}%` }} /></div><b>{completionPct}%</b></div>
+            </div>
+          </section>
+
+          <section className="g46-ref-panel">
+            <div className="g46-ref-panel-head">
+              <div>
+                <h2>Subjects</h2>
+                <p className="g46-ref-muted">Quick view of module completion.</p>
+              </div>
+            </div>
+            <div className="g46-ref-stat-row">
+              {stats.map(item => (
+                <button type="button" className="g46-ref-list-row" key={item.subj} onClick={() => openFirstSubjectLesson(item.subj)} style={{ width: '100%', border: 0, cursor: 'pointer' }}>
+                  <span className="g46-ref-card-icon">{item.theme.icon}</span>
+                  <div>
+                    <h3 style={{ fontSize: 26, margin: 0 }}>{item.subj}</h3>
+                    <p className="g46-ref-muted" style={{ margin: 0 }}>{item.done}/{item.total || 0} lessons</p>
+                  </div>
+                  <b>{item.pct}%</b>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
-      </section>
-
-      <section className="g46-lite-section">
-        <div className="g46-lite-section-head"><div><h3>👥 Pangkatang Gawain</h3></div><button onClick={() => goStudentTab('groups')}>Buksan sa Groups →</button></div>
-        <div className="g46-lite-group-preview">
-          <div className="g46-lite-team">👧🏻👦🏽👧🏽</div>
-          <div><b>{group?.name || 'Grupo Sampaguita'} ⭐</b><span>{groupTask?.title || 'Pangkatang Gawain'}</span><small>👧🏻 👦🏽 👧🏽 +2 • {group ? 'kasamahan' : 'demo preview'}</small></div>
-          <div className="g46-lite-group-side"><small>Due {displayDue(groupTask?.dueAt)}</small><i><b style={{ width: groupTask ? '45%' : '20%' }} /></i><em>{groupTask ? '45%' : '20%'}</em></div>
-          <button className="btn btn-green btn-sm" onClick={() => goStudentTab('groups')}>Buksan</button>
-        </div>
-      </section>
-
-      <section className="g46-lite-section">
-        <div className="g46-lite-section-head"><div><h3>📅 Mga Paparating na Gawain</h3></div><button onClick={() => goStudentTab('groups')}>Tingnan sa Groups →</button></div>
-        <div className="g46-lite-table">
-          {tasks.slice(0, 2).length ? tasks.slice(0, 2).map(t => <button className="g46-lite-table-row" key={t.id} onClick={() => goStudentTab('groups')}><span>📝 {t.title}</span><small>{t.groupName}</small><b>{displayDue(t.dueAt)}</b><em>Hindi pa tapos</em></button>) : <div className="g46-lite-empty">Wala pang paparating na gawain. Nice! 🎉</div>}
-        </div>
-      </section>
-    </main>
-
-    <aside className="g46-lite-right">
-      <section className="g46-lite-side-block snapshot">
-        <h3>Aking Snapshot</h3>
-        <div><span>⚡ Kabuoang XP</span><b>{s.xp || 0} XP</b></div>
-        <div><span>🔥 Streak</span><b>{streak} araw</b></div>
-        <div><span>🎯 Next Goal</span><b>{nextGoal} XP</b></div>
-        <div><span>📚 Progreso</span><b>{totalPct}%</b></div>
-      </section>
-
-      <section className="g46-lite-side-block">
-        <h3>Progress Preview <button onClick={() => goStudentTab('lessons')}>Full view →</button></h3>
-        {stats.map(item => <div className="g46-lite-progress-item" key={item.subj} onClick={() => openFirstSubjectLesson(item.subj)}><span>{item.theme.icon} {item.subj}</span><i><b style={{ width: `${item.pct}%`, '--bar': item.theme.accent }} /></i><strong>{item.pct}%</strong></div>)}
-      </section>
-
-      <section className="g46-lite-side-block rewards">
-        <h3>Rewards & Standing <button onClick={() => goStudentTab('badges')}>Tingnan lahat →</button></h3>
-        <div className="g46-lite-badges">{rewardBadges.map((b, idx) => <button className={`g46-lite-badge ${badges.length ? 'owned' : idx === 0 ? 'owned' : 'locked'}`} key={b.name || idx} onClick={() => goStudentTab('badges')}><span>{b.icon || '🏅'}</span><small>{b.name || 'Badge'}</small></button>)}</div>
-        <div className="g46-lite-leaderboard"><button className="g46-lite-rank me" onClick={() => goStudentTab('badges')}><span>🥇</span><b>{s.avatar || '👤'} {s.name || 'Ikaw'} • Ikaw</b><strong>{s.xp || 0} XP</strong></button></div>
-      </section>
-
-      <section className="g46-lite-side-block challenges">
-        <h3>Quick Challenge</h3>
-        <button onClick={() => nextLesson ? openLesson(nextLesson) : goStudentTab('lessons')}><span>🧩</span><div><b>Mini Quiz</b><small>Tanong para sa stars at XP.</small></div><i>›</i></button>
-      </section>
-    </aside>
-  </div>;
+      </div>
+    </Grade46StudentChrome>
+  );
 }
+
 
 function SubjectCards({ lessonsBySubject, openLesson }) {
   return <div className="grid grid-3">{lessonsBySubject.map(item => <button className="module-card" key={item.name} onClick={() => item.lessons[0] && openLesson(item.lessons[0])}><div style={{ fontSize: 36 }}>{item.icon}</div><h3>{item.name}</h3><p>{item.lessons.length} lessons</p><ProgressBar value={item.lessons.length ? Math.round((item.lessons.filter(l => l.completed).length / item.lessons.length) * 100) : 0} /></button>)}</div>;
@@ -2631,6 +4020,545 @@ function EarlyStudentSubpageStyles() {
         line-height: 1;
       }
 
+      /* Grade 1-2 shared Kid Curious UI for Lessons, Missions, Groups, Badges, and Profile. */
+      .g12-page {
+        background:
+          radial-gradient(circle at 14% 18%, rgba(255, 245, 207, 0.95), transparent 24%),
+          radial-gradient(circle at 86% 72%, rgba(237, 248, 241, 0.95), transparent 26%),
+          linear-gradient(135deg, #e8fff1 0%, #fffdf7 46%, #fff5cf 100%);
+      }
+
+      .g12-topbar {
+        width: min(1280px, calc(100vw - 32px));
+        margin: 14px auto 0;
+        border-radius: 34px;
+        border: 3px solid rgba(21, 150, 90, 0.12);
+        box-shadow: 0 14px 0 rgba(21, 150, 90, 0.08), 0 22px 42px rgba(21, 150, 90, 0.10);
+      }
+
+      .g12-shell,
+      .g12-subpage-shell {
+        width: min(1280px, calc(100vw - 32px));
+        max-width: none;
+        margin: 0 auto;
+      }
+
+      .g12-brand {
+        font-size: 34px;
+      }
+
+      .g12-brand-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 24px;
+        font-size: 38px;
+      }
+
+      .g12-pill,
+      .g12-action-btn {
+        min-height: 60px;
+        border-radius: 24px;
+        font-size: 19px;
+      }
+
+      .g12-subpage-hero {
+        border-radius: 44px;
+        padding: 38px 42px;
+        border: 4px solid rgba(21, 150, 90, 0.13);
+        box-shadow: 0 14px 0 rgba(21, 150, 90, 0.08), 0 26px 48px rgba(21, 150, 90, 0.12);
+        background:
+          radial-gradient(circle at 12% 20%, rgba(255, 245, 207, 0.92), transparent 28%),
+          radial-gradient(circle at 86% 26%, rgba(255, 255, 255, 0.80), transparent 18%),
+          linear-gradient(135deg, #28c98a 0%, #15965a 42%, #edf8f1 43%, #fffdf7 100%);
+      }
+
+      .g12-subpage-icon {
+        width: 100px;
+        height: 100px;
+        border-radius: 34px;
+        background: #fff5cf;
+        font-size: 58px;
+        box-shadow: 0 8px 0 #f6c453, inset 0 0 0 3px rgba(255,255,255,0.72);
+      }
+
+      .g12-subpage-title h1 {
+        color: #14223b;
+        font-size: clamp(54px, 5.6vw, 82px);
+        line-height: 0.94;
+        text-shadow: none;
+      }
+
+      .g12-subpage-title p {
+        color: #334155;
+        font-size: 24px;
+        line-height: 1.35;
+        text-shadow: none;
+      }
+
+      .g12-subpage-title > div {
+        padding: 18px 22px;
+        border-radius: 30px;
+        background: rgba(255, 255, 255, 0.74);
+        border: 3px solid rgba(255, 245, 207, 0.72);
+        box-shadow: 0 12px 26px rgba(20, 34, 59, 0.09);
+        backdrop-filter: blur(8px);
+      }
+
+      .g12-mini-progress {
+        min-width: 360px;
+        padding: 26px;
+        border-radius: 34px;
+        border: 4px solid rgba(255, 245, 207, 0.78);
+        box-shadow: 0 9px 0 rgba(246, 196, 83, 0.55), 0 20px 34px rgba(20, 34, 59, 0.12);
+      }
+
+      .g12-mini-progress strong {
+        font-size: 36px;
+      }
+
+      .g12-progress-track,
+      .g12-module-progress {
+        height: 20px;
+        border: 3px solid #d8efe0;
+      }
+
+      .g12-section-card,
+      .g12-group-card,
+      .g12-profile-card,
+      .g12-badge-card,
+      .g12-lesson-panel {
+        border-radius: 42px;
+        padding: 36px;
+        border: 4px solid rgba(21, 150, 90, 0.11);
+        box-shadow: 0 14px 0 rgba(21, 150, 90, 0.07), 0 26px 46px rgba(21, 150, 90, 0.10);
+      }
+
+      .g12-section-title {
+        font-size: clamp(38px, 4vw, 58px);
+      }
+
+      .g12-section-subtitle,
+      .g12-muted,
+      .g12-tile p {
+        font-size: 21px;
+      }
+
+      .g12-card-grid {
+        gap: 24px;
+      }
+
+      .g12-tile {
+        min-height: 232px;
+        grid-template-columns: 124px minmax(0, 1fr) 68px;
+        gap: 24px;
+        padding: 28px;
+        border-radius: 38px;
+        border: 4px solid rgba(255, 255, 255, 0.76);
+        box-shadow: 0 10px 0 rgba(21, 150, 90, 0.10), 0 22px 34px rgba(21, 150, 90, 0.10);
+      }
+
+      .g12-tile-icon {
+        width: 108px;
+        height: 108px;
+        border-radius: 34px;
+        font-size: 62px;
+      }
+
+      .g12-tile h3 {
+        font-size: 38px;
+      }
+
+      .g12-status-pill {
+        min-height: 46px;
+        padding: 0 18px;
+        font-size: 17px;
+      }
+
+      .g12-arrow {
+        width: 66px;
+        height: 66px;
+        font-size: 38px;
+      }
+
+      .g12-main-btn,
+      .g12-outline-btn {
+        min-height: 68px;
+        border-radius: 26px;
+        padding: 0 28px;
+        font-size: 22px;
+      }
+
+      .g12-main-btn {
+        background: linear-gradient(180deg, #ffe46c, #ffc928);
+        color: #14223b;
+        text-shadow: none;
+        box-shadow: 0 8px 0 #e7a90f, 0 18px 28px rgba(245, 158, 11, 0.20);
+      }
+
+      .g12-outline-btn {
+        border: 3px solid rgba(21, 150, 90, 0.24);
+        box-shadow: 0 8px 0 rgba(21, 150, 90, 0.12), 0 16px 26px rgba(21, 150, 90, 0.08);
+      }
+
+      .g12-task-card {
+        grid-template-columns: 84px minmax(0, 1fr) auto;
+        padding: 24px;
+        border-radius: 32px;
+      }
+
+      .g12-task-icon {
+        width: 74px;
+        height: 74px;
+        border-radius: 26px;
+        font-size: 42px;
+      }
+
+      .g12-badge-grid,
+      .g12-avatar-grid,
+      .g12-summary-grid {
+        gap: 24px;
+      }
+
+      .g12-badge-card {
+        min-height: 210px;
+      }
+
+      .g12-badge-big {
+        font-size: 82px;
+      }
+
+      .g12-badge-card strong {
+        font-size: 24px;
+      }
+
+      .g12-avatar-choice {
+        min-height: 150px;
+        border-radius: 38px;
+        font-size: 74px;
+        box-shadow: 0 8px 0 rgba(21, 150, 90, 0.10), inset 0 0 0 2px rgba(21, 150, 90, 0.12);
+      }
+
+      .g12-summary-box {
+        min-height: 132px;
+        border-radius: 34px;
+        padding: 26px;
+      }
+
+      .g12-summary-box span {
+        width: 76px;
+        height: 76px;
+        border-radius: 26px;
+        font-size: 42px;
+      }
+
+      .g12-summary-box b {
+        font-size: 32px;
+      }
+
+      .g12-summary-box small {
+        font-size: 18px;
+      }
+
+      .g12-reading-box {
+        border-radius: 34px;
+        padding: 30px;
+        font-size: 30px;
+      }
+
+      .g12-nav {
+        min-height: 96px;
+        border-radius: 42px;
+        border: 4px solid rgba(21, 150, 90, 0.10);
+        box-shadow: 0 12px 0 rgba(21, 150, 90, 0.10), 0 22px 34px rgba(20, 34, 59, 0.12);
+      }
+
+      .g12-nav button {
+        border-radius: 32px;
+        font-size: 19px;
+      }
+
+      .g12-nav button.active {
+        background: #fff5cf;
+        color: #0f7d49;
+        box-shadow: inset 0 0 0 2px rgba(246, 196, 83, 0.28);
+      }
+
+      .g12-nav-icon {
+        font-size: 40px;
+      }
+
+      .g12-page .missions-wrap.early > .missions-hero {
+        display: none;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card {
+        min-height: 300px;
+        border-radius: 38px;
+        padding: 26px;
+        border: 4px solid rgba(255,255,255,0.76);
+        box-shadow: 0 10px 0 rgba(21, 150, 90, 0.10), 0 22px 34px rgba(21, 150, 90, 0.10);
+      }
+
+      .g12-page .missions-wrap.early .missions-game-icon {
+        width: 92px;
+        height: 92px;
+        border-radius: 30px;
+        font-size: 54px;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card h4 {
+        font-size: 36px;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card p,
+      .g12-page .missions-wrap.early .missions-section-head p,
+      .g12-page .missions-wrap.early .missions-stat-card span {
+        font-size: 20px;
+      }
+
+      .g12-page .missions-wrap.early .missions-play-btn {
+        min-height: 66px;
+        border-radius: 26px;
+        background: linear-gradient(180deg, #ffe46c, #ffc928);
+        box-shadow: 0 8px 0 #e7a90f, 0 18px 28px rgba(245, 158, 11, 0.20);
+        font-size: 22px;
+      }
+
+
+      /* Grade 1-2 balanced subpage font sizing. */
+      .g12-brand {
+        font-size: 28px;
+      }
+
+      .g12-brand-icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 20px;
+        font-size: 32px;
+      }
+
+      .g12-pill,
+      .g12-action-btn {
+        min-height: 50px;
+        border-radius: 20px;
+        font-size: 16px;
+        padding: 0 16px;
+      }
+
+      .g12-subpage-hero {
+        padding: 28px 32px;
+        border-radius: 36px;
+      }
+
+      .g12-subpage-icon {
+        width: 78px;
+        height: 78px;
+        border-radius: 26px;
+        font-size: 42px;
+      }
+
+      .g12-subpage-title h1 {
+        font-size: clamp(34px, 4vw, 50px);
+        line-height: 1;
+      }
+
+      .g12-subpage-title p {
+        font-size: 17px;
+        line-height: 1.45;
+      }
+
+      .g12-subpage-title > div {
+        padding: 14px 18px;
+        border-radius: 24px;
+      }
+
+      .g12-mini-progress {
+        min-width: 300px;
+        padding: 22px;
+        border-radius: 28px;
+      }
+
+      .g12-mini-progress strong {
+        font-size: 24px;
+      }
+
+      .g12-progress-track,
+      .g12-module-progress {
+        height: 14px;
+        border-width: 2px;
+      }
+
+      .g12-section-card,
+      .g12-group-card,
+      .g12-profile-card,
+      .g12-badge-card,
+      .g12-lesson-panel {
+        padding: 28px;
+        border-radius: 34px;
+      }
+
+      .g12-section-title {
+        font-size: clamp(28px, 3vw, 38px);
+      }
+
+      .g12-section-subtitle,
+      .g12-muted,
+      .g12-tile p {
+        font-size: 16px;
+      }
+
+      .g12-card-grid {
+        gap: 20px;
+      }
+
+      .g12-tile {
+        min-height: 180px;
+        grid-template-columns: 96px minmax(0, 1fr) 52px;
+        gap: 18px;
+        padding: 22px;
+        border-radius: 30px;
+      }
+
+      .g12-tile-icon {
+        width: 84px;
+        height: 84px;
+        border-radius: 26px;
+        font-size: 46px;
+      }
+
+      .g12-tile h3 {
+        font-size: 28px;
+        line-height: 1.08;
+      }
+
+      .g12-status-pill {
+        min-height: 38px;
+        padding: 0 14px;
+        font-size: 14px;
+      }
+
+      .g12-arrow {
+        width: 52px;
+        height: 52px;
+        font-size: 30px;
+      }
+
+      .g12-main-btn,
+      .g12-outline-btn {
+        min-height: 54px;
+        border-radius: 20px;
+        padding: 0 22px;
+        font-size: 17px;
+      }
+
+      .g12-task-card {
+        grid-template-columns: 66px minmax(0, 1fr) auto;
+        padding: 18px;
+        border-radius: 26px;
+      }
+
+      .g12-task-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
+        font-size: 32px;
+      }
+
+      .g12-badge-grid,
+      .g12-avatar-grid,
+      .g12-summary-grid {
+        gap: 18px;
+      }
+
+      .g12-badge-card {
+        min-height: 160px;
+      }
+
+      .g12-badge-big {
+        font-size: 58px;
+      }
+
+      .g12-badge-card strong {
+        font-size: 18px;
+      }
+
+      .g12-avatar-choice {
+        min-height: 112px;
+        border-radius: 30px;
+        font-size: 52px;
+      }
+
+      .g12-summary-box {
+        min-height: 104px;
+        border-radius: 28px;
+        padding: 22px;
+      }
+
+      .g12-summary-box span {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
+        font-size: 32px;
+      }
+
+      .g12-summary-box b {
+        font-size: 24px;
+      }
+
+      .g12-summary-box small {
+        font-size: 15px;
+      }
+
+      .g12-reading-box {
+        padding: 24px;
+        border-radius: 28px;
+        font-size: 22px;
+        line-height: 1.65;
+      }
+
+      .g12-nav {
+        min-height: 78px;
+        border-radius: 34px;
+      }
+
+      .g12-nav button {
+        border-radius: 26px;
+        font-size: 15px;
+      }
+
+      .g12-nav-icon {
+        font-size: 30px;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card {
+        min-height: 230px;
+        padding: 22px;
+        border-radius: 30px;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-icon {
+        width: 74px;
+        height: 74px;
+        border-radius: 24px;
+        font-size: 40px;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card h4 {
+        font-size: 28px;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card p,
+      .g12-page .missions-wrap.early .missions-section-head p,
+      .g12-page .missions-wrap.early .missions-stat-card span {
+        font-size: 16px;
+      }
+
+      .g12-page .missions-wrap.early .missions-play-btn {
+        min-height: 54px;
+        border-radius: 20px;
+        font-size: 17px;
+      }
+
       @media (max-width: 1000px) {
         .g12-subpage-hero,
         .g12-card-grid,
@@ -2732,6 +4660,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
   const goStudentTab = (tab) => {
     if (tab === 'home') return go('screen-student');
     if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'badges') return go('screen-stu-badges');
     if (tab === 'profile') return go('screen-stu-profile');
@@ -2780,8 +4709,8 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
         <nav className="g12-nav" aria-label="Student navigation">
           <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
           <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+          <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
           <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-          <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
           <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
         </nav>
       </div>
@@ -2864,8 +4793,64 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
     );
   }
 
-  return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo" id="lessons-title">📚 Lessons</div><div className="pill">📌 <span id="lessons-count">{lessons.length}</span></div></div><div className="scroll"><div className="card"><div className="muted" id="lessons-sub">Mga aralin para sa iyong baitang.</div><div className="divider" /><div className="row"><button className={`btn btn-sm ${subjectFilter === 'ALL' ? 'btn-green' : 'btn-outline'}`} onClick={() => setSubjectFilter('ALL')}>All</button>{SUBJECTS.map(s => <button key={s.name} className={`btn btn-sm ${subjectFilter === s.name ? 'btn-green' : 'btn-outline'}`} onClick={() => setSubjectFilter(s.name)}>{s.icon} {s.name}</button>)}</div></div><div id="lessons-wrap">{lessons.map(l => <div className="lesson-card" key={l.id} onClick={() => openLesson(l)}><div className="lesson-icon">{SUBJECTS.find(s => s.name === l.subject)?.icon || '📘'}</div><div style={{ flex: 1 }}><b>{l.title}</b><div className="muted">{l.subject} • Grade {l.gradeLevel} • {l.xpReward} XP</div></div><div className="pill">{l.completed ? '✅ Done' : '▶ Start'}</div></div>)}{!lessons.length && <div className="card"><div className="muted">No lessons found.</div></div>}</div></div></>;
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="lessons"
+      go={go}
+      icon="📚"
+      title="Mga Aralin"
+      subtitle="Pumili ng Filipino lesson o module para magpatuloy."
+    >
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Lesson Library</h2>
+            <p className="g46-ref-muted">{lessons.length} lesson{lessons.length === 1 ? '' : 's'} available for your grade.</p>
+          </div>
+        </div>
+
+        <div className="g46-ref-filter-row">
+          <button className={subjectFilter === 'ALL' ? 'active' : ''} onClick={() => setSubjectFilter('ALL')}>🌎 All</button>
+          {SUBJECTS.map(subject => (
+            <button
+              key={subject.name}
+              className={subjectFilter === subject.name ? 'active' : ''}
+              onClick={() => setSubjectFilter(subject.name)}
+            >
+              {subject.icon} {subject.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="g46-ref-card-grid">
+          {lessons.map(lesson => {
+            const meta = subjectTheme(lesson.subject);
+            const subjectInfo = SUBJECTS.find(subject => subject.name === lesson.subject) || {};
+            const tone = subjectInfo.tone || 'green';
+
+            return (
+              <button type="button" className={`g46-ref-card ${tone}`} key={lesson.id} onClick={() => openLesson(lesson)}>
+                <div>
+                  <div className="g46-ref-card-top">
+                    <span className="g46-ref-card-icon">{meta.icon}</span>
+                    <span className="g46-ref-tag">{lesson.completed ? '✅ Done' : '▶ Start'}</span>
+                  </div>
+                  <h4>{lesson.title}</h4>
+                  <p>{lesson.subject} • Grade {lesson.gradeLevel} • +{lesson.xpReward || 0} XP</p>
+                </div>
+                <span className="g46-ref-primary-btn" style={{ width: 'max-content' }}>{lesson.completed ? 'Summary' : 'Start'}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {!lessons.length && <div className="g46-ref-empty">No lessons found for this filter yet.</div>}
+      </section>
+    </Grade46StudentChrome>
+  );
 }
+
 
 function normalizeSpeechText(text = '') {
   return String(text)
@@ -3456,6 +5441,59 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           .g12-summary-btn.purple {
             background: linear-gradient(135deg, #a770ef, #7b4fd6);
           }
+
+          /* Grade 1-2 completed-summary balanced font sizing. */
+          .g12-complete-hero {
+            padding: 30px 28px;
+            border-radius: 34px;
+          }
+
+          .g12-complete-badge {
+            width: 96px;
+            height: 96px;
+            border-radius: 32px;
+            font-size: 56px;
+          }
+
+          .g12-complete-hero h2 {
+            font-size: clamp(32px, 4vw, 48px);
+            line-height: 1;
+          }
+
+          .g12-complete-hero p {
+            font-size: 17px;
+          }
+
+          .g12-summary-chip {
+            min-height: 46px;
+            padding: 0 16px;
+            border-radius: 18px;
+            font-size: 15px;
+          }
+
+          .g12-summary-card {
+            padding: 24px;
+            border-radius: 30px;
+          }
+
+          .g12-summary-card h3 {
+            font-size: clamp(24px, 3vw, 34px);
+          }
+
+          .g12-summary-text {
+            padding: 22px;
+            border-radius: 24px;
+            font-size: clamp(18px, 2.1vw, 24px);
+            line-height: 1.6;
+          }
+
+          .g12-summary-btn {
+            min-height: 54px;
+            padding: 0 22px;
+            border-radius: 20px;
+            font-size: 17px;
+          }
+
         `}</style>
 
         <div className="g12-complete-summary">
@@ -3903,6 +5941,132 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
         .g12-confetti-piece:nth-child(5) { left: 64%; animation-delay: 0.55s; }
         .g12-confetti-piece:nth-child(6) { left: 78%; animation-delay: 0.95s; }
         .g12-confetti-piece:nth-child(7) { left: 90%; animation-delay: 0.25s; }
+
+
+        /* Grade 1-2 lesson mission balanced font sizing. */
+        .g12-mission-banner {
+          padding: 24px 26px;
+          border-radius: 32px;
+        }
+
+        .g12-mission-topline h2 {
+          font-size: clamp(28px, 3.4vw, 42px);
+          line-height: 1;
+        }
+
+        .g12-mission-topline p {
+          font-size: 16px;
+          line-height: 1.45;
+        }
+
+        .g12-mission-xp {
+          min-width: 132px;
+          min-height: 54px;
+          border-radius: 20px;
+          font-size: 19px;
+        }
+
+        .g12-mission-dot {
+          min-height: 62px;
+          border-radius: 20px;
+        }
+
+        .g12-mission-dot span {
+          font-size: 24px;
+        }
+
+        .g12-mission-card {
+          min-height: 360px;
+          padding: 28px;
+          border-radius: 32px;
+        }
+
+        .g12-mission-step-head {
+          grid-template-columns: 78px minmax(0, 1fr);
+          gap: 18px;
+        }
+
+        .g12-mission-big-icon {
+          width: 78px;
+          height: 78px;
+          border-radius: 26px;
+          font-size: 42px;
+        }
+
+        .g12-mission-step-head h3 {
+          font-size: clamp(28px, 3.4vw, 40px);
+          line-height: 1;
+        }
+
+        .g12-mission-step-head p {
+          font-size: 16px;
+          line-height: 1.45;
+        }
+
+        .g12-mission-text-card {
+          padding: 24px;
+          border-radius: 26px;
+          font-size: clamp(20px, 2.4vw, 28px);
+          line-height: 1.6;
+        }
+
+        .g12-mission-note {
+          padding: 16px 18px;
+          border-radius: 22px;
+          font-size: 16px;
+        }
+
+        .g12-mission-btn {
+          min-height: 54px;
+          padding: 0 22px;
+          border-radius: 20px;
+          font-size: 17px;
+        }
+
+        .g12-mission-feedback {
+          font-size: 17px;
+        }
+
+        .g12-finish-card .big {
+          font-size: 58px;
+        }
+
+        .g12-finish-card h3 {
+          font-size: clamp(28px, 3.4vw, 42px);
+        }
+
+        .g12-finish-card p {
+          font-size: 17px;
+        }
+
+        .g12-reward-modal {
+          width: min(560px, 100%);
+          padding: 34px 30px 30px;
+          border-radius: 34px;
+        }
+
+        .g12-reward-big {
+          width: 102px;
+          height: 102px;
+          border-radius: 34px;
+          font-size: 58px;
+        }
+
+        .g12-reward-modal h3 {
+          font-size: clamp(32px, 4vw, 48px);
+          line-height: 1;
+        }
+
+        .g12-reward-modal p {
+          font-size: 17px;
+        }
+
+        .g12-reward-xp {
+          min-height: 60px;
+          padding: 0 26px;
+          border-radius: 24px;
+          font-size: 26px;
+        }
 
         @keyframes g12RewardPop {
           from { opacity: 0; transform: scale(0.88) translateY(20px); }
@@ -4846,6 +7010,1302 @@ function InfographicActivity({ activity, index, total, isEarlyGrade, activityBox
 }
 
 
+
+
+function getMissionDemo(gameId) {
+  const demos = {
+    'word-match': {
+      instruction: 'Piliin ang tamang kahulugan ng salitang Filipino.',
+      prompt: 'Ano ang ibig sabihin ng salitang “bahay”?',
+      sample: 'bahay → house / tahanan',
+      options: ['House / tahanan', 'Dog / aso', 'Book / aklat'],
+      correct: 'House / tahanan',
+      success: 'Tama! Ang “bahay” ay house o tahanan.'
+    },
+    'letter-pop': {
+      instruction: 'Piliin ang nawawalang pantig para mabuo ang salita.',
+      prompt: 'ba + ___ = bata',
+      sample: 'Tapikin ang tamang pantig.',
+      options: ['ta', 'sa', 'la'],
+      correct: 'ta',
+      success: 'Tama! ba + ta = bata.'
+    },
+    'picture-guess': {
+      instruction: 'Tingnan ang picture clue at piliin ang tamang salitang Filipino.',
+      prompt: 'Picture clue: 🐱',
+      sample: 'Anong Filipino word ang bagay sa larawan?',
+      options: ['pusa', 'aso', 'ibon'],
+      correct: 'pusa',
+      success: 'Tama! Ang larawan ay pusa.'
+    },
+    'sentence-builder': {
+      instruction: 'Piliin ang wastong ayos ng pangungusap.',
+      prompt: 'Ayusin ang mga salita: bata / Ako / ay',
+      sample: 'Dapat malinaw at tama ang pangungusap.',
+      options: ['Ako ay bata.', 'Ay bata ako.', 'Bata ako ay.'],
+      correct: 'Ako ay bata.',
+      success: 'Tama! “Ako ay bata.” ang wastong pangungusap.'
+    },
+    'story-quest': {
+      instruction: 'Basahin ang maikling kuwento at sagutin ang tanong.',
+      prompt: 'Si Ana ay may pulang payong. Ginamit niya ito nang umulan. Ano ang ginamit ni Ana?',
+      sample: 'Hanapin ang sagot sa kuwento.',
+      options: ['payong', 'aklat', 'lapis'],
+      correct: 'payong',
+      success: 'Tama! Ginamit ni Ana ang payong.'
+    },
+    'sound-and-say': {
+      instruction: 'Practice card muna habang wala pang backend speech scoring.',
+      prompt: 'Bigkasin: “Magandang umaga po.”',
+      sample: 'Basahin nang malinaw at malakas.',
+      options: ['Nasabi ko na!', 'Ulitin ko muna'],
+      correct: 'Nasabi ko na!',
+      success: 'Mahusay! Practice complete. Backend speech scoring can be added later.'
+    },
+    'badge-challenge': {
+      instruction: 'Tapusin ang mini challenge para makita kung paano mag-u-unlock ng badge.',
+      prompt: 'Ilang vocabulary games ang kailangan para sa “Bokabularyo Star”?',
+      sample: 'Complete 3 vocabulary games → unlock badge.',
+      options: ['3 games', '1 game', '10 games'],
+      correct: '3 games',
+      success: 'Tama! 3 vocabulary games para sa Bokabularyo Star.'
+    }
+  };
+
+  return demos[gameId] || demos['word-match'];
+}
+
+function missionGamesForStudent(data) {
+  const lessons = asArray(data?.lessons);
+  const completedLessons = lessons.filter(lesson => lesson?.completed).length;
+
+  return MISSION_GAMES.map((game, index) => {
+    let status = game.baseStatus || 'Available';
+
+    if (game.minCompleted && completedLessons < game.minCompleted) {
+      status = 'Locked';
+    } else if (!game.future && completedLessons > index + 1) {
+      status = 'Completed';
+    }
+
+    return { ...game, status };
+  });
+}
+
+function MissionStyles() {
+  return (
+    <style>{`
+      .missions-wrap {
+        display: grid;
+        gap: 18px;
+      }
+
+      .missions-wrap.early {
+        --mission-text: #26354d;
+        --mission-muted: #526988;
+        --mission-primary: #15965a;
+      }
+
+      .missions-wrap.standard {
+        --mission-text: #17243b;
+        --mission-muted: #64748b;
+        --mission-primary: #2563eb;
+        padding: 18px 0 96px;
+      }
+
+      .missions-hero {
+        position: relative;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+        gap: 18px;
+        align-items: stretch;
+        border-radius: 34px;
+        padding: 26px;
+        background:
+          radial-gradient(circle at 10% 20%, rgba(255, 236, 163, 0.78), transparent 28%),
+          radial-gradient(circle at 90% 16%, rgba(219, 234, 254, 0.80), transparent 28%),
+          linear-gradient(135deg, #ffffff, #f0fff5 48%, #eef8ff);
+        border: 1px solid rgba(31, 154, 92, 0.10);
+        box-shadow: 0 16px 34px rgba(39, 87, 63, 0.07);
+      }
+
+      .missions-wrap.standard .missions-hero {
+        background: linear-gradient(135deg, #eef2ff, #ffffff 54%, #f8fafc);
+        border-color: rgba(37, 99, 235, 0.10);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+      }
+
+      .missions-hero-copy h2 {
+        margin: 0;
+        color: var(--mission-primary);
+        font-size: clamp(38px, 4.6vw, 62px);
+        line-height: 0.96;
+        letter-spacing: -0.055em;
+        font-weight: 1000;
+      }
+
+      .missions-wrap.standard .missions-hero-copy h2 {
+        font-size: clamp(34px, 4vw, 52px);
+        letter-spacing: -0.045em;
+      }
+
+      .missions-hero-copy p {
+        margin: 12px 0 0;
+        color: var(--mission-muted);
+        max-width: 720px;
+        font-size: 18px;
+        line-height: 1.55;
+        font-weight: 850;
+      }
+
+      .missions-hero-icon {
+        width: 96px;
+        height: 96px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 12px;
+        border-radius: 30px;
+        background: #fff5cf;
+        font-size: 54px;
+        box-shadow: inset 0 0 0 2px rgba(246, 196, 83, 0.22);
+      }
+
+      .missions-progress-card {
+        border-radius: 30px;
+        padding: 22px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 2px solid rgba(255, 217, 102, 0.32);
+        box-shadow: 0 14px 30px rgba(20, 34, 59, 0.08);
+        align-self: stretch;
+        display: grid;
+        align-content: center;
+      }
+
+      .missions-progress-card strong {
+        color: #14223b;
+        font-size: clamp(26px, 3vw, 38px);
+        font-weight: 1000;
+        letter-spacing: -0.045em;
+      }
+
+      .missions-progress-track {
+        height: 15px;
+        margin-top: 14px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+      }
+
+      .missions-progress-fill {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #45c985, #facc15);
+      }
+
+      .missions-wrap.standard .missions-progress-fill {
+        background: linear-gradient(90deg, #2563eb, #7c3aed);
+      }
+
+      .missions-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .missions-stat-card {
+        min-height: 104px;
+        padding: 18px;
+        border-radius: 24px;
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.20);
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+      }
+
+      .missions-stat-card b {
+        display: block;
+        color: var(--mission-text);
+        font-size: 30px;
+        font-weight: 1000;
+        line-height: 1;
+      }
+
+      .missions-stat-card span {
+        display: block;
+        margin-top: 8px;
+        color: var(--mission-muted);
+        font-weight: 850;
+      }
+
+      .missions-section {
+        border-radius: 32px;
+        padding: 26px;
+        background: rgba(255, 255, 255, 0.94);
+        border: 1px solid rgba(31, 154, 92, 0.07);
+        box-shadow: 0 16px 32px rgba(39, 87, 63, 0.06);
+      }
+
+      .missions-wrap.standard .missions-section {
+        border-color: rgba(37, 99, 235, 0.09);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.06);
+      }
+
+      .missions-section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 18px;
+      }
+
+      .missions-section-head h3 {
+        margin: 0;
+        color: var(--mission-primary);
+        font-size: clamp(28px, 3.3vw, 42px);
+        line-height: 1;
+        letter-spacing: -0.045em;
+        font-weight: 1000;
+      }
+
+      .missions-section-head p {
+        margin: 8px 0 0;
+        color: var(--mission-muted);
+        font-weight: 850;
+        line-height: 1.5;
+      }
+
+      .missions-game-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+        gap: 16px;
+      }
+
+      .missions-wrap.early .missions-game-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .missions-game-card {
+        border: 0;
+        min-height: 238px;
+        border-radius: 28px;
+        padding: 18px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 14px;
+        cursor: pointer;
+        color: #24324a;
+        box-shadow: 0 12px 24px rgba(47, 78, 84, 0.06);
+        border: 2px solid transparent;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      }
+
+      .missions-game-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 30px rgba(47, 78, 84, 0.10);
+      }
+
+      .missions-game-card.locked {
+        opacity: 0.68;
+        cursor: not-allowed;
+      }
+
+      .missions-game-card.sky { background: #e0f2fe; }
+      .missions-game-card.sun { background: #fef3c7; }
+      .missions-game-card.mint { background: #dcfce7; }
+      .missions-game-card.pink { background: #fce7f3; }
+      .missions-game-card.violet { background: #ede9fe; }
+      .missions-game-card.rose { background: #ffe4e6; }
+      .missions-game-card.orange { background: #ffedd5; }
+
+      .missions-game-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .missions-game-icon {
+        width: 66px;
+        height: 66px;
+        display: grid;
+        place-items: center;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 38px;
+      }
+
+      .missions-status {
+        min-height: 32px;
+        padding: 0 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        color: #334155;
+        font-size: 12px;
+        font-weight: 1000;
+      }
+
+      .missions-game-card h4 {
+        margin: 12px 0 8px;
+        color: #14223b;
+        font-size: 24px;
+        line-height: 1.05;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+      }
+
+      .missions-game-card p {
+        margin: 0;
+        color: #385075;
+        font-size: 15px;
+        line-height: 1.45;
+        font-weight: 800;
+      }
+
+      .missions-tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0;
+      }
+
+      .missions-tag {
+        min-height: 30px;
+        padding: 0 10px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        color: #334155;
+        font-size: 12px;
+        font-weight: 1000;
+      }
+
+      .missions-play-btn {
+        width: 100%;
+        min-height: 48px;
+        border: 0;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #47ce87, #1f9c60);
+        color: white;
+        font-size: 15px;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 12px 18px rgba(32, 156, 96, 0.16);
+        display: grid;
+        place-items: center;
+      }
+
+      .missions-wrap.standard .missions-play-btn {
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        box-shadow: 0 12px 18px rgba(37, 99, 235, 0.16);
+      }
+
+      .missions-play-btn.locked {
+        background: #94a3b8;
+        box-shadow: none;
+        cursor: not-allowed;
+      }
+
+      .missions-badge-card {
+        border-radius: 28px;
+        padding: 24px;
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        box-shadow: 0 14px 26px rgba(15, 23, 42, 0.05);
+      }
+
+      .missions-badge-card h3 {
+        margin: 0 0 10px;
+        color: var(--mission-primary);
+        font-size: 30px;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+      }
+
+      .missions-badge-card p {
+        color: var(--mission-muted);
+        font-weight: 850;
+        line-height: 1.6;
+      }
+
+      .missions-badge-preview-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .missions-badge-preview {
+        min-height: 108px;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        font-weight: 950;
+      }
+
+      .missions-badge-preview span {
+        display: block;
+        font-size: 34px;
+        margin-bottom: 6px;
+      }
+
+      .missions-bottom-nav {
+        position: fixed;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        width: min(760px, calc(100vw - 24px));
+        z-index: 90;
+        min-height: 76px;
+        padding: 8px;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        border-radius: 26px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+        backdrop-filter: blur(14px);
+      }
+
+      .missions-bottom-nav button {
+        border: 0;
+        border-radius: 20px;
+        background: transparent;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 950;
+        cursor: pointer;
+        display: grid;
+        place-items: center;
+        gap: 2px;
+      }
+
+      .missions-bottom-nav button.active {
+        background: #edf8f1;
+        color: #15965a;
+      }
+
+      .missions-wrap.standard + .missions-bottom-nav button.active {
+        background: #dbeafe;
+        color: #1d4ed8;
+      }
+
+      .missions-bottom-nav span {
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .mission-play-shell {
+        display: grid;
+        gap: 18px;
+      }
+
+      .mission-play-card {
+        border-radius: 36px;
+        padding: 32px;
+        background:
+          radial-gradient(circle at 10% 18%, rgba(255, 236, 163, 0.78), transparent 28%),
+          radial-gradient(circle at 90% 16%, rgba(219, 234, 254, 0.80), transparent 30%),
+          linear-gradient(135deg, #ffffff, #f8fcff);
+        border: 1px solid rgba(31, 154, 92, 0.10);
+        box-shadow: 0 18px 38px rgba(39, 87, 63, 0.08);
+      }
+
+      .mission-play-head {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr);
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+
+      .mission-play-icon {
+        width: 110px;
+        height: 110px;
+        border-radius: 34px;
+        display: grid;
+        place-items: center;
+        background: #fff5cf;
+        font-size: 62px;
+        box-shadow: inset 0 0 0 2px rgba(246, 196, 83, 0.22);
+      }
+
+      .mission-play-head h2 {
+        margin: 0;
+        color: #15965a;
+        font-size: clamp(40px, 5vw, 68px);
+        line-height: 0.95;
+        letter-spacing: -0.06em;
+        font-weight: 1000;
+      }
+
+      .mission-play-head p {
+        margin: 10px 0 0;
+        color: #526988;
+        font-size: 18px;
+        line-height: 1.55;
+        font-weight: 850;
+      }
+
+      .mission-prompt-box {
+        padding: 24px;
+        border-radius: 28px;
+        background: #ffffff;
+        border: 1px dashed #cbd5e1;
+        color: #24324a;
+        font-size: clamp(22px, 3vw, 34px);
+        line-height: 1.55;
+        font-weight: 1000;
+      }
+
+      .mission-play-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .mission-play-choice {
+        min-height: 72px;
+        border: 2px solid rgba(47, 191, 115, 0.20);
+        border-radius: 22px;
+        background: #ffffff;
+        color: #24324a;
+        font-size: 18px;
+        font-weight: 1000;
+        cursor: pointer;
+        padding: 12px 16px;
+        text-align: center;
+      }
+
+      .mission-play-choice.selected,
+      .mission-play-choice:hover {
+        background: #edf8f1;
+        color: #15965a;
+        border-color: rgba(47, 191, 115, 0.46);
+      }
+
+      .mission-result {
+        margin-top: 16px;
+        padding: 18px;
+        border-radius: 22px;
+        background: #fff8cf;
+        color: #24324a;
+        font-size: 18px;
+        font-weight: 1000;
+        line-height: 1.45;
+      }
+
+      .mission-result.good {
+        background: #e9fbef;
+        color: #0d7f48;
+        border: 1px solid #bfeacb;
+      }
+
+      .mission-play-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .mission-play-action {
+        min-height: 58px;
+        border: 0;
+        border-radius: 20px;
+        padding: 0 22px;
+        background: linear-gradient(135deg, #47ce87, #1f9c60);
+        color: white;
+        font-size: 17px;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 12px 20px rgba(32, 156, 96, 0.14);
+      }
+
+      .mission-play-action.secondary {
+        background: #ffffff;
+        color: #14975a;
+        border: 2px solid #2fbf73;
+        box-shadow: none;
+      }
+
+      .mission-play-action.purple {
+        background: linear-gradient(135deg, #a770ef, #7b4fd6);
+      }
+
+      /* Duolingo-inspired mission polish */
+      .missions-wrap.early {
+        gap: 24px;
+      }
+
+      .missions-wrap.early .missions-game-card,
+      .missions-wrap.early .mission-play-card,
+      .missions-wrap.early .missions-section,
+      .missions-wrap.early .missions-badge-card,
+      .missions-wrap.early .missions-stat-card {
+        border: 3px solid rgba(209, 250, 229, 0.95);
+        box-shadow: 0 9px 0 rgba(188, 221, 198, 0.72), 0 18px 34px rgba(25, 78, 54, 0.08);
+      }
+
+      .missions-wrap.early .missions-game-card {
+        min-height: 258px;
+        position: relative;
+        overflow: hidden;
+        transform: translateY(0);
+      }
+
+      .missions-wrap.early .missions-game-card::after {
+        content: '';
+        position: absolute;
+        inset: 12px;
+        border-radius: 24px;
+        border: 2px solid rgba(255, 255, 255, 0.42);
+        pointer-events: none;
+      }
+
+      .missions-wrap.early .missions-game-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 0 rgba(188, 221, 198, 0.84), 0 24px 42px rgba(25, 78, 54, 0.12);
+      }
+
+      .missions-wrap.early .missions-game-card:active {
+        transform: translateY(3px);
+        box-shadow: 0 5px 0 rgba(188, 221, 198, 0.84), 0 14px 26px rgba(25, 78, 54, 0.10);
+      }
+
+      .missions-wrap.early .missions-game-icon,
+      .missions-wrap.early .mission-play-icon {
+        background: #ffffff;
+        border: 3px solid rgba(255, 238, 174, 0.85);
+        box-shadow: 0 6px 0 rgba(246, 196, 83, 0.18);
+      }
+
+      .missions-wrap.early .missions-play-btn,
+      .missions-wrap.early .mission-play-action {
+        min-height: 56px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #58cc02 0%, #40a900 100%);
+        box-shadow: 0 6px 0 #2f8500, 0 12px 20px rgba(88, 204, 2, 0.18);
+        letter-spacing: 0.01em;
+      }
+
+      .missions-wrap.early .missions-play-btn {
+        text-transform: uppercase;
+        font-size: 16px;
+      }
+
+      .missions-wrap.early .mission-play-action:hover,
+      .missions-wrap.early .missions-play-btn:hover {
+        filter: brightness(1.03);
+      }
+
+      .missions-wrap.early .mission-play-action:active,
+      .missions-wrap.early .missions-play-btn:active {
+        transform: translateY(4px);
+        box-shadow: 0 2px 0 #2f8500, 0 8px 14px rgba(88, 204, 2, 0.16);
+      }
+
+      .missions-wrap.early .mission-play-action.secondary {
+        background: #ffffff;
+        color: #15965a;
+        border: 3px solid #b7efc5;
+        box-shadow: 0 6px 0 #d4ead9;
+      }
+
+      .missions-wrap.early .mission-play-action.purple {
+        background: linear-gradient(180deg, #8b5cf6 0%, #6d45d8 100%);
+        box-shadow: 0 6px 0 #4f2faf, 0 12px 20px rgba(139, 92, 246, 0.18);
+      }
+
+      .missions-wrap.early .mission-prompt-box {
+        background: #ffffff;
+        border: 3px solid #e5eef9;
+        box-shadow: inset 0 -5px 0 rgba(226, 232, 240, 0.62);
+      }
+
+      .missions-wrap.early .mission-play-choice {
+        min-height: 86px;
+        border: 3px solid #dbeafe;
+        border-bottom-width: 7px;
+        border-radius: 24px;
+        background: #ffffff;
+        color: #24324a;
+        box-shadow: none;
+        transition: 0.14s ease;
+      }
+
+      .missions-wrap.early .mission-play-choice:hover,
+      .missions-wrap.early .mission-play-choice.selected {
+        background: #ecfdf5;
+        color: #15965a;
+        border-color: #8ce0ae;
+        transform: translateY(-2px);
+      }
+
+      .missions-wrap.early .mission-result {
+        border: 3px solid #fde68a;
+        box-shadow: 0 6px 0 #f7d86b;
+      }
+
+      .missions-wrap.early .mission-result.good {
+        border-color: #86efac;
+        box-shadow: 0 6px 0 #60c983;
+      }
+
+      .missions-wrap.early .mission-play-card {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .missions-wrap.early .mission-play-card::before {
+        content: '⭐';
+        position: absolute;
+        right: 28px;
+        top: 26px;
+        font-size: 34px;
+        opacity: 0.38;
+        pointer-events: none;
+      }
+
+      .g12-mission-play-nohero {
+        padding-top: 22px;
+      }
+
+      .g12-mission-play-nav {
+        grid-template-columns: repeat(5, 1fr);
+      }
+
+
+      /* Grade 1-2 Missions and game screen balanced font sizing. */
+      .missions-wrap.early .missions-section,
+      .missions-wrap.early .missions-badge-card,
+      .missions-wrap.early .missions-stat-card,
+      .missions-wrap.early .mission-play-card {
+        border-radius: 30px;
+      }
+
+      .missions-wrap.early .missions-section {
+        padding: 24px;
+      }
+
+      .missions-wrap.early .missions-stat-card {
+        min-height: 92px;
+        padding: 16px;
+      }
+
+      .missions-wrap.early .missions-stat-card b {
+        font-size: 24px;
+      }
+
+      .missions-wrap.early .missions-stat-card span,
+      .missions-wrap.early .missions-section-head p,
+      .missions-wrap.early .missions-badge-card p {
+        font-size: 15px;
+        line-height: 1.45;
+      }
+
+      .missions-wrap.early .missions-section-head h3,
+      .missions-wrap.early .missions-badge-card h3 {
+        font-size: clamp(24px, 3vw, 34px);
+        line-height: 1.05;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card,
+      .missions-wrap.early .missions-game-card {
+        min-height: 230px;
+        padding: 22px;
+        border-radius: 30px;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-icon,
+      .missions-wrap.early .missions-game-icon {
+        width: 74px;
+        height: 74px;
+        border-radius: 24px;
+        font-size: 40px;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card h4,
+      .missions-wrap.early .missions-game-card h4 {
+        font-size: 28px;
+        line-height: 1.08;
+      }
+
+      .g12-page .missions-wrap.early .missions-game-card p,
+      .missions-wrap.early .missions-game-card p {
+        font-size: 16px;
+      }
+
+      .g12-page .missions-wrap.early .missions-play-btn,
+      .missions-wrap.early .missions-play-btn {
+        min-height: 54px;
+        border-radius: 20px;
+        font-size: 16px;
+      }
+
+      .missions-wrap.early .missions-badge-preview {
+        min-height: 92px;
+        border-radius: 20px;
+        font-size: 14px;
+      }
+
+      .missions-wrap.early .missions-badge-preview span {
+        font-size: 28px;
+      }
+
+      .missions-wrap.early .mission-play-card {
+        padding: 28px;
+      }
+
+      .missions-wrap.early .mission-play-head {
+        grid-template-columns: 84px minmax(0, 1fr);
+        gap: 18px;
+        margin-bottom: 20px;
+      }
+
+      .missions-wrap.early .mission-play-icon {
+        width: 84px;
+        height: 84px;
+        border-radius: 28px;
+        font-size: 46px;
+      }
+
+      .missions-wrap.early .mission-play-head h2 {
+        font-size: clamp(30px, 3.8vw, 46px);
+        line-height: 1;
+      }
+
+      .missions-wrap.early .mission-play-head p {
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      .missions-wrap.early .mission-prompt-box {
+        padding: 22px;
+        border-radius: 24px;
+        font-size: clamp(18px, 2.2vw, 26px);
+        line-height: 1.6;
+      }
+
+      .missions-wrap.early .mission-play-options {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      }
+
+      .missions-wrap.early .mission-play-choice {
+        min-height: 68px;
+        border-radius: 22px;
+        font-size: 16px;
+      }
+
+      .missions-wrap.early .mission-result {
+        padding: 16px;
+        border-radius: 20px;
+        font-size: 16px;
+      }
+
+      .missions-wrap.early .mission-play-action {
+        min-height: 54px;
+        border-radius: 20px;
+        padding: 0 22px;
+        font-size: 16px;
+      }
+
+      @media (max-width: 960px) {
+        .missions-hero,
+        .missions-wrap.early .missions-game-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .missions-stat-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .mission-play-head {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .missions-hero,
+        .missions-section,
+        .missions-badge-card,
+        .mission-play-card {
+          border-radius: 26px;
+          padding: 20px;
+        }
+
+        .missions-stat-grid,
+        .missions-badge-preview-row {
+          grid-template-columns: 1fr;
+        }
+
+        .missions-bottom-nav {
+          width: calc(100vw - 18px);
+          bottom: 10px;
+          border-radius: 22px;
+        }
+
+        .missions-bottom-nav button {
+          font-size: 10px;
+        }
+
+        .mission-play-icon {
+          width: 84px;
+          height: 84px;
+          border-radius: 28px;
+          font-size: 48px;
+        }
+      }
+    `}</style>
+  );
+}
+
+function StudentMissions({ data, go, onPlayMission }) {
+  const student = data?.student || {};
+  const gradeLevel = Number(student?.gradeLevel || 4);
+  const early = gradeLevel <= 2;
+  const xp = Number(student?.xp || 0);
+  const level = data?.level || levelForXp(xp);
+  const xpPct = xpPercent(xp);
+  const completedLessons = asArray(data?.lessons).filter(lesson => lesson?.completed).length;
+  const badgeCount = asArray(data?.badges).length;
+  const games = missionGamesForStudent(data);
+  const availableCount = games.filter(game => game.status !== 'Locked').length;
+  const completedCount = games.filter(game => game.status === 'Completed').length;
+  const nextBadgeProgress = Math.min(3, completedLessons);
+
+  const openTab = (tab) => {
+    if (tab === 'home') return go('screen-student');
+    if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'missions') return go('screen-stu-missions');
+    if (tab === 'groups') return go('screen-stu-groups');
+    if (tab === 'profile') return go('screen-stu-profile');
+  };
+
+  const playMission = (game) => {
+    if (!game || game.status === 'Locked') return;
+    if (typeof onPlayMission === 'function') {
+      onPlayMission(game.id);
+      return;
+    }
+    go('screen-stu-mission-play');
+  };
+
+  const content = (
+    <>
+      <MissionStyles />
+
+      <div className={`missions-wrap ${early ? 'early' : 'standard'}`}>
+        <section className="missions-hero">
+          <div className="missions-hero-copy">
+            <div className="missions-hero-icon">🚀</div>
+            <h2>{early ? 'Tuklas Missions' : 'Learning Games'}</h2>
+            <p>
+              {early
+                ? 'Pumili ng game at pindutin ang Play. Sagutin ang challenge para sa XP preview!'
+                : 'A separate game-based Filipino learning area where each card opens its own mission screen for vocabulary, reading, writing, comprehension, and oral communication practice.'}
+            </p>
+          </div>
+
+          <div className="missions-progress-card">
+            <strong>🪙 {xp} XP • Level {level}</strong>
+            <div className="missions-progress-track">
+              <span className="missions-progress-fill" style={{ width: `${Math.max(6, xpPct)}%` }} />
+            </div>
+            <p style={{ margin: '12px 0 0', color: '#526988', fontWeight: 850 }}>
+              {100 - xpPct} XP pa bago ang susunod na level.
+            </p>
+          </div>
+        </section>
+
+        <section className="missions-stat-grid" aria-label="Mission progress summary">
+          <div className="missions-stat-card"><b>{availableCount}</b><span>Available games</span></div>
+          <div className="missions-stat-card"><b>{completedCount}</b><span>Completed missions</span></div>
+          <div className="missions-stat-card"><b>{badgeCount}</b><span>Unlocked badges</span></div>
+          <div className="missions-stat-card"><b>{nextBadgeProgress}/3</b><span>Badge challenge</span></div>
+        </section>
+
+        <section className="missions-section">
+          <div className="missions-section-head">
+            <div>
+              <h3>🎮 Available Learning Games</h3>
+              <p>Tap Play to open a Filipino learning game. Earn XP preview and keep your streak going!</p>
+            </div>
+          </div>
+
+          <div className="missions-game-grid">
+            {games.map(game => {
+              const locked = game.status === 'Locked';
+
+              return (
+                <button
+                  type="button"
+                  className={`missions-game-card ${game.tone} ${locked ? 'locked' : ''}`}
+                  key={game.id}
+                  onClick={() => playMission(game)}
+                  disabled={locked}
+                >
+                  <div>
+                    <div className="missions-game-top">
+                      <span className="missions-game-icon">{game.icon}</span>
+                      <span className="missions-status">{game.status}</span>
+                    </div>
+                    <h4>{game.title}</h4>
+                    <p>{game.short}</p>
+                    <div className="missions-tag-row">
+                      <span className="missions-tag">{game.module}</span>
+                      <span className="missions-tag">+{game.xp} XP</span>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`missions-play-btn ${locked ? 'locked' : ''}`}
+                    role="button"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  >
+                    {locked ? '🔒 Locked' : '▶ Play'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="missions-badge-card">
+          <h3>🏅 Badge Preview</h3>
+          <p>Keep playing learning games to unlock more rewards and stay motivated.</p>
+          <div className="missions-badge-preview-row">
+            <div className="missions-badge-preview"><div><span>🔤</span>Bokabularyo Star</div></div>
+            <div className="missions-badge-preview"><div><span>📖</span>Pagbasa Hero</div></div>
+            <div className="missions-badge-preview"><div><span>🎙️</span>Oral Champ</div></div>
+          </div>
+        </section>
+      </div>
+    </>
+  );
+
+  if (early) {
+    return (
+      <EarlyStudentChrome
+        data={data}
+        activeTab="missions"
+        go={go}
+        icon="🎮"
+        title="Tuklas Missions"
+        subtitle="Pumili ng game, pindutin ang Play, at sagutin ang challenge."
+      >
+        {content}
+      </EarlyStudentChrome>
+    );
+  }
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="missions"
+      go={go}
+      icon="🎮"
+      title="Tuklas Missions"
+      subtitle="Play Filipino learning games connected to vocabulary, reading, writing, comprehension, and oral communication."
+    >
+      {content}
+    </Grade46StudentChrome>
+  );
+}
+
+function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack }) {
+  const [missionChoice, setMissionChoice] = useState('');
+  const [missionResult, setMissionResult] = useState('');
+  const student = data?.student || {};
+  const gradeLevel = Number(student?.gradeLevel || 4);
+  const early = gradeLevel <= 2;
+  const xp = Number(student?.xp || 0);
+  const games = missionGamesForStudent(data);
+  const selectedGame = games.find(game => game.id === selectedGameId) || games[0];
+  const demo = getMissionDemo(selectedGame?.id);
+  const locked = selectedGame?.status === 'Locked';
+
+  useEffect(() => {
+    setMissionChoice('');
+    setMissionResult('');
+  }, [selectedGame?.id]);
+
+  const openTab = (tab) => {
+    if (tab === 'home') return go('screen-student');
+    if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'missions') return go('screen-stu-missions');
+    if (tab === 'groups') return go('screen-stu-groups');
+    if (tab === 'profile') return go('screen-stu-profile');
+  };
+
+  const backToMissions = () => {
+    if (typeof onBack === 'function') {
+      onBack();
+      return;
+    }
+    go('screen-stu-missions');
+  };
+
+  const checkMissionAnswer = (choice) => {
+    if (!demo || locked) return;
+
+    setMissionChoice(choice);
+    if (choice === demo.correct) {
+      setMissionResult(`✅ ${demo.success} Demo reward: +${selectedGame?.xp || 0} XP preview.`);
+    } else {
+      setMissionResult('⭐ Hindi pa tama. Subukan muli!');
+    }
+  };
+
+  const restartDemo = () => {
+    setMissionChoice('');
+    setMissionResult('');
+  };
+
+  const content = (
+    <>
+      <MissionStyles />
+
+      <div className={`missions-wrap ${early ? 'early' : 'standard'}`}>
+        <section className="mission-play-shell">
+          <div className="mission-play-card">
+            <div className="mission-play-head">
+              <div className="mission-play-icon">{selectedGame?.icon || '🎮'}</div>
+              <div>
+                <h2>{selectedGame?.title || 'Mission'}</h2>
+                <p>
+                  {locked
+                    ? 'This mission is still locked. Complete more lessons or games to unlock it.'
+                    : `${selectedGame?.module || 'Filipino'} mission • +${selectedGame?.xp || 0} XP preview • ${selectedGame?.status || 'Available'}`}
+                </p>
+              </div>
+            </div>
+
+            {locked ? (
+              <>
+                <div className="mission-prompt-box">
+                  🔒 Locked mission. Complete {selectedGame?.minCompleted || 3} lessons or missions to unlock this challenge.
+                </div>
+
+                <div className="mission-play-actions">
+                  <button type="button" className="mission-play-action secondary" onClick={backToMissions}>
+                    ← Back to Missions
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mission-prompt-box">
+                  <strong>Mission:</strong> {demo?.prompt}
+                  <br />
+                  <strong>Clue:</strong> {demo?.sample}
+                </div>
+
+                <div className="mission-play-options" aria-label="Mission choices">
+                  {(demo?.options || []).map(choice => (
+                    <button
+                      type="button"
+                      className={`mission-play-choice ${missionChoice === choice ? 'selected' : ''}`}
+                      key={choice}
+                      onClick={() => checkMissionAnswer(choice)}
+                    >
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+
+                {missionResult && (
+                  <div className={`mission-result ${missionResult.includes('✅') ? 'good' : ''}`}>
+                    {missionResult}
+                  </div>
+                )}
+
+                <div className="mission-play-actions">
+                  <button type="button" className="mission-play-action secondary" onClick={backToMissions}>
+                    ← Back to Missions
+                  </button>
+                  <button type="button" className="mission-play-action" onClick={restartDemo}>
+                    🔄 Restart
+                  </button>
+                  <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
+                    📖 Go to Lessons
+                  </button>
+                </div>
+
+                <p style={{ margin: '18px 0 0', color: '#526988', fontWeight: 850 }}>
+                  Frontend demo only: XP is previewed here. Real mission completion, saved XP, streaks, and badge unlocks can be connected to backend routes later.
+                </p>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </>
+  );
+
+  if (early) {
+    return (
+      <>
+        <EarlyStudentSubpageStyles />
+        <div className="g12-page">
+          <header className="g12-topbar">
+            <button type="button" className="g12-brand" onClick={backToMissions}>
+              <span className="g12-brand-icon">{selectedGame?.icon || '🎮'}</span>
+              <span>{selectedGame?.title || 'Mission'}</span>
+            </button>
+
+            <div className="g12-top-actions">
+              <div className="g12-pill">🌸 Grade {student.gradeLevel || '—'} • {student.section || '—'}</div>
+              <div className="g12-pill">⚡ {xp} XP</div>
+              <button type="button" className="g12-action-btn" onClick={backToMissions}>🎮 Missions</button>
+              <button type="button" className="g12-action-btn" onClick={() => go('screen-student')}>🏠 Home</button>
+            </div>
+          </header>
+
+          <main className="g12-shell g12-subpage-shell g12-mission-play-nohero">
+            {content}
+          </main>
+
+          <nav className="g12-nav g12-mission-play-nav" aria-label="Student navigation">
+            <button type="button" onClick={() => openTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
+            <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+            <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
+            <button type="button" onClick={() => openTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
+            <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
+          </nav>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="missions"
+      go={go}
+      icon={selectedGame?.icon || '🎮'}
+      title={selectedGame?.title || 'Mission'}
+      subtitle={`${selectedGame?.module || 'Filipino'} mission • +${selectedGame?.xp || 0} XP preview`}
+      titleAction={<button type="button" className="g46-ref-soft-btn" onClick={backToMissions}>← Missions</button>}
+    >
+      {content}
+    </Grade46StudentChrome>
+  );
+}
+
 function EarlyGroupsScreen({ data, go, completeGroupTask }) {
   const groups = data?.groups || [];
 
@@ -4876,7 +8336,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                 <div className="g12-task-card" key={task.id}>
                   <div className="g12-task-icon">✅</div>
                   <div>
-                    <h3 style={{ fontSize: 20, marginBottom: 4 }}>{task.title}</h3>
+                    <h3 style={{ fontSize: 28, marginBottom: 6 }}>{task.title}</h3>
                     <p className="g12-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
                   </div>
                   <button type="button" className="g12-main-btn" onClick={() => completeGroupTask(task.id)}>
@@ -4908,8 +8368,50 @@ function StudentGroups({ data, go, completeGroupTask }) {
   }
 
   const groups = data?.groups || [];
-  return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo">👥 Mga Grupo</div><div /></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--orange),#E67E22)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Group Tasks</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Gawin ang tasks bago ang deadline.</div></div><div id="stu-groups-wrap">{groups.map(g => <div className="card" key={g.id}><div className="section-title">👥 {g.name}</div><div className="muted">{g.description}</div><div className="divider" />{(g.tasks || []).map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">✅</div><div style={{ flex: 1 }}><b>{t.title}</b><div className="muted">Due: {fmtDate(t.dueAt)} • {t.xpReward} XP</div></div><button className="btn btn-green btn-sm" onClick={() => completeGroupTask(t.id)}>Complete</button></div>)}</div>)}{!groups.length && <div className="card"><div className="muted">No group tasks yet.</div></div>}</div></div></>;
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="groups"
+      go={go}
+      icon="👥"
+      title="Mga Grupo"
+      subtitle="Tingnan ang group tasks at tapusin ang collaborative activities."
+    >
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Group Tasks</h2>
+            <p className="g46-ref-muted">Gawin ang tasks bago ang deadline para makakuha ng XP.</p>
+          </div>
+        </div>
+
+        {groups.map(group => (
+          <div className="g46-ref-panel" key={group.id} style={{ marginBottom: 14, boxShadow: 'none', background: '#fbfefc' }}>
+            <h3>👥 {group.name}</h3>
+            <p className="g46-ref-muted">{group.description || 'Walang description.'}</p>
+
+            {(group.tasks || []).map(task => (
+              <div className="g46-ref-task-row" key={task.id}>
+                <span className="g46-ref-card-icon">✅</span>
+                <div>
+                  <h3 style={{ fontSize: 28, marginBottom: 6 }}>{task.title}</h3>
+                  <p className="g46-ref-muted" style={{ margin: 0 }}>Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
+                </div>
+                <button type="button" className="g46-ref-primary-btn" onClick={() => completeGroupTask(task.id)}>Complete</button>
+              </div>
+            ))}
+
+            {!(group.tasks || []).length && <div className="g46-ref-empty">No tasks yet for this group.</div>}
+          </div>
+        ))}
+
+        {!groups.length && <div className="g46-ref-empty">No group tasks yet.</div>}
+      </section>
+    </Grade46StudentChrome>
+  );
 }
+
 
 function EarlyBadgesScreen({ data, go }) {
   const badges = data?.badges || [];
@@ -4958,8 +8460,41 @@ function StudentBadges({ data, go }) {
     return <EarlyBadgesScreen data={data} go={go} />;
   }
 
-  return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo">🏅 Badges</div><div className="pill">⚡ <span id="badge-xp">{data?.student?.xp || 0}</span></div></div><div className="scroll"><div className="card"><div className="section-title">🌟 Achievements</div><div id="badges-wrap" className="kid-badge-shelf">{(data?.badges || []).map(b => <div className="kid-badge-pill owned" key={b.id}><span className="kid-badge-icon">{b.icon || '🏅'}</span>{b.name}</div>)}{!(data?.badges || []).length && <div className="muted">Wala pang badge. Tapusin ang lessons para makakuha!</div>}</div></div></div></>;
+  const badges = data?.badges || [];
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="profile"
+      go={go}
+      icon="🏅"
+      title="Badges"
+      subtitle="Rewards and achievements from lessons, missions, and activities."
+    >
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Achievements</h2>
+            <p className="g46-ref-muted">{badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {data?.student?.xp || 0} XP</p>
+          </div>
+        </div>
+
+        {badges.length ? (
+          <div className="g46-ref-badge-grid">
+            {badges.map(badge => (
+              <div className="g46-ref-badge" key={badge.id || badge.name}>
+                <div><span>{badge.icon || '🏅'}</span>{badge.name || 'Badge'}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="g46-ref-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
+        )}
+      </section>
+    </Grade46StudentChrome>
+  );
 }
+
 
 function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
   const s = data?.student || {};
@@ -5022,9 +8557,59 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go }) {
     return <EarlyProfileScreen data={data} selectedAvatar={selectedAvatar} updateAvatar={updateAvatar} go={go} />;
   }
 
-  const s = data?.student;
-  return <><div className="top-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-student')}>← Dashboard</button><div className="logo">👤 Profile</div><div /></div><div className="scroll"><div className="card"><div className="section-title">Avatar</div><div className="muted">Palitan ang avatar mo (saved sa account).</div><div className="divider" /><div className="avatar-grid" id="profile-avatar-grid">{AVATARS.map(a => <button key={a} className={`avatar-circle ${selectedAvatar === a ? 'selected' : ''}`} onClick={() => updateAvatar(a)}>{a}</button>)}</div></div><div className="card"><div className="section-title">📊 Summary</div><div id="profile-summary"><div className="grid grid-3"><Stat icon="👤" label="Name" value={s?.name || '—'} /><Stat icon="🎒" label="Grade" value={s?.gradeLevel || '—'} /><Stat icon="⚡" label="XP" value={s?.xp || 0} /></div></div></div></div></>;
+  const s = data?.student || {};
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="profile"
+      go={go}
+      icon="👤"
+      title="Profile"
+      subtitle="Piliin ang avatar mo at tingnan ang learning summary."
+    >
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Avatar</h2>
+            <p className="g46-ref-muted">Piliin ang avatar na gusto mong gamitin sa account mo.</p>
+          </div>
+        </div>
+
+        <div className="g46-ref-avatar-grid">
+          {AVATARS.map(avatar => (
+            <button
+              key={avatar}
+              type="button"
+              className={`g46-ref-avatar-choice ${selectedAvatar === avatar ? 'selected' : ''}`}
+              onClick={() => updateAvatar(avatar)}
+              aria-label={`Choose avatar ${avatar}`}
+            >
+              {avatar}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Summary</h2>
+            <p className="g46-ref-muted">Basic profile and progress information.</p>
+          </div>
+        </div>
+
+        <div className="g46-ref-card-grid">
+          <div className="g46-ref-card green"><span className="g46-ref-card-icon">👤</span><h4>{s.name || '—'}</h4><p>Name</p></div>
+          <div className="g46-ref-card yellow"><span className="g46-ref-card-icon">🎒</span><h4>Grade {s.gradeLevel || '—'}</h4><p>Grade</p></div>
+          <div className="g46-ref-card blue"><span className="g46-ref-card-icon">🌸</span><h4>{s.section || '—'}</h4><p>Section</p></div>
+          <div className="g46-ref-card purple"><span className="g46-ref-card-icon">⚡</span><h4>{s.xp || 0} XP</h4><p>XP</p></div>
+        </div>
+      </section>
+    </Grade46StudentChrome>
+  );
 }
+
 
 function TeacherRedesignStyles() {
   return (

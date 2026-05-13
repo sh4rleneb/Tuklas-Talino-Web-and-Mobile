@@ -1,3 +1,54 @@
+:root {
+  --font-heading: 'Quicksand', 'Nunito', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+}
+
+body,
+.screen,
+input,
+textarea,
+select {
+  font-family: var(--font-body) !important;
+  font-weight: 700;
+}
+
+p,
+.muted,
+.g12-muted,
+.g12-section-subtitle,
+.missions-game-card p,
+.mission-play-head p {
+  font-family: var(--font-body) !important;
+  font-weight: 800 !important;
+}
+
+button,
+.logo,
+.tt-logo,
+.tt-logo strong,
+.home-title,
+.g12-brand,
+.g12-section-title,
+.g12-subpage-title h1,
+.g12-welcome-copy h1,
+.g12-progress-title,
+.g12-subject-card h3,
+.g46-lite-brand,
+.g46-lite-hero-copy h1,
+.missions-hero-copy h2,
+.missions-section-head h3,
+.missions-game-card h4,
+.mission-play-head h2,
+.mission-prompt-box,
+.section-title,
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading) !important;
+  font-weight: 700 !important;
+}
+
 /* Small React-only helpers. The visual identity comes from legacy-theme.css and gamification.css. */
 .loading-card{
   min-height:100vh;
