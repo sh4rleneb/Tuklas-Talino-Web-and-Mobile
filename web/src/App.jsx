@@ -150,6 +150,9 @@ export default function App() {
   const [selectedAvatar, setSelectedAvatar] = useState('🦊');
   const [studentDash, setStudentDash] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(null);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [quizResult, setQuizResult] = useState(null);
+  const [quizAttempts, setQuizAttempts] = useState({});
   const [selectedMissionGameId, setSelectedMissionGameId] = useState('word-match');
   const [lessonFeedback, setLessonFeedback] = useState('');
   const [teacherData, setTeacherData] = useState({ stats: null, rows: [], groups: [], students: [], lessons: [] });
@@ -180,6 +183,12 @@ const [adminData, setAdminData] = useState({
     const t = setTimeout(() => setNotice(null), 3600);
     return () => clearTimeout(t);
   }, [notice]);
+
+  useEffect(() => {
+    const studentId = studentDash?.student?.id || user?.student?.id;
+    if (!studentId) return;
+    setQuizAttempts(loadQuizAttempts(studentId));
+  }, [studentDash?.student?.id, user?.student?.id]);
 
   useEffect(() => {
   if (!booting && user) {
@@ -221,6 +230,9 @@ const [adminData, setAdminData] = useState({
     authLogout();
     setStudentDash(null);
     setSelectedLesson(null);
+    setSelectedQuiz(null);
+    setQuizResult(null);
+    setQuizAttempts({});
     setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [] });
 setAdminData({
   stats: null,
@@ -349,6 +361,28 @@ if (role === 'admin') {
       setLessonFeedback('');
       go('screen-lesson');
     });
+  }
+
+  function openQuiz(quiz) {
+    if (!quiz) return;
+    setSelectedQuiz(quiz);
+    setQuizResult(null);
+    go('screen-stu-quiz-play');
+  }
+
+  function submitQuiz(quiz, answers) {
+    if (!quiz) return null;
+
+    const studentId = studentDash?.student?.id || user?.student?.id || 'demo-student';
+    const existingAttempts = quizAttempts?.[quiz.id] || [];
+    const result = gradeQuizAttempt(quiz, answers, existingAttempts.length + 1);
+    const updatedAttempts = appendQuizAttempt(studentId, quizAttempts, quiz.id, result);
+
+    setQuizAttempts(updatedAttempts);
+    setQuizResult(result);
+    notify(`Quiz submitted: ${result.score}/${result.total} (${result.percent}%)`);
+    go('screen-stu-quiz-result');
+    return result;
   }
 
   async function completeLesson(options = {}) {
@@ -902,6 +936,38 @@ async function archiveTeacher(id) {
         />
       </Screen>
 
+      <Screen id="screen-stu-quizzes" active={screen === 'screen-stu-quizzes'}>
+        <StudentQuizzes
+          data={studentDash}
+          go={go}
+          openQuiz={openQuiz}
+          quizAttempts={quizAttempts}
+        />
+      </Screen>
+
+      <Screen id="screen-stu-quiz-play" active={screen === 'screen-stu-quiz-play'}>
+        {selectedQuiz && (
+          <StudentQuizPlay
+            data={studentDash}
+            quiz={selectedQuiz}
+            go={go}
+            submitQuiz={submitQuiz}
+            quizAttempts={quizAttempts}
+          />
+        )}
+      </Screen>
+
+      <Screen id="screen-stu-quiz-result" active={screen === 'screen-stu-quiz-result'}>
+        {quizResult && (
+          <StudentQuizResult
+            data={studentDash}
+            result={quizResult}
+            go={go}
+            openQuiz={openQuiz}
+          />
+        )}
+      </Screen>
+
       <Screen id="screen-lesson" active={screen === 'screen-lesson'}>
         {selectedLesson && (
           <LessonScreen
@@ -1305,6 +1371,279 @@ function getGroupTasks(data) {
   return groups.flatMap(g => asArray(g.tasks).map(t => ({ ...t, groupName: g.name })));
 }
 
+const EARLY_GROUP_ROLES = [
+  { id: 'reader', icon: '📖', label: 'Reader', helper: 'Basahin ang salita o kuwento.' },
+  { id: 'speaker', icon: '🎤', label: 'Speaker', helper: 'Bigkasin ang sagot nang malinaw.' },
+  { id: 'helper', icon: '⭐', label: 'Helper', helper: 'Tumulong sa kaklase.' },
+  { id: 'checker', icon: '✅', label: 'Checker', helper: 'Tingnan kung tapos na ang gawain.' }
+];
+
+const UPPER_GROUP_ROLES = [
+  { id: 'leader', icon: '👑', label: 'Leader', helper: 'Guide the group and keep everyone on task.' },
+  { id: 'reader', icon: '📖', label: 'Reader', helper: 'Read the passage or instructions.' },
+  { id: 'writer', icon: '✍️', label: 'Writer', helper: 'Prepare the group answer or summary.' },
+  { id: 'reporter', icon: '🎙️', label: 'Reporter', helper: 'Present the group output.' },
+  { id: 'checker', icon: '✅', label: 'Checker', helper: 'Review the answer before submission.' }
+];
+
+function rolesForGradeLevel(gradeLevel) {
+  return Number(gradeLevel || 4) <= 2 ? EARLY_GROUP_ROLES : UPPER_GROUP_ROLES;
+}
+
+function taskCompletionPercent(task = {}, localDone = false) {
+  if (localDone || task.completed || task.isCompleted || task.status === 'completed') return 100;
+  if (task.status === 'submitted') return 75;
+  if (task.status === 'in_progress') return 45;
+  return 15;
+}
+
+function effectivenessBand(percent = 0) {
+  const value = Number(percent || 0);
+  if (value >= 85) return { label: 'Mastery', icon: '🏆', note: 'Students are showing strong understanding.' };
+  if (value >= 70) return { label: 'Developing', icon: '🌱', note: 'Most students are progressing, but some need practice.' };
+  if (value >= 40) return { label: 'Needs Support', icon: '🧭', note: 'Review missed skills and give guided practice.' };
+  return { label: 'Starting', icon: '✨', note: 'Students are beginning the activity or need more attempts.' };
+}
+
+function lessonAssessmentProfile(activities = []) {
+  const rows = asArray(activities);
+  const has = (type) => rows.some(activity => activity?.type === type);
+  return {
+    hasContent: has('infographic') || has('vocabulary'),
+    hasObjectiveQuiz: has('mcq') || has('matching'),
+    hasWriting: has('writing'),
+    hasSpeech: has('speech'),
+    activityCount: rows.length
+  };
+}
+
+function quizStorageKey(studentId) {
+  return `tuklas_quiz_attempts_${studentId || 'demo'}`;
+}
+
+function loadQuizAttempts(studentId) {
+  if (typeof window === 'undefined' || !studentId) return {};
+  try {
+    return JSON.parse(window.localStorage.getItem(quizStorageKey(studentId)) || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveQuizAttempts(studentId, attempts) {
+  if (typeof window === 'undefined' || !studentId) return;
+  try {
+    window.localStorage.setItem(quizStorageKey(studentId), JSON.stringify(attempts || {}));
+  } catch {
+    // localStorage can fail in private browsing; the UI still works for the current session.
+  }
+}
+
+function appendQuizAttempt(studentId, attempts, quizId, result) {
+  const next = {
+    ...(attempts || {}),
+    [quizId]: [result, ...asArray(attempts?.[quizId])].slice(0, 5)
+  };
+  saveQuizAttempts(studentId, next);
+  return next;
+}
+
+function getBestQuizAttempt(attempts = {}, quizId) {
+  const rows = asArray(attempts?.[quizId]);
+  if (!rows.length) return null;
+  return rows.reduce((best, row) => Number(row.percent || 0) > Number(best.percent || 0) ? row : best, rows[0]);
+}
+
+function masteryFromPercent(percent = 0) {
+  const value = Number(percent || 0);
+  if (value >= 90) return { label: 'Advanced', icon: '🏆', tone: 'green', note: 'Excellent mastery. Keep challenging yourself.' };
+  if (value >= 75) return { label: 'Proficient', icon: '🌟', tone: 'blue', note: 'Good understanding. A short review can make it stronger.' };
+  if (value >= 50) return { label: 'Developing', icon: '🌱', tone: 'yellow', note: 'You are getting there. Review the missed questions.' };
+  return { label: 'Needs Practice', icon: '🧭', tone: 'pink', note: 'Try again after reviewing the lesson.' };
+}
+
+function normalizeQuizOption(option, index) {
+  const text = typeof option === 'string' ? option : (option?.text || option?.label || option?.value || `Choice ${index + 1}`);
+  return {
+    id: String(option?.id ?? option?.value ?? `opt-${index}-${text}`),
+    text,
+    isCorrect: Boolean(option?.isCorrect || option?.correct)
+  };
+}
+
+function stableShuffleOptions(options = [], seed = '') {
+  const rows = [...options];
+  let hash = String(seed || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  for (let i = rows.length - 1; i > 0; i--) {
+    hash = (hash * 9301 + 49297) % 233280;
+    const j = hash % (i + 1);
+    [rows[i], rows[j]] = [rows[j], rows[i]];
+  }
+  return rows;
+}
+
+function buildFallbackOptions(correctText, alternates = []) {
+  const correct = String(correctText || 'Filipino');
+  const choices = [correct, ...alternates.filter(Boolean).filter(item => String(item) !== correct)];
+  const fillers = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Oral Communication', 'Pagsulat', 'Hindi nabanggit'];
+  fillers.forEach(item => {
+    if (choices.length < 4 && !choices.includes(item)) choices.push(item);
+  });
+
+  const options = choices.slice(0, 4).map((text, index) => ({
+    id: `fallback-${index}-${String(text).replace(/\s+/g, '-').toLowerCase()}`,
+    text,
+    isCorrect: String(text) === correct
+  }));
+
+  return stableShuffleOptions(options, correct);
+}
+
+function buildQuizQuestionsFromLesson(lesson = {}) {
+  const activities = asArray(lesson?.activities);
+  const questions = [];
+
+  activities.forEach((activity, activityIndex) => {
+    if (activity?.type === 'mcq') {
+      asArray(activity.questions).forEach((question, questionIndex) => {
+        const options = asArray(question.options || question.choices).map(normalizeQuizOption);
+        if (!options.length) return;
+        const hasCorrect = options.some(option => option.isCorrect);
+        questions.push({
+          id: String(question.id || `${lesson.id || 'lesson'}-${activityIndex}-${questionIndex}`),
+          type: 'mcq',
+          source: activity.title || 'Lesson Quiz',
+          prompt: question.question || question.prompt || 'Piliin ang tamang sagot.',
+          options: hasCorrect ? options : options.map((option, idx) => ({ ...option, isCorrect: idx === 0 })),
+          points: Number(question.points || 1)
+        });
+      });
+    }
+
+    if (activity?.type === 'matching') {
+      asArray(activity.pairs || activity.items).slice(0, 3).forEach((pair, pairIndex) => {
+        const left = pair.left || pair.word || pair.term || `Item ${pairIndex + 1}`;
+        const right = pair.right || pair.meaning || pair.answer || 'Tamang pares';
+        questions.push({
+          id: String(pair.id || `${lesson.id || 'lesson'}-match-${pairIndex}`),
+          type: 'mcq',
+          source: activity.title || 'Matching Check',
+          prompt: `Ano ang tamang pares o kahulugan ng "${left}"?`,
+          options: buildFallbackOptions(right, asArray(activity.pairs || activity.items).map(item => item.right || item.meaning || item.answer)),
+          points: 1
+        });
+      });
+    }
+  });
+
+  if (!questions.length) {
+    const subject = lesson.subject || 'Filipino';
+    const title = lesson.title || 'Aralin';
+    questions.push(
+      {
+        id: `${lesson.id || title}-fallback-subject`,
+        type: 'mcq',
+        source: 'Lesson Check',
+        prompt: `Anong subject area ang pinakaakma sa araling "${title}"?`,
+        options: buildFallbackOptions(subject, SUBJECTS.map(item => item.name)),
+        points: 1
+      },
+      {
+        id: `${lesson.id || title}-fallback-purpose`,
+        type: 'mcq',
+        source: 'Lesson Check',
+        prompt: 'Ano ang dapat gawin pagkatapos basahin ang aralin?',
+        options: [
+          { id: 'purpose-0', text: 'Sagutin ang gawain at tingnan ang feedback', isCorrect: true },
+          { id: 'purpose-1', text: 'Isara agad ang lesson', isCorrect: false },
+          { id: 'purpose-2', text: 'Laktawan ang lahat ng activity', isCorrect: false },
+          { id: 'purpose-3', text: 'Hindi na kailangan mag-practice', isCorrect: false }
+        ],
+        points: 1
+      }
+    );
+  }
+
+  return questions.slice(0, 8);
+}
+
+function buildStudentQuizzes(data = {}) {
+  return asArray(data?.lessons).map((lesson) => {
+    const questions = buildQuizQuestionsFromLesson(lesson);
+    return {
+      id: `lesson-${lesson.id || lesson.title}-quiz`,
+      lessonId: lesson.id,
+      lessonTitle: lesson.title || 'Lesson',
+      title: `${lesson.title || 'Lesson'} Quiz`,
+      subject: lesson.subject || 'Filipino',
+      gradeLevel: lesson.gradeLevel || data?.student?.gradeLevel || '—',
+      xpReward: Math.max(5, Math.round(Number(lesson.xpReward || 20) / 2)),
+      type: lesson.completed ? 'Post-Lesson Quiz' : 'Practice Quiz',
+      unlocked: true,
+      questions
+    };
+  }).filter(quiz => quiz.questions.length);
+}
+
+function getQuizStats(quizzes = [], attempts = {}) {
+  const taken = quizzes.filter(quiz => asArray(attempts?.[quiz.id]).length).length;
+  const bestScores = quizzes.map(quiz => getBestQuizAttempt(attempts, quiz.id)).filter(Boolean);
+  const average = bestScores.length
+    ? Math.round(bestScores.reduce((sum, item) => sum + Number(item.percent || 0), 0) / bestScores.length)
+    : 0;
+  const passed = bestScores.filter(item => Number(item.percent || 0) >= 75).length;
+  return { total: quizzes.length, taken, average, passed };
+}
+
+function gradeQuizAttempt(quiz = {}, answers = {}, attemptNo = 1) {
+  const questions = asArray(quiz.questions);
+  let score = 0;
+  let total = 0;
+
+  const review = questions.map((question, index) => {
+    const points = Number(question.points || 1);
+    const selectedId = answers[question.id];
+    const selectedOption = asArray(question.options).find(option => String(option.id) === String(selectedId)) || null;
+    const correctOption = asArray(question.options).find(option => option.isCorrect) || asArray(question.options)[0] || null;
+    const correct = Boolean(selectedOption && correctOption && String(selectedOption.id) === String(correctOption.id));
+
+    total += points;
+    if (correct) score += points;
+
+    return {
+      index: index + 1,
+      questionId: question.id,
+      prompt: question.prompt,
+      selectedText: selectedOption?.text || 'No answer',
+      correctText: correctOption?.text || '—',
+      correct,
+      pointsEarned: correct ? points : 0,
+      points
+    };
+  });
+
+  const percent = total ? Math.round((score / total) * 100) : 0;
+  const mastery = masteryFromPercent(percent);
+
+  return {
+    id: `${quiz.id}-${Date.now()}`,
+    quizId: quiz.id,
+    quizTitle: quiz.title,
+    lessonId: quiz.lessonId,
+    lessonTitle: quiz.lessonTitle,
+    subject: quiz.subject,
+    gradeLevel: quiz.gradeLevel,
+    xpReward: Number(quiz.xpReward || 0),
+    score,
+    total,
+    percent,
+    mastery,
+    attemptNo,
+    review,
+    submittedAt: new Date().toISOString()
+  };
+}
+
 function StarRow({ count = 0, max = 6 }) {
   return <>{Array.from({ length: max }).map((_, idx) => <span key={idx} className={`kid-star ${idx < count ? 'on' : ''}`}>⭐</span>)}</>;
 }
@@ -1322,6 +1661,7 @@ function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLes
   const goStudentTab = (tab) => {
     if (tab === 'home') return go('screen-student');
     if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'quizzes') return go('screen-stu-quizzes');
     if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'badges') return go('screen-stu-badges');
@@ -1872,7 +2212,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         min-height: 82px;
         padding: 10px 20px;
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 10px;
         border-radius: 34px;
         background: rgba(255, 255, 255, 0.96);
@@ -2475,6 +2815,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
       <nav className="g12-nav" aria-label="Student navigation">
         <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
         <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
         <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
         <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
         <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
@@ -3178,7 +3519,7 @@ function Grade46ReferenceStyles() {
   );
 }
 
-function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logout, title, subtitle, icon = '☀️', children, titleAction }) {
+function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logout, title, subtitle, icon = '☀️', children, titleAction, beforeNavigate }) {
   const s = data?.student || {};
   const xp = Number(s.xp || 0);
   const level = levelForXp(xp);
@@ -3186,10 +3527,12 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
   const avatar = s.avatar || '👤';
 
   const openTab = (tab) => {
+    if (typeof beforeNavigate === 'function' && !beforeNavigate(tab)) return;
     if (typeof goStudentTab === 'function') return goStudentTab(tab);
     if (!go) return;
     if (tab === 'home') return go('screen-student');
     if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'quizzes') return go('screen-stu-quizzes');
     if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'badges') return go('screen-stu-badges');
@@ -3199,6 +3542,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
   const navItems = [
     { id: 'home', icon: '🏠', label: 'Home' },
     { id: 'lessons', icon: '📚', label: 'Lessons' },
+    { id: 'quizzes', icon: '🧠', label: 'Quizzes' },
     { id: 'missions', icon: '🎮', label: 'Missions' },
     { id: 'groups', icon: '👥', label: 'Groups' },
     { id: 'profile', icon: '👤', label: 'Profile' }
@@ -3987,7 +4331,7 @@ function EarlyStudentSubpageStyles() {
         min-height: 82px;
         padding: 10px 20px;
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 10px;
         border-radius: 34px;
         background: rgba(255, 255, 255, 0.96);
@@ -4652,14 +4996,16 @@ function EarlyStudentSubpageStyles() {
   );
 }
 
-function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, children, showProgress = true }) {
+function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, children, showProgress = true, beforeNavigate }) {
   const s = data?.student || {};
   const level = levelForXp(s.xp);
   const xpPct = xpPercent(s.xp);
 
   const goStudentTab = (tab) => {
+    if (typeof beforeNavigate === 'function' && !beforeNavigate(tab)) return;
     if (tab === 'home') return go('screen-student');
     if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'quizzes') return go('screen-stu-quizzes');
     if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'badges') return go('screen-stu-badges');
@@ -4709,6 +5055,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
         <nav className="g12-nav" aria-label="Student navigation">
           <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
           <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
           <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
           <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
           <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
@@ -5092,6 +5439,10 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
           ))}
         </div>
 
+        <div className="card">
+          <StudentSelfEvaluation isEarlyGrade={false} />
+        </div>
+
         <div
           className="card"
           style={{
@@ -5115,6 +5466,89 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
         </div>
       </div>
     </>
+  );
+}
+
+
+function StudentSelfEvaluation({ isEarlyGrade = false }) {
+  const [answers, setAnswers] = useState({});
+
+  const questions = isEarlyGrade
+    ? [
+        { id: 'understand', label: 'Naintindihan ko ang lesson.', options: ['😊 Oo', '😐 Konti lang', '😟 Hindi pa'] },
+        { id: 'practice', label: 'Kaya kong subukan ulit ang activity.', options: ['⭐ Kaya ko', '🌱 Kailangan pa', '🧑‍🏫 Help po'] }
+      ]
+    : [
+        { id: 'understand', label: 'I understood the lesson.', options: ['Strongly agree', 'Agree', 'Need review'] },
+        { id: 'useful', label: 'The activity helped me practice Filipino.', options: ['Strongly agree', 'Agree', 'Need review'] },
+        { id: 'confidence', label: 'I feel ready for a short quiz or task.', options: ['Ready', 'Almost ready', 'Need support'] }
+      ];
+
+  const answered = Object.keys(answers).length;
+  const complete = answered === questions.length;
+
+  return (
+    <div
+      style={{
+        borderRadius: isEarlyGrade ? 30 : 22,
+        padding: isEarlyGrade ? 24 : 20,
+        background: 'linear-gradient(135deg, #fff8cf, #f0fff5)',
+        border: '2px solid rgba(246, 196, 83, 0.34)',
+        boxShadow: '0 14px 28px rgba(39, 87, 63, 0.06)'
+      }}
+    >
+      <div className="section-title" style={{ fontSize: isEarlyGrade ? 28 : 22, marginBottom: 8 }}>
+        {isEarlyGrade ? '🌟 Quick Check' : '🧾 Lesson Evaluation'}
+      </div>
+      <p className={isEarlyGrade ? 'g12-muted' : 'muted'} style={{ marginBottom: 16 }}>
+        {isEarlyGrade
+          ? 'Sagutin ito para malaman ni teacher kung madali o mahirap ang lesson.'
+          : 'This self-check helps teachers see if the lesson is clear, useful, and ready for assessment.'}
+      </p>
+
+      <div style={{ display: 'grid', gap: 14 }}>
+        {questions.map(question => (
+          <div key={question.id}>
+            <strong style={{ display: 'block', marginBottom: 8, color: '#14223b', fontSize: isEarlyGrade ? 18 : 15 }}>
+              {question.label}
+            </strong>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {question.options.map(option => (
+                <button
+                  key={option}
+                  type="button"
+                  className={answers[question.id] === option ? 'btn btn-green' : 'btn btn-outline'}
+                  onClick={() => setAnswers(prev => ({ ...prev, [question.id]: option }))}
+                  style={{
+                    minHeight: isEarlyGrade ? 54 : 42,
+                    borderRadius: isEarlyGrade ? 20 : 14,
+                    fontSize: isEarlyGrade ? 17 : 14,
+                    fontWeight: 900
+                  }}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {complete && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: 14,
+            borderRadius: 18,
+            background: '#E9FBEF',
+            color: '#0d7f48',
+            fontWeight: 900
+          }}
+        >
+          ✅ {isEarlyGrade ? 'Salamat! Nakita ni teacher ang self-check mo.' : 'Evaluation saved in this session. Backend storage can be connected for reports.'}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -6289,6 +6723,8 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                 </div>
               </div>
 
+              <StudentSelfEvaluation isEarlyGrade={true} />
+
               {feedback && (
                 <div className="g12-mission-feedback">
                   {feedback}
@@ -6429,6 +6865,7 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
 function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitMcq }) {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [mcqFeedback, setMcqFeedback] = useState({});
+  const [mcqStats, setMcqStats] = useState({});
 
   async function handleMcq(question, option) {
     setSelectedAnswers(prev => ({
@@ -6439,6 +6876,11 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
     const result = await submitMcq(question, option);
 
     if (result) {
+      setMcqStats(prev => ({
+        ...prev,
+        [question.id]: Boolean(result.correct)
+      }));
+
       setMcqFeedback(prev => ({
         ...prev,
         [question.id]: result.correct
@@ -6453,6 +6895,10 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
   }
 
   const questions = activity.questions || [];
+  const answeredCount = Object.keys(mcqStats).length;
+  const correctCount = Object.values(mcqStats).filter(Boolean).length;
+  const scorePercent = questions.length ? Math.round((correctCount / questions.length) * 100) : 0;
+  const band = effectivenessBand(scorePercent);
 
   return (
     <div className="card" style={activityBoxStyle}>
@@ -6474,8 +6920,8 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
 
       <div className="muted">
         {isEarlyGrade
-          ? 'Piliin ang tamang sagot.'
-          : 'Choose the best answer for each question.'}
+          ? 'Piliin ang tamang sagot. Makikita mo agad kung tama para makapag-practice muli.'
+          : 'Choose the best answer. This quiz gives the teacher learning evidence beyond lesson completion.'}
       </div>
 
       <div className="divider" />
@@ -6543,6 +6989,32 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
           )}
         </div>
       ))}
+
+      {answeredCount > 0 && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: isEarlyGrade ? 18 : 16,
+            borderRadius: isEarlyGrade ? 24 : 18,
+            background: scorePercent >= 70 ? '#E9FBEF' : '#FFF8CF',
+            border: scorePercent >= 70 ? '1px solid #bfeacb' : '1px solid #f7dfa0',
+            color: '#14223b',
+            fontWeight: 900,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <strong style={{ fontSize: isEarlyGrade ? 22 : 18 }}>
+              {band.icon} Quiz Score: {correctCount}/{questions.length} ({scorePercent}%)
+            </strong>
+            <span className="pill">{band.label}</span>
+          </div>
+          <div style={{ marginTop: 8, color: '#526988', fontSize: isEarlyGrade ? 16 : 14 }}>
+            {isEarlyGrade
+              ? 'Kapag may mali, puwede mong subukan muli para mas maintindihan ang lesson.'
+              : `${band.note} Teachers can use this score with writing, speech, and group outputs to judge lesson effectiveness.`}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -7470,7 +7942,7 @@ function MissionStyles() {
         min-height: 76px;
         padding: 8px;
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 6px;
         border-radius: 26px;
         background: rgba(255, 255, 255, 0.96);
@@ -7784,7 +8256,7 @@ function MissionStyles() {
       }
 
       .g12-mission-play-nav {
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
       }
 
 
@@ -7972,6 +8444,1237 @@ function MissionStyles() {
   );
 }
 
+function QuizSharedStyles() {
+  return (
+    <style>{`
+      .quiz-shell {
+        --quiz-green: var(--tt-green, #15965a);
+        --quiz-green-dark: var(--tt-green-dark, #0f7d49);
+        --quiz-green-soft: var(--tt-green-soft, #edf8f1);
+        --quiz-yellow: var(--tt-yellow, #fff5cf);
+        --quiz-yellow-deep: var(--tt-yellow-deep, #f6c453);
+        --quiz-sky: var(--tt-sky, #eef8ff);
+        --quiz-cream: var(--tt-cream, #fffdf7);
+        --quiz-purple: var(--tt-purple, #7b4fd6);
+        --quiz-ink: var(--tt-ink, #203451);
+        --quiz-muted: var(--tt-muted, #526988);
+        display: grid;
+        gap: 18px;
+        color: var(--quiz-ink);
+      }
+
+      .quiz-game-panel,
+      .quiz-game-stage,
+      .quiz-game-results,
+      .quiz-game-landing-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 10% 12%, color-mix(in srgb, var(--quiz-yellow) 88%, transparent), transparent 28%),
+          radial-gradient(circle at 92% 18%, color-mix(in srgb, var(--quiz-sky) 82%, transparent), transparent 26%),
+          linear-gradient(135deg, var(--quiz-cream), #ffffff 54%, var(--quiz-green-soft));
+        border: 1px solid color-mix(in srgb, var(--quiz-green) 13%, transparent);
+        box-shadow: 0 18px 38px rgba(31, 73, 61, 0.08);
+      }
+
+      .quiz-game-panel::before,
+      .quiz-game-stage::before,
+      .quiz-game-results::before,
+      .quiz-game-landing-card::before {
+        content: '';
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        right: -72px;
+        top: -72px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--quiz-yellow) 68%, transparent);
+        pointer-events: none;
+      }
+
+      .quiz-game-panel::after,
+      .quiz-game-stage::after,
+      .quiz-game-results::after,
+      .quiz-game-landing-card::after {
+        content: '';
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        left: -42px;
+        bottom: -42px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--quiz-green-soft) 86%, transparent);
+        pointer-events: none;
+      }
+
+      .quiz-game-landing-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 0.52fr);
+        gap: 24px;
+        align-items: center;
+        padding: 30px;
+      }
+
+      .quiz-game-copy,
+      .quiz-game-mascot-scene,
+      .quiz-game-results-inner,
+      .quiz-game-stage-inner {
+        position: relative;
+        z-index: 1;
+      }
+
+      .quiz-game-copy h2,
+      .quiz-game-panel h2,
+      .quiz-game-results h2 {
+        margin: 0;
+        color: var(--quiz-ink);
+        font-size: clamp(32px, 4vw, 54px);
+        line-height: 0.98;
+        font-weight: 1000;
+        letter-spacing: -0.055em;
+      }
+
+      .quiz-game-copy p,
+      .quiz-game-panel p,
+      .quiz-game-results p,
+      .quiz-game-help-text {
+        margin: 12px 0 0;
+        color: var(--quiz-muted);
+        font-size: 16px;
+        line-height: 1.55;
+        font-weight: 850;
+      }
+
+      .quiz-game-mascot-scene {
+        min-height: 220px;
+        border-radius: 30px;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.92), transparent 18%),
+          linear-gradient(145deg, color-mix(in srgb, var(--quiz-yellow) 76%, white), color-mix(in srgb, var(--quiz-sky) 76%, white));
+        border: 1px solid color-mix(in srgb, var(--quiz-green) 10%, transparent);
+      }
+
+      .quiz-game-mascot {
+        width: 142px;
+        height: 142px;
+        border-radius: 45px;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        font-size: 78px;
+        box-shadow: 0 16px 34px rgba(31, 73, 61, 0.11), inset 0 0 0 3px color-mix(in srgb, var(--quiz-yellow) 50%, transparent);
+      }
+
+      .quiz-game-float {
+        position: absolute;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        box-shadow: 0 12px 22px rgba(31, 73, 61, 0.08);
+        font-weight: 1000;
+      }
+
+      .quiz-game-float.one { width: 52px; height: 52px; left: 12%; top: 18%; color: var(--quiz-green-dark); }
+      .quiz-game-float.two { width: 64px; height: 64px; right: 13%; top: 28%; color: var(--quiz-purple); }
+      .quiz-game-float.three { width: 48px; height: 48px; left: 22%; bottom: 18%; color: var(--quiz-yellow-deep); }
+
+      .quiz-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .quiz-stat {
+        border-radius: 26px;
+        padding: 18px;
+        background: #ffffff;
+        border: 1px solid color-mix(in srgb, var(--quiz-green) 10%, transparent);
+        box-shadow: 0 12px 26px rgba(31, 73, 61, 0.06);
+      }
+
+      .quiz-stat b {
+        display: block;
+        color: var(--quiz-ink);
+        font-size: 30px;
+        font-weight: 1000;
+        letter-spacing: -0.04em;
+      }
+
+      .quiz-stat span {
+        display: block;
+        margin-top: 4px;
+        color: var(--quiz-muted);
+        font-size: 12px;
+        font-weight: 950;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .quiz-game-toolbar,
+      .quiz-game-header,
+      .quiz-result-actions,
+      .quiz-nav-actions,
+      .quiz-pill-row,
+      .quiz-game-subject-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .quiz-game-toolbar {
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      .quiz-game-subject-row {
+        margin: 4px 0 18px;
+      }
+
+      .quiz-game-subject-chip,
+      .quiz-pill,
+      .quiz-game-help {
+        min-height: 34px;
+        border: 0;
+        padding: 0 12px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--quiz-green-dark);
+        font-size: 12px;
+        font-weight: 1000;
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--quiz-green) 9%, transparent);
+      }
+
+      .quiz-game-help {
+        width: 42px;
+        min-height: 42px;
+        padding: 0;
+        font-size: 18px;
+        background: var(--quiz-yellow);
+        color: var(--quiz-ink);
+      }
+
+      .quiz-card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .quiz-card {
+        border: 0;
+        min-height: 232px;
+        padding: 22px;
+        border-radius: 30px;
+        background: #ffffff;
+        color: var(--quiz-ink);
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 14px 28px rgba(31, 73, 61, 0.06);
+        border: 1px solid color-mix(in srgb, var(--quiz-green) 8%, transparent);
+        transition: transform 0.16s ease, box-shadow 0.16s ease;
+      }
+
+      .quiz-card:hover,
+      .quiz-card:focus-visible,
+      .quiz-primary:hover,
+      .quiz-secondary:hover,
+      .quiz-choice:hover:not(:disabled) {
+        transform: translateY(-2px);
+      }
+
+      .quiz-card:focus-visible,
+      .quiz-primary:focus-visible,
+      .quiz-secondary:focus-visible,
+      .quiz-choice:focus-visible,
+      .quiz-game-start-btn:focus-visible {
+        outline: 4px solid color-mix(in srgb, var(--quiz-yellow-deep) 45%, transparent);
+        outline-offset: 3px;
+      }
+
+      .quiz-card.green { background: var(--quiz-green-soft); }
+      .quiz-card.blue { background: var(--quiz-sky); }
+      .quiz-card.yellow { background: var(--quiz-yellow); }
+      .quiz-card.purple { background: color-mix(in srgb, var(--quiz-purple) 10%, white); }
+      .quiz-card.pink { background: #fff0f5; }
+
+      .quiz-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .quiz-card-icon {
+        width: 66px;
+        height: 66px;
+        border-radius: 24px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.82);
+        font-size: 36px;
+        flex: 0 0 auto;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65);
+      }
+
+      .quiz-card h3 {
+        margin: 14px 0 8px;
+        color: var(--quiz-ink);
+        font-size: 25px;
+        line-height: 1.05;
+        font-weight: 1000;
+        letter-spacing: -0.035em;
+      }
+
+      .quiz-card p {
+        margin: 0;
+        color: var(--quiz-muted);
+        font-size: 15px;
+        line-height: 1.5;
+        font-weight: 850;
+      }
+
+      .quiz-action,
+      .quiz-primary,
+      .quiz-secondary,
+      .quiz-game-start-btn {
+        min-height: 50px;
+        border-radius: 18px;
+        font-size: 15px;
+        font-weight: 1000;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        line-height: 1;
+      }
+
+      .quiz-action,
+      .quiz-primary,
+      .quiz-game-start-btn {
+        border: 0;
+        padding: 0 22px;
+        background: linear-gradient(135deg, var(--quiz-green), var(--quiz-green-dark));
+        color: #ffffff;
+        box-shadow: 0 12px 20px rgba(21, 150, 90, 0.16);
+      }
+
+      .quiz-game-start-btn {
+        min-height: 60px;
+        border-radius: 22px;
+        padding: 0 28px;
+        font-size: 18px;
+      }
+
+      .quiz-secondary {
+        border: 2px solid color-mix(in srgb, var(--quiz-green) 22%, transparent);
+        padding: 0 20px;
+        background: #ffffff;
+        color: var(--quiz-green-dark);
+      }
+
+      .quiz-primary:disabled,
+      .quiz-secondary:disabled,
+      .quiz-choice:disabled {
+        cursor: not-allowed;
+        opacity: 0.72;
+      }
+
+      .quiz-game-stage {
+        padding: 24px;
+      }
+
+      .quiz-game-stage-inner {
+        display: grid;
+        gap: 18px;
+      }
+
+      .quiz-game-header {
+        justify-content: space-between;
+        padding: 16px 18px;
+        border-radius: 26px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid color-mix(in srgb, var(--quiz-green) 10%, transparent);
+      }
+
+      .quiz-game-title-line {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+      }
+
+      .quiz-game-title-icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: var(--quiz-yellow);
+        font-size: 30px;
+        flex: 0 0 auto;
+      }
+
+      .quiz-game-title-line h2 {
+        margin: 0;
+        color: var(--quiz-ink);
+        font-size: clamp(23px, 3vw, 36px);
+        line-height: 1.04;
+        font-weight: 1000;
+        letter-spacing: -0.045em;
+      }
+
+      .quiz-game-title-line small {
+        display: block;
+        margin-top: 3px;
+        color: var(--quiz-muted);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .quiz-progress-line {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        color: var(--quiz-muted);
+        font-weight: 950;
+      }
+
+      .quiz-progress-track {
+        height: 14px;
+        border-radius: 999px;
+        background: #eaf4ee;
+        overflow: hidden;
+        border: 1px solid color-mix(in srgb, var(--quiz-green) 12%, transparent);
+      }
+
+      .quiz-progress-track span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--quiz-green), var(--quiz-yellow-deep));
+      }
+
+      .quiz-question-box {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 190px;
+        gap: 22px;
+        align-items: center;
+        border-radius: 30px;
+        padding: 26px;
+        background:
+          radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.72), transparent 18%),
+          linear-gradient(135deg, #ffffff, var(--quiz-yellow) 55%, var(--quiz-sky));
+        border: 1px solid color-mix(in srgb, var(--quiz-yellow-deep) 28%, transparent);
+      }
+
+      .quiz-question-box small {
+        display: inline-flex;
+        width: max-content;
+        min-height: 32px;
+        align-items: center;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--quiz-green-dark);
+        font-weight: 1000;
+      }
+
+      .quiz-question-box h2 {
+        margin: 12px 0 0;
+        color: var(--quiz-ink);
+        font-size: clamp(28px, 3.6vw, 48px);
+        line-height: 1.08;
+        letter-spacing: -0.05em;
+        font-weight: 1000;
+      }
+
+      .quiz-question-mascot {
+        min-height: 172px;
+        border-radius: 28px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 88px;
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.68);
+      }
+
+      .quiz-choice-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .quiz-choice {
+        border: 0;
+        min-height: 88px;
+        padding: 16px 18px;
+        border-radius: 24px;
+        background: #ffffff;
+        color: var(--quiz-ink);
+        text-align: left;
+        font-size: 17px;
+        line-height: 1.35;
+        font-weight: 950;
+        cursor: pointer;
+        box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--quiz-green) 10%, transparent), 0 10px 18px rgba(31, 73, 61, 0.04);
+        transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+      }
+
+      .quiz-choice-letter {
+        width: 38px;
+        height: 38px;
+        margin-right: 10px;
+        border-radius: 14px;
+        display: inline-grid;
+        place-items: center;
+        background: var(--quiz-green-soft);
+        color: var(--quiz-green-dark);
+        font-size: 15px;
+        font-weight: 1000;
+      }
+
+      .quiz-choice.selected {
+        background: var(--quiz-yellow);
+        box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--quiz-yellow-deep) 30%, transparent), 0 8px 0 color-mix(in srgb, var(--quiz-yellow-deep) 32%, transparent);
+      }
+
+      .quiz-choice.correct {
+        background: var(--quiz-green-soft);
+        box-shadow: inset 0 0 0 4px color-mix(in srgb, var(--quiz-green) 24%, transparent), 0 8px 0 color-mix(in srgb, var(--quiz-green) 18%, transparent);
+      }
+
+      .quiz-choice.incorrect {
+        background: #fff8f8;
+        box-shadow: inset 0 0 0 4px rgba(239, 68, 68, 0.18), 0 8px 0 rgba(239, 68, 68, 0.08);
+      }
+
+      .quiz-feedback {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 14px;
+        align-items: center;
+        padding: 18px;
+        border-radius: 24px;
+        background: #ffffff;
+        border: 1px solid color-mix(in srgb, var(--quiz-green) 10%, transparent);
+        box-shadow: 0 12px 24px rgba(31, 73, 61, 0.05);
+      }
+
+      .quiz-feedback.correct {
+        background: var(--quiz-green-soft);
+        border-color: color-mix(in srgb, var(--quiz-green) 26%, transparent);
+      }
+
+      .quiz-feedback.incorrect {
+        background: #fff8f8;
+        border-color: rgba(239, 68, 68, 0.18);
+      }
+
+      .quiz-feedback-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 22px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 255, 255, 0.78);
+        font-size: 34px;
+      }
+
+      .quiz-feedback h3 {
+        margin: 0;
+        color: var(--quiz-ink);
+        font-size: 22px;
+        font-weight: 1000;
+        letter-spacing: -0.035em;
+      }
+
+      .quiz-feedback p {
+        margin: 6px 0 0;
+        color: var(--quiz-muted);
+        font-size: 15px;
+        line-height: 1.45;
+        font-weight: 850;
+      }
+
+      .quiz-nav-actions,
+      .quiz-result-actions {
+        justify-content: space-between;
+      }
+
+      .quiz-game-results {
+        padding: 32px;
+        text-align: center;
+      }
+
+      .quiz-game-results-inner {
+        display: grid;
+        justify-items: center;
+        gap: 16px;
+      }
+
+      .quiz-result-mascot {
+        width: 138px;
+        height: 138px;
+        border-radius: 44px;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        font-size: 76px;
+        box-shadow: 0 16px 34px rgba(31, 73, 61, 0.10), inset 0 0 0 3px color-mix(in srgb, var(--quiz-yellow) 50%, transparent);
+      }
+
+      .quiz-score-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 78px;
+        padding: 0 30px;
+        border-radius: 28px;
+        background: #ffffff;
+        color: var(--quiz-ink);
+        font-size: clamp(30px, 4vw, 46px);
+        font-weight: 1000;
+        box-shadow: 0 12px 24px rgba(31, 73, 61, 0.08);
+      }
+
+      .quiz-game-stars {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        font-size: 28px;
+        line-height: 1;
+      }
+
+      .quiz-game-stars .kid-star {
+        filter: grayscale(1);
+        opacity: 0.38;
+      }
+
+      .quiz-game-stars .kid-star.on {
+        filter: none;
+        opacity: 1;
+      }
+
+      .quiz-result-rewards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        width: min(720px, 100%);
+      }
+
+      .quiz-reward-box {
+        padding: 16px;
+        border-radius: 22px;
+        background: #ffffff;
+        border: 1px solid color-mix(in srgb, var(--quiz-green) 10%, transparent);
+      }
+
+      .quiz-reward-box b {
+        display: block;
+        color: var(--quiz-ink);
+        font-size: 22px;
+        font-weight: 1000;
+      }
+
+      .quiz-reward-box span {
+        display: block;
+        margin-top: 3px;
+        color: var(--quiz-muted);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .quiz-review-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .quiz-review-item {
+        border-radius: 22px;
+        padding: 16px;
+        background: #ffffff;
+        border: 1px solid #e7f0ea;
+      }
+
+      .quiz-review-item.correct {
+        background: var(--quiz-green-soft);
+        border-color: color-mix(in srgb, var(--quiz-green) 26%, transparent);
+      }
+
+      .quiz-review-item.wrong {
+        background: #fff8f8;
+        border-color: rgba(239, 68, 68, 0.18);
+      }
+
+      .quiz-review-item b {
+        color: var(--quiz-ink);
+      }
+
+      .quiz-review-item p {
+        margin: 7px 0 0;
+        color: var(--quiz-muted);
+        font-weight: 850;
+        line-height: 1.45;
+      }
+
+      .g12-page .quiz-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .g12-page .quiz-card {
+        min-height: 210px;
+        border-radius: 34px;
+        border: 3px solid rgba(255, 255, 255, 0.70);
+        box-shadow: 0 8px 0 rgba(21, 150, 90, 0.09), 0 18px 28px rgba(21, 150, 90, 0.09);
+      }
+      .g12-page .quiz-card h3 { font-size: 24px; }
+      .g12-page .quiz-choice { min-height: 90px; border-radius: 26px; font-size: 18px; }
+      .g12-page .quiz-game-stage,
+      .g12-page .quiz-game-results,
+      .g12-page .quiz-game-landing-card { border-radius: 36px; }
+
+      @media (max-width: 980px) {
+        .quiz-game-landing-card,
+        .quiz-question-box,
+        .quiz-result-rewards {
+          grid-template-columns: 1fr;
+        }
+        .quiz-question-mascot { min-height: 124px; font-size: 64px; }
+      }
+
+      @media (max-width: 900px) {
+        .quiz-stat-grid,
+        .quiz-card-grid,
+        .quiz-choice-grid {
+          grid-template-columns: 1fr;
+        }
+        .quiz-progress-line { grid-template-columns: 1fr; }
+        .quiz-game-header,
+        .quiz-nav-actions,
+        .quiz-result-actions { align-items: stretch; flex-direction: column; }
+        .quiz-secondary,
+        .quiz-primary,
+        .quiz-game-start-btn { width: 100%; }
+      }
+    `}</style>
+  );
+}
+
+function QuizMascotScene({ mascot = '🧠', compact = false }) {
+  return (
+    <div className="quiz-game-mascot-scene" aria-hidden="true">
+      <span className="quiz-game-float one">Aa</span>
+      <span className="quiz-game-float two">⭐</span>
+      <span className="quiz-game-float three">✓</span>
+      <div className="quiz-game-mascot" style={compact ? { width: 112, height: 112, fontSize: 62 } : undefined}>{mascot}</div>
+    </div>
+  );
+}
+
+function QuizMetricCard({ value, label }) {
+  return (
+    <div className="quiz-stat">
+      <b>{value}</b>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function QuizGameProgress({ currentIndex = 0, total = 0, answeredCount = 0 }) {
+  const progress = total ? Math.round(((currentIndex + 1) / total) * 100) : 0;
+  return (
+    <div className="quiz-progress-line" aria-label="Quiz progress">
+      <span>Question {Math.min(currentIndex + 1, Math.max(total, 1))} of {total || 1}</span>
+      <div className="quiz-progress-track" role="progressbar" aria-valuenow={progress} aria-valuemin="0" aria-valuemax="100">
+        <span style={{ width: `${progress}%` }} />
+      </div>
+      <span>{answeredCount}/{total} answered</span>
+    </div>
+  );
+}
+
+function QuizGameHeader({ quiz, best, go, onBack }) {
+  return (
+    <header className="quiz-game-header">
+      <div className="quiz-game-title-line">
+        <span className="quiz-game-title-icon">{subjectTheme(quiz?.subject).icon || '🧠'}</span>
+        <div>
+          <h2>{quiz?.title || 'Quiz'}</h2>
+          <small>{quiz?.subject || 'Filipino'} • {quiz?.type || 'Practice Quiz'} {best ? `• Best ${best.percent}%` : ''}</small>
+        </div>
+      </div>
+
+      <div className="quiz-game-toolbar" style={{ marginBottom: 0 }}>
+        <button type="button" className="quiz-secondary" onClick={onBack || (() => go('screen-stu-quizzes'))}>← Back</button>
+        <button type="button" className="quiz-game-help" title="Basahin ang tanong at piliin ang sagot. Makikita ang feedback pagkatapos mong i-submit ang quiz.">?</button>
+      </div>
+    </header>
+  );
+}
+
+function QuizStartCard({ quiz, best, onStart, onBack }) {
+  return (
+    <section className="quiz-game-landing-card" aria-label="Quiz start">
+      <div className="quiz-game-copy">
+        <div className="quiz-pill-row">
+          <span className="quiz-pill">{subjectTheme(quiz?.subject).icon || '📚'} {quiz?.subject || 'Filipino'}</span>
+          <span className="quiz-pill">{asArray(quiz?.questions).length} question{asArray(quiz?.questions).length === 1 ? '' : 's'}</span>
+          <span className="quiz-pill">+{quiz?.xpReward || 0} XP preview</span>
+        </div>
+        <h2>Ready ka na sa Quiz Quest?</h2>
+        <p>
+          Basahin ang bawat tanong at piliin ang pinakamagandang sagot. Makikita ang score at review feedback pagkatapos mong i-submit ang quiz.
+        </p>
+        {best && <p><strong>Best score:</strong> {best.score}/{best.total} ({best.percent}%) • {best.mastery?.label || 'Progress saved'}</p>}
+        <div className="quiz-result-actions" style={{ justifyContent: 'flex-start', marginTop: 18 }}>
+          <button type="button" className="quiz-game-start-btn" onClick={onStart}>🚀 Start Quiz</button>
+          <button type="button" className="quiz-secondary" onClick={onBack}>← Back to Quizzes</button>
+        </div>
+      </div>
+
+      <QuizMascotScene mascot="🦉" />
+    </section>
+  );
+}
+
+function QuizAnswerButton({ option, index, selected, reveal, correct, onClick }) {
+  const stateClass = reveal
+    ? correct
+      ? 'correct'
+      : selected
+        ? 'incorrect'
+        : ''
+    : selected
+      ? 'selected'
+      : '';
+
+  return (
+    <button
+      type="button"
+      className={`quiz-choice ${stateClass}`}
+      onClick={onClick}
+      aria-pressed={selected}
+    >
+      <span className="quiz-choice-letter">{String.fromCharCode(65 + index)}</span>
+      {option.text}
+    </button>
+  );
+}
+
+function QuizFeedbackMessage({ selectedOption, correctOption }) {
+  if (!selectedOption) {
+    return (
+      <div className="quiz-feedback">
+        <div className="quiz-feedback-icon">💡</div>
+        <div>
+          <h3>Piliin ang sagot mo.</h3>
+          <p>Take your time. Basahin muna ang tanong bago pumili.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const correct = String(selectedOption.id) === String(correctOption?.id);
+  return (
+    <div className={`quiz-feedback ${correct ? 'correct' : 'incorrect'}`} role="status" aria-live="polite">
+      <div className="quiz-feedback-icon">{correct ? '🎉' : '🌱'}</div>
+      <div>
+        <h3>{correct ? 'Tama! Great job!' : 'Good try! Balikan natin.'}</h3>
+        <p>
+          {correct
+            ? 'Nakuha mo ang tamang sagot. Magpatuloy sa susunod na tanong.'
+            : `Ang tamang sagot ay: ${correctOption?.text || '—'}. Maaari mong gamitin ito sa review pagkatapos ng quiz.`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function QuizQuestionCard({ quiz, question, currentIndex, total }) {
+  return (
+    <section className="quiz-question-box" aria-label={`Question ${currentIndex + 1}`}>
+      <div>
+        <small>{quiz?.subject || 'Filipino'} • {question?.source || 'Quiz Check'}</small>
+        <h2>{question?.prompt || 'Piliin ang tamang sagot.'}</h2>
+      </div>
+      <div className="quiz-question-mascot" aria-hidden="true">
+        {currentIndex + 1 >= total ? '🏁' : '🧠'}
+      </div>
+    </section>
+  );
+}
+
+function QuizResultCard({ result }) {
+  const mastery = result?.mastery || masteryFromPercent(result?.percent || 0);
+  const starCount = Math.max(1, Math.min(5, Math.ceil(Number(result?.percent || 0) / 20)));
+  return (
+    <section className="quiz-game-results" aria-label="Quiz result">
+      <div className="quiz-game-results-inner">
+        <div className="quiz-result-mascot" aria-hidden="true">{mastery.icon || '🏆'}</div>
+        <h2>{mastery.label}</h2>
+        <div className="quiz-game-stars"><StarRow count={starCount} max={5} /></div>
+        <p>{mastery.note}</p>
+        <div className="quiz-score-badge">{result.percent}/100</div>
+        <div className="quiz-result-rewards">
+          <div className="quiz-reward-box"><b>{result.score}/{result.total}</b><span>Raw score</span></div>
+          <div className="quiz-reward-box"><b>+{result.xpReward || 0}</b><span>XP reward preview</span></div>
+          <div className="quiz-reward-box"><b>{result.attemptNo || 1}</b><span>Attempt number</span></div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StudentQuizzes({ data, go, openQuiz, quizAttempts = {} }) {
+  const student = data?.student || {};
+  const early = Number(student?.gradeLevel || 4) <= 2;
+  const quizzes = buildStudentQuizzes(data);
+  const recommendedQuiz = quizzes.find(quiz => !asArray(quizAttempts?.[quiz.id]).length) || quizzes[0];
+  const subjectCounts = SUBJECTS.map(subject => ({
+    ...subject,
+    count: quizzes.filter(quiz => quiz.subject === subject.name).length
+  })).filter(item => item.count > 0);
+
+  const cards = quizzes.map((quiz, index) => {
+    const best = getBestQuizAttempt(quizAttempts, quiz.id);
+    const mastery = best?.mastery || masteryFromPercent(0);
+    const subjectMeta = SUBJECTS.find(subject => subject.name === quiz.subject) || SUBJECTS[index % SUBJECTS.length] || SUBJECTS[0];
+    return { quiz, best, mastery, tone: mastery.tone || subjectMeta.tone || 'green', icon: subjectTheme(quiz.subject).icon || '🧠' };
+  });
+
+  const quizContent = (
+    <>
+      <QuizSharedStyles />
+      <div className="quiz-shell">
+        <section className={early ? 'g12-section-card' : 'g46-ref-panel'}>
+          <div className={early ? 'g12-section-head' : 'g46-ref-panel-head'}>
+            <div>
+              <h2 className={early ? 'g12-section-title' : ''}>{early ? '🧠 Mga Quiz' : 'Quiz List'}</h2>
+              <p className={early ? 'g12-section-subtitle' : 'g46-ref-muted'}>
+                {early
+                  ? 'Pumili ng quiz. Makikita ang feedback pagkatapos i-submit.'
+                  : 'Choose a quiz to check lesson mastery and review results after submission.'}
+              </p>
+            </div>
+            {recommendedQuiz && (
+              <button type="button" className="quiz-secondary" onClick={() => openQuiz(recommendedQuiz)}>
+                🚀 Start Recommended
+              </button>
+            )}
+          </div>
+
+          {subjectCounts.length > 0 && (
+            <div className="quiz-game-subject-row" aria-label="Quiz subject counts">
+              {subjectCounts.map(subject => <span className="quiz-game-subject-chip" key={subject.name}>{subject.icon} {subject.name}: {subject.count}</span>)}
+            </div>
+          )}
+
+          <div className="quiz-card-grid">
+            {cards.map(({ quiz, best, mastery, tone, icon }) => (
+              <button type="button" className={`quiz-card ${tone}`} key={quiz.id} onClick={() => openQuiz(quiz)}>
+                <div>
+                  <div className="quiz-card-head">
+                    <span className="quiz-card-icon">{icon}</span>
+                    <span className="quiz-pill">{best ? `${best.percent}% ${mastery.label}` : 'Not taken yet'}</span>
+                  </div>
+                  <h3>{quiz.title}</h3>
+                  <p>{quiz.subject} • Grade {quiz.gradeLevel} • {quiz.questions.length} question{quiz.questions.length === 1 ? '' : 's'} • +{quiz.xpReward} XP</p>
+                  <div className="quiz-pill-row">
+                    <span className="quiz-pill">{quiz.type}</span>
+                    {best && <span className="quiz-pill">Best: {best.score}/{best.total}</span>}
+                  </div>
+                </div>
+                <span className="quiz-action" role="button" tabIndex={-1}>{best ? 'Retake Quiz' : 'Start Quiz'}</span>
+              </button>
+            ))}
+          </div>
+
+          {!quizzes.length && (
+            <div className={early ? 'g12-empty' : 'g46-ref-empty'}>No quizzes yet. Create lessons with MCQ or matching activities first.</div>
+          )}
+        </section>
+      </div>
+    </>
+  );
+
+  if (early) {
+    return (
+      <EarlyStudentChrome
+        data={data}
+        activeTab="quizzes"
+        go={go}
+        icon="🧠"
+        title="Quiz Quest"
+        subtitle="Sagutin ang quiz para malaman kung naintindihan ang lesson."
+      >
+        {quizContent}
+      </EarlyStudentChrome>
+    );
+  }
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="quizzes"
+      go={go}
+      icon="🧠"
+      title="Quizzes"
+      subtitle="Separate assessment space for scores, mastery, attempts, and review feedback."
+    >
+      {quizContent}
+    </Grade46StudentChrome>
+  );
+}
+
+function StudentQuizPlay({ data, quiz, go, submitQuiz, quizAttempts = {} }) {
+  const [started, setStarted] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const student = data?.student || {};
+  const early = Number(student?.gradeLevel || 4) <= 2;
+  const questions = asArray(quiz?.questions);
+  const current = questions[currentIndex] || questions[0];
+  const answeredCount = Object.keys(answers).length;
+  const best = getBestQuizAttempt(quizAttempts, quiz?.id);
+  const selectedId = current ? answers[current.id] : null;
+  const hasSelectedAnswer = Boolean(selectedId);
+
+  useEffect(() => {
+    setStarted(false);
+    setCurrentIndex(0);
+    setAnswers({});
+  }, [quiz?.id]);
+
+  function selectAnswer(questionId, optionId) {
+    setAnswers(prev => ({ ...prev, [questionId]: optionId }));
+  }
+
+  function confirmQuizExit() {
+    if (!started) return true;
+    return window.confirm(
+      'Paalala: May sinasagutan ka pang Filipino quiz. Tapusin muna ang quiz para ma-save ang iyong score at review feedback. Pindutin ang Cancel para manatili at tapusin, o OK kung aalis ka muna.'
+    );
+  }
+
+  function goWithQuizGuard(targetScreen) {
+    if (!confirmQuizExit()) return;
+    go(targetScreen);
+  }
+
+  function beforeQuizNavigate() {
+    return confirmQuizExit();
+  }
+
+  function nextQuestion() {
+    setCurrentIndex(index => Math.min(questions.length - 1, index + 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function previousQuestion() {
+    setCurrentIndex(index => Math.max(0, index - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function finishQuiz() {
+    if (answeredCount < questions.length) {
+      const proceed = window.confirm(`May ${answeredCount}/${questions.length} ka pang nasagutan. I-submit na ba ang quiz kahit may hindi pa nasasagutan?`);
+      if (!proceed) return;
+    }
+    submitQuiz(quiz, answers);
+  }
+
+  let quizInnerContent = null;
+
+  if (!questions.length) {
+    quizInnerContent = (
+      <section className="quiz-game-panel" style={{ padding: 28 }}>
+        <div className="quiz-game-copy" style={{ position: 'relative', zIndex: 1 }}>
+          <h2>No questions yet</h2>
+          <p>This quiz does not have questions. Please return to the quiz list.</p>
+          <button type="button" className="quiz-secondary" onClick={() => go('screen-stu-quizzes')} style={{ marginTop: 18 }}>← Back to Quizzes</button>
+        </div>
+      </section>
+    );
+  } else if (!started) {
+    quizInnerContent = (
+      <QuizStartCard
+        quiz={quiz}
+        best={best}
+        onStart={() => setStarted(true)}
+        onBack={() => go('screen-stu-quizzes')}
+      />
+    );
+  } else {
+    quizInnerContent = (
+      <section className="quiz-game-stage" aria-label="Active quiz">
+        <div className="quiz-game-stage-inner">
+          <QuizGameHeader quiz={quiz} best={best} go={go} onBack={() => goWithQuizGuard('screen-stu-quizzes')} />
+          <QuizGameProgress currentIndex={currentIndex} total={questions.length} answeredCount={answeredCount} />
+          <QuizQuestionCard quiz={quiz} question={current} currentIndex={currentIndex} total={questions.length} />
+
+          <div className="quiz-choice-grid">
+            {asArray(current?.options).map((option, index) => (
+              <QuizAnswerButton
+                key={option.id}
+                option={option}
+                index={index}
+                selected={String(selectedId) === String(option.id)}
+                reveal={false}
+                correct={false}
+                onClick={() => selectAnswer(current.id, option.id)}
+              />
+            ))}
+          </div>
+
+          <div className="quiz-nav-actions">
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button type="button" className="quiz-secondary" onClick={() => goWithQuizGuard('screen-stu-quizzes')}>← Back to Quizzes</button>
+              <button type="button" className="quiz-secondary" onClick={previousQuestion} disabled={currentIndex === 0}>Previous</button>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {currentIndex < questions.length - 1 ? (
+                <button type="button" className="quiz-primary" onClick={nextQuestion}>{hasSelectedAnswer ? 'Next Question →' : 'Skip for now →'}</button>
+              ) : (
+                <button type="button" className="quiz-primary" onClick={finishQuiz}>Submit Quiz</button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const quizContent = (
+    <>
+      <QuizSharedStyles />
+      <div className="quiz-shell">
+        {quizInnerContent}
+      </div>
+    </>
+  );
+
+  if (early) {
+    return (
+      <EarlyStudentChrome
+        data={data}
+        activeTab="quizzes"
+        go={go}
+        icon="🧠"
+        title={started ? 'Quiz Time' : 'Quiz Quest'}
+        subtitle={started ? 'Tapusin muna ang quiz bago lumipat sa ibang tab.' : (quiz?.title || 'Sagutin ang tanong.')}
+        beforeNavigate={beforeQuizNavigate}
+      >
+        {quizContent}
+      </EarlyStudentChrome>
+    );
+  }
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="quizzes"
+      go={go}
+      icon="🧠"
+      title={quiz?.title || 'Quiz'}
+      subtitle={started ? 'Finish the quiz first before moving to another learning tab.' : 'Answer each item, then review your score and feedback after submission.'}
+      titleAction={<button type="button" className="g46-ref-soft-btn" onClick={() => goWithQuizGuard('screen-stu-quizzes')}>← Quizzes</button>}
+      beforeNavigate={beforeQuizNavigate}
+    >
+      {quizContent}
+    </Grade46StudentChrome>
+  );
+}
+
+function StudentQuizResult({ data, result, go, openQuiz }) {
+  const early = Number(data?.student?.gradeLevel || 4) <= 2;
+  const mastery = result?.mastery || masteryFromPercent(result?.percent || 0);
+  const sourceQuiz = buildStudentQuizzes(data).find(quiz => quiz.id === result.quizId);
+  const quizForRetake = {
+    id: result.quizId,
+    lessonId: result.lessonId,
+    lessonTitle: result.lessonTitle,
+    title: result.quizTitle,
+    subject: result.subject,
+    gradeLevel: result.gradeLevel,
+    type: 'Retake Quiz',
+    xpReward: sourceQuiz?.xpReward || result.xpReward || 0,
+    questions: sourceQuiz?.questions || []
+  };
+
+  const resultContent = (
+    <>
+      <QuizSharedStyles />
+      <div className="quiz-shell">
+        <QuizResultCard result={{ ...result, mastery }} />
+
+        <section className={early ? 'g12-section-card' : 'g46-ref-panel'}>
+          <div className={early ? 'g12-section-head' : 'g46-ref-panel-head'}>
+            <div>
+              <h2 className={early ? 'g12-section-title' : ''}>Review Feedback</h2>
+              <p className={early ? 'g12-section-subtitle' : 'g46-ref-muted'}>Tingnan kung aling items ang tama at alin ang kailangan pang balikan.</p>
+            </div>
+          </div>
+
+          <div className="quiz-review-list">
+            {asArray(result.review).map(item => (
+              <div className={`quiz-review-item ${item.correct ? 'correct' : 'wrong'}`} key={item.questionId}>
+                <b>{item.correct ? '✅' : '❌'} {item.index}. {item.prompt}</b>
+                <p>Your answer: {item.selectedText}</p>
+                {!item.correct && <p>Correct answer: {item.correctText}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="quiz-result-actions">
+          <button type="button" className="quiz-secondary" onClick={() => go('screen-stu-quizzes')}>🧠 Back to Quizzes</button>
+          {quizForRetake.questions.length > 0 && <button type="button" className="quiz-primary" onClick={() => openQuiz(quizForRetake)}>Retake Quiz</button>}
+          <button type="button" className="quiz-secondary" onClick={() => go('screen-lessons')}>📖 Review Lessons</button>
+        </div>
+      </div>
+    </>
+  );
+
+  if (early) {
+    return (
+      <EarlyStudentChrome
+        data={data}
+        activeTab="quizzes"
+        go={go}
+        icon="🏆"
+        title="Quiz Result"
+        subtitle="Narito ang iyong score, stars, at feedback."
+      >
+        {resultContent}
+      </EarlyStudentChrome>
+    );
+  }
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="quizzes"
+      go={go}
+      icon="🏆"
+      title="Quiz Result"
+      subtitle="Use this review to decide what to study next."
+    >
+      {resultContent}
+    </Grade46StudentChrome>
+  );
+}
+
 function StudentMissions({ data, go, onPlayMission }) {
   const student = data?.student || {};
   const gradeLevel = Number(student?.gradeLevel || 4);
@@ -7989,6 +9692,7 @@ function StudentMissions({ data, go, onPlayMission }) {
   const openTab = (tab) => {
     if (tab === 'home') return go('screen-student');
     if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'quizzes') return go('screen-stu-quizzes');
     if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'profile') return go('screen-stu-profile');
@@ -8146,6 +9850,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
   const openTab = (tab) => {
     if (tab === 'home') return go('screen-student');
     if (tab === 'lessons') return go('screen-lessons');
+    if (tab === 'quizzes') return go('screen-stu-quizzes');
     if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'profile') return go('screen-stu-profile');
@@ -8308,6 +10013,15 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
 
 function EarlyGroupsScreen({ data, go, completeGroupTask }) {
   const groups = data?.groups || [];
+  const roles = rolesForGradeLevel(data?.student?.gradeLevel);
+  const [selectedRoles, setSelectedRoles] = useState({});
+  const [doneTasks, setDoneTasks] = useState({});
+  const [taskFeelings, setTaskFeelings] = useState({});
+
+  async function markTaskDone(taskId) {
+    setDoneTasks(prev => ({ ...prev, [taskId]: true }));
+    await completeGroupTask(taskId);
+  }
 
   return (
     <EarlyStudentChrome
@@ -8315,38 +10029,87 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       activeTab="groups"
       go={go}
       icon="👥"
-      title="Mga Grupo"
-      subtitle="Tingnan ang iyong group tasks at tapusin ang collaborative activities."
+      title="Team Missions"
+      subtitle="Pumili ng role, gawin ang task, at tulungan ang iyong grupo."
     >
+      <style>{`
+        .g12-team-path { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+        .g12-team-step { min-height: 76px; border-radius: 24px; padding: 12px; background: #ffffff; border: 2px solid rgba(21,150,90,0.12); display: grid; place-items: center; text-align: center; color: #14223b; font-weight: 1000; }
+        .g12-role-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+        .g12-role-choice { border: 0; min-height: 104px; border-radius: 28px; padding: 14px; background: #ffffff; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.10); cursor: pointer; text-align: center; color: #14223b; font-weight: 1000; }
+        .g12-role-choice.selected { background: #fff5cf; box-shadow: inset 0 0 0 4px rgba(246,196,83,0.34), 0 8px 0 rgba(246,196,83,0.44); }
+        .g12-role-choice span { display: block; font-size: 36px; margin-bottom: 6px; }
+        .g12-feeling-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .g12-feeling-row button { border: 0; min-height: 48px; padding: 0 16px; border-radius: 18px; background: #ffffff; color: #14223b; font-size: 16px; font-weight: 1000; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(21,150,90,0.14); }
+        .g12-feeling-row button.selected { background: #edf8f1; color: #0f7d49; box-shadow: inset 0 0 0 3px rgba(21,150,90,0.18); }
+      `}</style>
+
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">👥 Group Tasks</h2>
-            <p className="g12-section-subtitle">Gawin ang tasks bago ang deadline para makakuha ng XP.</p>
+            <h2 className="g12-section-title">👥 Team Missions</h2>
+            <p className="g12-section-subtitle">Mas malinaw na ngayon ang gagawin: role → activity → self-check.</p>
           </div>
+        </div>
+
+        <div className="g12-team-path" aria-label="Group mission steps">
+          <div className="g12-team-step">1️⃣ Pumili ng Role</div>
+          <div className="g12-team-step">2️⃣ Gawin ang Task</div>
+          <div className="g12-team-step">3️⃣ Sabihin kung kaya</div>
         </div>
 
         <div className="g12-card-grid">
           {groups.map(group => (
             <div className="g12-group-card" key={group.id}>
               <h3>👥 {group.name}</h3>
-              <p className="g12-muted">{group.description || 'Walang description.'}</p>
+              <p className="g12-muted">{group.description || 'Team mission para sa Filipino practice.'}</p>
 
-              {(group.tasks || []).map(task => (
-                <div className="g12-task-card" key={task.id}>
-                  <div className="g12-task-icon">✅</div>
-                  <div>
-                    <h3 style={{ fontSize: 28, marginBottom: 6 }}>{task.title}</h3>
-                    <p className="g12-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
-                  </div>
-                  <button type="button" className="g12-main-btn" onClick={() => completeGroupTask(task.id)}>
-                    Complete
+              <div className="g12-role-grid">
+                {roles.map(role => (
+                  <button
+                    type="button"
+                    key={`${group.id}-${role.id}`}
+                    className={`g12-role-choice ${selectedRoles[group.id] === role.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedRoles(prev => ({ ...prev, [group.id]: role.id }))}
+                  >
+                    <span>{role.icon}</span>
+                    {role.label}
+                    <small style={{ display: 'block', marginTop: 6, color: '#526988', lineHeight: 1.3 }}>{role.helper}</small>
                   </button>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {(group.tasks || []).map(task => {
+                const pct = taskCompletionPercent(task, doneTasks[task.id]);
+                return (
+                  <div className="g12-task-card" key={task.id}>
+                    <div className="g12-task-icon">{doneTasks[task.id] ? '🎉' : '🧩'}</div>
+                    <div>
+                      <h3 style={{ fontSize: 24, marginBottom: 6 }}>{task.title}</h3>
+                      <p className="g12-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
+                      <div className="g12-module-progress" style={{ marginTop: 10 }}><span style={{ width: `${pct}%` }} /></div>
+                      <div className="g12-feeling-row">
+                        {['😊 Madali', '😐 Sakto', '🙋 Help po'].map(choice => (
+                          <button
+                            type="button"
+                            key={choice}
+                            className={taskFeelings[task.id] === choice ? 'selected' : ''}
+                            onClick={() => setTaskFeelings(prev => ({ ...prev, [task.id]: choice }))}
+                          >
+                            {choice}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button type="button" className="g12-main-btn" onClick={() => markTaskDone(task.id)}>
+                      {doneTasks[task.id] ? 'Done' : 'Tapos na'}
+                    </button>
+                  </div>
+                );
+              })}
 
               {!(group.tasks || []).length && (
-                <div className="g12-empty" style={{ marginTop: 14 }}>No tasks yet for this group.</div>
+                <div className="g12-empty" style={{ marginTop: 14 }}>Wala pang team mission para sa grupong ito.</div>
               )}
             </div>
           ))}
@@ -8362,12 +10125,21 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
 
 function StudentGroups({ data, go, completeGroupTask }) {
   const early = Number(data?.student?.gradeLevel || 4) <= 2;
+  const groups = data?.groups || [];
+  const roles = rolesForGradeLevel(data?.student?.gradeLevel);
+  const [selectedRoles, setSelectedRoles] = useState({});
+  const [taskNotes, setTaskNotes] = useState({});
+  const [taskRatings, setTaskRatings] = useState({});
+  const [submittedTasks, setSubmittedTasks] = useState({});
 
   if (early) {
     return <EarlyGroupsScreen data={data} go={go} completeGroupTask={completeGroupTask} />;
   }
 
-  const groups = data?.groups || [];
+  async function submitGroupTask(taskId) {
+    setSubmittedTasks(prev => ({ ...prev, [taskId]: true }));
+    await completeGroupTask(taskId);
+  }
 
   return (
     <Grade46StudentChrome
@@ -8375,32 +10147,85 @@ function StudentGroups({ data, go, completeGroupTask }) {
       activeTab="groups"
       go={go}
       icon="👥"
-      title="Mga Grupo"
-      subtitle="Tingnan ang group tasks at tapusin ang collaborative activities."
+      title="Group Collaboration"
+      subtitle="Choose a role, submit group output, and record your contribution."
     >
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
             <h2>Group Tasks</h2>
-            <p className="g46-ref-muted">Gawin ang tasks bago ang deadline para makakuha ng XP.</p>
+            <p className="g46-ref-muted">Teachers can judge collaboration better when students show role, output, and contribution evidence.</p>
           </div>
         </div>
 
         {groups.map(group => (
           <div className="g46-ref-panel" key={group.id} style={{ marginBottom: 14, boxShadow: 'none', background: '#fbfefc' }}>
-            <h3>👥 {group.name}</h3>
-            <p className="g46-ref-muted">{group.description || 'Walang description.'}</p>
-
-            {(group.tasks || []).map(task => (
-              <div className="g46-ref-task-row" key={task.id}>
-                <span className="g46-ref-card-icon">✅</span>
-                <div>
-                  <h3 style={{ fontSize: 28, marginBottom: 6 }}>{task.title}</h3>
-                  <p className="g46-ref-muted" style={{ margin: 0 }}>Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
-                </div>
-                <button type="button" className="g46-ref-primary-btn" onClick={() => completeGroupTask(task.id)}>Complete</button>
+            <div className="g46-ref-panel-head">
+              <div>
+                <h3>👥 {group.name}</h3>
+                <p className="g46-ref-muted">{group.description || 'Collaborative Filipino task.'}</p>
               </div>
-            ))}
+              <span className="g46-ref-tag">{group.tasks?.length || 0} task{(group.tasks?.length || 0) === 1 ? '' : 's'}</span>
+            </div>
+
+            <div className="g46-ref-filter-row" style={{ marginBottom: 14 }}>
+              {roles.map(role => (
+                <button
+                  type="button"
+                  key={`${group.id}-${role.id}`}
+                  className={selectedRoles[group.id] === role.id ? 'active' : ''}
+                  onClick={() => setSelectedRoles(prev => ({ ...prev, [group.id]: role.id }))}
+                  title={role.helper}
+                >
+                  {role.icon} {role.label}
+                </button>
+              ))}
+            </div>
+
+            {(group.tasks || []).map(task => {
+              const pct = taskCompletionPercent(task, submittedTasks[task.id]);
+              const band = effectivenessBand(pct);
+              return (
+                <div className="g46-ref-task-row" key={task.id} style={{ gridTemplateColumns: '58px minmax(0, 1fr)', alignItems: 'start' }}>
+                  <span className="g46-ref-card-icon">{submittedTasks[task.id] ? '✅' : '📝'}</span>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div>
+                        <h3 style={{ fontSize: 26, marginBottom: 6 }}>{task.title}</h3>
+                        <p className="g46-ref-muted" style={{ margin: 0 }}>Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP • {band.icon} {band.label}</p>
+                      </div>
+                      <button type="button" className="g46-ref-primary-btn" onClick={() => submitGroupTask(task.id)}>
+                        {submittedTasks[task.id] ? 'Submitted' : 'Submit Task'}
+                      </button>
+                    </div>
+
+                    <div className="g46-ref-mini-track" style={{ marginTop: 12 }}><span style={{ width: `${pct}%` }} /></div>
+
+                    <textarea
+                      className="input-field"
+                      rows="3"
+                      value={taskNotes[task.id] || ''}
+                      onChange={(e) => setTaskNotes(prev => ({ ...prev, [task.id]: e.target.value }))}
+                      placeholder="Write your group answer, summary, or contribution note here..."
+                      style={{ marginTop: 12, minHeight: 92 }}
+                    />
+
+                    <div className="g46-ref-filter-row" style={{ marginTop: 12, marginBottom: 0 }}>
+                      {['I helped a lot', 'I helped some', 'I need to participate more'].map(choice => (
+                        <button
+                          type="button"
+                          key={choice}
+                          className={taskRatings[task.id] === choice ? 'active' : ''}
+                          onClick={() => setTaskRatings(prev => ({ ...prev, [task.id]: choice }))}
+                        >
+                          {choice}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
 
             {!(group.tasks || []).length && <div className="g46-ref-empty">No tasks yet for this group.</div>}
           </div>
@@ -8411,7 +10236,6 @@ function StudentGroups({ data, go, completeGroupTask }) {
     </Grade46StudentChrome>
   );
 }
-
 
 function EarlyBadgesScreen({ data, go }) {
   const badges = data?.badges || [];
@@ -10579,6 +12403,134 @@ function TeacherRedesignStyles() {
 }
 
 
+function TeacherAssessmentCenter({ lessons = [], rows = [] }) {
+  const quizzes = lessons.map(lesson => ({
+    lesson,
+    questions: buildQuizQuestionsFromLesson(lesson),
+    profile: lessonAssessmentProfile(lesson.activities || [])
+  }));
+  const withQuiz = quizzes.filter(item => item.profile.hasObjectiveQuiz).length;
+  const questionCount = quizzes.reduce((sum, item) => sum + item.questions.length, 0);
+  const missingQuiz = Math.max(0, lessons.length - withQuiz);
+  const readiness = lessons.length ? Math.round((withQuiz / lessons.length) * 100) : 0;
+
+  return (
+    <section className="teacher-workspace-card" id="teacher-assessment-center">
+      <div className="teacher-workspace-heading">
+        <div>
+          <div className="lms-section-label">Assessment Hub</div>
+          <h2>Quiz Builder & Effectiveness Preview</h2>
+          <p>Create the lesson first, then use each lesson's MCQ or matching activities as a separate student Quiz tab. Backend saving comes next.</p>
+        </div>
+      </div>
+
+      <div className="teacher-monitor-summary">
+        <div><span>Assessment Coverage</span><strong>{readiness}%</strong></div>
+        <div><span>Quiz-ready Lessons</span><strong>{withQuiz}/{lessons.length}</strong></div>
+        <div><span>Total Questions</span><strong>{questionCount}</strong></div>
+      </div>
+
+      <div className="teacher-monitor-summary" style={{ marginTop: 12 }}>
+        <div><span>Lessons Missing Quiz</span><strong>{missingQuiz}</strong></div>
+        <div><span>Students to Monitor</span><strong>{rows.length}</strong></div>
+        <div><span>Passing Target</span><strong>75%</strong></div>
+      </div>
+
+      <div className="lms-empty-line" style={{ marginTop: 14, background: '#fff8df', color: '#6b4b00' }}>
+        Recommended next backend step: save Assessment, AssessmentQuestion, AssessmentAttempt, and AssessmentResponse records so teachers can see real class averages, pass rates, and most-missed questions.
+      </div>
+
+      <div className="teacher-groups-area" style={{ marginTop: 16 }}>
+        <div className="teacher-mini-heading">
+          <div>
+            <h3>Lesson-to-Quiz Checklist</h3>
+            <p>Each lesson should have at least one objective quiz plus writing or speech evidence for stronger effectiveness measurement.</p>
+          </div>
+        </div>
+
+        <div className="teacher-groups-grid">
+          {quizzes.map(({ lesson, questions, profile }) => {
+            const coverage = [profile.hasObjectiveQuiz, profile.hasWriting, profile.hasSpeech].filter(Boolean).length;
+            return (
+              <div className="teacher-group-item" key={lesson.id || lesson.title}>
+                <div className="teacher-group-item-top">
+                  <div>
+                    <strong>{lesson.title || 'Untitled lesson'}</strong>
+                    <p>{lesson.subject || 'Filipino'} • Grade {lesson.gradeLevel || '—'}</p>
+                  </div>
+                  <span className="lms-mini-pill">{questions.length} item{questions.length === 1 ? '' : 's'}</span>
+                </div>
+                <div className="teacher-progress-cell" style={{ marginTop: 12 }}>
+                  <span>{coverage}/3 evidence types</span>
+                  <div className="teacher-progress-track"><div style={{ width: `${Math.max(8, (coverage / 3) * 100)}%` }} /></div>
+                </div>
+                <p style={{ marginTop: 10 }}>
+                  {profile.hasObjectiveQuiz ? '✅ Quiz/Matching' : '⚠️ Add quiz'} • {profile.hasWriting ? '✅ Writing' : 'Add writing'} • {profile.hasSpeech ? '✅ Speech' : 'Add speech'}
+                </p>
+              </div>
+            );
+          })}
+          {!lessons.length && (
+            <div className="teacher-empty-panel">
+              <div>🧠</div>
+              <strong>No lessons yet.</strong>
+              <p>Create lessons first, then the Quiz tab will automatically show assessment cards.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TeacherEffectivenessPanel({ rows = [], lessons = [], groups = [] }) {
+  const avgProgress = rows.length
+    ? Math.round(rows.reduce((sum, row) => sum + Number(row.percent || 0), 0) / rows.length)
+    : 0;
+  const completed = rows.reduce((sum, row) => sum + Number(row.completed || 0), 0);
+  const totalLessons = rows.reduce((sum, row) => sum + Number(row.totalLessons || 0), 0);
+  const completionRate = totalLessons ? Math.round((completed / totalLessons) * 100) : 0;
+  const groupTaskCount = groups.reduce((sum, group) => sum + asArray(group.tasks).length, 0);
+  const band = effectivenessBand(avgProgress || completionRate);
+  const assessmentMix = lessons.reduce((acc, lesson) => {
+    const profile = lessonAssessmentProfile(lesson.activities || []);
+    acc.content += profile.hasContent ? 1 : 0;
+    acc.quiz += profile.hasObjectiveQuiz ? 1 : 0;
+    acc.writing += profile.hasWriting ? 1 : 0;
+    acc.speech += profile.hasSpeech ? 1 : 0;
+    return acc;
+  }, { content: 0, quiz: 0, writing: 0, speech: 0 });
+
+  return (
+    <div className="teacher-workspace-card" style={{ margin: '18px 0', background: 'linear-gradient(135deg, #fbfffd, #fffdf0)', boxShadow: 'none' }}>
+      <div className="teacher-workspace-heading">
+        <div>
+          <div className="lms-section-label">Learning Effectiveness</div>
+          <h2>{band.icon} {band.label}</h2>
+          <p>{band.note} Use quiz scores, writing, speech, group output, and self-checks instead of completion only.</p>
+        </div>
+      </div>
+
+      <div className="teacher-monitor-summary">
+        <div><span>Completion Rate</span><strong>{completionRate}%</strong></div>
+        <div><span>Average Progress</span><strong>{avgProgress}%</strong></div>
+        <div><span>Group Tasks</span><strong>{groupTaskCount}</strong></div>
+      </div>
+
+      <div className="teacher-monitor-summary" style={{ marginTop: 12 }}>
+        <div><span>Lessons with Quiz/Matching</span><strong>{assessmentMix.quiz}/{lessons.length}</strong></div>
+        <div><span>Lessons with Writing</span><strong>{assessmentMix.writing}/{lessons.length}</strong></div>
+        <div><span>Lessons with Speech</span><strong>{assessmentMix.speech}/{lessons.length}</strong></div>
+      </div>
+
+      <div className="lms-empty-line" style={{ marginTop: 14, background: '#ffffff', color: '#264136' }}>
+        Suggested teacher decision: if completion is high but quiz/speech/writing evidence is low, add a short post-test or reteaching activity before awarding full mastery.
+      </div>
+    </div>
+  );
+}
+
+
 
 
 function TeacherDashboard({
@@ -10655,6 +12607,13 @@ function TeacherDashboard({
               onClick={() => openTab('groups')}
             >
               👥 Groups
+            </button>
+            <button
+              className={teacherTab === 'assessments' ? 'active' : ''}
+              type="button"
+              onClick={() => openTab('assessments')}
+            >
+              🧠 Assessments
             </button>
             <button
               className={teacherTab === 'students' ? 'active' : ''}
@@ -10752,6 +12711,14 @@ function TeacherDashboard({
           >
             <span>👥</span>
             Group Manager
+          </button>
+          <button
+            className={teacherTab === 'assessments' ? 'active' : ''}
+            type="button"
+            onClick={() => openTab('assessments')}
+          >
+            <span>🧠</span>
+            Assessments
           </button>
           <button
             className={teacherTab === 'students' ? 'active' : ''}
@@ -10868,6 +12835,10 @@ function TeacherDashboard({
           </section>
         )}
 
+        {teacherTab === 'assessments' && (
+          <TeacherAssessmentCenter lessons={lessons} rows={rows} />
+        )}
+
         {teacherTab === 'students' && (
           <section className="teacher-workspace-card clean-students-panel" id="teacher-monitoring-table">
             <div className="teacher-workspace-heading monitor">
@@ -10899,6 +12870,8 @@ function TeacherDashboard({
                 <strong>{lessons.length}</strong>
               </div>
             </div>
+
+            <TeacherEffectivenessPanel rows={rows} lessons={lessons} groups={groups} />
 
             <div className="teacher-table-wrapper">
               <table className="teacher-monitor-table">
@@ -11665,6 +13638,15 @@ function TeacherLessonManager({ lessons, createLesson }) {
     { type: 'writing', label: 'Writing Prompt', icon: '✎', className: 'choice-writing' }
   ];
 
+  const assessmentProfile = lessonAssessmentProfile(validActivities);
+  const assessmentChecks = [
+    { label: 'Content / Info', ok: assessmentProfile.hasContent, note: 'Adds lesson context before assessment.' },
+    { label: 'Quiz or Matching', ok: assessmentProfile.hasObjectiveQuiz, note: 'Measures basic understanding with a score.' },
+    { label: 'Writing Evidence', ok: assessmentProfile.hasWriting, note: 'Shows if students can express ideas in Filipino.' },
+    { label: 'Speech Evidence', ok: assessmentProfile.hasSpeech, note: 'Supports pronunciation and oral communication.' }
+  ];
+  const readinessScore = Math.round((assessmentChecks.filter(item => item.ok).length / assessmentChecks.length) * 100);
+
   function scrollToRecentLessons() {
     document.getElementById('teacher-recent-lessons')?.scrollIntoView({
       behavior: 'smooth',
@@ -11927,9 +13909,34 @@ function TeacherLessonManager({ lessons, createLesson }) {
             </div>
           </section>
 
-          <section className="teacher-design-card soft" id="teacher-recent-lessons">
+          <section className="teacher-design-card soft">
             <div className="teacher-design-heading">
               <div className="teacher-design-step">4</div>
+              <div>
+                <h2>Assessment Coverage</h2>
+                <p>Use more than MCQ so teachers can check understanding, writing, speaking, and engagement.</p>
+              </div>
+              <span className="lms-mini-pill">{readinessScore}% ready</span>
+            </div>
+
+            <div className="teacher-monitor-summary">
+              {assessmentChecks.map(item => (
+                <div key={item.label} style={{ background: item.ok ? '#edf8f1' : '#fff8df' }}>
+                  <span>{item.ok ? '✅' : '⚠️'} {item.label}</span>
+                  <strong>{item.ok ? 'Added' : 'Missing'}</strong>
+                  <small style={{ display: 'block', marginTop: 6, color: '#526988', fontWeight: 800 }}>{item.note}</small>
+                </div>
+              ))}
+            </div>
+
+            <div className="lms-empty-line" style={{ marginTop: 14, background: '#ffffff', color: '#264136' }}>
+              Recommended flow: pre-check → lesson content → practice → quiz/test → writing or speech → student self-evaluation.
+            </div>
+          </section>
+
+          <section className="teacher-design-card soft" id="teacher-recent-lessons">
+            <div className="teacher-design-heading">
+              <div className="teacher-design-step">5</div>
               <div>
                 <h2>Recently Created Lessons</h2>
                 <p>Your most recent lessons.</p>
