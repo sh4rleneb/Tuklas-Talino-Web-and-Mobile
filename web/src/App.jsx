@@ -5,7 +5,7 @@ import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
 import QuizResults from './components/student/quizzes/QuizResults';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
-import { fmtDate, levelForXp, xpPercent } from './utils/studentHelpers';
+import { asArray, fmtDate, levelForXp, masteryFromPercent, subjectTheme, xpPercent } from './utils/studentHelpers';
 
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';
@@ -1246,21 +1246,7 @@ function AdminLogin({ go, onLogin }) {
 }
 
 
-function subjectTheme(subject) {
-  const map = {
-    'Pagbasa': { icon: '📖', bg: '#DFF7E8', accent: '#2ECC71', tag: 'Kwento' },
-    'Bokabularyo': { icon: '🔤', bg: '#DFF2FF', accent: '#3498DB', tag: 'Salita' },
-    'Panitikan': { icon: '📜', bg: '#FFF0DD', accent: '#F39C12', tag: 'Tula' },
-    'Oral Comm': { icon: '🎙️', bg: '#FFE2EA', accent: '#E67EA2', tag: 'Bigkas' },
-    'Pagsulat': { icon: '✍️', bg: '#FFF8CF', accent: '#F1C40F', tag: 'Sulatin' },
-    'Grupo': { icon: '👥', bg: '#EFE5FF', accent: '#9B59B6', tag: 'Sama-sama' }
-  };
-  return map[subject] || { icon: '📚', bg: '#F6F6F6', accent: '#95A5A6', tag: 'Aralin' };
-}
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function lessonXp(lesson) {
   return lesson?.xpReward ?? lesson?.xp ?? 0;
@@ -1383,13 +1369,6 @@ function getBestQuizAttempt(attempts = {}, quizId) {
   return rows.reduce((best, row) => Number(row.percent || 0) > Number(best.percent || 0) ? row : best, rows[0]);
 }
 
-function masteryFromPercent(percent = 0) {
-  const value = Number(percent || 0);
-  if (value >= 90) return { label: 'Advanced', icon: '🏆', tone: 'green', note: 'Excellent mastery. Keep challenging yourself.' };
-  if (value >= 75) return { label: 'Proficient', icon: '🌟', tone: 'blue', note: 'Good understanding. A short review can make it stronger.' };
-  if (value >= 50) return { label: 'Developing', icon: '🌱', tone: 'yellow', note: 'You are getting there. Review the missed questions.' };
-  return { label: 'Needs Practice', icon: '🧭', tone: 'pink', note: 'Try again after reviewing the lesson.' };
-}
 
 function normalizeQuizOption(option, index) {
   const text = typeof option === 'string' ? option : (option?.text || option?.label || option?.value || `Choice ${index + 1}`);
