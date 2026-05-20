@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api, downloadUrl } from './api/client';
 import { useAuth } from './contexts/AuthContext';
+import QuizzesPage from './pages/Student/QuizzesPage';
 
 const AVATARS = ['🦊', '🐼', '🐯', '🐸', '🐵', '🦄', '🐰', '🧒'];
 const SUBJECTS = [
@@ -936,14 +937,19 @@ async function archiveTeacher(id) {
         />
       </Screen>
 
-      <Screen id="screen-stu-quizzes" active={screen === 'screen-stu-quizzes'}>
-        <StudentQuizzes
-          data={studentDash}
-          go={go}
-          openQuiz={openQuiz}
-          quizAttempts={quizAttempts}
-        />
-      </Screen>
+<Screen id="screen-stu-quizzes" active={screen === 'screen-stu-quizzes'}>
+  <QuizzesPage
+    data={studentDash}
+    go={go}
+    openQuiz={openQuiz}
+    quizAttempts={quizAttempts}
+    subjects={SUBJECTS}
+    buildStudentQuizzes={buildStudentQuizzes}
+    getBestQuizAttempt={getBestQuizAttempt}
+    EarlyStudentChrome={EarlyStudentChrome}
+    Grade46StudentChrome={Grade46StudentChrome}
+  />
+</Screen>
 
       <Screen id="screen-stu-quiz-play" active={screen === 'screen-stu-quiz-play'}>
         {selectedQuiz && (
