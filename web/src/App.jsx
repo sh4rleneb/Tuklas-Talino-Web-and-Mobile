@@ -5,18 +5,13 @@ import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
 import QuizResults from './components/student/quizzes/QuizResults';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
+import { levelForXp, xpPercent } from './utils/studentHelpers';
 
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';
 }
 
-function levelForXp(xp = 0) {
-  return Math.max(1, Math.floor(Number(xp || 0) / 100) + 1);
-}
 
-function xpPercent(xp = 0) {
-  return Number(xp || 0) % 100;
-}
 
 function fmtDate(value) {
   if (!value) return '—';
