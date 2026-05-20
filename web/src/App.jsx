@@ -171,13 +171,13 @@ const [adminData, setAdminData] = useState({
   const [subjectFilter, setSubjectFilter] = useState('ALL');
 
   const activeRole = screen.includes('teacher') ? 'teacher' : screen.includes('admin') ? 'admin' : screen.includes('student') || screen.includes('stu') || screen.includes('lesson') ? 'student' : '';
-  const gradeLevel = studentDash?.student?.gradeLevel || user?.student?.gradeLevel || 4;
-  const gradeBand = Number(gradeLevel) <= 2 ? 'early' : 'grade46';
+  const gradeLevel = studentDash?.student?.gradeLevel ?? user?.student?.gradeLevel ?? null;
+  const gradeBand = gradeLevel == null ? '' : Number(gradeLevel) <= 2 ? 'early' : 'grade46';
 
   useEffect(() => {
     if (activeRole) document.body.dataset.role = activeRole;
     else delete document.body.dataset.role;
-    if (activeRole === 'student') document.body.dataset.gradeBand = gradeBand;
+    if (activeRole === 'student' && gradeBand) document.body.dataset.gradeBand = gradeBand;
     else delete document.body.dataset.gradeBand;
   }, [activeRole, gradeBand]);
 
@@ -193,7 +193,7 @@ const [adminData, setAdminData] = useState({
     setQuizAttempts(loadQuizAttempts(studentId));
   }, [studentDash?.student?.id, user?.student?.id]);
 
-  useEffect(() => {
+useEffect(() => {
   if (!booting && user) {
     if (user.mustChangePassword) {
       setScreen('screen-change-password');
@@ -201,14 +201,42 @@ const [adminData, setAdminData] = useState({
     }
 
     if (user.role === 'student') {
-      setScreen('screen-student');
-      loadStudentDashboard();
-    } else if (user.role === 'teacher') {
-      setScreen('screen-teacher');
-      loadTeacherDashboard();
-    } else if (user.role === 'admin') {
-      setScreen('screen-admin');
-      loadAdminDashboard();
+      setStudentDash(null);
+
+      loadStudentDashboard()
+        .then(() => {
+          setScreen('screen-student');
+        })
+        .catch((err) => {
+          notify(err.message || 'Hindi ma-load ang student dashboard.', 'bad');
+          setScreen('screen-login-student');
+        });
+
+      return;
+    }
+
+    if (user.role === 'teacher') {
+      loadTeacherDashboard()
+        .then(() => {
+          setScreen('screen-teacher');
+        })
+        .catch((err) => {
+          notify(err.message || 'Hindi ma-load ang teacher dashboard.', 'bad');
+          setScreen('screen-login-teacher');
+        });
+
+      return;
+    }
+
+    if (user.role === 'admin') {
+      loadAdminDashboard()
+        .then(() => {
+          setScreen('screen-admin');
+        })
+        .catch((err) => {
+          notify(err.message || 'Hindi ma-load ang admin dashboard.', 'bad');
+          setScreen('screen-login-admin');
+        });
     }
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -275,6 +303,7 @@ if (logged.mustChangePassword) {
 }
 
 if (role === 'student') {
+  setStudentDash(null);
   setSelectedAvatar(logged.student?.avatar || selectedAvatar);
   await loadStudentDashboard();
   go('screen-student');
