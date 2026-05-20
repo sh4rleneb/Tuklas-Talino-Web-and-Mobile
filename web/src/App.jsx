@@ -5,7 +5,7 @@ import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
 import QuizResults from './components/student/quizzes/QuizResults';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
-import { levelForXp, xpPercent } from './utils/studentHelpers';
+import { fmtDate, levelForXp, xpPercent } from './utils/studentHelpers';
 
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';
@@ -13,10 +13,6 @@ function read(id) {
 
 
 
-function fmtDate(value) {
-  if (!value) return '—';
-  try { return new Date(value).toLocaleDateString(); } catch { return '—'; }
-}
 
 function ProgressBar({ value = 0 }) {
   const safe = Math.max(0, Math.min(100, Number(value || 0)));
