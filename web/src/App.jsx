@@ -7,6 +7,7 @@ import QuizResults from './components/student/quizzes/QuizResults';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
 import { asArray, fmtDate, levelForXp, masteryFromPercent, subjectTheme, xpPercent } from './utils/studentHelpers';
 import { EarlyStudentSubpageStyles, Grade46ReferenceStyles, TeacherRedesignStyles } from './components/styles/StyleBlocks';
+import { ProgressBar, Screen, Stat } from './components/common/CommonUI';
 
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';
@@ -14,19 +15,6 @@ function read(id) {
 
 
 
-
-function ProgressBar({ value = 0 }) {
-  const safe = Math.max(0, Math.min(100, Number(value || 0)));
-  return <div className="progress-bar"><div className="progress-fill" style={{ width: `${safe}%` }} /></div>;
-}
-
-function Stat({ icon, label, value }) {
-  return <div className="stat-card"><div className="stat-icon">{icon}</div><div><b>{value}</b><span>{label}</span></div></div>;
-}
-
-function Screen({ id, active, children }) {
-  return <div id={id} className={`screen ${active ? 'active' : ''}`}>{children}</div>;
-}
 
 function Notification({ notice }) {
   if (!notice) return <div className="notif-wrap" id="notif-wrap" />;
