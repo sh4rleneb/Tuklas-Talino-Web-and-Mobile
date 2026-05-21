@@ -62,6 +62,13 @@ async function dashboardPayload(student) {
     return map;
   }, {});
 
+  const groupTaskCompletions = await GroupTaskCompletion.findAll({
+    where: { studentId: student.id }
+  });
+  const completedGroupTaskIds = new Set(
+    groupTaskCompletions.map(completion => Number(completion.groupTaskId))
+  );
+
   const memberships = await GroupMember.findAll({ where: { studentId: student.id }, include: [{ model: Group, include: [{ model: GroupTask, as: 'tasks' }] }] });
 
   return {
@@ -77,7 +84,25 @@ async function dashboardPayload(student) {
     badges: badges.map(sb => sb.Badge),
     xpLogs,
     quizAttempts,
-    groups: memberships.map(m => m.Group)
+    groups: memberships.map(m => {
+      const group = m.Group?.toJSON ? m.Group.toJSON() : m.Group;
+      if (!group) return null;
+
+      const tasks = Array.isArray(group.tasks) ? group.tasks : [];
+
+      return {
+        ...group,
+        tasks: tasks.map(task => {
+          const completed = completedGroupTaskIds.has(Number(task.id));
+
+          return {
+            ...task,
+            completed,
+            completedByStudent: completed
+          };
+        })
+      };
+    }).filter(Boolean)
   };
 }
 

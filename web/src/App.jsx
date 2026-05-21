@@ -5831,14 +5831,100 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
 }
 
 function EarlyGroupsScreen({ data, go, completeGroupTask }) {
-  const groups = data?.groups || [];
+  const groups = asArray(data?.groups);
   const roles = rolesForGradeLevel(data?.student?.gradeLevel);
+  const [selectedGroupId, setSelectedGroupId] = useState(groups[0]?.id || null);
   const [selectedRoles, setSelectedRoles] = useState({});
   const [doneTasks, setDoneTasks] = useState({});
-  const [taskFeelings, setTaskFeelings] = useState({});
+  const [flowStep, setFlowStep] = useState('start');
+  const [showMoreTeams, setShowMoreTeams] = useState(false);
+  
+  function isTaskDone(task) {
+    if (!task) return false;
+    return Boolean(
+      doneTasks[task.id] ||
+      task.completed ||
+      task.isCompleted ||
+      task.completedByStudent ||
+      task.status === 'completed'
+    );
+  }
+
+  function groupTasks(group) {
+    return asArray(group?.tasks);
+  }
+
+  function groupDoneCount(group) {
+    return groupTasks(group).filter(task => isTaskDone(task)).length;
+  }
+
+  function isGroupDone(group) {
+    const tasks = groupTasks(group);
+    return tasks.length > 0 && tasks.every(task => isTaskDone(task));
+  }
+
+  function groupStatusText(group) {
+    const tasks = groupTasks(group);
+    const doneCount = groupDoneCount(group);
+    const leftCount = Math.max(0, tasks.length - doneCount);
+
+    if (!tasks.length) return 'Tap to start';
+    if (!leftCount) return 'Done today';
+    if (leftCount === 1) return '1 mission left';
+    return `${leftCount} missions left`;
+  }
+
+  const activeGroups = groups.filter(group => !isGroupDone(group));
+  const finishedGroups = groups.filter(group => isGroupDone(group));
+  const visibleActiveGroups = showMoreTeams ? activeGroups : activeGroups.slice(0, 3);
+  const hiddenActiveCount = Math.max(0, activeGroups.length - visibleActiveGroups.length);
+
+  useEffect(() => {
+    const selectableGroups = activeGroups.length ? activeGroups : groups;
+
+    if (selectableGroups.length && !selectableGroups.some(group => String(group.id) === String(selectedGroupId))) {
+      setSelectedGroupId(selectableGroups[0].id);
+    }
+  }, [groups, activeGroups, selectedGroupId]);
+
+  const selectedGroup = groups.find(group => String(group.id) === String(selectedGroupId)) || activeGroups[0] || groups[0] || null;
+  const selectedTasks = groupTasks(selectedGroup);
+  const primaryTask = selectedTasks.find(task => !isTaskDone(task)) || selectedTasks[0] || null;
+  const extraTaskCount = Math.max(0, selectedTasks.filter(task => !isTaskDone(task)).length - 1);
+  const selectedRoleId = selectedGroup ? selectedRoles[selectedGroup.id] : null;
+  const selectedRole = roles.find(role => role.id === selectedRoleId);
+  const taskRecorded = primaryTask ? isTaskDone(primaryTask) : false;
+  const selectedGroupDone = selectedGroup ? isGroupDone(selectedGroup) : false;
+
+  function chooseGroup(groupId) {
+    const group = groups.find(item => String(item.id) === String(groupId));
+    setSelectedGroupId(groupId);
+    setFlowStep(group && isGroupDone(group) ? 'done' : 'role');
+  }
+
+  function chooseRole(roleId) {
+    if (!selectedGroup) return;
+    setSelectedRoles(prev => ({ ...prev, [selectedGroup.id]: roleId }));
+    setFlowStep('task');
+  }
 
   async function markTaskDone(taskId) {
-    setDoneTasks(prev => ({ ...prev, [taskId]: true }));
+    const nextDoneTasks = { ...doneTasks, [taskId]: true };
+
+    setDoneTasks(nextDoneTasks);
+
+    const groupWillBeFinished = selectedTasks.length > 0 && selectedTasks.every(task => (
+      Boolean(
+        nextDoneTasks[task.id] ||
+        task.completed ||
+        task.isCompleted ||
+        task.completedByStudent ||
+        task.status === 'completed'
+      )
+    ));
+
+    setFlowStep(groupWillBeFinished ? 'finished' : 'done');
+
     await completeGroupTask(taskId);
   }
 
@@ -5848,94 +5934,263 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       activeTab="groups"
       go={go}
       icon="👥"
-      title="Team Missions"
-      subtitle="Pumili ng role, gawin ang task, at tulungan ang iyong grupo."
+      title="Team Mission"
+      subtitle="Choose. Help. Done."
     >
       <style>{`
-        .g12-team-path { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
-        .g12-team-step { min-height: 76px; border-radius: 24px; padding: 12px; background: #ffffff; border: 2px solid rgba(21,150,90,0.12); display: grid; place-items: center; text-align: center; color: #14223b; font-weight: 1000; }
-        .g12-role-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
-        .g12-role-choice { border: 0; min-height: 104px; border-radius: 28px; padding: 14px; background: #ffffff; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.10); cursor: pointer; text-align: center; color: #14223b; font-weight: 1000; }
-        .g12-role-choice.selected { background: #fff5cf; box-shadow: inset 0 0 0 4px rgba(246,196,83,0.34), 0 8px 0 rgba(246,196,83,0.44); }
-        .g12-role-choice span { display: block; font-size: 36px; margin-bottom: 6px; }
-        .g12-feeling-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-        .g12-feeling-row button { border: 0; min-height: 48px; padding: 0 16px; border-radius: 18px; background: #ffffff; color: #14223b; font-size: 16px; font-weight: 1000; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(21,150,90,0.14); }
-        .g12-feeling-row button.selected { background: #edf8f1; color: #0f7d49; box-shadow: inset 0 0 0 3px rgba(21,150,90,0.18); }
+        .g12-team-flow-shell { display: grid; gap: 16px; padding-bottom: 24px; }
+        .g12-team-flow-card { border-radius: 34px; padding: 22px; background: linear-gradient(135deg, #ffffff 0%, #f6fbff 100%); border: 2px solid rgba(21,150,90,0.12); box-shadow: 0 16px 38px rgba(26, 49, 89, 0.10); color: #14223b; }
+        .g12-team-flow-hero { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+        .g12-team-mascot { width: 78px; height: 78px; border-radius: 26px; display: grid; place-items: center; font-size: 38px; background: #fff5cf; box-shadow: inset 0 0 0 3px rgba(246,196,83,0.28); }
+        .g12-team-flow-card h3 { margin: 0 0 8px; font-size: 36px; line-height: 1.08; color: #14223b; }
+        .g12-team-flow-card p { margin: 0; color: #526988; font-size: 22px; line-height: 1.45; font-weight: 800; }
+        .g12-team-top-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: stretch; margin: 16px 0; }
+        .g12-team-progress { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0; }
+        .g12-team-progress button { border: 0; min-height: 66px; font-size: 22px; border-radius: 18px; display: grid; place-items: center; text-align: center; background: #ffffff; color: #526988; font-weight: 1000; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.10); }
+        .g12-team-progress button.active { background: #edf8f1; color: #0f7d49; box-shadow: inset 0 0 0 3px rgba(21,150,90,0.18); }
+        .g12-team-progress button:disabled { opacity: 0.55; cursor: not-allowed; }
+        .g12-finished-pill-btn { border: 0; min-height: 66px; border-radius: 999px; padding: 0 24px; background: #fff5cf; color: #0f7d49; font-size: 20px; font-weight: 1000; cursor: pointer; white-space: nowrap; box-shadow: inset 0 0 0 2px rgba(246,196,83,0.34), 0 8px 0 rgba(246,196,83,0.18); }
+        .g12-finished-pill-btn.active { background: #edf8f1; color: #0f7d49; box-shadow: inset 0 0 0 3px rgba(21,150,90,0.18), 0 8px 0 rgba(21,150,90,0.10); }
+        .g12-team-select-grid { display: grid; gap: 12px; margin-top: 16px; }
+        .g12-team-select-btn { border: 0; width: 100%; border-radius: 28px; padding: 24px; min-height: 118px; background: #ffffff; color: #14223b; text-align: left; cursor: pointer; display: flex; justify-content: space-between; gap: 14px; align-items: center; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.12), 0 8px 0 rgba(21,150,90,0.08); }
+        .g12-team-select-btn.finished { opacity: 0.92; background: linear-gradient(135deg, #f7fffb 0%, #ffffff 100%); }
+        .g12-team-select-btn strong { display: block; font-size: 30px; margin-bottom: 4px; }
+        .g12-team-select-btn small { display: block; color: #526988; font-size: 20px; font-weight: 900; line-height: 1.35; }
+        .g12-team-select-btn .arrow { width: 60px; height: 60px; border-radius: 18px; display: grid; place-items: center; background: #fff5cf; font-size: 24px; flex: 0 0 auto; }
+        .g12-team-finished-toggle { border: 0; width: 100%; min-height: 70px; border-radius: 24px; padding: 0 22px; background: #edf8f1; color: #0f7d49; font-size: 22px; font-weight: 1000; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.14); }
+        .g12-role-grid.simple { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+        .g12-role-choice.simple { border: 0; min-height: 138px; font-size: 23px; border-radius: 28px; padding: 14px; background: #ffffff; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.10), 0 8px 0 rgba(21,150,90,0.08); cursor: pointer; text-align: center; color: #14223b; font-weight: 1000; }
+        .g12-role-choice.simple.selected { background: #fff5cf; box-shadow: inset 0 0 0 4px rgba(246,196,83,0.34), 0 8px 0 rgba(246,196,83,0.44); }
+        .g12-role-choice.simple span { display: block; font-size: 48px; margin-bottom: 6px; }
+        .g12-role-choice.simple small { display: block; margin-top: 8px; color: #526988; line-height: 1.3; font-size: 17px; }
+        .g12-mission-box { margin-top: 16px; border-radius: 30px; padding: 18px; background: #ffffff; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.10); }
+        .g12-mission-chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+        .g12-mission-chip { border-radius: 999px; padding: 12px 16px; background: #edf8f1; color: #0f7d49; font-size: 18px; font-weight: 1000; }
+        .g12-team-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+        .g12-soft-btn { border: 0; min-height: 68px; border-radius: 22px; padding: 0 28px; background: #ffffff; color: #526988; font-weight: 1000; font-size: 22px; cursor: pointer; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.10); }
+        .g12-team-done { text-align: center; }
+        .g12-team-done .done-icon { width: 90px; height: 90px; margin: 0 auto 12px; border-radius: 30px; display: grid; place-items: center; background: #fff5cf; font-size: 46px; box-shadow: inset 0 0 0 3px rgba(246,196,83,0.28); }
+        @media (max-width: 680px) {
+          .g12-team-flow-hero { grid-template-columns: 1fr; text-align: center; }
+          .g12-team-mascot { margin: 0 auto; }
+          .g12-team-top-controls { grid-template-columns: 1fr; }
+          .g12-team-progress { grid-template-columns: repeat(3, 1fr); }
+          .g12-finished-pill-btn { width: 100%; }
+          .g12-role-grid.simple { grid-template-columns: 1fr; }
+        }
       `}</style>
 
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">👥 Team Missions</h2>
-            <p className="g12-section-subtitle">Mas malinaw na ngayon ang gagawin: role → activity → self-check.</p>
+            <h2 className="g12-section-title">👥 Team Mission</h2>
+            <p className="g12-section-subtitle">Choose. Help. Done.</p>
           </div>
         </div>
 
-        <div className="g12-team-path" aria-label="Group mission steps">
-          <div className="g12-team-step">1️⃣ Pumili ng Role</div>
-          <div className="g12-team-step">2️⃣ Gawin ang Task</div>
-          <div className="g12-team-step">3️⃣ Sabihin kung kaya</div>
-        </div>
-
-        <div className="g12-card-grid">
-          {groups.map(group => (
-            <div className="g12-group-card" key={group.id}>
-              <h3>👥 {group.name}</h3>
-              <p className="g12-muted">{group.description || 'Team mission para sa Filipino practice.'}</p>
-
-              <div className="g12-role-grid">
-                {roles.map(role => (
-                  <button
-                    type="button"
-                    key={`${group.id}-${role.id}`}
-                    className={`g12-role-choice ${selectedRoles[group.id] === role.id ? 'selected' : ''}`}
-                    onClick={() => setSelectedRoles(prev => ({ ...prev, [group.id]: role.id }))}
-                  >
-                    <span>{role.icon}</span>
-                    {role.label}
-                    <small style={{ display: 'block', marginTop: 6, color: '#526988', lineHeight: 1.3 }}>{role.helper}</small>
-                  </button>
-                ))}
+        {!groups.length ? (
+          <div className="g12-empty">No team mission yet.</div>
+        ) : (
+          <div className="g12-team-flow-shell">
+            <div className="g12-team-top-controls">
+              <div className="g12-team-progress" aria-label="Team mission steps">
+                <button type="button" className={flowStep === 'start' ? 'active' : ''} onClick={() => setFlowStep('start')}>Choose</button>
+                <button type="button" className={flowStep === 'role' ? 'active' : ''} disabled={!selectedGroup || selectedGroupDone} onClick={() => selectedGroup && !selectedGroupDone && setFlowStep('role')}>Job</button>
+                <button type="button" className={flowStep === 'task' || flowStep === 'done' ? 'active' : ''} disabled={!selectedGroup} onClick={() => selectedGroup && setFlowStep(selectedGroupDone ? 'done' : 'task')}>Task</button>
               </div>
 
-              {(group.tasks || []).map(task => {
-                const pct = taskCompletionPercent(task, doneTasks[task.id]);
-                return (
-                  <div className="g12-task-card" key={task.id}>
-                    <div className="g12-task-icon">{doneTasks[task.id] ? '🎉' : '🧩'}</div>
-                    <div>
-                      <h3 style={{ fontSize: 24, marginBottom: 6 }}>{task.title}</h3>
-                      <p className="g12-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
-                      <div className="g12-module-progress" style={{ marginTop: 10 }}><span style={{ width: `${pct}%` }} /></div>
-                      <div className="g12-feeling-row">
-                        {['😊 Madali', '😐 Sakto', '🙋 Help po'].map(choice => (
-                          <button
-                            type="button"
-                            key={choice}
-                            className={taskFeelings[task.id] === choice ? 'selected' : ''}
-                            onClick={() => setTaskFeelings(prev => ({ ...prev, [task.id]: choice }))}
-                          >
-                            {choice}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <button type="button" className="g12-main-btn" onClick={() => markTaskDone(task.id)}>
-                      {doneTasks[task.id] ? 'Done' : 'Tapos na'}
-                    </button>
-                  </div>
-                );
-              })}
-
-              {!(group.tasks || []).length && (
-                <div className="g12-empty" style={{ marginTop: 14 }}>Wala pang team mission para sa grupong ito.</div>
-              )}
+              <button
+                type="button"
+                className={`g12-finished-pill-btn ${flowStep === 'finished' ? 'active' : ''}`}
+                onClick={() => setFlowStep('finished')}
+              >
+                ✅ Done {finishedGroups.length ? `(${finishedGroups.length})` : ''}
+              </button>
             </div>
-          ))}
-        </div>
 
-        {!groups.length && (
-          <div className="g12-empty">No group tasks yet.</div>
+            {flowStep === 'finished' && (
+              <div className="g12-team-flow-card">
+                <div className="g12-team-flow-hero">
+                  <div className="g12-team-mascot">🎉</div>
+                  <div>
+                    <h3>Done Today</h3>
+                    <p>{finishedGroups.length ? 'You finished these teams.' : 'No done teams yet.'}</p>
+                  </div>
+                </div>
+
+                {finishedGroups.length ? (
+                  <div className="g12-team-select-grid">
+                    {finishedGroups.map(group => (
+                      <button
+                        type="button"
+                        className="g12-team-select-btn finished"
+                        key={group.id}
+                        onClick={() => chooseGroup(group.id)}
+                      >
+                        <span>
+                          <strong>✅ {group.name}</strong>
+                          <small>Done today</small>
+                        </span>
+
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="g12-mission-box" style={{ textAlign: 'center' }}>
+                    <h3>Keep going!</h3>
+                    <p>Finish a team mission first.</p>
+                  </div>
+                )}
+
+                <div className="g12-team-actions">
+                  <button type="button" className="g12-soft-btn" onClick={() => setFlowStep('start')}>Back</button>
+                </div>
+              </div>
+            )}
+
+
+
+            {flowStep === 'start' && (
+              <div className="g12-team-flow-card">
+                <div className="g12-team-flow-hero">
+                  <div className="g12-team-mascot">👥</div>
+                  <div>
+                    <h3>{activeGroups.length ? 'Pick a team' : 'All done today!'}</h3>
+                    <p>{activeGroups.length ? 'Tap one team.' : 'Tap Done to see it.'}</p>
+                  </div>
+                </div>
+
+                {!activeGroups.length && !!finishedGroups.length && (
+                  <div className="g12-mission-box" style={{ textAlign: 'center' }}>
+                    <h3>🎉 You did it!</h3>
+                    <p>Your team mission is done.</p>
+                    <div className="g12-team-actions" style={{ justifyContent: 'center' }}>
+                      <button type="button" className="g12-main-btn" onClick={() => setFlowStep('finished')}>
+                        See done teams
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!!activeGroups.length && (
+                  <div className="g12-team-select-grid">
+                    {visibleActiveGroups.map(group => (
+                      <button
+                        type="button"
+                        className="g12-team-select-btn"
+                        key={group.id}
+                        onClick={() => chooseGroup(group.id)}
+                      >
+                        <span>
+                          <strong>👥 {group.name}</strong>
+                          <small>{groupStatusText(group)}</small>
+                        </span>
+                        <span className="arrow">→</span>
+                      </button>
+                    ))}
+
+                    {hiddenActiveCount > 0 && (
+                      <button
+                        type="button"
+                        className="g12-team-finished-toggle"
+                        onClick={() => setShowMoreTeams(prev => !prev)}
+                      >
+                        <span>{showMoreTeams ? 'Show less' : `Show ${hiddenActiveCount} more`}</span>
+                        <span>{showMoreTeams ? '↑' : '↓'}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+
+              </div>
+            )}
+
+            {flowStep === 'role' && selectedGroup && (
+              <div className="g12-team-flow-card">
+                <div className="g12-team-flow-hero">
+                  <div className="g12-team-mascot">⭐</div>
+                  <div>
+                    <h3>Pick a job</h3>
+                    <p>Choose your job.</p>
+                  </div>
+                </div>
+
+                <div className="g12-role-grid simple">
+                  {roles.map(role => (
+                    <button
+                      type="button"
+                      key={`${selectedGroup.id}-${role.id}`}
+                      className={`g12-role-choice simple ${selectedRoleId === role.id ? 'selected' : ''}`}
+                      onClick={() => chooseRole(role.id)}
+                    >
+                      <span>{role.icon}</span>
+                      {role.label}
+                      <small>{role.helper}</small>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="g12-team-actions">
+                  <button type="button" className="g12-soft-btn" onClick={() => setFlowStep('start')}>Back</button>
+                </div>
+              </div>
+            )}
+
+            {flowStep === 'task' && selectedGroup && (
+              <div className="g12-team-flow-card">
+                <div className="g12-team-flow-hero">
+                  <div className="g12-team-mascot">🧩</div>
+                  <div>
+                    <h3>Help time!</h3>
+                    <p>Do the mission together.</p>
+                  </div>
+                </div>
+
+                <div className="g12-mission-box">
+                  {primaryTask ? (
+                    <>
+                      <h3>{primaryTask.title}</h3>
+                      <p>{primaryTask.description || selectedGroup.description || 'Complete the activity together with your group.'}</p>
+                      <div className="g12-mission-chip-row">
+                        {selectedRole && <span className="g12-mission-chip">Job: {selectedRole.icon} {selectedRole.label}</span>}
+                        {!!primaryTask.xpReward && <span className="g12-mission-chip">+{primaryTask.xpReward} XP</span>}
+                        {extraTaskCount > 0 && <span className="g12-mission-chip">{extraTaskCount} more</span>}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3>No mission yet</h3>
+                      <p>Teacher can add one.</p>
+                    </>
+                  )}
+                </div>
+
+                <div className="g12-team-actions">
+                  <button type="button" className="g12-soft-btn" onClick={() => setFlowStep('role')}>Back</button>
+                  <button
+                    type="button"
+                    className="g12-main-btn"
+                    disabled={!primaryTask || taskRecorded}
+                    onClick={() => primaryTask && markTaskDone(primaryTask.id)}
+                  >
+                    {taskRecorded ? 'Mission Done' : 'I helped my team!'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {flowStep === 'done' && (
+              <div className="g12-team-flow-card g12-team-done">
+                <div className="done-icon">🎉</div>
+                <h3>{selectedGroupDone ? 'Mission Done!' : 'Great job!'}</h3>
+                <p>{selectedGroupDone ? 'You helped your team today.' : 'Teacher can check your work.'}</p>
+                <div className="g12-team-actions" style={{ justifyContent: 'center' }}>
+                  <button type="button" className="g12-main-btn" onClick={() => setFlowStep('start')}>Back to teams</button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </section>
     </EarlyStudentChrome>
