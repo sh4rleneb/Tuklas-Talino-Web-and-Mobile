@@ -6965,6 +6965,30 @@ function TeacherDashboard({
       <TeacherRedesignStyles />
 
       <style>{`
+        /* teacher-dashboard-assigned-classes-polish */
+        .teacher-assigned-classes-card {
+          padding: 30px 34px !important;
+        }
+
+        .teacher-assigned-classes-card .lms-section-label {
+          font-size: 0.96rem !important;
+        }
+
+        .teacher-assigned-classes-card h2 {
+          font-size: 1.8rem !important;
+          line-height: 1.18 !important;
+          margin-bottom: 10px !important;
+        }
+
+        .teacher-assigned-classes-card .pill {
+          font-size: 1rem !important;
+          padding: 10px 16px !important;
+          border-radius: 999px !important;
+        }
+      `}</style>
+
+
+      <style>{`
         /* lesson-builder-readable-text */
         .teacher-builder-workflow {
           gap: 12px;
@@ -7235,7 +7259,6 @@ function TeacherDashboard({
               <strong>{teacherName}</strong>
               <small>Guro</small>
             </div>
-            <span>⌄</span>
           </div>
 
         </div>
@@ -7321,12 +7344,9 @@ function TeacherDashboard({
           </div>
         </section>
 
-        <section className="teacher-workspace-card" style={{ marginBottom: 16 }}>
+        <section className="teacher-workspace-card teacher-assigned-classes-card" style={{ marginBottom: 16 }}>
           <div className="lms-section-label">Assigned Classes</div>
           <h2>Your Handled Classes</h2>
-          <p className="muted">
-            These are the grade and section assignments set by the admin. Your students, monitoring, quiz attempts, and reports are filtered using these classes.
-          </p>
 
           <div className="divider" />
 
@@ -8507,7 +8527,7 @@ function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
               <div className="teacher-design-step">AI</div>
               <div>
                 <h2>AI-Assisted Lesson Builder</h2>
-                <p>Upload a lesson plan file or paste the content, then generate a Tuklas Talino draft. Teacher review is still required before publishing.</p>
+
               </div>
             </div>
 
