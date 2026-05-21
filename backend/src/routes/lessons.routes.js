@@ -158,7 +158,40 @@ router.get('/:id', async (req, res, next) => {
       return res.status(404).json({ message: 'Lesson not found.' });
     }
 
-    res.json({ lesson });
+    const lessonJson = lesson.toJSON();
+
+    if (req.student?.id) {
+      const histories = await QuizHistory.findAll({
+        where: {
+          studentId: req.student.id,
+          lessonId: lesson.id,
+        },
+        order: [['answeredAt', 'DESC']],
+      });
+
+      const latestByQuestion = new Map();
+
+      for (const history of histories) {
+        if (!latestByQuestion.has(Number(history.questionId))) {
+          latestByQuestion.set(Number(history.questionId), {
+            selectedOptionId: history.selectedOptionId,
+            isCorrect: history.isCorrect,
+            answeredAt: history.answeredAt,
+          });
+        }
+      }
+
+      for (const activity of lessonJson.activities || []) {
+        for (const question of activity.questions || []) {
+          const saved = latestByQuestion.get(Number(question.id));
+          if (saved) {
+            question.mcqAttempt = saved;
+          }
+        }
+      }
+    }
+
+    res.json({ lesson: lessonJson });
   } catch (err) {
     next(err);
   }
@@ -317,29 +350,47 @@ router.post('/:id/mcq', requireRole('student'), async (req, res, next) => {
       isCorrect: option.isCorrect,
     });
 
-    if (option.isCorrect) {
-      await awardXp(
-        req.student.id,
-        5,
-        'mcq',
-        question.id,
-        'Correct MCQ answer'
-      );
+    let xpAwarded = 0;
 
-      notifyTeacherAndLeaderboard({
-        type: 'mcq_correct',
-        studentId: req.student.id,
-        studentName: req.student.name,
-        lessonId: Number(req.params.id),
-        questionId: question.id,
-        xp: 5,
-        message: `${req.student.name} answered a quiz correctly`,
+    if (option.isCorrect) {
+      const existingMcqXp = await XpLog.findOne({
+        where: {
+          studentId: req.student.id,
+          sourceType: 'mcq',
+          sourceId: question.id,
+        },
       });
+
+      if (!existingMcqXp) {
+        await awardXp(
+          req.student.id,
+          5,
+          'mcq',
+          question.id,
+          'Correct MCQ answer'
+        );
+
+        xpAwarded = 5;
+
+        notifyTeacherAndLeaderboard({
+          type: 'mcq_correct',
+          studentId: req.student.id,
+          studentName: req.student.name,
+          lessonId: Number(req.params.id),
+          questionId: question.id,
+          xp: 5,
+          message: `${req.student.name} answered an MCQ correctly`,
+        });
+      }
     }
 
     res.json({
       correct: option.isCorrect,
       history,
+      xpAwarded,
+      message: xpAwarded
+        ? 'Correct answer. XP awarded once for this question.'
+        : 'Answer saved. No extra XP for repeated or incorrect answers.',
     });
   } catch (err) {
     next(err);

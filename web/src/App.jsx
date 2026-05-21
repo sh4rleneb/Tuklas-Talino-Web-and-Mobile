@@ -421,21 +421,58 @@ if (role === 'admin') {
     });
   }
 
-  async function submitMcq(question, option) {
-  if (!selectedLesson) return null;
+  async function submitMcq(question, option, options = {}) {
+    if (!selectedLesson) return null;
 
-  return await safeRun(async () => {
-    const data = await api(`/lessons/${selectedLesson.id}/mcq`, {
-      method: 'POST',
-      body: { questionId: question.id, selectedOptionId: option.id }
-    });
+    const { silent = false } = options || {};
 
-    setLessonFeedback(data.correct ? '✅ Tama! +5 XP' : '❌ Subukan muli.');
-    await loadStudentDashboard();
+    return await safeRun(async () => {
+      const data = await api(`/lessons/${selectedLesson.id}/mcq`, {
+        method: 'POST',
+        body: { questionId: question.id, selectedOptionId: option.id }
+      });
 
-    return data;
-  });
-}
+      setSelectedLesson(prev => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          activities: (prev.activities || []).map(activity => ({
+            ...activity,
+            questions: (activity.questions || []).map(item => {
+              if (String(item.id) !== String(question.id)) return item;
+
+              return {
+                ...item,
+                mcqAttempt: {
+                  selectedOptionId: option.id,
+                  isCorrect: Boolean(data.correct),
+                  answeredAt: data.history?.answeredAt || new Date().toISOString(),
+                },
+              };
+            }),
+          })),
+        };
+      });
+
+      if (data.xpAwarded) {
+        await loadStudentDashboard();
+      }
+
+      if (!silent) {
+        notify(
+          data.xpAwarded
+            ? `Correct! +${data.xpAwarded} XP`
+            : data.correct
+              ? 'Correct! XP already awarded for this question.'
+              : 'Not quite. Review the answer.',
+          data.correct ? 'good' : 'bad'
+        );
+      }
+
+      return data;
+    }, 'Hindi ma-save ang sagot. Pakisubukan muli.');
+  }
 
   async function submitWriting(taskId, answer) {
   if (!selectedLesson) return;
@@ -4670,42 +4707,99 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
 }
 
 function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitMcq }) {
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [mcqFeedback, setMcqFeedback] = useState({});
-  const [mcqStats, setMcqStats] = useState({});
+  const questions = activity.questions || [];
 
-  async function handleMcq(question, option) {
+  function getBackendMcqState() {
+    const selectedAnswers = {};
+    const mcqFeedback = {};
+    const mcqStats = {};
+    let hasSubmittedAnswer = false;
+
+    for (const question of questions) {
+      const attempt = question.mcqAttempt;
+      if (!attempt) continue;
+
+      hasSubmittedAnswer = true;
+      selectedAnswers[question.id] = attempt.selectedOptionId;
+      mcqStats[question.id] = Boolean(attempt.isCorrect);
+      mcqFeedback[question.id] = attempt.isCorrect
+        ? isEarlyGrade
+          ? 'Correct!'
+          : 'Correct. XP already counted.'
+        : isEarlyGrade
+          ? 'Review this'
+          : 'Not quite. Review this answer.';
+    }
+
+    return { selectedAnswers, mcqFeedback, mcqStats, submitted: hasSubmittedAnswer };
+  }
+
+  const backendState = getBackendMcqState();
+
+  const [selectedAnswers, setSelectedAnswers] = useState(backendState.selectedAnswers);
+  const [mcqFeedback, setMcqFeedback] = useState(backendState.mcqFeedback);
+  const [mcqStats, setMcqStats] = useState(backendState.mcqStats);
+  const [submitted, setSubmitted] = useState(Boolean(backendState.submitted));
+  const [checking, setChecking] = useState(false);
+
+  const selectedCount = questions.filter(q => selectedAnswers[q.id]).length;
+  const allSelected = Boolean(questions.length) && selectedCount === questions.length;
+  const correctCount = Object.values(mcqStats).filter(Boolean).length;
+  const scorePercent = submitted && questions.length ? Math.round((correctCount / questions.length) * 100) : 0;
+  const band = effectivenessBand(scorePercent);
+
+  function chooseAnswer(question, option) {
+    if (submitted) return;
+
     setSelectedAnswers(prev => ({
       ...prev,
       [question.id]: option.id,
     }));
-
-    const result = await submitMcq(question, option);
-
-    if (result) {
-      setMcqStats(prev => ({
-        ...prev,
-        [question.id]: Boolean(result.correct)
-      }));
-
-      setMcqFeedback(prev => ({
-        ...prev,
-        [question.id]: result.correct
-          ? isEarlyGrade
-            ? '✅ Tama! Ang galing mo!'
-            : '✅ Correct answer.'
-          : isEarlyGrade
-            ? '❌ Hindi pa tama. Subukan muli!'
-            : '❌ Not quite. Try again.'
-      }));
-    }
   }
 
-  const questions = activity.questions || [];
-  const answeredCount = Object.keys(mcqStats).length;
-  const correctCount = Object.values(mcqStats).filter(Boolean).length;
-  const scorePercent = questions.length ? Math.round((correctCount / questions.length) * 100) : 0;
-  const band = effectivenessBand(scorePercent);
+  async function seeScore() {
+    if (submitted || checking || !allSelected) return;
+
+    setChecking(true);
+
+    const nextStats = {};
+    const nextFeedback = {};
+
+    for (const question of questions) {
+      const selectedId = selectedAnswers[question.id];
+      const option = (question.options || []).find(item => String(item.id) === String(selectedId));
+
+      if (!option) {
+        nextStats[question.id] = false;
+        nextFeedback[question.id] = isEarlyGrade
+          ? 'Choose an answer first.'
+          : 'No answer selected.';
+        continue;
+      }
+
+      const result = await submitMcq(question, option, { silent: false });
+
+      if (result) {
+        nextStats[question.id] = Boolean(result.correct);
+        nextFeedback[question.id] = result.correct
+          ? result.xpAwarded
+            ? isEarlyGrade
+              ? `Correct! +${result.xpAwarded} XP`
+              : `Correct! +${result.xpAwarded} XP`
+            : isEarlyGrade
+              ? 'Correct!'
+              : 'Correct. XP already counted.'
+          : isEarlyGrade
+            ? 'Review this'
+            : 'Not quite. Review this answer.';
+      }
+    }
+
+    setMcqStats(nextStats);
+    setMcqFeedback(nextFeedback);
+    setSubmitted(true);
+    setChecking(false);
+  }
 
   return (
     <div className="card" style={activityBoxStyle}>
@@ -4726,9 +4820,13 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
       )}
 
       <div className="muted">
-        {isEarlyGrade
-          ? 'Piliin ang tamang sagot. Makikita mo agad kung tama para makapag-practice muli.'
-          : 'Choose the best answer. This quiz gives the teacher learning evidence beyond lesson completion.'}
+        {submitted
+          ? isEarlyGrade
+            ? 'Done! Your answer is saved.'
+            : 'This MCQ is already submitted.'
+          : isEarlyGrade
+            ? 'Choose your answer first. Tap See Score when done.'
+            : 'Choose your answers first. Feedback appears after you click See Score.'}
       </div>
 
       <div className="divider" />
@@ -4737,8 +4835,8 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
         <div
           key={q.id || qIndex}
           style={{
-            padding: isEarlyGrade ? 16 : 14,
-            borderRadius: 16,
+            padding: isEarlyGrade ? 18 : 14,
+            borderRadius: isEarlyGrade ? 22 : 16,
             background: isEarlyGrade ? '#F8FAFF' : '#FAFAFA',
             marginBottom: 12,
           }}
@@ -4747,26 +4845,29 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
             Question {qIndex + 1} of {questions.length}
           </div>
 
-          <h3 style={{ marginTop: 0, fontSize: isEarlyGrade ? 21 : 17 }}>
+          <h3 style={{ marginTop: 0, fontSize: isEarlyGrade ? 23 : 17, lineHeight: 1.35 }}>
             {q.question}
           </h3>
 
           <div className="grid grid-2">
             {(q.options || []).map((option, optionIndex) => {
-              const selected = selectedAnswers[q.id] === option.id;
+              const selected = String(selectedAnswers[q.id]) === String(option.id);
               const label = option.optionText || option.text || `Option ${optionIndex + 1}`;
 
               return (
                 <button
                   key={option.id || optionIndex}
+                  type="button"
                   className={`btn ${selected ? 'btn-green' : 'btn-outline'}`}
-                  onClick={() => handleMcq(q, option)}
+                  onClick={() => chooseAnswer(q, option)}
+                  disabled={submitted}
                   style={{
-                    minHeight: isEarlyGrade ? 62 : 46,
+                    minHeight: isEarlyGrade ? 72 : 48,
                     justifyContent: 'flex-start',
                     textAlign: 'left',
-                    fontSize: isEarlyGrade ? 18 : 14,
+                    fontSize: isEarlyGrade ? 20 : 15,
                     whiteSpace: 'normal',
+                    opacity: submitted && !selected ? 0.65 : 1,
                   }}
                 >
                   <span style={{ marginRight: 8, fontWeight: 800 }}>
@@ -4778,48 +4879,68 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
             })}
           </div>
 
-          {mcqFeedback[q.id] && (
+          {submitted && mcqFeedback[q.id] && (
             <div
               style={{
                 marginTop: 12,
-                padding: 12,
-                borderRadius: 14,
-                background: mcqFeedback[q.id].includes('Tama') || mcqFeedback[q.id].includes('Correct')
-                  ? '#E9FBEF'
-                  : '#FFF4E5',
-                fontWeight: 800,
-                fontSize: isEarlyGrade ? 18 : 14,
+                padding: isEarlyGrade ? 16 : 12,
+                borderRadius: isEarlyGrade ? 20 : 14,
+                background: mcqStats[q.id] ? '#E9FBEF' : '#FFF4E5',
+                fontWeight: 900,
+                fontSize: isEarlyGrade ? 21 : 15,
+                lineHeight: 1.45,
               }}
             >
-              {mcqFeedback[q.id]}
+              Question {qIndex + 1}: {mcqFeedback[q.id]}
             </div>
           )}
         </div>
       ))}
 
-      {answeredCount > 0 && (
+      {!submitted && (
+        <button
+          type="button"
+          className="btn btn-green"
+          onClick={seeScore}
+          disabled={!allSelected || checking}
+          style={{
+            width: '100%',
+            minHeight: isEarlyGrade ? 64 : 50,
+            fontSize: isEarlyGrade ? 22 : 16,
+            borderRadius: isEarlyGrade ? 24 : 16,
+            opacity: !allSelected || checking ? 0.65 : 1,
+          }}
+        >
+          {checking ? 'Checking...' : allSelected ? 'See Score' : `Answer ${selectedCount}/${questions.length}`}
+        </button>
+      )}
+
+      {submitted && (
         <div
           style={{
             marginTop: 12,
             padding: isEarlyGrade ? 18 : 16,
             borderRadius: isEarlyGrade ? 24 : 18,
-            background: scorePercent >= 70 ? '#E9FBEF' : '#FFF8CF',
-            border: scorePercent >= 70 ? '1px solid #bfeacb' : '1px solid #f7dfa0',
-            color: '#14223b',
-            fontWeight: 900,
+            background: isEarlyGrade ? '#FFF7D6' : '#F7F9FC',
+            border: '1px solid #E8E8E8',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <strong style={{ fontSize: isEarlyGrade ? 22 : 18 }}>
-              {band.icon} Quiz Score: {correctCount}/{questions.length} ({scorePercent}%)
-            </strong>
-            <span className="pill">{band.label}</span>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <b style={{ fontSize: isEarlyGrade ? 22 : 16 }}>
+                Score: {correctCount}/{questions.length}
+              </b>
+              <div className="muted" style={{ fontSize: isEarlyGrade ? 17 : 13 }}>
+                {isEarlyGrade ? 'Good try! Keep learning.' : `${band.icon} ${band.label} • ${scorePercent}%`}
+              </div>
+            </div>
+
+            <div className="pill">
+              {scorePercent}%
+            </div>
           </div>
-          <div style={{ marginTop: 8, color: '#526988', fontSize: isEarlyGrade ? 16 : 14 }}>
-            {isEarlyGrade
-              ? 'Kapag may mali, puwede mong subukan muli para mas maintindihan ang lesson.'
-              : `${band.note} Teachers can use this score with writing, speech, and group outputs to judge lesson effectiveness.`}
-          </div>
+
+          <ProgressBar value={scorePercent} />
         </div>
       )}
     </div>

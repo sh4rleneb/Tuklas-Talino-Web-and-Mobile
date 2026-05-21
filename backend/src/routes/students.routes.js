@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, GroupMember, Group, GroupTask, GroupTaskCompletion } from '../models/index.js';
+import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, GroupMember, Group, GroupTask, GroupTaskCompletion } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
@@ -211,6 +211,7 @@ router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) 
     await Promise.all([
       CompletedLesson.destroy({ where: { studentId: student.id } }),
       XpLog.destroy({ where: { studentId: student.id } }),
+      QuizHistory.destroy({ where: { studentId: student.id } }),
       StudentBadge.destroy({ where: { studentId: student.id } }),
       GroupTaskCompletion.destroy({ where: { studentId: student.id } })
     ]);
