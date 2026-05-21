@@ -6964,6 +6964,83 @@ function TeacherDashboard({
     <div className="teacher-redesign-page">
       <TeacherRedesignStyles />
 
+      <style>{`
+        .admin-clean-table {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          width: 100%;
+          margin-top: 18px;
+        }
+
+        .admin-clean-table-head,
+        .admin-clean-table-row {
+          display: grid;
+          grid-template-columns: 1.4fr 1fr .8fr 1.6fr;
+          gap: 16px;
+          align-items: center;
+          padding: 14px 16px;
+          border-radius: 18px;
+        }
+
+        .admin-clean-table-head {
+          background: #f4fbf7;
+          color: #43564d;
+          font-size: 0.82rem;
+          font-weight: 900;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .admin-clean-table-row {
+          background: #ffffff;
+          border: 1px solid #e1efe7;
+          box-shadow: 0 8px 22px rgba(13, 71, 45, 0.04);
+        }
+
+        .admin-clean-table-row strong {
+          display: block;
+          color: #10213f;
+          font-size: 0.98rem;
+          line-height: 1.35;
+        }
+
+        .admin-clean-table-row small {
+          display: block;
+          color: #60736a;
+          font-weight: 800;
+          margin-top: 4px;
+        }
+
+        .admin-clean-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .admin-audit-table .admin-clean-table-head,
+        .admin-audit-table .admin-clean-table-row {
+          grid-template-columns: 1.35fr 1fr .8fr 1fr;
+        }
+
+        @media (max-width: 980px) {
+          .admin-clean-table-head {
+            display: none;
+          }
+
+          .admin-clean-table-row,
+          .admin-audit-table .admin-clean-table-row {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+
+          .admin-clean-actions {
+            justify-content: flex-start;
+          }
+        }
+      `}</style>
+
       <header className="teacher-main-header teacher-main-header-clean">
         <div className="teacher-brand-area">
           <div className="teacher-brand-mark">
@@ -8812,9 +8889,17 @@ function AdminDashboard({
   removeTeacherAssignment,
   reload
 }) {
+  const [adminTab, setAdminTab] = useState('overview');
+
+  const stats = data.stats || {};
+  const students = data.students || [];
+  const archivedStudents = data.archivedStudents || [];
   const teachers = data.teachers || [];
+  const archivedTeachers = data.archivedTeachers || [];
   const teacherAssignments = data.teacherAssignments || [];
   const classOptions = data.classOptions || [];
+  const logs = data.logs || [];
+
   const [assignGradeFilter, setAssignGradeFilter] = useState('');
   const sectionOptions = [...new Set(
     classOptions
@@ -8822,6 +8907,18 @@ function AdminDashboard({
       .map(option => option.section)
       .filter(Boolean)
   )];
+
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+
+  function openTab(tab, targetId = 'admin-dashboard-workspace') {
+    setAdminTab(tab);
+    setTimeout(() => scrollTo(targetId), 0);
+  }
 
   function assignmentLabel(assignment) {
     return `Grade ${assignment.gradeLevel} • ${assignment.section}`;
@@ -8831,184 +8928,467 @@ function AdminDashboard({
     return assignment.Teacher?.name || teachers.find(t => Number(t.id) === Number(assignment.teacherId))?.name || 'Teacher';
   }
 
-  return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card">
-  <div className="section-title">🏫 Assign Teacher to Class</div>
-  <div className="muted">
-    Choose which grade and section each teacher handles. This controls what they see in monitoring, reports, quiz attempts, and student lists.
-  </div>
+  return (
+    <div className="teacher-redesign-page">
+      <TeacherRedesignStyles />
 
-  <div className="divider" />
-
-  <div className="grid grid-2">
-    <select className="input-field" id="a-assign-teacher" defaultValue="">
-      <option value="">Select teacher</option>
-      {teachers.map(t => (
-        <option key={t.id} value={t.id}>{t.name}</option>
-      ))}
-    </select>
-
-    <select
-      className="input-field"
-      id="a-assign-grade"
-      value={assignGradeFilter}
-      onChange={(event) => setAssignGradeFilter(event.target.value)}
-    >
-      <option value="">Grade</option>
-      {[1, 2, 3, 4, 5, 6].map(grade => (
-        <option key={grade} value={grade}>Grade {grade}</option>
-      ))}
-    </select>
-
-    <select className="input-field" id="a-assign-section" defaultValue="">
-      <option value="">Section</option>
-      {sectionOptions.map(section => (
-        <option key={section} value={section}>{section}</option>
-      ))}
-      {!sectionOptions.length && (
-        <option value="" disabled>No sections found for this grade</option>
-      )}
-    </select>
-
-    <button className="btn btn-blue" onClick={assignTeacherClass}>
-      Save Assignment
-    </button>
-  </div>
-
-  <div className="divider" />
-
-  <div className="grid grid-2">
-    {teacherAssignments.map(assignment => (
-      <div className="lesson-card" key={assignment.id}>
-        <div className="lesson-icon">🏫</div>
-        <div style={{ flex: 1 }}>
-          <b>{teacherNameForAssignment(assignment)}</b>
-          <div className="muted">{assignmentLabel(assignment)}</div>
-        </div>
-        <button className="btn btn-danger btn-sm" onClick={() => removeTeacherAssignment(assignment.id)}>
-          Remove
-        </button>
-      </div>
-    ))}
-
-    {!teacherAssignments.length && (
-      <div className="muted">No teacher class assignments yet.</div>
-    )}
-  </div>
-</div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div>
- <button
-  className="btn btn-outline btn-sm"
-  onClick={() => resetStudentPassword(s.id, s.name)}
->
-  Reset Password
-</button>
-
-<button
-  className="btn btn-outline btn-sm"
-  onClick={() => resetStudent(s.id)}
->
-  Reset Progress
-</button>
-
-<button
-  className="btn btn-danger btn-sm"
-  onClick={() => archiveStudent(s.id)}
->
-  Archive
-</button>
-  </div>)}</div></div>
-  <div className="card">
-  <div className="section-title">🗃️ Archived Students</div>
-
-  <div className="muted">
-    Archived students cannot log in, but their records are still saved.
-    Use Reactivate if an account was archived by mistake.
-  </div>
-
-  <div className="divider" />
-
-  <div id="admin-archived-students-wrap">
-    {(data.archivedStudents || []).map(s => (
-      <div className="lesson-card" key={s.id}>
-        <div className="lesson-icon">{s.avatar || '👨‍🎓'}</div>
-
-        <div style={{ flex: 1 }}>
-          <b>{s.name}</b>
-          <div className="muted">
-            {s.studentCode} • Grade {s.gradeLevel} • {s.section} • Archived
+      <header className="teacher-main-header teacher-main-header-clean">
+        <div className="teacher-brand-area">
+          <div className="teacher-brand-mark">
+            <div className="teacher-brand-icon">🌱</div>
+            <div className="teacher-brand-text">
+              <strong>Tuklas Talino</strong>
+              <small>Tuklasin. Matuto. Magningning.</small>
+            </div>
           </div>
         </div>
 
-        <button
-          className="btn btn-green btn-sm"
-          onClick={() => reactivateStudent(s.id)}
-        >
-          Reactivate
-        </button>
-      </div>
-    ))}
-
-    {!(data.archivedStudents || []).length && (
-      <div className="muted">
-        No archived students.
-      </div>
-    )}
-  </div>
-</div>
-  <div className="card"><div className="section-title">📋 Teachers</div><div className="divider" /><div id="admin-teachers-wrap">{data.teachers.map(t => <div className="lesson-card" key={t.id}><div className="lesson-icon">👩‍🏫</div><div style={{ flex: 1 }}><b>{t.name}</b><div className="muted">{t.employeeCode} • {t.status}</div></div>
-  <button
-  className="btn btn-outline btn-sm"
-  onClick={() => resetTeacherPassword(t.id, t.name)}
->
-  Reset Password
-</button>
-
-<button
-  className="btn btn-danger btn-sm"
-  onClick={() => archiveTeacher(t.id)}
->
-  Archive
-</button>
-
-  </div>)}</div></div>
-
-  <div className="card">
-  <div className="section-title">🗃️ Archived Teachers</div>
-
-  <div className="muted">
-    Archived teachers cannot log in, but their records are still saved.
-    Use Reactivate if an account was archived by mistake.
-  </div>
-
-  <div className="divider" />
-
-  <div id="admin-archived-teachers-wrap">
-    {(data.archivedTeachers || []).map(t => (
-      <div className="lesson-card" key={t.id}>
-        <div className="lesson-icon">👩‍🏫</div>
-
-        <div style={{ flex: 1 }}>
-          <b>{t.name}</b>
-          <div className="muted">
-            {t.employeeCode} • Archived
+        <div className="teacher-header-actions">
+          <div className="teacher-profile-pill">
+            <div className="teacher-profile-avatar">🛡️</div>
+            <div className="teacher-profile-text">
+              <strong>Admin</strong>
+              <small>System Manager</small>
+            </div>
+            <span>⌄</span>
           </div>
         </div>
+      </header>
 
-        <button
-          className="btn btn-green btn-sm"
-          onClick={() => reactivateTeacher(t.id)}
-        >
-          Reactivate
-        </button>
-      </div>
-    ))}
+      <main className="teacher-main-content teacher-main-content-clean" id="admin-dashboard-top">
+        <div className="teacher-sidebar-layout">
+          <aside className="teacher-side-nav" aria-label="Admin workspace navigation">
+            <div className="teacher-side-nav-title">
+              <span>🛡️</span>
+              <strong>Admin Panel</strong>
+            </div>
 
-    {!(data.archivedTeachers || []).length && (
-      <div className="muted">
-        No archived teachers.
-      </div>
-    )}
-  </div>
-</div>
-  
-  <div className="card"><div className="section-title">🗂️ Account History (Audit Trail)</div><div className="muted">Read-only record of maintenance actions.</div><div className="divider" /><div id="admin-history-wrap">{data.logs.map(log => <div className="trow" key={log.id}><div>{log.action}</div><div>{log.entityType}</div><div>{log.entityId}</div><div className="hide-sm">{fmtDate(log.createdAt)}</div><div className="hide-sm">#{log.actorUserId}</div></div>)}</div></div></div></>;
+            <button className={`teacher-sidebar-button ${adminTab === 'overview' ? 'active' : ''}`} type="button" onClick={() => openTab('overview')}>
+              <span>📊</span>
+              <strong>Overview</strong>
+            </button>
+
+            <button className={`teacher-sidebar-button ${adminTab === 'add' ? 'active' : ''}`} type="button" onClick={() => openTab('add')}>
+              <span>➕</span>
+              <strong>Add Accounts</strong>
+            </button>
+
+            <button className={`teacher-sidebar-button ${adminTab === 'assignments' ? 'active' : ''}`} type="button" onClick={() => openTab('assignments')}>
+              <span>🏫</span>
+              <strong>Teacher Assignments</strong>
+            </button>
+
+            <button className={`teacher-sidebar-button ${adminTab === 'students' ? 'active' : ''}`} type="button" onClick={() => openTab('students')}>
+              <span>👨‍🎓</span>
+              <strong>Students</strong>
+            </button>
+
+            <button className={`teacher-sidebar-button ${adminTab === 'teachers' ? 'active' : ''}`} type="button" onClick={() => openTab('teachers')}>
+              <span>👩‍🏫</span>
+              <strong>Teachers</strong>
+            </button>
+
+            <button className={`teacher-sidebar-button ${adminTab === 'archives' ? 'active' : ''}`} type="button" onClick={() => openTab('archives')}>
+              <span>🗃️</span>
+              <strong>Archives</strong>
+            </button>
+
+            <button className={`teacher-sidebar-button ${adminTab === 'logs' ? 'active' : ''}`} type="button" onClick={() => openTab('logs')}>
+              <span>🧾</span>
+              <strong>Audit Logs</strong>
+            </button>
+
+            <button className="teacher-sidebar-button danger" type="button" onClick={logout}>
+              <span>⇥</span>
+              <strong>Logout</strong>
+            </button>
+          </aside>
+
+          <div className="teacher-main-workarea" id="admin-dashboard-workspace">
+            <section className="teacher-clean-hero">
+              <div className="teacher-clean-hero-copy">
+                <div className="lms-section-label">Admin Workspace</div>
+                <h1>Admin Dashboard</h1>
+                <p>Manage accounts, class assignments, archives, and system activity in one place.</p>
+              </div>
+
+              <div className="teacher-clean-actions">
+                <button className="lms-view-button" type="button" onClick={() => openTab('assignments')}>
+                  🏫 Assign Teachers
+                </button>
+                <button className="teacher-logout-btn light" type="button" onClick={reload}>
+                  🔄 Refresh
+                </button>
+              </div>
+            </section>
+
+            {adminTab === 'overview' && (
+              <>
+                <section className="teacher-clean-metrics" aria-label="Admin quick stats">
+                  <button className="teacher-clean-metric" type="button" onClick={() => openTab('students')}>
+                    <span className="metric-icon blue">👥</span>
+                    <span><small>Total Users</small><strong>{stats.users || 0}</strong></span>
+                  </button>
+
+                  <button className="teacher-clean-metric" type="button" onClick={() => openTab('students')}>
+                    <span className="metric-icon green">👨‍🎓</span>
+                    <span><small>Students</small><strong>{stats.students || students.length || 0}</strong></span>
+                  </button>
+
+                  <button className="teacher-clean-metric" type="button" onClick={() => openTab('teachers')}>
+                    <span className="metric-icon yellow">👩‍🏫</span>
+                    <span><small>Teachers</small><strong>{stats.teachers || teachers.length || 0}</strong></span>
+                  </button>
+
+                  <button className="teacher-clean-metric" type="button" onClick={() => openTab('assignments')}>
+                    <span className="metric-icon purple">🏫</span>
+                    <span><small>Assignments</small><strong>{teacherAssignments.length}</strong></span>
+                  </button>
+                </section>
+
+                <section className="teacher-workspace-card">
+                  <div className="teacher-workspace-heading">
+                    <div>
+                      <div className="lms-section-label">System Overview</div>
+                      <h2>Account Management Summary</h2>
+                      <p>Use this area to check active accounts, teacher assignments, and recent maintenance actions.</p>
+                    </div>
+                  </div>
+
+                  <div className="teacher-monitor-summary">
+                    <div><span>Active Students</span><strong>{students.length}</strong></div>
+                    <div><span>Active Teachers</span><strong>{teachers.length}</strong></div>
+                    <div><span>Archived Accounts</span><strong>{archivedStudents.length + archivedTeachers.length}</strong></div>
+                  </div>
+
+                  <div className="lms-empty-line" style={{ marginTop: 14 }}>
+                    Tip: Assign teachers to grade and section first so their dashboard, reports, quizzes, and student monitoring stay properly filtered.
+                  </div>
+                </section>
+              </>
+            )}
+
+            {adminTab === 'add' && (
+              <section className="teacher-clean-panel">
+                <div className="teacher-form-grid">
+                  <div className="teacher-workspace-card">
+                    <div className="teacher-workspace-heading">
+                      <div>
+                        <div className="lms-section-label">Student Account</div>
+                        <h2>Add Student</h2>
+                        <p>Create a learner account with grade and section details.</p>
+                      </div>
+                    </div>
+
+                    <input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" />
+                    <div style={{ height: 10 }} />
+                    <input className="input-field" id="a-stu-name" placeholder="Name" />
+                    <div style={{ height: 10 }} />
+                    <input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" />
+                    <div style={{ height: 10 }} />
+                    <input className="input-field" id="a-stu-section" placeholder="Section" />
+                    <div style={{ height: 10 }} />
+                    <input className="input-field" id="a-stu-password" placeholder="Password (default student123)" />
+                    <div className="divider" />
+
+                    <button className="lms-main-action full" type="button" onClick={addStudent}>
+                      Add Student
+                    </button>
+                  </div>
+
+                  <div className="teacher-workspace-card">
+                    <div className="teacher-workspace-heading">
+                      <div>
+                        <div className="lms-section-label">Teacher Account</div>
+                        <h2>Add Teacher</h2>
+                        <p>Create a teacher login, then assign handled classes in the next section.</p>
+                      </div>
+                    </div>
+
+                    <input className="input-field" id="a-t-username" placeholder="Username (unique)" />
+                    <div style={{ height: 10 }} />
+                    <input className="input-field" id="a-t-name" placeholder="Teacher Name" />
+                    <div style={{ height: 10 }} />
+                    <input className="input-field" id="a-t-code" placeholder="Employee Code" />
+                    <div style={{ height: 10 }} />
+                    <input className="input-field" id="a-t-password" placeholder="Password" />
+                    <div className="divider" />
+
+                    <button className="lms-main-action full" type="button" onClick={addTeacher}>
+                      Add Teacher
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {adminTab === 'assignments' && (
+              <section className="teacher-workspace-card">
+                <div className="teacher-workspace-heading">
+                  <div>
+                    <div className="lms-section-label">Teacher Assignment</div>
+                    <h2>Assign Teacher to Class</h2>
+                    <p>Choose which grade and section each teacher handles. This controls their monitoring, reports, quiz attempts, and student lists.</p>
+                  </div>
+                </div>
+
+                <div className="teacher-tool-box">
+                  <div className="teacher-form-grid">
+                    <select className="input-field" id="a-assign-teacher" defaultValue="">
+                      <option value="">Select teacher</option>
+                      {teachers.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+
+                    <select className="input-field" id="a-assign-grade" value={assignGradeFilter} onChange={(event) => setAssignGradeFilter(event.target.value)}>
+                      <option value="">Grade</option>
+                      {[1, 2, 3, 4, 5, 6].map(grade => (
+                        <option key={grade} value={grade}>Grade {grade}</option>
+                      ))}
+                    </select>
+
+                    <select className="input-field" id="a-assign-section" defaultValue="">
+                      <option value="">Section</option>
+                      {sectionOptions.map(section => (
+                        <option key={section} value={section}>{section}</option>
+                      ))}
+                      {!sectionOptions.length && (
+                        <option value="" disabled>No sections found for this grade</option>
+                      )}
+                    </select>
+
+                    <button className="lms-main-action" type="button" onClick={assignTeacherClass}>
+                      Save Assignment
+                    </button>
+                  </div>
+                </div>
+
+                <div className="divider" />
+
+                <div className="teacher-groups-grid">
+                  {teacherAssignments.map(assignment => (
+                    <div className="teacher-group-item" key={assignment.id}>
+                      <div className="teacher-group-item-top">
+                        <div>
+                          <strong>{teacherNameForAssignment(assignment)}</strong>
+                          <p>{assignmentLabel(assignment)}</p>
+                        </div>
+                        <span className="lms-mini-pill">Assigned</span>
+                      </div>
+
+                      <button className="btn btn-danger btn-sm" type="button" onClick={() => removeTeacherAssignment(assignment.id)}>
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+
+                  {!teacherAssignments.length && (
+                    <div className="lms-empty-line">No teacher class assignments yet.</div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {adminTab === 'students' && (
+              <section className="teacher-workspace-card">
+                <div className="teacher-workspace-heading">
+                  <div>
+                    <div className="lms-section-label">Learner Accounts</div>
+                    <h2>Students</h2>
+                    <p>Manage active student accounts, reset passwords, and reset progress when needed.</p>
+                  </div>
+
+                  <button className="lms-view-button" type="button" onClick={reload}>
+                    Refresh
+                  </button>
+                </div>
+
+                <div className="admin-clean-table">
+                  <div className="admin-clean-table-head">
+                    <span>Student</span>
+                    <span>Grade & Section</span>
+                    <span>Status</span>
+                    <span>Actions</span>
+                  </div>
+
+                  {students.map(s => (
+                    <div className="admin-clean-table-row" key={s.id}>
+                      <span>
+                        <strong>{s.name}</strong>
+                        <small>{s.studentCode}</small>
+                      </span>
+
+                      <span>
+                        <strong>Grade {s.gradeLevel}</strong>
+                        <small>{s.section}</small>
+                      </span>
+
+                      <span>
+                        <span className="lms-mini-pill">{s.status}</span>
+                      </span>
+
+                      <span className="admin-clean-actions">
+                        <button className="btn btn-outline btn-sm" onClick={() => resetStudentPassword(s.id, s.name)}>Reset Password</button>
+                        <button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset Progress</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button>
+                      </span>
+                    </div>
+                  ))}
+
+                  {!students.length && (
+                    <div className="lms-empty-line">No active students.</div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {adminTab === 'teachers' && (
+              <section className="teacher-workspace-card">
+                <div className="teacher-workspace-heading">
+                  <div>
+                    <div className="lms-section-label">Teacher Accounts</div>
+                    <h2>Teachers</h2>
+                    <p>Manage teacher accounts and check their assigned classes.</p>
+                  </div>
+                </div>
+
+                <div className="teacher-groups-grid">
+                  {teachers.map(t => {
+                    const assignments = teacherAssignments.filter(a => Number(a.teacherId) === Number(t.id));
+
+                    return (
+                      <div className="teacher-group-item" key={t.id}>
+                        <div className="teacher-group-item-top">
+                          <div>
+                            <strong>{t.name}</strong>
+                            <p>{t.employeeCode} • {t.status}</p>
+                            <p className="g46-ref-muted">
+                              Handles: {assignments.length ? assignments.map(assignmentLabel).join(', ') : 'No class assigned yet'}
+                            </p>
+                          </div>
+                          <span className="lms-mini-pill">Teacher</span>
+                        </div>
+
+                        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                          <button className="btn btn-outline btn-sm" onClick={() => resetTeacherPassword(t.id, t.name)}>Reset Password</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {!teachers.length && (
+                    <div className="lms-empty-line">No active teachers.</div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {adminTab === 'archives' && (
+              <section className="teacher-clean-panel">
+                <div className="teacher-workspace-card">
+                  <div className="teacher-workspace-heading">
+                    <div>
+                      <div className="lms-section-label">Archived Accounts</div>
+                      <h2>Archived Students</h2>
+                      <p>Archived students cannot log in, but their records remain saved.</p>
+                    </div>
+                  </div>
+
+                  {archivedStudents.map(s => (
+                    <div className="teacher-group-item" key={s.id}>
+                      <div className="teacher-group-item-top">
+                        <div>
+                          <strong>{s.name}</strong>
+                          <p>{s.studentCode} • Grade {s.gradeLevel} • {s.section}</p>
+                        </div>
+                        <button className="btn btn-green btn-sm" onClick={() => reactivateStudent(s.id)}>Reactivate</button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {!archivedStudents.length && (
+                    <div className="lms-empty-line">No archived students.</div>
+                  )}
+                </div>
+
+                <div className="teacher-workspace-card" style={{ marginTop: 16 }}>
+                  <div className="teacher-workspace-heading">
+                    <div>
+                      <div className="lms-section-label">Archived Accounts</div>
+                      <h2>Archived Teachers</h2>
+                      <p>Archived teachers cannot log in, but their records remain saved.</p>
+                    </div>
+                  </div>
+
+                  {archivedTeachers.map(t => (
+                    <div className="teacher-group-item" key={t.id}>
+                      <div className="teacher-group-item-top">
+                        <div>
+                          <strong>{t.name}</strong>
+                          <p>{t.employeeCode} • Archived</p>
+                        </div>
+                        <button className="btn btn-green btn-sm" onClick={() => reactivateTeacher(t.id)}>Reactivate</button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {!archivedTeachers.length && (
+                    <div className="lms-empty-line">No archived teachers.</div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {adminTab === 'logs' && (
+              <section className="teacher-workspace-card">
+                <div className="teacher-workspace-heading">
+                  <div>
+                    <div className="lms-section-label">Audit Trail</div>
+                    <h2>Account History</h2>
+                    <p>Read-only record of recent admin and system maintenance actions.</p>
+                  </div>
+                </div>
+
+                <div className="admin-clean-table admin-audit-table">
+                  <div className="admin-clean-table-head">
+                    <span>Action</span>
+                    <span>Entity</span>
+                    <span>Record</span>
+                    <span>Date</span>
+                  </div>
+
+                  {logs.map(log => (
+                    <div className="admin-clean-table-row" key={log.id}>
+                      <span>
+                        <strong>{log.action}</strong>
+                      </span>
+
+                      <span>
+                        <strong>{log.entityType || 'Record'}</strong>
+                      </span>
+
+                      <span>
+                        <span className="lms-mini-pill">#{log.entityId || '-'}</span>
+                      </span>
+
+                      <span>
+                        <small>{fmtDate(log.createdAt)}</small>
+                      </span>
+                    </div>
+                  ))}
+
+                  {!logs.length && (
+                    <div className="lms-empty-line">No audit logs yet.</div>
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }
+
