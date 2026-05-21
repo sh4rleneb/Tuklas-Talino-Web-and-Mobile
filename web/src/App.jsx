@@ -504,26 +504,38 @@ if (role === 'admin') {
     }, 'Hindi ma-save ang sagot. Pakisubukan muli.');
   }
 
-  async function submitWriting(taskId, answer) {
-  if (!selectedLesson) return;
+  async function submitWriting(taskId, answer, options = {}) {
+  if (!selectedLesson) return null;
 
   if (!answer || answer.trim().length < 2) {
     setLessonFeedback('✍️ Pakisulat muna ang iyong sagot bago i-submit.');
-    return;
+    return null;
   }
 
-  await safeRun(async () => {
-    await api(`/lessons/${selectedLesson.id}/writing`, {
+  if (options?.autoChecked) {
+    setLessonFeedback('');
+  }
+
+  return safeRun(async () => {
+    const data = await api(`/lessons/${selectedLesson.id}/writing`, {
       method: 'POST',
       body: {
         taskId,
-        content: answer
+        content: answer,
+        ...options
       }
     });
 
-    setLessonFeedback('✍️ Na-save ang writing activity. +8 XP');
+    if (!options?.autoChecked) {
+      setLessonFeedback(data?.message || '✍️ Naipasa na ang writing activity.');
+    } else {
+      setLessonFeedback('');
+    }
+
     await loadStudentDashboard();
-  });
+
+    return data;
+  }, 'Hindi ma-save ang sagot. Pakisubukan muli.');
 }
 
   async function submitSpeech(taskId, transcript, score) {
@@ -3580,7 +3592,7 @@ function activityMissionMeta(activity, index = 0) {
     matching: { icon: '🧩', label: 'Pares' },
     mcq: { icon: '🎮', label: 'Quiz' },
     speech: { icon: '🎤', label: 'Bigkas' },
-    writing: { icon: '✍️', label: 'Sulatin' }
+    writing: { icon: '🧩', label: 'Patlang' }
   };
 
   return map[activity?.type] || { icon: ['⭐', '🌟', '✨'][index % 3], label: 'Gawain' };
@@ -3616,6 +3628,20 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
   const safeStep = Math.min(missionStep, missionSteps.length - 1);
   const currentStep = missionSteps[safeStep];
   const progress = Math.round(((safeStep + 1) / Math.max(1, missionSteps.length)) * 100);
+
+  function activityGuideText(step) {
+    const activity = step?.activity || {};
+
+    if (activity.speechTask || activity.targetText) {
+      return 'Pakinggan muna, tapos bigkasin. Tutulungan ka ng AI speech check sa pagbigkas.';
+    }
+
+    if (activity.writingTask || activity.prompt) {
+      return '';
+    }
+
+    return 'Piliin ang tamang sagot. Makikita mo agad ang feedback pagkatapos.';
+  }
 
   function goNext() {
     if (rewardModal) return;
@@ -3666,10 +3692,27 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     go('screen-student');
   }
 
-  function speakLesson() {
-    const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${kidPassage}`;
+  function speakFilipinoText(text) {
+    const cleanText = String(text || '').trim();
+
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = speechSynthesis.getVoices();
+    const filipinoVoice = voices.find(voice =>
+      /fil|tagalog|philippines|filipino/i.test(`${voice.lang} ${voice.name}`)
+    );
+
+    utterance.lang = 'fil-PH';
+    utterance.rate = 0.86;
+    utterance.pitch = 1.05;
+
+    if (filipinoVoice) {
+      utterance.voice = filipinoVoice;
+    }
+
     speechSynthesis.cancel();
-    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+    speechSynthesis.speak(utterance);
   }
 
   if (lesson?.completed && !rewardModal) {
@@ -4025,7 +4068,16 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           color: #0d8b4e;
         }
 
-        .g12-mission-dot.active {
+        .g12-mission-dot:disabled {
+            cursor: not-allowed;
+            opacity: 0.72;
+          }
+
+          .g12-mission-dot:disabled small {
+            color: #50627A;
+          }
+
+          .g12-mission-dot.active {
           background: #fff4c7;
           color: #14223b;
           box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.28), 0 10px 18px rgba(245, 158, 11, 0.10);
@@ -4528,7 +4580,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           <div className="g12-mission-topline">
             <div>
               <h2>{lesson?.title || 'Aralin'} 🌟</h2>
-              <p>{lesson?.subject || 'Filipino'} mission • Step {safeStep + 1} of {missionSteps.length}</p>
+              <p>{lesson?.subject || 'Filipino'} AI mission • Hakbang {safeStep + 1} of {missionSteps.length}</p>
             </div>
             <div className="g12-mission-xp">⚡ +{lesson?.xpReward || 0} XP</div>
           </div>
@@ -4543,7 +4595,13 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                 type="button"
                 key={`${step.type}-${index}`}
                 className={`g12-mission-dot ${index < safeStep ? 'done' : ''} ${index === safeStep ? 'active' : ''}`}
-                onClick={() => !rewardClaimed && !rewardModal && setMissionStep(index)}
+                disabled={rewardClaimed || rewardModal || index > safeStep}
+                aria-disabled={rewardClaimed || rewardModal || index > safeStep}
+                onClick={() => {
+                  if (!rewardClaimed && !rewardModal && index <= safeStep) {
+                    setMissionStep(index);
+                  }
+                }}
               >
                 <span>{step.icon}</span>
                 <small>{step.label}</small>
@@ -4558,8 +4616,8 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-step-head">
                 <div className="g12-mission-big-icon">👂</div>
                 <div>
-                  <h3>Makinig muna</h3>
-                  <p>Pindutin ang speaker. Pakinggan ang aralin bago sumagot.</p>
+                  <h3>Makinig muna sa AI gabay</h3>
+                  <p>Pindutin ang speaker. Babasahin ng system ang aralin gamit ang text-to-speech.</p>
                 </div>
               </div>
 
@@ -4575,7 +4633,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
-                  <button className="g12-mission-btn" onClick={speakLesson}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
                   <button className="g12-mission-btn secondary" onClick={() => speechSynthesis.cancel()}>⏹ Stop</button>
                 </div>
                 <div className="g12-mission-actions-right">
@@ -4590,8 +4648,8 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-step-head">
                 <div className="g12-mission-big-icon">📖</div>
                 <div>
-                  <h3>Basahin natin</h3>
-                  <p>Maikli lang ito. Basahin nang dahan-dahan.</p>
+                  <h3>Basahin at sabayan</h3>
+                  <p>Basahin nang dahan-dahan. Pwede mong pindutin ang speaker kung kailangan ng gabay.</p>
                 </div>
               </div>
 
@@ -4602,7 +4660,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
-                  <button className="g12-mission-btn" onClick={speakLesson}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(kidPassage)}>🔊 Pakinggan</button>
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>
@@ -4618,8 +4676,16 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-step-head">
                 <div className="g12-mission-big-icon">{currentStep.icon}</div>
                 <div>
-                  <h3>{currentStep.label}</h3>
-                  <p>Tapikin ang sagot o gawin ang gawain. Kaya mo ito!</p>
+                  <h3>{
+                    currentStep.activity?.writingTask ||
+                    currentStep.activity?.prompt ||
+                    currentStep.activity?.template ||
+                    currentStep.activity?.fillBlank ||
+                    currentStep.activity?.sentence
+                      ? 'Punan ang Patlang'
+                      : currentStep.label
+                  }</h3>
+                  {activityGuideText(currentStep) ? <p>{activityGuideText(currentStep)}</p> : null}
                 </div>
               </div>
 
@@ -5012,7 +5078,11 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
             opacity: !allSelected || checking ? 0.65 : 1,
           }}
         >
-          {checking ? 'Checking...' : allSelected ? 'See Score' : `Answer ${selectedCount}/${questions.length}`}
+          {checking
+            ? (isEarlyGrade ? 'Tinitingnan...' : 'Checking...')
+            : allSelected
+              ? (isEarlyGrade ? 'Tingnan ang Score' : 'See Score')
+              : (isEarlyGrade ? `Sagutan ${selectedCount}/${questions.length}` : `Answer ${selectedCount}/${questions.length}`)}
         </button>
       )}
 
@@ -5050,20 +5120,151 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
 
 function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitWriting }) {
   const [writingText, setWritingText] = useState('');
+  const [selectedWords, setSelectedWords] = useState([]);
+  const [earlyLocked, setEarlyLocked] = useState(false);
+  const [earlyStatus, setEarlyStatus] = useState('');
 
   const prompt = activity.writingTask?.prompt || activity.prompt || 'Isulat ang iyong sagot.';
+  const rawTemplate =
+    activity.writingTask?.template ||
+    activity.template ||
+    activity.fillBlank ||
+    activity.sentence ||
+    (isEarlyGrade && /_{2,}|\\[blank\\]/i.test(prompt) ? prompt : '');
+
+  const defaultEarlyWordBank = [
+    'bata', 'guro', 'bahay', 'paaralan',
+    'masaya', 'mabait', 'nagbabasa', 'tumutulong'
+  ];
+
+  const activityWordBank = asArray(
+    activity.wordBank ||
+    activity.words ||
+    activity.choices ||
+    activity.options ||
+    activity.writingTask?.wordBank ||
+    activity.writingTask?.words ||
+    activity.writingTask?.choices ||
+    activity.writingTask?.options
+  )
+    .map(item => {
+      if (typeof item === 'string') return item;
+      return item?.text || item?.label || item?.value || item?.answer || '';
+    })
+    .filter(Boolean);
+
+  const earlyWordBank = activityWordBank.length ? activityWordBank : defaultEarlyWordBank;
+  const sentenceTemplate = isEarlyGrade
+    ? (String(rawTemplate || '').trim() || 'Ang ____ ay ____.')
+    : '';
+
+  const blankMatches = sentenceTemplate.match(/_{2,}|\\[blank\\]/gi) || [];
+  const blankCount = Math.max(blankMatches.length, 1);
+
+  function formatFilledSentence(template, words) {
+    let blankIndex = 0;
+    return String(template || '').replace(/_{2,}|\\[blank\\]/gi, () => {
+      const word = words[blankIndex];
+      blankIndex += 1;
+      return word || '____';
+    });
+  }
+
+  const templateParts = sentenceTemplate.split(/(__+|\\[blank\\])/gi).filter(Boolean);
+  const renderedTemplateParts = [];
+  let slot = 0;
+
+  templateParts.forEach((part, partIndex) => {
+    if (/^(__+|\\[blank\\])$/i.test(part)) {
+      renderedTemplateParts.push({
+        type: 'blank',
+        value: selectedWords[slot] || '____',
+        slot,
+        key: `blank-${slot}`
+      });
+      slot += 1;
+      return;
+    }
+
+    renderedTemplateParts.push({
+      type: 'text',
+      value: part,
+      key: `text-${partIndex}`
+    });
+  });
+
+  const filledSentence = isEarlyGrade ? formatFilledSentence(sentenceTemplate, selectedWords) : writingText;
+  const filledCount = selectedWords.filter(Boolean).length;
+  const earlyAnswerReady = filledCount >= blankCount && !filledSentence.includes('____');
+
+  function addWord(word) {
+    if (earlyLocked) return;
+
+    setEarlyStatus('');
+    setSelectedWords(prev => {
+      if (prev.length >= blankCount) return prev;
+      return [...prev, word];
+    });
+  }
+
+  function removeLastWord() {
+    if (earlyLocked) return;
+
+    setEarlyStatus('');
+    setSelectedWords(prev => prev.slice(0, -1));
+  }
+
+  function clearAnswer() {
+    if (earlyLocked) return;
+
+    setEarlyStatus('');
+    setSelectedWords([]);
+    setWritingText('');
+  }
+
+  async function submitEarlyWriting() {
+    setEarlyStatus('Tinitingnan ang sagot...');
+
+    const data = await submitWriting(activity.writingTask?.id, filledSentence, { autoChecked: true });
+
+    if (!data) {
+      setEarlyStatus('Subukan muli 😊');
+      return;
+    }
+
+    const message = data.message ||
+      (data.correct
+        ? `Tama! +${data.xpAwarded || 10} XP 🌟`
+        : data.alreadySubmitted || data.locked
+          ? 'Nasagutan mo na ito 🌟'
+          : 'Subukan muli 😊');
+
+    setEarlyStatus(message);
+
+    if (data.correct || data.alreadySubmitted || data.locked) {
+      setEarlyLocked(true);
+    }
+  }
 
   return (
     <div className="card" style={activityBoxStyle}>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="section-title">
-          ✍️ {isEarlyGrade ? 'Isulat ang Sagot' : 'Writing Activity'}
-        </div>
+      {!isEarlyGrade ? (
+        <div
+          className="row"
+          style={{
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
+          <div className="section-title">
+            ✍️ Writing Activity
+          </div>
 
-        <div className="pill">
-          {index + 1}/{total}
+          <div className="pill">
+            {index + 1}/{total}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       {activity.instructions && (
         <div className="muted" style={{ marginBottom: 8 }}>
@@ -5071,42 +5272,235 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
         </div>
       )}
 
-      <div
-        style={{
-          padding: 14,
-          borderRadius: 16,
-          background: '#FFF8CF',
-          lineHeight: 1.6,
-          marginBottom: 12,
-          fontSize: isEarlyGrade ? 17 : 14,
-        }}
-      >
-        <b>{isEarlyGrade ? 'Tanong:' : 'Prompt:'}</b> {prompt}
-      </div>
+      {!isEarlyGrade && (
+        <div
+          style={{
+            padding: 14,
+            borderRadius: 16,
+            background: '#FFF8CF',
+            lineHeight: 1.6,
+            marginBottom: 12,
+            fontSize: 14,
+          }}
+        >
+          <b>Prompt:</b> {prompt}
+        </div>
+      )}
 
-      <textarea
-        className="input-field"
-        rows="5"
-        value={writingText}
-        onChange={(e) => setWritingText(e.target.value)}
-        placeholder={isEarlyGrade ? 'Isulat dito ang sagot mo...' : 'Type your answer here...'}
-        style={{
-          minHeight: isEarlyGrade ? 150 : 130,
-          resize: 'vertical',
-          fontSize: isEarlyGrade ? 18 : 15,
-          lineHeight: 1.6,
-        }}
-      />
+      {isEarlyGrade ? (
+        <>
+          <div
+            style={{
+              padding: 24,
+              borderRadius: 28,
+              background: '#FFFFFF',
+              border: '2px solid #E7D8FF',
+              boxShadow: '0 10px 24px rgba(106, 44, 145, 0.10)',
+              marginBottom: 18,
+              fontSize: 30,
+              fontWeight: 900,
+              lineHeight: 1.85,
+            }}
+          >
+            {renderedTemplateParts.map(part => {
+              if (part.type === 'blank') {
+                return (
+                  <span
+                    key={part.key}
+                    style={{
+                      display: 'inline-block',
+                      minWidth: 132,
+                      padding: '6px 14px',
+                      margin: '0 8px',
+                      borderRadius: 18,
+                      background: part.value === '____' ? '#FFF7D6' : '#E9FBEF',
+                      border: part.value === '____' ? '2px dashed #F4B942' : '2px solid #5DBB63',
+                      color: part.value === '____' ? '#80621A' : '#1F6B36',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {part.value}
+                  </span>
+                );
+              }
 
-      <div className="divider" />
+              return <span key={part.key}>{part.value}</span>;
+            })}
+          </div>
 
-      <button
-        className="btn btn-green"
-        onClick={() => submitWriting(activity.writingTask?.id, writingText)}
-        disabled={!writingText.trim()}
-      >
-        ✅ Submit Writing
-      </button>
+          <div
+            style={{
+              padding: 18,
+              borderRadius: 24,
+              background: '#F7F2FF',
+              border: '1px solid #E7D8FF',
+              marginBottom: 14,
+            }}
+          >
+            <div className="row" style={{ alignItems: 'center', gap: 10 }}>
+              <b style={{ fontSize: 24 }}>Tapikin ang sagot:</b>
+            </div>
+
+            <div className="row" style={{ gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+              {earlyWordBank.map((word, wordIndex) => (
+                <button
+                  key={`${word}-${wordIndex}`}
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => addWord(word)}
+                  disabled={earlyLocked || filledCount >= blankCount}
+                  style={{
+                    borderRadius: 999,
+                    minHeight: 72,
+                    padding: '14px 24px',
+                    fontWeight: 900,
+                    fontSize: 24,
+                    background: '#FFFFFF',
+                    opacity: earlyLocked || filledCount >= blankCount ? 0.65 : 1,
+                  }}
+                >
+                  {word}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {earlyStatus && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: 16,
+                borderRadius: 22,
+                background: earlyLocked ? '#E9FBEF' : '#FFF7D6',
+                border: earlyLocked ? '2px solid #5DBB63' : '2px solid #F4B942',
+                color: earlyLocked ? '#1F6B36' : '#80621A',
+                fontWeight: 900,
+                fontSize: 22,
+                textAlign: 'center',
+              }}
+            >
+              {earlyStatus}
+            </div>
+          )}
+
+          <div className="divider" />
+
+          <div className="row" style={{ gap: 14, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={removeLastWord}
+              disabled={earlyLocked || !filledCount}
+              style={{
+                minHeight: 74,
+                minWidth: 220,
+                padding: '16px 24px',
+                fontSize: 22,
+                fontWeight: 900,
+                borderRadius: 24,
+                border: '2px solid #F1CF63',
+                background: '#FFF4C2',
+                color: '#7A5A00',
+                boxShadow: '0 10px 20px rgba(241, 207, 99, 0.25)',
+                opacity: earlyLocked || !filledCount ? 0.65 : 1,
+              }}
+            >
+              ↩️ Tanggalin Huli
+            </button>
+
+            <button
+              type="button"
+              className="btn"
+              onClick={clearAnswer}
+              disabled={earlyLocked || !filledCount}
+              style={{
+                minHeight: 74,
+                minWidth: 180,
+                padding: '16px 24px',
+                fontSize: 22,
+                fontWeight: 900,
+                borderRadius: 24,
+                border: '2px solid #F2B6C2',
+                background: '#FFE7EC',
+                color: '#A63D57',
+                boxShadow: '0 10px 20px rgba(242, 182, 194, 0.25)',
+                opacity: earlyLocked || !filledCount ? 0.65 : 1,
+              }}
+            >
+              🧹 Burahin
+            </button>
+
+            <button
+              type="button"
+              className="btn"
+              onClick={submitEarlyWriting}
+              disabled={earlyLocked || !earlyAnswerReady}
+              style={{
+                minHeight: 74,
+                minWidth: 260,
+                padding: '16px 28px',
+                fontSize: 24,
+                fontWeight: 900,
+                borderRadius: 24,
+                border: '2px solid #24A851',
+                background: '#34C759',
+                color: '#FFFFFF',
+                boxShadow: '0 12px 24px rgba(52, 199, 89, 0.28)',
+                opacity: earlyLocked || !earlyAnswerReady ? 0.7 : 1,
+              }}
+            >
+              ✅ Ipasa ang Sagot
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div
+            style={{
+              padding: 14,
+              borderRadius: 16,
+              background: '#F7F9FC',
+              border: '1px solid #E8E8E8',
+              marginBottom: 12,
+              lineHeight: 1.55,
+            }}
+          >
+            <b>Writing guide:</b> Answer in complete Filipino sentences. You may start with
+            <span style={{ fontWeight: 900 }}> “Ang sagot ko ay...”</span> or
+            <span style={{ fontWeight: 900 }}> “Sa aking palagay...”</span>
+            <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
+              <li>Use a complete sentence.</li>
+              <li>Answer the question directly.</li>
+              <li>Read your answer once before submitting.</li>
+            </ul>
+          </div>
+
+          <textarea
+            className="input-field"
+            rows="5"
+            value={writingText}
+            onChange={(e) => setWritingText(e.target.value)}
+            placeholder="Type your answer here..."
+            style={{
+              minHeight: 130,
+              resize: 'vertical',
+              fontSize: 15,
+              lineHeight: 1.6,
+            }}
+          />
+
+          <div className="divider" />
+
+          <button
+            type="button"
+            className="btn btn-green"
+            onClick={() => submitWriting(activity.writingTask?.id, writingText)}
+            disabled={!writingText.trim()}
+          >
+            ✅ Submit Writing
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -5183,7 +5577,7 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
 
       <div className="muted">
         {isEarlyGrade
-          ? 'Pakinggan muna, pagkatapos pindutin ang Start Speaking at bigkasin ang pangungusap.'
+          ? 'Pakinggan muna, pagkatapos pindutin ang Magsalita. Iche-check ng AI speech support ang bigkas mo.'
           : 'Listen to the target text, then speak it aloud. Your answer will be scored using edit distance.'}
       </div>
 
@@ -5204,15 +5598,17 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
 
       <div className="row">
         <button className="btn btn-purple" onClick={speakTarget}>
-          🔊 Listen
+          {isEarlyGrade ? '🔊 Pakinggan' : '🔊 Listen'}
         </button>
 
         <button className="btn btn-blue" onClick={startSpeechRecognition} disabled={isListening}>
-          {isListening ? '🎙️ Listening...' : '🎙️ Start Speaking'}
+          {isListening
+            ? (isEarlyGrade ? '🎙️ Nakikinig...' : '🎙️ Listening...')
+            : (isEarlyGrade ? '🎙️ Magsalita' : '🎙️ Start Speaking')}
         </button>
 
         <button className="btn btn-outline" onClick={() => speechSynthesis.cancel()}>
-          ⏹ Stop Audio
+          {isEarlyGrade ? '⏹ Stop' : '⏹ Stop Audio'}
         </button>
       </div>
 

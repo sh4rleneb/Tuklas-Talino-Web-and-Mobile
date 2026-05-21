@@ -627,44 +627,179 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
 
 router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
   try {
-    if (!req.body.content || req.body.content.trim().length < 5) {
+    const lessonId = Number(req.params.id);
+    const taskId = Number(req.body.taskId || 0);
+    const content = String(req.body.content || '').trim();
+    const autoChecked = Boolean(req.body.autoChecked);
+
+    if (!taskId) {
+      return res.status(422).json({
+        message: 'Writing task is missing.',
+      });
+    }
+
+    if (!content || content.length < 2) {
       return res.status(422).json({
         message: 'Please write a longer answer.',
       });
     }
 
+    const existing = await WritingSubmission.findOne({
+      where: {
+        studentId: req.student.id,
+        lessonId,
+        taskId,
+      },
+      order: [['submittedAt', 'DESC']],
+    });
+
+    const existingIsCorrectAutoChecked = existing &&
+      /Tama ang sagot|Correct fill-in-the-blank/i.test(existing.feedback || '');
+
+    if (autoChecked && existingIsCorrectAutoChecked) {
+      return res.json({
+        submission: existing,
+        alreadySubmitted: true,
+        locked: true,
+        xpAwarded: 0,
+        message: 'Nasagutan mo na ito 🌟',
+      });
+    }
+
+    if (!autoChecked && existing) {
+      return res.json({
+        submission: existing,
+        pendingReview: true,
+        xpAwarded: 0,
+        message: 'Naipasa na. Hihintayin ang pagsusuri ng guro.',
+      });
+    }
+
+    if (autoChecked) {
+      const task = await WritingTask.findByPk(taskId);
+      const rubric = task?.rubricJson && typeof task.rubricJson === 'object'
+        ? task.rubricJson
+        : {};
+
+      function normalizeWritingAnswer(value) {
+        return String(value || '')
+          .toLowerCase()
+          .replace(/[.,!?;:'"“”‘’()[\]{}]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+
+      function fillTemplate(template, words) {
+        let blankIndex = 0;
+        return String(template || '').replace(/_{2,}|\[blank\]/gi, () => {
+          const word = words[blankIndex];
+          blankIndex += 1;
+          return word || '';
+        });
+      }
+
+      const expectedAnswers = [
+        rubric.correctAnswer,
+        rubric.answer,
+        ...(Array.isArray(rubric.correctAnswers) ? rubric.correctAnswers : []),
+        ...(Array.isArray(rubric.acceptedAnswers) ? rubric.acceptedAnswers : []),
+        ...(Array.isArray(rubric.correctWords)
+          ? [fillTemplate(rubric.template || rubric.sentence || task?.prompt || 'Ang ____ ay ____.', rubric.correctWords)]
+          : []),
+        'Ang bata ay masaya.',
+        'Ang bata ay mabait.',
+        'Ang bata ay nagbabasa.',
+        'Ang bata ay tumutulong.',
+        'Ang guro ay masaya.',
+        'Ang guro ay mabait.',
+        'Ang guro ay nagbabasa.',
+        'Ang guro ay tumutulong.',
+        'Ang bahay ay maganda.',
+        'Ang bahay ay malinis.',
+        'Ang paaralan ay maganda.',
+        'Ang paaralan ay malinis.'
+      ].filter(Boolean);
+
+      const normalizedContent = normalizeWritingAnswer(content);
+      const isCorrect = expectedAnswers.some(answer =>
+        normalizeWritingAnswer(answer) === normalizedContent
+      );
+
+      if (!isCorrect) {
+        return res.json({
+          correct: false,
+          xpAwarded: 0,
+          message: 'Subukan muli 😊',
+        });
+      }
+
+      const submission = await WritingSubmission.create({
+        studentId: req.student.id,
+        lessonId,
+        taskId,
+        content,
+        feedback: 'Tama ang sagot. Na-award na ang XP.',
+      });
+
+      const xpAwarded = 10;
+
+      await awardXp(
+        req.student.id,
+        xpAwarded,
+        'writing',
+        submission.id,
+        'Correct fill-in-the-blank writing task'
+      );
+
+      notifyTeacherAndLeaderboard({
+        type: 'writing_submission',
+        studentId: req.student.id,
+        studentName: req.student.name,
+        lessonId,
+        submissionId: submission.id,
+        xp: xpAwarded,
+        message: `${req.student.name} answered a writing activity correctly`,
+      });
+
+      return res.status(201).json({
+        submission,
+        correct: true,
+        locked: true,
+        xpAwarded,
+        message: `Tama! +${xpAwarded} XP 🌟`,
+      });
+    }
+
     const submission = await WritingSubmission.create({
       studentId: req.student.id,
-      lessonId: req.params.id,
-      taskId: req.body.taskId,
-      content: req.body.content,
+      lessonId,
+      taskId,
+      content,
       feedback:
         'Salamat sa iyong sagot. Naka-save na ito para sa pagsusuri ng guro.',
     });
-
-    await awardXp(
-      req.student.id,
-      8,
-      'writing',
-      submission.id,
-      'Submitted writing task'
-    );
 
     notifyTeacherAndLeaderboard({
       type: 'writing_submission',
       studentId: req.student.id,
       studentName: req.student.name,
-      lessonId: Number(req.params.id),
+      lessonId,
       submissionId: submission.id,
-      xp: 8,
-      message: `${req.student.name} submitted a writing activity`,
+      xp: 0,
+      message: `${req.student.name} submitted a writing activity for teacher review`,
     });
 
-    res.status(201).json({ submission });
+    res.status(201).json({
+      submission,
+      pendingReview: true,
+      xpAwarded: 0,
+      message: 'Naipasa na. Hihintayin ang pagsusuri ng guro.',
+    });
   } catch (err) {
     next(err);
   }
 });
+
 
 router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
   try {
