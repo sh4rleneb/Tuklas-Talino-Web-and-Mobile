@@ -6860,47 +6860,32 @@ function TeacherAssessmentCenter({ lessons = [], rows = [], quizPerformance = {}
 }
 
 function TeacherEffectivenessPanel({ rows = [], lessons = [], groups = [] }) {
-  const avgProgress = rows.length
+  const totalLearners = rows.length;
+  const averageProgress = rows.length
     ? Math.round(rows.reduce((sum, row) => sum + Number(row.percent || 0), 0) / rows.length)
     : 0;
-  const completed = rows.reduce((sum, row) => sum + Number(row.completed || 0), 0);
-  const totalLessons = rows.reduce((sum, row) => sum + Number(row.totalLessons || 0), 0);
-  const completionRate = totalLessons ? Math.round((completed / totalLessons) * 100) : 0;
+  const recordedCompletions = rows.reduce((sum, row) => sum + Number(row.completed || 0), 0);
   const groupTaskCount = groups.reduce((sum, group) => sum + asArray(group.tasks).length, 0);
-  const band = effectivenessBand(avgProgress || completionRate);
-  const assessmentMix = lessons.reduce((acc, lesson) => {
-    const profile = lessonAssessmentProfile(lesson.activities || []);
-    acc.content += profile.hasContent ? 1 : 0;
-    acc.quiz += profile.hasObjectiveQuiz ? 1 : 0;
-    acc.writing += profile.hasWriting ? 1 : 0;
-    acc.speech += profile.hasSpeech ? 1 : 0;
-    return acc;
-  }, { content: 0, quiz: 0, writing: 0, speech: 0 });
 
   return (
-    <div className="teacher-workspace-card" style={{ margin: '18px 0', background: 'linear-gradient(135deg, #fbfffd, #fffdf0)', boxShadow: 'none' }}>
+    <div className="teacher-workspace-card" style={{ margin: '18px 0', boxShadow: 'none', background: '#fbfffd' }}>
       <div className="teacher-workspace-heading">
         <div>
-          <div className="lms-section-label">Learning Effectiveness</div>
-          <h2>{band.icon} {band.label}</h2>
-          <p>{band.note} Use quiz scores, writing, speech, group output, and self-checks instead of completion only.</p>
+          <div className="lms-section-label">Academic Progress Overview</div>
+          <h2>Class Learning Summary</h2>
         </div>
       </div>
 
       <div className="teacher-monitor-summary">
-        <div><span>Completion Rate</span><strong>{completionRate}%</strong></div>
-        <div><span>Average Progress</span><strong>{avgProgress}%</strong></div>
-        <div><span>Group Tasks</span><strong>{groupTaskCount}</strong></div>
+        <div><span>Total Learners</span><strong>{totalLearners}</strong></div>
+        <div><span>Average Progress</span><strong>{averageProgress}%</strong></div>
+        <div><span>Recorded Completions</span><strong>{recordedCompletions}</strong></div>
       </div>
 
       <div className="teacher-monitor-summary" style={{ marginTop: 12 }}>
-        <div><span>Lessons with Quiz/Matching</span><strong>{assessmentMix.quiz}/{lessons.length}</strong></div>
-        <div><span>Lessons with Writing</span><strong>{assessmentMix.writing}/{lessons.length}</strong></div>
-        <div><span>Lessons with Speech</span><strong>{assessmentMix.speech}/{lessons.length}</strong></div>
-      </div>
-
-      <div className="lms-empty-line" style={{ marginTop: 14, background: '#ffffff', color: '#264136' }}>
-        Suggested teacher decision: if completion is high but quiz/speech/writing evidence is low, add a short post-test or reteaching activity before awarding full mastery.
+        <div><span>Available Lessons</span><strong>{lessons.length}</strong></div>
+        <div><span>Group Tasks</span><strong>{groupTaskCount}</strong></div>
+        <div><span>Active Records</span><strong>{rows.filter(row => String(row.status || '').toLowerCase() === 'active').length}</strong></div>
       </div>
     </div>
   );
@@ -8144,7 +8129,6 @@ function TeacherDashboard({
               <div>
                 <div className="lms-section-label">Learner Monitoring</div>
                 <h2>Students Monitoring Table</h2>
-                <p>Track XP, lesson completion, progress, and learner status.</p>
               </div>
 
               <div className="teacher-monitor-actions">
@@ -8155,22 +8139,8 @@ function TeacherDashboard({
               </div>
             </div>
 
-            <div className="teacher-monitor-summary">
-              <div>
-                <span>Total Students</span>
-                <strong>{studentCount}</strong>
-              </div>
-              <div>
-                <span>Average Progress</span>
-                <strong>{averageProgress}%</strong>
-              </div>
-              <div>
-                <span>Lessons Available</span>
-                <strong>{lessons.length}</strong>
-              </div>
-            </div>
 
-            <TeacherEffectivenessPanel rows={rows} lessons={lessons} groups={groups} />
+
 
             <div className="teacher-table-wrapper">
               <table className="teacher-monitor-table">
