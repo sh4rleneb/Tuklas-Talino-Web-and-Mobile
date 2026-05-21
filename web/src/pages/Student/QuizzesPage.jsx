@@ -11,6 +11,7 @@ export default function QuizzesPage({
   data,
   go,
   openQuiz,
+  openQuizResult,
   quizAttempts = {},
   subjects = [],
   buildStudentQuizzes,
@@ -31,8 +32,10 @@ export default function QuizzesPage({
       ? getBestQuizAttempt
       : () => null;
 
+  const maxQuizAttempts = 2;
+
   const recommendedQuiz =
-    quizzes.find((quiz) => !asArray(quizAttempts?.[quiz.id]).length) ||
+    quizzes.find((quiz) => asArray(quizAttempts?.[quiz.id]).length < maxQuizAttempts) ||
     quizzes[0];
 
   const subjectCounts = subjects
@@ -43,6 +46,9 @@ export default function QuizzesPage({
     .filter((item) => item.count > 0);
 
   const cards = quizzes.map((quiz, index) => {
+    const attempts = asArray(quizAttempts?.[quiz.id]);
+    const attemptsUsed = attempts.length;
+    const attemptsDone = attemptsUsed >= maxQuizAttempts;
     const best = getBest(quizAttempts, quiz.id);
     const mastery = best?.mastery || masteryFromPercent(0);
     const subjectMeta =
@@ -59,6 +65,8 @@ export default function QuizzesPage({
       mastery,
       tone: mastery.tone || subjectMeta.tone || "green",
       icon: subjectTheme(quiz.subject).icon || subjectMeta.icon || "📚",
+      attemptsUsed,
+      attemptsDone,
     };
   });
 
@@ -76,8 +84,8 @@ export default function QuizzesPage({
 
               <p className={early ? "g12-section-subtitle" : "g46-ref-muted"}>
                 {early
-                  ? "Pumili ng quiz. Makikita ang feedback pagkatapos i-submit."
-                  : "Choose a quiz to check lesson mastery and review results after submission."}
+                  ? "Sagutan muna. Feedback after final try."
+                  : "Answer first. Review feedback after your final try."}
               </p>
             </div>
 
@@ -103,12 +111,12 @@ export default function QuizzesPage({
           )}
 
           <div className="quiz-card-grid">
-            {cards.map(({ quiz, best, mastery, tone, icon }) => (
+            {cards.map(({ quiz, best, mastery, tone, icon, attemptsUsed, attemptsDone }) => (
               <button
                 type="button"
                 className={`quiz-card ${tone}`}
                 key={quiz.id}
-                onClick={() => openQuiz(quiz)}
+                onClick={() => attemptsDone && typeof openQuizResult === "function" ? openQuizResult(quiz) : openQuiz(quiz)}
               >
                 <div>
                   <div className="quiz-card-head">
@@ -130,6 +138,10 @@ export default function QuizzesPage({
                   <div className="quiz-pill-row">
                     <span className="quiz-pill">{quiz.type}</span>
 
+                    <span className="quiz-pill">
+                      Attempts: {Math.min(attemptsUsed, maxQuizAttempts)}/{maxQuizAttempts}
+                    </span>
+
                     {best && (
                       <span className="quiz-pill">
                         Best: {best.score}/{best.total}
@@ -139,7 +151,7 @@ export default function QuizzesPage({
                 </div>
 
                 <span className="quiz-action" role="button" tabIndex={-1}>
-                  {best ? "Retake Quiz" : "Start Quiz"}
+                  {attemptsDone ? "Review" : best ? "Try Again" : "Start"}
                 </span>
               </button>
             ))}

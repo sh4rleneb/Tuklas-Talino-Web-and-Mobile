@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 import {
   masteryFromPercent,
@@ -24,7 +24,18 @@ export default function QuizResults({
       ? buildStudentQuizzes(data)
       : [];
 
-  const sourceQuiz = quizzes.find((quiz) => quiz.id === result.quizId);
+  const sourceQuiz = quizzes.find((quiz) => quiz.id === result?.quizId);
+  const attemptNo = Number(result?.attemptNo || 1);
+  const maxAttempts = Number(result?.maxAttempts || 2);
+  const attemptHistory = Array.isArray(result?.attemptHistory) && result.attemptHistory.length
+    ? result.attemptHistory
+    : [result].filter(Boolean);
+  const [selectedReviewIndex, setSelectedReviewIndex] = useState(0);
+  const canRetake = Boolean(sourceQuiz && attemptHistory.length < maxAttempts);
+  const showReview = !canRetake;
+  const activeReviewIndex = Math.min(selectedReviewIndex, Math.max(0, attemptHistory.length - 1));
+  const activeAttempt = attemptHistory[activeReviewIndex] || result;
+  const activeReviewItems = activeAttempt?.review || activeAttempt?.details || [];
 
   const resultContent = (
     <>
@@ -37,16 +48,18 @@ export default function QuizResults({
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
-                Review Answers
+                {showReview ? "Review Answers" : "Quiz Attempt Saved"}
               </h2>
 
               <p className={early ? "g12-section-subtitle" : "g46-ref-muted"}>
-                Feedback appears after the quiz so students can focus while answering.
+                {showReview
+                  ? "Check your answers."
+                  : "Try again first. Feedback later."}
               </p>
             </div>
 
             <div className="quiz-result-actions">
-              {sourceQuiz && (
+              {canRetake && (
                 <button
                   type="button"
                   className="quiz-primary"
@@ -66,28 +79,59 @@ export default function QuizResults({
             </div>
           </div>
 
-          <div className="quiz-review-list">
-            {(result.details || []).map((item, index) => (
-              <article
-                key={item.questionId || index}
-                className={`quiz-review-item ${item.correct ? "correct" : "wrong"}`}
-              >
-                <b>
-                  {item.correct ? "✓" : "•"} Question {index + 1}
-                </b>
+          {!showReview ? (
+            <div
+              className="quiz-review-item correct"
+              style={early ? { fontSize: 24, padding: 26, borderRadius: 30, lineHeight: 1.55 } : { fontSize: 17, lineHeight: 1.45 }}
+            >
+              <b>Score saved!</b>
+              <p>Try again first. Feedback later.</p>
+            </div>
+          ) : (
+            <div className="quiz-review-list">
+              <div className="quiz-result-actions" style={{ justifyContent: "flex-start", marginBottom: 12 }}>
+                {attemptHistory.map((attempt, attemptIndex) => (
+                  <button
+                    type="button"
+                    key={attempt.id || attemptIndex}
+                    className={activeReviewIndex === attemptIndex ? "quiz-primary" : "quiz-secondary"}
+                    onClick={() => setSelectedReviewIndex(attemptIndex)}
+                    style={early ? { fontSize: 20, padding: "14px 22px", borderRadius: 22, minHeight: 56 } : undefined}
+                  >
+                    Try {attempt.attemptNo || attemptIndex + 1}
+                  </button>
+                ))}
+              </div>
 
-                <p>{item.prompt}</p>
+              <section style={{ display: "grid", gap: 12 }}>
+                <h3 className={early ? "g12-section-title" : ""}>
+                  Try {activeAttempt?.attemptNo || activeReviewIndex + 1} of {maxAttempts}
+                </h3>
 
-                <p>
-                  Your answer: <strong>{item.selectedText || "No answer"}</strong>
-                </p>
+                {activeReviewItems.map((item, index) => (
+                  <article
+                    key={`${activeAttempt?.id || activeReviewIndex}-${item.questionId || index}`}
+                    className={`quiz-review-item ${item.correct ? "correct" : "wrong"}`}
+                    style={early ? { fontSize: 24, padding: 26, borderRadius: 30, lineHeight: 1.55 } : { fontSize: 17, lineHeight: 1.45 }}
+                  >
+                    <b>
+                      Question {index + 1}: {item.correct ? "✅ Correct!" : "❌ Review this"}
+                    </b>
 
-                <p>
-                  Correct answer: <strong>{item.correctText || "—"}</strong>
-                </p>
-              </article>
-            ))}
-          </div>
+                    <p>{item.prompt}</p>
+
+                    <p>
+                      Your answer: <strong>{item.selectedText || "No answer"}</strong>
+                    </p>
+
+                    <p>
+                      Correct: <strong>{item.correctText || "—"}</strong>
+                    </p>
+                  </article>
+                ))}
+              </section>
+            </div>
+          )}
         </section>
       </div>
     </>

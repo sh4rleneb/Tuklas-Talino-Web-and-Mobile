@@ -1002,7 +1002,7 @@ function QuizStartCard({ quiz, best, onStart, onBack }) {
             {questionCount} question{questionCount === 1 ? "" : "s"}
           </span>
 
-          <span className="quiz-pill">+{quiz?.xpReward || 0} XP preview</span>
+          <span className="quiz-pill">Up to +20 XP</span>
         </div>
 
         <h2>Ready ka na sa Quiz Quest?</h2>
@@ -1149,13 +1149,13 @@ function QuizResultCard({ result }) {
           </div>
 
           <div className="quiz-reward-box">
-            <b>+{result.xpReward || 0}</b>
-            <span>XP reward preview</span>
+            <b>+{Number(result.xpAwarded ?? 0)}</b>
+            <span>{Number(result.xpAwarded || 0) > 0 ? "XP earned" : "No extra XP"}</span>
           </div>
 
           <div className="quiz-reward-box">
-            <b>{result.attemptNo || 1}</b>
-            <span>Attempt number</span>
+            <b>{result.attemptNo || 1} of {result.maxAttempts || 2}</b>
+            <span>Quiz attempts</span>
           </div>
         </div>
       </div>

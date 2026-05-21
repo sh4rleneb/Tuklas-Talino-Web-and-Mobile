@@ -279,19 +279,122 @@ if (role === 'admin') {
     go('screen-stu-quiz-play');
   }
 
-  function submitQuiz(quiz, answers) {
+  function openQuizResult(quiz) {
+    if (!quiz) return;
+
+    const attempts = quizAttempts?.[quiz.id] || [];
+    const latestAttempt = attempts[attempts.length - 1];
+
+    if (!latestAttempt) {
+      openQuiz(quiz);
+      return;
+    }
+
+    setSelectedQuiz(quiz);
+    setQuizResult({
+      ...latestAttempt,
+      attemptHistory: attempts,
+      maxAttempts: 2,
+      maxAttemptsReached: attempts.length >= 2,
+    });
+    go('screen-stu-quiz-result');
+  }
+
+  async function submitQuiz(quiz, answers) {
     if (!quiz) return null;
 
+    const maxQuizAttempts = 2;
     const studentId = studentDash?.student?.id || user?.student?.id || 'demo-student';
     const existingAttempts = quizAttempts?.[quiz.id] || [];
+
+    if (existingAttempts.length >= maxQuizAttempts) {
+      const latestAttempt = existingAttempts[existingAttempts.length - 1] || getBestQuizAttempt(quizAttempts, quiz.id);
+
+      if (latestAttempt) {
+        setQuizResult({
+          ...latestAttempt,
+          maxAttempts: maxQuizAttempts,
+          maxAttemptsReached: true,
+        });
+      }
+
+      notify('You already used your 2 quiz attempts. Review your answers instead.');
+      go('screen-stu-quiz-result');
+      return latestAttempt || null;
+    }
+
     const result = gradeQuizAttempt(quiz, answers, existingAttempts.length + 1);
-    const updatedAttempts = appendQuizAttempt(studentId, quizAttempts, quiz.id, result);
+
+    let finalResult = {
+      ...result,
+      maxAttempts: maxQuizAttempts,
+      maxAttemptsReached: result.attemptNo >= maxQuizAttempts,
+    };
+
+    let backendWarning = '';
+
+    const lessonId = quiz.lessonId || selectedLesson?.id;
+
+    if (lessonId) {
+      try {
+        const data = await api(`/lessons/${lessonId}/quiz-result`, {
+          method: 'POST',
+          body: {
+            quizId: quiz.id,
+            quizTitle: quiz.title,
+            score: result.score,
+            total: result.total,
+            percent: result.percent,
+            attemptNo: result.attemptNo,
+            review: result.review,
+          },
+        });
+
+        const saved = data?.quizResult || {};
+
+        finalResult = {
+          ...finalResult,
+          xpAwarded: Number(saved.xpAwarded || 0),
+          xpPossible: Number(saved.xpPossible || 0),
+          xpAlreadyAwarded: Boolean(saved.xpAlreadyAwarded),
+          backendSaved: true,
+        };
+
+        await loadStudentDashboard();
+      } catch (err) {
+        backendWarning = err.message || 'Quiz saved locally, but backend saving failed.';
+        finalResult = {
+          ...finalResult,
+          xpAwarded: 0,
+          backendSaved: false,
+        };
+      }
+    }
+
+    const updatedAttempts = appendQuizAttempt(studentId, quizAttempts, quiz.id, finalResult);
+    const attemptHistory = updatedAttempts?.[quiz.id] || [];
+
+    finalResult = {
+      ...finalResult,
+      attemptHistory,
+      maxAttemptsReached: attemptHistory.length >= maxQuizAttempts,
+    };
 
     setQuizAttempts(updatedAttempts);
-    setQuizResult(result);
-    notify(`Quiz submitted: ${result.score}/${result.total} (${result.percent}%)`);
+    setQuizResult(finalResult);
+
+    if (backendWarning) {
+      notify(`${backendWarning} Local score: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%)`, 'bad');
+    } else if (finalResult.xpAwarded) {
+      notify(`Quiz submitted: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%). +${finalResult.xpAwarded} XP`);
+    } else if (finalResult.xpAlreadyAwarded) {
+      notify(`Quiz submitted: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%). Retake saved, no extra XP.`);
+    } else {
+      notify(`Quiz submitted: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%).`);
+    }
+
     go('screen-stu-quiz-result');
-    return result;
+    return finalResult;
   }
 
   async function completeLesson(options = {}) {
@@ -850,6 +953,7 @@ async function archiveTeacher(id) {
     data={studentDash}
     go={go}
     openQuiz={openQuiz}
+    openQuizResult={openQuizResult}
     quizAttempts={quizAttempts}
     subjects={SUBJECTS}
     buildStudentQuizzes={buildStudentQuizzes}
@@ -1200,6 +1304,8 @@ function gradeQuizAttempt(quiz = {}, answers = {}, attemptNo = 1) {
       index: index + 1,
       questionId: question.id,
       prompt: question.prompt,
+      selectedOptionId: selectedOption?.id || null,
+      correctOptionId: correctOption?.id || null,
       selectedText: selectedOption?.text || 'No answer',
       correctText: correctOption?.text || '—',
       correct,
