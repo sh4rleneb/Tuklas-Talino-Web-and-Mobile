@@ -6924,6 +6924,8 @@ function TeacherDashboard({
   downloadSummaryReport
 }) {
   const [teacherTab, setTeacherTab] = useState('lessons');
+  const [openGroupTools, setOpenGroupTools] = useState({});
+  const [openGroupProgress, setOpenGroupProgress] = useState({});
 
   const lessons = data.lessons || [];
   const groups = data.groups || [];
@@ -6934,6 +6936,7 @@ function TeacherDashboard({
   const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
   const pendingGroupChecks = data.pendingGroupChecks || { summary: {}, rows: [] };
   const pendingGroupRows = asArray(pendingGroupChecks.rows);
+  const groupProgressRows = buildGroupProgressRows(groups);
   const teacherName = user?.displayName || 'Teacher 1';
 
   const publishedLessons = lessons.filter(lesson => (lesson.status || 'published') === 'published').length;
@@ -6960,9 +6963,435 @@ function TeacherDashboard({
     setTimeout(() => scrollTo('teacher-recent-lessons'), 0);
   }
 
+  function toggleGroupTools(groupId) {
+    setOpenGroupTools(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  }
+
+  function toggleGroupProgress(rowKey) {
+    setOpenGroupProgress(prev => ({
+      ...prev,
+      [rowKey]: !prev[rowKey]
+    }));
+  }
+
+  function buildGroupProgressRows(groupList = []) {
+    const rows = [];
+
+    for (const group of groupList || []) {
+      const members = group.members || group.Members || [];
+      const tasks = group.tasks || group.Tasks || [];
+
+      for (const task of tasks) {
+        const completions = task.completions || task.Completions || [];
+        const submittedStudentIds = new Set(completions.map(item => Number(item.studentId)));
+
+        const approved = completions.filter(item => item.verificationStatus === 'approved').length;
+        const pending = completions.filter(item => item.verificationStatus === 'pending').length;
+        const returned = completions.filter(item => item.verificationStatus === 'returned').length;
+        const notSubmitted = Math.max(0, members.length - submittedStudentIds.size);
+
+        const details = members.map(member => {
+          const student = member.Student || member.student || member;
+          const completion = completions.find(item => Number(item.studentId) === Number(student.id));
+          const status = completion?.verificationStatus || 'not_submitted';
+
+          return {
+            studentId: student.id,
+            studentName: student.name || 'Student',
+            status
+          };
+        });
+
+        rows.push({
+          key: `${group.id}-${task.id}`,
+          groupId: group.id,
+          groupName: group.name,
+          taskId: task.id,
+          taskTitle: task.title || 'Group task',
+          xpReward: task.xpReward || 0,
+          approved,
+          pending,
+          returned,
+          notSubmitted,
+          memberCount: members.length,
+          details
+        });
+      }
+    }
+
+    return rows;
+  }
+
+  function groupProgressStatusLabel(status) {
+    if (status === 'approved') return 'Approved';
+    if (status === 'pending') return 'Pending Check';
+    if (status === 'returned') return 'Returned';
+    return 'Not Submitted';
+  }
+
   return (
     <div className="teacher-redesign-page">
       <TeacherRedesignStyles />
+
+      <style>{`
+        /* teacher-verification-tab-polish */
+        .teacher-verification-panel .teacher-tool-box {
+          margin-bottom: 18px;
+        }
+
+        .teacher-verification-panel .teacher-workspace-heading h2 {
+          font-size: 1.75rem;
+        }
+      `}</style>
+
+
+      <style>{`
+        /* teacher-group-task-progress-container */
+        .teacher-group-progress-container {
+          margin-bottom: 18px;
+        }
+
+        .teacher-group-progress-list {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(280px, 1fr));
+          gap: 16px;
+        }
+
+        .teacher-group-progress-card {
+          background: #ffffff;
+          border: 1px solid #dfeee6;
+          border-radius: 24px;
+          padding: 20px;
+          box-shadow: 0 10px 24px rgba(13, 71, 45, 0.045);
+        }
+
+        .teacher-group-progress-card-top {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          align-items: flex-start;
+        }
+
+        .teacher-group-progress-card-top strong {
+          display: block;
+          color: #10213f;
+          font-size: 1.1rem;
+          line-height: 1.3;
+        }
+
+        .teacher-group-progress-card-top p {
+          margin: 5px 0 0;
+          color: #63756c;
+          font-weight: 800;
+          line-height: 1.35;
+        }
+
+        .teacher-group-progress-stats {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 10px;
+          margin-top: 16px;
+        }
+
+        .teacher-group-progress-stat {
+          background: #f8fcfa;
+          border: 1px solid #e4f1e9;
+          border-radius: 18px;
+          padding: 12px;
+          text-align: center;
+        }
+
+        .teacher-group-progress-stat span {
+          display: block;
+          color: #6d7b73;
+          font-size: 0.78rem;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .teacher-group-progress-stat strong {
+          display: block;
+          margin-top: 4px;
+          color: #10213f;
+          font-size: 1.25rem;
+        }
+
+        .teacher-group-progress-details {
+          margin-top: 14px;
+          padding-top: 14px;
+          border-top: 1px solid #edf3ef;
+          display: grid;
+          gap: 8px;
+        }
+
+        .teacher-group-progress-student {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: center;
+          background: #f8fcfa;
+          border: 1px solid #e5f1e9;
+          border-radius: 16px;
+          padding: 10px 12px;
+          color: #10213f;
+          font-weight: 850;
+        }
+
+        @media (max-width: 980px) {
+          .teacher-group-progress-list,
+          .teacher-group-progress-stats {
+            grid-template-columns: 1fr;
+          }
+
+          .teacher-group-progress-card-top {
+            flex-direction: column;
+          }
+        }
+      `}</style>
+
+
+      <style>{`
+        /* teacher-group-member-task-polish */
+        .clean-groups-panel .teacher-groups-grid {
+          grid-template-columns: repeat(2, minmax(280px, 1fr)) !important;
+          align-items: stretch;
+        }
+
+        .teacher-group-details-box {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 16px;
+        }
+
+        .teacher-group-detail-section {
+          background: #f8fcfa;
+          border: 1px solid #e3f0e8;
+          border-radius: 18px;
+          padding: 14px;
+          min-height: 104px;
+        }
+
+        .teacher-group-detail-section h4 {
+          margin: 0 0 10px;
+          color: #006b3f;
+          font-size: 0.9rem;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+
+        .teacher-group-chip-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .teacher-group-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border-radius: 999px;
+          background: #ffffff;
+          border: 1px solid #dcefe5;
+          color: #10213f;
+          padding: 8px 10px;
+          font-weight: 850;
+          font-size: 0.88rem;
+          line-height: 1.2;
+        }
+
+        .teacher-group-task-list {
+          display: grid;
+          gap: 8px;
+        }
+
+        .teacher-group-task-item {
+          background: #ffffff;
+          border: 1px solid #dcefe5;
+          border-radius: 14px;
+          padding: 9px 10px;
+          color: #10213f;
+          font-weight: 850;
+          font-size: 0.88rem;
+          line-height: 1.3;
+        }
+
+        .teacher-group-task-item small {
+          display: block;
+          margin-top: 4px;
+          color: #6d7b73;
+          font-weight: 800;
+        }
+
+        .teacher-group-empty-note {
+          color: #718178;
+          font-weight: 800;
+          font-size: 0.9rem;
+          line-height: 1.35;
+        }
+
+        .clean-groups-panel .teacher-add-member-row {
+          display: grid !important;
+          grid-template-columns: minmax(0, 1fr) auto !important;
+          align-items: center;
+          gap: 12px;
+          margin-top: 16px;
+          padding: 14px;
+          background: #f4fbf7;
+          border: 1px solid #dcefe5;
+          border-radius: 20px;
+        }
+
+        .clean-groups-panel .teacher-add-member-row .input-field {
+          min-width: 0;
+          width: 100%;
+        }
+
+        .clean-groups-panel .teacher-add-member-row button {
+          white-space: nowrap;
+          min-width: 130px;
+        }
+
+        @media (max-width: 1120px) {
+          .clean-groups-panel .teacher-groups-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .teacher-group-details-box {
+            grid-template-columns: 1fr;
+          }
+
+          .clean-groups-panel .teacher-add-member-row {
+            grid-template-columns: 1fr !important;
+          }
+
+          .clean-groups-panel .teacher-add-member-row button {
+            width: 100%;
+          }
+        }
+      `}</style>
+
+
+      <style>{`
+        /* teacher-group-manager-clean-polish */
+        .clean-groups-panel .teacher-workspace-heading > div > p {
+          display: none;
+        }
+
+        .clean-groups-panel .teacher-group-layout {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+
+        .clean-groups-panel .teacher-group-tools {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+        }
+
+        .clean-groups-panel .teacher-tool-box {
+          padding: 24px !important;
+          border-radius: 26px !important;
+        }
+
+        .clean-groups-panel .teacher-tool-box h3 {
+          font-size: 1.45rem !important;
+        }
+
+        .clean-groups-panel .teacher-tool-box p {
+          font-size: 1rem !important;
+        }
+
+        .clean-groups-panel .teacher-groups-area {
+          padding: 24px !important;
+          border-radius: 28px !important;
+        }
+
+        .clean-groups-panel .teacher-mini-heading {
+          align-items: center;
+          margin-bottom: 18px;
+        }
+
+        .clean-groups-panel .teacher-mini-heading h3 {
+          font-size: 1.55rem !important;
+        }
+
+        .clean-groups-panel .teacher-groups-grid {
+          grid-template-columns: repeat(3, minmax(220px, 1fr));
+          gap: 16px;
+        }
+
+        .clean-groups-panel .teacher-group-item {
+          padding: 20px !important;
+          border-radius: 24px !important;
+          box-shadow: 0 10px 24px rgba(13, 71, 45, 0.04);
+        }
+
+        .clean-groups-panel .teacher-group-item strong {
+          font-size: 1.12rem !important;
+          line-height: 1.3;
+        }
+
+        .clean-groups-panel .teacher-group-item p {
+          font-size: 0.96rem !important;
+          font-weight: 750;
+        }
+
+        .teacher-group-meta-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 14px;
+        }
+
+        .teacher-group-actions-row {
+          display: flex;
+          gap: 10px;
+          margin-top: 16px;
+          padding-top: 14px;
+          border-top: 1px solid #edf3ef;
+        }
+
+        .teacher-group-actions-row button {
+          flex: 1;
+        }
+
+        .clean-groups-panel .teacher-add-member-row {
+          margin-top: 14px;
+          grid-template-columns: minmax(0, 1fr) auto;
+          background: #f8fcfa;
+          border: 1px solid #e3f0e8;
+          border-radius: 18px;
+          padding: 12px;
+        }
+
+        @media (max-width: 1120px) {
+          .clean-groups-panel .teacher-groups-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 820px) {
+          .clean-groups-panel .teacher-group-tools,
+          .clean-groups-panel .teacher-groups-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .teacher-group-actions-row,
+          .clean-groups-panel .teacher-add-member-row {
+            grid-template-columns: 1fr;
+            flex-direction: column;
+          }
+        }
+      `}</style>
+
 
       <style>{`
         /* teacher-dashboard-assigned-classes-polish */
@@ -7291,6 +7720,15 @@ function TeacherDashboard({
             </button>
 
             <button
+              className={`teacher-sidebar-button ${teacherTab === 'verification' ? 'active' : ''}`}
+              type="button"
+              onClick={() => openTab('verification')}
+            >
+              <span>✅</span>
+              <strong>Teacher Verification</strong>
+            </button>
+
+            <button
               className={`teacher-sidebar-button ${teacherTab === 'assessments' ? 'active' : ''}`}
               type="button"
               onClick={() => openTab('assessments')}
@@ -7403,17 +7841,17 @@ function TeacherDashboard({
           </section>
         )}
 
-        {teacherTab === 'groups' && (
-          <section className="teacher-workspace-card clean-groups-panel" id="teacher-group-manager">
+        
+        {teacherTab === 'verification' && (
+          <section className="teacher-workspace-card clean-groups-panel teacher-verification-panel" id="teacher-verification-panel">
             <div className="teacher-workspace-heading">
               <div>
-                <div className="lms-section-label">Classroom Tools</div>
-                <h2>Group Manager</h2>
-                <p>Create groups, assign tasks, and add students to collaborative learning groups.</p>
+                <div className="lms-section-label">Teacher Verification</div>
+                <h2>Group Task Review</h2>
               </div>
             </div>
 
-            <div className="teacher-tool-box" style={{ marginBottom: 18 }}>
+<div className="teacher-tool-box" style={{ marginBottom: 18 }}>
               <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
                 <div>
                   <div className="lms-section-label">Teacher Verification</div>
@@ -7455,6 +7893,93 @@ function TeacherDashboard({
                   <p>Student group submissions that need approval will appear here.</p>
                 </div>
               )}
+            </div>
+
+            <div className="teacher-tool-box teacher-group-progress-container">
+              <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
+                <div>
+                  <div className="lms-section-label">Group Task Progress</div>
+                  <h3>Submitted, Approved, and Pending Work</h3>
+                </div>
+                <span className="lms-mini-pill">📌 {groupProgressRows.length} task{groupProgressRows.length === 1 ? '' : 's'}</span>
+              </div>
+
+              {groupProgressRows.length ? (
+                <div className="teacher-group-progress-list">
+                  {groupProgressRows.map(row => {
+                    const isOpen = Boolean(openGroupProgress[row.key]);
+
+                    return (
+                      <div className="teacher-group-progress-card" key={row.key}>
+                        <div className="teacher-group-progress-card-top">
+                          <div>
+                            <strong>{row.groupName}</strong>
+                            <p>{row.taskTitle} • +{row.xpReward} XP</p>
+                          </div>
+
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            onClick={() => toggleGroupProgress(row.key)}
+                          >
+                            {isOpen ? 'Hide Details' : 'View Details'}
+                          </button>
+                        </div>
+
+                        <div className="teacher-group-progress-stats">
+                          <div className="teacher-group-progress-stat">
+                            <span>Approved</span>
+                            <strong>{row.approved}</strong>
+                          </div>
+
+                          <div className="teacher-group-progress-stat">
+                            <span>Pending</span>
+                            <strong>{row.pending}</strong>
+                          </div>
+
+                          <div className="teacher-group-progress-stat">
+                            <span>Not Submitted</span>
+                            <strong>{row.notSubmitted}</strong>
+                          </div>
+                        </div>
+
+                        {isOpen && (
+                          <div className="teacher-group-progress-details">
+                            {row.details.length ? row.details.map(detail => (
+                              <div className="teacher-group-progress-student" key={`${row.key}-${detail.studentId}`}>
+                                <span>{detail.studentName}</span>
+                                <span className="lms-mini-pill">{groupProgressStatusLabel(detail.status)}</span>
+                              </div>
+                            )) : (
+                              <div className="lms-empty-line">No members in this group yet.</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="teacher-empty-panel">
+                  <div>📌</div>
+                  <strong>No group task progress yet.</strong>
+                  <p>Add tasks to your groups first. Student submissions will appear here after they complete a group task.</p>
+                </div>
+              )}
+            </div>
+
+            
+          </section>
+        )}
+
+{teacherTab === 'groups' && (
+          <section className="teacher-workspace-card clean-groups-panel" id="teacher-group-manager">
+            <div className="teacher-workspace-heading">
+              <div>
+                <div className="lms-section-label">Classroom Tools</div>
+                <h2>Group Manager</h2>
+                <p>Create groups, assign tasks, and add students to collaborative learning groups.</p>
+              </div>
             </div>
 
             <div className="teacher-group-layout">
@@ -7510,30 +8035,93 @@ function TeacherDashboard({
                 </div>
 
                 <div className="teacher-groups-grid">
-                  {groups.length ? groups.map(group => (
-                    <div className="teacher-group-item" key={group.id}>
-                      <div className="teacher-group-item-top">
-                        <div>
-                          <strong>{group.name}</strong>
-                          <p>{group.description || 'No description added.'}</p>
-                        </div>
-                        <span className="lms-mini-pill">✅ {group.tasks?.length || 0} tasks</span>
-                      </div>
+                  {groups.length ? groups.map(group => {
+                    const members = group.members || group.Members || [];
+                    const tasks = group.tasks || [];
+                    const memberCount = members.length;
+                    const taskCount = tasks.length;
+                    const isOpen = Boolean(openGroupTools[group.id]);
 
-                      <div className="teacher-add-member-row">
-                        <select className="input-field" id={`member-${group.id}`}>
-                          {students.map(student => (
-                            <option key={student.id} value={student.id}>
-                              {student.name} • Grade {student.gradeLevel}
-                            </option>
-                          ))}
-                        </select>
-                        <button className="lms-outline-action" onClick={() => addMember(group.id)}>
-                          Add Member
-                        </button>
+                    return (
+                      <div className="teacher-group-item" key={group.id}>
+                        <div className="teacher-group-item-top">
+                          <div>
+                            <strong>{group.name}</strong>
+                            <p>{group.description || 'No description added.'}</p>
+                          </div>
+                        </div>
+
+                        <div className="teacher-group-meta-row">
+                          <span className="lms-mini-pill">👥 {memberCount} member{memberCount === 1 ? '' : 's'}</span>
+                          <span className="lms-mini-pill">✅ {taskCount} task{taskCount === 1 ? '' : 's'}</span>
+                        </div>
+
+                        <div className="teacher-group-details-box">
+                          <div className="teacher-group-detail-section">
+                            <h4>Members</h4>
+                            {members.length ? (
+                              <div className="teacher-group-chip-list">
+                                {members.map(member => {
+                                  const student = member.Student || member.student || member;
+                                  return (
+                                    <span className="teacher-group-chip" key={member.id || student.id || student.studentCode || student.name}>
+                                      👤 {student.name || 'Student'}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <div className="teacher-group-empty-note">No members added yet.</div>
+                            )}
+                          </div>
+
+                          <div className="teacher-group-detail-section">
+                            <h4>Tasks</h4>
+                            {tasks.length ? (
+                              <div className="teacher-group-task-list">
+                                {tasks.slice(0, 3).map(task => (
+                                  <div className="teacher-group-task-item" key={task.id || task.title}>
+                                    {task.title || 'Group task'}
+                                    <small>+{task.xpReward || 0} XP</small>
+                                  </div>
+                                ))}
+                                {tasks.length > 3 && (
+                                  <div className="teacher-group-empty-note">+{tasks.length - 3} more task{tasks.length - 3 === 1 ? '' : 's'}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="teacher-group-empty-note">No tasks assigned yet.</div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="teacher-group-actions-row">
+                          <button
+                            className="lms-outline-action"
+                            type="button"
+                            onClick={() => toggleGroupTools(group.id)}
+                          >
+                            {isOpen ? 'Hide Add Member' : 'Add Member'}
+                          </button>
+                        </div>
+
+                        {isOpen && (
+                          <div className="teacher-add-member-row">
+                            <select className="input-field" id={`member-${group.id}`}>
+                              {students.map(student => (
+                                <option key={student.id} value={student.id}>
+                                  {student.name} • Grade {student.gradeLevel}
+                                </option>
+                              ))}
+                            </select>
+                            <button className="lms-outline-action" onClick={() => addMember(group.id)}>
+                              Add Member
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )) : (
+                    );
+                  }) : (
                     <div className="teacher-empty-panel">
                       <div>👥</div>
                       <strong>No groups yet.</strong>

@@ -81,6 +81,12 @@ router.get('/', async (req, res, next) => {
         {
           model: GroupTask,
           as: 'tasks',
+          include: [
+            {
+              model: GroupTaskCompletion,
+              as: 'completions',
+            },
+          ],
         },
       ],
       order: [['createdAt', 'DESC']],
