@@ -4580,7 +4580,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           <div className="g12-mission-topline">
             <div>
               <h2>{lesson?.title || 'Aralin'} 🌟</h2>
-              <p>{lesson?.subject || 'Filipino'} AI mission • Hakbang {safeStep + 1} of {missionSteps.length}</p>
+              <p>Hakbang {safeStep + 1} of {missionSteps.length}</p>
             </div>
             <div className="g12-mission-xp">⚡ +{lesson?.xpReward || 0} XP</div>
           </div>
@@ -4616,16 +4616,9 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-step-head">
                 <div className="g12-mission-big-icon">👂</div>
                 <div>
-                  <h3>Makinig muna sa AI gabay</h3>
-                  <p>Pindutin ang speaker. Babasahin ng system ang aralin gamit ang text-to-speech.</p>
+                  <h3>Makinig</h3>
                 </div>
               </div>
-
-              {lesson?.instructions && (
-                <div className="g12-mission-note">
-                  <b>Panuto:</b> {lesson.instructions}
-                </div>
-              )}
 
               <div className="g12-mission-text-card">
                 {lesson?.title || 'Handa ka na bang matuto?'}
