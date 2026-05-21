@@ -213,6 +213,16 @@ export const GroupTask = sequelize.define('GroupTask', {
 export const GroupTaskCompletion = sequelize.define('GroupTaskCompletion', {
   groupTaskId: { type: DataTypes.INTEGER, allowNull: false },
   studentId: { type: DataTypes.INTEGER, allowNull: false },
+  verificationStatus: {
+    type: DataTypes.ENUM('pending', 'approved', 'returned'),
+    allowNull: false,
+    defaultValue: 'approved'
+  },
+  submittedAt: { type: DataTypes.DATE, allowNull: true, defaultValue: DataTypes.NOW },
+  reviewedAt: { type: DataTypes.DATE, allowNull: true },
+  reviewedByTeacherId: { type: DataTypes.INTEGER, allowNull: true },
+  teacherFeedback: { type: DataTypes.TEXT, allowNull: true },
+  xpAwarded: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   completedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, { tableName: 'group_task_completions' });
 
@@ -246,6 +256,17 @@ export const AuditLog = sequelize.define('AuditLog', {
   metadata: { type: DataTypes.JSON, allowNull: true }
 }, { tableName: 'audit_logs' });
 
+export const Notification = sequelize.define('Notification', {
+  userId: { type: DataTypes.INTEGER, allowNull: false },
+  role: { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'student' },
+  type: { type: DataTypes.STRING(80), allowNull: false },
+  title: { type: DataTypes.STRING(160), allowNull: false },
+  message: { type: DataTypes.TEXT, allowNull: false },
+  isRead: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+  readAt: { type: DataTypes.DATE, allowNull: true },
+  metadata: { type: DataTypes.JSON, allowNull: true }
+}, { tableName: 'notifications' });
+
 export const PasskeyCredential = sequelize.define('PasskeyCredential', {
   userId: { type: DataTypes.INTEGER, allowNull: false },
   credentialId: { type: DataTypes.STRING(255), allowNull: false, unique: true },
@@ -263,6 +284,8 @@ User.hasOne(Teacher, { foreignKey: 'userId' });
 Teacher.belongsTo(User, { foreignKey: 'userId' });
 User.hasOne(AdminProfile, { foreignKey: 'userId' });
 AdminProfile.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(Notification, { foreignKey: 'userId' });
+Notification.belongsTo(User, { foreignKey: 'userId' });
 
 Lesson.hasMany(LessonActivity, { foreignKey: 'lessonId', as: 'activities' });
 LessonActivity.belongsTo(Lesson, { foreignKey: 'lessonId' });
@@ -303,7 +326,7 @@ export const models = {
   Role, User, Student, Teacher, AdminProfile, Lesson, LessonActivity,
   MCQQuestion, MCQOption, WritingTask, SpeechTask, CompletedLesson, QuizHistory,
   QuizAttempt, WritingSubmission, SpeechAttempt, Group, GroupMember, GroupTask,
-  GroupTaskCompletion, Badge, StudentBadge, XpLog, AuditLog, PasskeyCredential
+  GroupTaskCompletion, Badge, StudentBadge, XpLog, AuditLog, Notification, PasskeyCredential
 };
 
 export async function syncModels({ force = false } = {}) {

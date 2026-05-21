@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion } from '../models/index.js';
+import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion, Notification } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
@@ -65,8 +65,17 @@ async function dashboardPayload(student) {
   const groupTaskCompletions = await GroupTaskCompletion.findAll({
     where: { studentId: student.id }
   });
+  const groupTaskCompletionMap = new Map(
+    groupTaskCompletions.map(completion => [
+      Number(completion.groupTaskId),
+      completion.toJSON ? completion.toJSON() : completion
+    ])
+  );
+
   const completedGroupTaskIds = new Set(
-    groupTaskCompletions.map(completion => Number(completion.groupTaskId))
+    groupTaskCompletions
+      .filter(completion => completion.verificationStatus === 'approved')
+      .map(completion => Number(completion.groupTaskId))
   );
 
   const memberships = await GroupMember.findAll({ where: { studentId: student.id }, include: [{ model: Group, include: [{ model: GroupTask, as: 'tasks' }] }] });
@@ -93,12 +102,18 @@ async function dashboardPayload(student) {
       return {
         ...group,
         tasks: tasks.map(task => {
-          const completed = completedGroupTaskIds.has(Number(task.id));
+          const completion = groupTaskCompletionMap.get(Number(task.id)) || null;
+          const verificationStatus = completion?.verificationStatus || null;
+          const completed = verificationStatus === 'approved';
 
           return {
             ...task,
             completed,
-            completedByStudent: completed
+            completedByStudent: completed,
+            pendingTeacherCheck: verificationStatus === 'pending',
+            returnedByTeacher: verificationStatus === 'returned',
+            verificationStatus,
+            completion
           };
         })
       };
@@ -131,6 +146,49 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
     await audit(req.user.id, 'student.create', 'student', student.id);
     res.status(201).json({ student });
   } catch (err) { next(err); }
+});
+
+router.get('/notifications', requireRole('student'), async (req, res, next) => {
+  try {
+    const notifications = await Notification.findAll({
+      where: {
+        userId: req.user.id,
+        role: 'student',
+        isRead: false,
+      },
+      order: [['createdAt', 'ASC']],
+      limit: 10,
+    });
+
+    res.json({ notifications });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/notifications/:id/read', requireRole('student'), async (req, res, next) => {
+  try {
+    const notification = await Notification.findOne({
+      where: {
+        id: req.params.id,
+        userId: req.user.id,
+        role: 'student',
+      },
+    });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found.' });
+    }
+
+    await notification.update({
+      isRead: true,
+      readAt: new Date(),
+    });
+
+    res.json({ notification });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/dashboard', requireRole('student'), async (req, res, next) => {

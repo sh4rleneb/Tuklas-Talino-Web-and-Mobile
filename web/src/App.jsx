@@ -244,9 +244,35 @@ if (role === 'admin') {
   }, 'Hindi napalitan ang password.');
 }
 
+  async function showUnreadStudentNotifications() {
+    try {
+      const data = await api('/students/notifications');
+      const notifications = asArray(data?.notifications);
+
+      if (!notifications.length) return;
+
+      const first = notifications[0];
+      const extraCount = Math.max(0, notifications.length - 1);
+
+      notify(extraCount
+        ? `${first.message} +${extraCount} more update${extraCount === 1 ? '' : 's'}`
+        : first.message
+      );
+
+      await Promise.all(
+        notifications.map(item =>
+          api(`/students/notifications/${item.id}/read`, { method: 'POST' })
+        )
+      );
+    } catch (err) {
+      console.warn('Could not load student notifications:', err);
+    }
+  }
+
   async function loadStudentDashboard() {
     const data = await api('/students/dashboard');
     setStudentDash(data);
+    await showUnreadStudentNotifications();
     setQuizAttempts(data.quizAttempts || {});
     if (data.student?.avatar) setSelectedAvatar(data.student.avatar);
   }
@@ -531,13 +557,14 @@ if (role === 'admin') {
   }
 
   async function loadTeacherDashboard() {
-    const [dash, monitoring, groups, students, lessons, quizPerformance] = await Promise.all([
+    const [dash, monitoring, groups, students, lessons, quizPerformance, pendingGroupChecks] = await Promise.all([
       api('/teachers/dashboard'),
       api('/teachers/monitoring/stats'),
       api('/groups'),
       api('/students?status=active'),
       api('/lessons'),
-      api('/teachers/quiz-performance')
+      api('/teachers/quiz-performance'),
+      api('/groups/task-completions/pending')
     ]);
 
     const sortedLessons = [...(lessons.lessons || [])].sort((a, b) => {
@@ -555,7 +582,28 @@ if (role === 'admin') {
       groups: groups.groups || [],
       students: students.students || [],
       lessons: sortedLessons,
-      quizPerformance: quizPerformance || { summary: {}, rows: [] }
+      quizPerformance: quizPerformance || { summary: {}, rows: [] },
+      pendingGroupChecks: pendingGroupChecks || { summary: {}, rows: [] }
+    });
+  }
+
+  async function teacherApproveGroupTaskCompletion(row) {
+    if (!row?.groupTaskId || !row?.studentId) {
+      notify('Missing group task approval details.');
+      return;
+    }
+
+    await safeRun(async () => {
+      const data = await api(`/groups/tasks/${row.groupTaskId}/completions/${row.studentId}/approve`, {
+        method: 'POST',
+        body: {}
+      });
+
+      notify(data.xpAwarded
+        ? `${row.studentName || 'Student'} earned +${data.xpAwarded} XP after teacher approval.`
+        : `${row.studentName || 'Student'} was already approved.`
+      );
+      await loadTeacherDashboard();
     });
   }
 
@@ -1100,6 +1148,7 @@ async function archiveTeacher(id) {
           createGroup={teacherCreateGroup}
           addTask={teacherAddTask}
           addMember={teacherAddMember}
+          approveGroupTaskCompletion={teacherApproveGroupTaskCompletion}
           createLesson={teacherCreateLesson}
           exportStudentsCSV={exportStudentsCSV}
           exportLogsCSV={exportLogsCSV}
@@ -5842,11 +5891,27 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
   function isTaskDone(task) {
     if (!task) return false;
     return Boolean(
-      doneTasks[task.id] ||
       task.completed ||
-      task.isCompleted ||
       task.completedByStudent ||
+      task.verificationStatus === 'approved' ||
       task.status === 'completed'
+    );
+  }
+
+  function isTaskPending(task) {
+    if (!task) return false;
+    return Boolean(
+      doneTasks[task.id] ||
+      task.pendingTeacherCheck ||
+      task.verificationStatus === 'pending'
+    );
+  }
+
+  function isTaskReturned(task) {
+    if (!task) return false;
+    return Boolean(
+      task.returnedByTeacher ||
+      task.verificationStatus === 'returned'
     );
   }
 
@@ -5869,6 +5934,8 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
     const leftCount = Math.max(0, tasks.length - doneCount);
 
     if (!tasks.length) return 'Tap to start';
+    if (tasks.some(task => isTaskPending(task))) return 'Waiting for teacher';
+    if (tasks.some(task => isTaskReturned(task))) return 'Ask teacher';
     if (!leftCount) return 'Done today';
     if (leftCount === 1) return '1 mission left';
     return `${leftCount} missions left`;
@@ -5912,18 +5979,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
     const nextDoneTasks = { ...doneTasks, [taskId]: true };
 
     setDoneTasks(nextDoneTasks);
-
-    const groupWillBeFinished = selectedTasks.length > 0 && selectedTasks.every(task => (
-      Boolean(
-        nextDoneTasks[task.id] ||
-        task.completed ||
-        task.isCompleted ||
-        task.completedByStudent ||
-        task.status === 'completed'
-      )
-    ));
-
-    setFlowStep(groupWillBeFinished ? 'finished' : 'done');
+    setFlowStep('done');
 
     await completeGroupTask(taskId);
   }
@@ -6021,18 +6077,17 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                 {finishedGroups.length ? (
                   <div className="g12-team-select-grid">
                     {finishedGroups.map(group => (
-                      <button
-                        type="button"
+                      <div
                         className="g12-team-select-btn finished"
                         key={group.id}
-                        onClick={() => chooseGroup(group.id)}
+                        role="status"
+                        aria-label={`${group.name} done today`}
                       >
                         <span>
                           <strong>✅ {group.name}</strong>
                           <small>Done today</small>
                         </span>
-
-                      </button>
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -6174,7 +6229,13 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                     disabled={!primaryTask || taskRecorded}
                     onClick={() => primaryTask && markTaskDone(primaryTask.id)}
                   >
-                    {taskRecorded ? 'Mission Done' : 'I helped my team!'}
+                    {isTaskPending(primaryTask)
+                      ? 'Waiting for teacher'
+                      : taskRecorded
+                        ? 'Mission Done'
+                        : isTaskReturned(primaryTask)
+                          ? 'Ask teacher'
+                          : 'I helped my team!'}
                   </button>
                 </div>
               </div>
@@ -6183,8 +6244,8 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
             {flowStep === 'done' && (
               <div className="g12-team-flow-card g12-team-done">
                 <div className="done-icon">🎉</div>
-                <h3>{selectedGroupDone ? 'Mission Done!' : 'Great job!'}</h3>
-                <p>{selectedGroupDone ? 'You helped your team today.' : 'Teacher can check your work.'}</p>
+                <h3>{selectedGroupDone ? 'Mission Done!' : 'Waiting for teacher'}</h3>
+                <p>{selectedGroupDone ? 'Teacher checked your team mission.' : 'Your teacher will check your work.'}</p>
                 <div className="g12-team-actions" style={{ justifyContent: 'center' }}>
                   <button type="button" className="g12-main-btn" onClick={() => setFlowStep('start')}>Back to teams</button>
                 </div>
@@ -6812,6 +6873,7 @@ function TeacherDashboard({
   createGroup,
   addTask,
   addMember,
+  approveGroupTaskCompletion,
   createLesson,
   exportStudentsCSV,
   exportLogsCSV,
@@ -6825,6 +6887,8 @@ function TeacherDashboard({
   const rows = data.rows || [];
   const stats = data.stats || {};
   const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
+  const pendingGroupChecks = data.pendingGroupChecks || { summary: {}, rows: [] };
+  const pendingGroupRows = asArray(pendingGroupChecks.rows);
   const teacherName = user?.displayName || 'Teacher 1';
 
   const publishedLessons = lessons.filter(lesson => (lesson.status || 'published') === 'published').length;
@@ -7008,6 +7072,50 @@ function TeacherDashboard({
                 <h2>Group Manager</h2>
                 <p>Create groups, assign tasks, and add students to collaborative learning groups.</p>
               </div>
+            </div>
+
+            <div className="teacher-tool-box" style={{ marginBottom: 18 }}>
+              <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
+                <div>
+                  <div className="lms-section-label">Teacher Verification</div>
+                  <h3>Pending Group Checks</h3>
+                  <p>Approve group participation before XP is awarded.</p>
+                </div>
+                <span className="lms-mini-pill">⏳ {pendingGroupRows.length} pending</span>
+              </div>
+
+              {pendingGroupRows.length ? (
+                <div className="teacher-groups-grid">
+                  {pendingGroupRows.map(row => (
+                    <div className="teacher-group-item" key={`${row.groupTaskId}-${row.studentId}`}>
+                      <div className="teacher-group-item-top">
+                        <div>
+                          <strong>{row.studentName}</strong>
+                          <p>{row.groupName} • {row.taskTitle}</p>
+                          <p className="g46-ref-muted">
+                            Grade {row.gradeLevel || '-'} {row.section ? `• ${row.section}` : ''} • +{row.taskXp || 0} XP
+                          </p>
+                        </div>
+                        <span className="lms-mini-pill">Waiting</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="lms-main-action full"
+                        onClick={() => approveGroupTaskCompletion(row)}
+                      >
+                        Approve
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="teacher-empty-panel">
+                  <div>✅</div>
+                  <strong>No pending checks.</strong>
+                  <p>Student group submissions that need approval will appear here.</p>
+                </div>
+              )}
             </div>
 
             <div className="teacher-group-layout">
