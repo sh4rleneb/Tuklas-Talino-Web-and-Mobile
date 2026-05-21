@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SUBJECTS } from '../../constants/studentConstants';
 
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';

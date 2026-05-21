@@ -10,9 +10,6 @@ import { EarlyStudentSubpageStyles, Grade46ReferenceStyles, MissionStyles, Teach
 import { ProgressBar, Screen, Stat } from './components/common/CommonUI';
 import { AdminLogin, StudentLogin, TeacherLogin } from './pages/Login/LoginScreens';
 import { ChangePasswordScreen, HomeScreen, LandingScreen } from './pages/Home/HomeScreens';
-import { EarlyBadgesScreen, EarlyProfileScreen, StudentBadges, StudentProfile } from './pages/Student/ProfileScreens';
-import { EarlyGroupsScreen, StudentGroups } from './pages/Student/GroupScreens';
-import { TeacherAssessmentCenter, TeacherEffectivenessPanel } from './pages/Teacher/TeacherPanels';
 
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';
@@ -5665,8 +5662,557 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
   );
 }
 
+function EarlyGroupsScreen({ data, go, completeGroupTask }) {
+  const groups = data?.groups || [];
+  const roles = rolesForGradeLevel(data?.student?.gradeLevel);
+  const [selectedRoles, setSelectedRoles] = useState({});
+  const [doneTasks, setDoneTasks] = useState({});
+  const [taskFeelings, setTaskFeelings] = useState({});
+
+  async function markTaskDone(taskId) {
+    setDoneTasks(prev => ({ ...prev, [taskId]: true }));
+    await completeGroupTask(taskId);
+  }
+
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="groups"
+      go={go}
+      icon="👥"
+      title="Team Missions"
+      subtitle="Pumili ng role, gawin ang task, at tulungan ang iyong grupo."
+    >
+      <style>{`
+        .g12-team-path { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+        .g12-team-step { min-height: 76px; border-radius: 24px; padding: 12px; background: #ffffff; border: 2px solid rgba(21,150,90,0.12); display: grid; place-items: center; text-align: center; color: #14223b; font-weight: 1000; }
+        .g12-role-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+        .g12-role-choice { border: 0; min-height: 104px; border-radius: 28px; padding: 14px; background: #ffffff; box-shadow: inset 0 0 0 2px rgba(21,150,90,0.10); cursor: pointer; text-align: center; color: #14223b; font-weight: 1000; }
+        .g12-role-choice.selected { background: #fff5cf; box-shadow: inset 0 0 0 4px rgba(246,196,83,0.34), 0 8px 0 rgba(246,196,83,0.44); }
+        .g12-role-choice span { display: block; font-size: 36px; margin-bottom: 6px; }
+        .g12-feeling-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .g12-feeling-row button { border: 0; min-height: 48px; padding: 0 16px; border-radius: 18px; background: #ffffff; color: #14223b; font-size: 16px; font-weight: 1000; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(21,150,90,0.14); }
+        .g12-feeling-row button.selected { background: #edf8f1; color: #0f7d49; box-shadow: inset 0 0 0 3px rgba(21,150,90,0.18); }
+      `}</style>
+
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">👥 Team Missions</h2>
+            <p className="g12-section-subtitle">Mas malinaw na ngayon ang gagawin: role → activity → self-check.</p>
+          </div>
+        </div>
+
+        <div className="g12-team-path" aria-label="Group mission steps">
+          <div className="g12-team-step">1️⃣ Pumili ng Role</div>
+          <div className="g12-team-step">2️⃣ Gawin ang Task</div>
+          <div className="g12-team-step">3️⃣ Sabihin kung kaya</div>
+        </div>
+
+        <div className="g12-card-grid">
+          {groups.map(group => (
+            <div className="g12-group-card" key={group.id}>
+              <h3>👥 {group.name}</h3>
+              <p className="g12-muted">{group.description || 'Team mission para sa Filipino practice.'}</p>
+
+              <div className="g12-role-grid">
+                {roles.map(role => (
+                  <button
+                    type="button"
+                    key={`${group.id}-${role.id}`}
+                    className={`g12-role-choice ${selectedRoles[group.id] === role.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedRoles(prev => ({ ...prev, [group.id]: role.id }))}
+                  >
+                    <span>{role.icon}</span>
+                    {role.label}
+                    <small style={{ display: 'block', marginTop: 6, color: '#526988', lineHeight: 1.3 }}>{role.helper}</small>
+                  </button>
+                ))}
+              </div>
+
+              {(group.tasks || []).map(task => {
+                const pct = taskCompletionPercent(task, doneTasks[task.id]);
+                return (
+                  <div className="g12-task-card" key={task.id}>
+                    <div className="g12-task-icon">{doneTasks[task.id] ? '🎉' : '🧩'}</div>
+                    <div>
+                      <h3 style={{ fontSize: 24, marginBottom: 6 }}>{task.title}</h3>
+                      <p className="g12-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
+                      <div className="g12-module-progress" style={{ marginTop: 10 }}><span style={{ width: `${pct}%` }} /></div>
+                      <div className="g12-feeling-row">
+                        {['😊 Madali', '😐 Sakto', '🙋 Help po'].map(choice => (
+                          <button
+                            type="button"
+                            key={choice}
+                            className={taskFeelings[task.id] === choice ? 'selected' : ''}
+                            onClick={() => setTaskFeelings(prev => ({ ...prev, [task.id]: choice }))}
+                          >
+                            {choice}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button type="button" className="g12-main-btn" onClick={() => markTaskDone(task.id)}>
+                      {doneTasks[task.id] ? 'Done' : 'Tapos na'}
+                    </button>
+                  </div>
+                );
+              })}
+
+              {!(group.tasks || []).length && (
+                <div className="g12-empty" style={{ marginTop: 14 }}>Wala pang team mission para sa grupong ito.</div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {!groups.length && (
+          <div className="g12-empty">No group tasks yet.</div>
+        )}
+      </section>
+    </EarlyStudentChrome>
+  );
+}
+
+function StudentGroups({ data, go, completeGroupTask }) {
+  const early = Number(data?.student?.gradeLevel || 4) <= 2;
+  const groups = data?.groups || [];
+  const roles = rolesForGradeLevel(data?.student?.gradeLevel);
+  const [selectedRoles, setSelectedRoles] = useState({});
+  const [taskNotes, setTaskNotes] = useState({});
+  const [taskRatings, setTaskRatings] = useState({});
+  const [submittedTasks, setSubmittedTasks] = useState({});
+
+  if (early) {
+    return <EarlyGroupsScreen data={data} go={go} completeGroupTask={completeGroupTask} />;
+  }
+
+  async function submitGroupTask(taskId) {
+    setSubmittedTasks(prev => ({ ...prev, [taskId]: true }));
+    await completeGroupTask(taskId);
+  }
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="groups"
+      go={go}
+      icon="👥"
+      title="Group Collaboration"
+      subtitle="Choose a role, submit group output, and record your contribution."
+    >
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Group Tasks</h2>
+            <p className="g46-ref-muted">Teachers can judge collaboration better when students show role, output, and contribution evidence.</p>
+          </div>
+        </div>
+
+        {groups.map(group => (
+          <div className="g46-ref-panel" key={group.id} style={{ marginBottom: 14, boxShadow: 'none', background: '#fbfefc' }}>
+            <div className="g46-ref-panel-head">
+              <div>
+                <h3>👥 {group.name}</h3>
+                <p className="g46-ref-muted">{group.description || 'Collaborative Filipino task.'}</p>
+              </div>
+              <span className="g46-ref-tag">{group.tasks?.length || 0} task{(group.tasks?.length || 0) === 1 ? '' : 's'}</span>
+            </div>
+
+            <div className="g46-ref-filter-row" style={{ marginBottom: 14 }}>
+              {roles.map(role => (
+                <button
+                  type="button"
+                  key={`${group.id}-${role.id}`}
+                  className={selectedRoles[group.id] === role.id ? 'active' : ''}
+                  onClick={() => setSelectedRoles(prev => ({ ...prev, [group.id]: role.id }))}
+                  title={role.helper}
+                >
+                  {role.icon} {role.label}
+                </button>
+              ))}
+            </div>
+
+            {(group.tasks || []).map(task => {
+              const pct = taskCompletionPercent(task, submittedTasks[task.id]);
+              const band = effectivenessBand(pct);
+              return (
+                <div className="g46-ref-task-row" key={task.id} style={{ gridTemplateColumns: '58px minmax(0, 1fr)', alignItems: 'start' }}>
+                  <span className="g46-ref-card-icon">{submittedTasks[task.id] ? '✅' : '📝'}</span>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div>
+                        <h3 style={{ fontSize: 26, marginBottom: 6 }}>{task.title}</h3>
+                        <p className="g46-ref-muted" style={{ margin: 0 }}>Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP • {band.icon} {band.label}</p>
+                      </div>
+                      <button type="button" className="g46-ref-primary-btn" onClick={() => submitGroupTask(task.id)}>
+                        {submittedTasks[task.id] ? 'Submitted' : 'Submit Task'}
+                      </button>
+                    </div>
+
+                    <div className="g46-ref-mini-track" style={{ marginTop: 12 }}><span style={{ width: `${pct}%` }} /></div>
+
+                    <textarea
+                      className="input-field"
+                      rows="3"
+                      value={taskNotes[task.id] || ''}
+                      onChange={(e) => setTaskNotes(prev => ({ ...prev, [task.id]: e.target.value }))}
+                      placeholder="Write your group answer, summary, or contribution note here..."
+                      style={{ marginTop: 12, minHeight: 92 }}
+                    />
+
+                    <div className="g46-ref-filter-row" style={{ marginTop: 12, marginBottom: 0 }}>
+                      {['I helped a lot', 'I helped some', 'I need to participate more'].map(choice => (
+                        <button
+                          type="button"
+                          key={choice}
+                          className={taskRatings[task.id] === choice ? 'active' : ''}
+                          onClick={() => setTaskRatings(prev => ({ ...prev, [task.id]: choice }))}
+                        >
+                          {choice}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {!(group.tasks || []).length && <div className="g46-ref-empty">No tasks yet for this group.</div>}
+          </div>
+        ))}
+
+        {!groups.length && <div className="g46-ref-empty">No group tasks yet.</div>}
+      </section>
+    </Grade46StudentChrome>
+  );
+}
+
+function EarlyBadgesScreen({ data, go }) {
+  const badges = data?.badges || [];
+  const s = data?.student || {};
+
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="badges"
+      go={go}
+      icon="🏅"
+      title="Badges"
+      subtitle="Makikita dito ang rewards na nakuha mo sa lessons at activities."
+    >
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">🌟 Achievements</h2>
+            <p className="g12-section-subtitle">{badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {s.xp || 0} XP</p>
+          </div>
+        </div>
+
+        {badges.length ? (
+          <div className="g12-badge-grid">
+            {badges.map(badge => (
+              <div className="g12-badge-card" key={badge.id || badge.name}>
+                <div>
+                  <div className="g12-badge-big">{badge.icon || '🏅'}</div>
+                  <strong>{badge.name || 'Badge'}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="g12-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
+        )}
+      </section>
+    </EarlyStudentChrome>
+  );
+}
+
+function StudentBadges({ data, go }) {
+  const early = Number(data?.student?.gradeLevel || 4) <= 2;
+
+  if (early) {
+    return <EarlyBadgesScreen data={data} go={go} />;
+  }
+
+  const badges = data?.badges || [];
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="profile"
+      go={go}
+      icon="🏅"
+      title="Badges"
+      subtitle="Rewards and achievements from lessons, missions, and activities."
+    >
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Achievements</h2>
+            <p className="g46-ref-muted">{badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {data?.student?.xp || 0} XP</p>
+          </div>
+        </div>
+
+        {badges.length ? (
+          <div className="g46-ref-badge-grid">
+            {badges.map(badge => (
+              <div className="g46-ref-badge" key={badge.id || badge.name}>
+                <div><span>{badge.icon || '🏅'}</span>{badge.name || 'Badge'}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="g46-ref-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
+        )}
+      </section>
+    </Grade46StudentChrome>
+  );
+}
 
 
+function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
+  const s = data?.student || {};
+
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="profile"
+      go={go}
+      icon="🐰"
+      title="Profile"
+      subtitle="Piliin ang avatar mo at tingnan ang learning summary."
+    >
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">🐰 Avatar</h2>
+            <p className="g12-section-subtitle">Piliin ang avatar na gusto mong gamitin sa account mo.</p>
+          </div>
+        </div>
+
+        <div className="g12-avatar-grid">
+          {AVATARS.map(avatar => (
+            <button
+              key={avatar}
+              type="button"
+              className={`g12-avatar-choice ${selectedAvatar === avatar ? 'selected' : ''}`}
+              onClick={() => updateAvatar(avatar)}
+              aria-label={`Choose avatar ${avatar}`}
+            >
+              {avatar}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">📊 Summary</h2>
+            <p className="g12-section-subtitle">Basic profile and progress information.</p>
+          </div>
+        </div>
+
+        <div className="g12-summary-grid">
+          <div className="g12-summary-box"><span>👤</span><div><b>{s.name || '—'}</b><small>Name</small></div></div>
+          <div className="g12-summary-box"><span>🎒</span><div><b>Grade {s.gradeLevel || '—'}</b><small>Grade</small></div></div>
+          <div className="g12-summary-box"><span>🌸</span><div><b>{s.section || '—'}</b><small>Section</small></div></div>
+          <div className="g12-summary-box"><span>⚡</span><div><b>{s.xp || 0} XP</b><small>XP</small></div></div>
+        </div>
+      </section>
+    </EarlyStudentChrome>
+  );
+}
+
+function StudentProfile({ data, selectedAvatar, updateAvatar, go }) {
+  const early = Number(data?.student?.gradeLevel || 4) <= 2;
+
+  if (early) {
+    return <EarlyProfileScreen data={data} selectedAvatar={selectedAvatar} updateAvatar={updateAvatar} go={go} />;
+  }
+
+  const s = data?.student || {};
+
+  return (
+    <Grade46StudentChrome
+      data={data}
+      activeTab="profile"
+      go={go}
+      icon="👤"
+      title="Profile"
+      subtitle="Piliin ang avatar mo at tingnan ang learning summary."
+    >
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Avatar</h2>
+            <p className="g46-ref-muted">Piliin ang avatar na gusto mong gamitin sa account mo.</p>
+          </div>
+        </div>
+
+        <div className="g46-ref-avatar-grid">
+          {AVATARS.map(avatar => (
+            <button
+              key={avatar}
+              type="button"
+              className={`g46-ref-avatar-choice ${selectedAvatar === avatar ? 'selected' : ''}`}
+              onClick={() => updateAvatar(avatar)}
+              aria-label={`Choose avatar ${avatar}`}
+            >
+              {avatar}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>Summary</h2>
+            <p className="g46-ref-muted">Basic profile and progress information.</p>
+          </div>
+        </div>
+
+        <div className="g46-ref-card-grid">
+          <div className="g46-ref-card green"><span className="g46-ref-card-icon">👤</span><h4>{s.name || '—'}</h4><p>Name</p></div>
+          <div className="g46-ref-card yellow"><span className="g46-ref-card-icon">🎒</span><h4>Grade {s.gradeLevel || '—'}</h4><p>Grade</p></div>
+          <div className="g46-ref-card blue"><span className="g46-ref-card-icon">🌸</span><h4>{s.section || '—'}</h4><p>Section</p></div>
+          <div className="g46-ref-card purple"><span className="g46-ref-card-icon">⚡</span><h4>{s.xp || 0} XP</h4><p>XP</p></div>
+        </div>
+      </section>
+    </Grade46StudentChrome>
+  );
+}
+
+
+
+function TeacherAssessmentCenter({ lessons = [], rows = [] }) {
+  const quizzes = lessons.map(lesson => ({
+    lesson,
+    questions: buildQuizQuestionsFromLesson(lesson),
+    profile: lessonAssessmentProfile(lesson.activities || [])
+  }));
+  const withQuiz = quizzes.filter(item => item.profile.hasObjectiveQuiz).length;
+  const questionCount = quizzes.reduce((sum, item) => sum + item.questions.length, 0);
+  const missingQuiz = Math.max(0, lessons.length - withQuiz);
+  const readiness = lessons.length ? Math.round((withQuiz / lessons.length) * 100) : 0;
+
+  return (
+    <section className="teacher-workspace-card" id="teacher-assessment-center">
+      <div className="teacher-workspace-heading">
+        <div>
+          <div className="lms-section-label">Assessment Hub</div>
+          <h2>Quiz Builder & Effectiveness Preview</h2>
+          <p>Create the lesson first, then use each lesson's MCQ or matching activities as a separate student Quiz tab. Backend saving comes next.</p>
+        </div>
+      </div>
+
+      <div className="teacher-monitor-summary">
+        <div><span>Assessment Coverage</span><strong>{readiness}%</strong></div>
+        <div><span>Quiz-ready Lessons</span><strong>{withQuiz}/{lessons.length}</strong></div>
+        <div><span>Total Questions</span><strong>{questionCount}</strong></div>
+      </div>
+
+      <div className="teacher-monitor-summary" style={{ marginTop: 12 }}>
+        <div><span>Lessons Missing Quiz</span><strong>{missingQuiz}</strong></div>
+        <div><span>Students to Monitor</span><strong>{rows.length}</strong></div>
+        <div><span>Passing Target</span><strong>75%</strong></div>
+      </div>
+
+      <div className="lms-empty-line" style={{ marginTop: 14, background: '#fff8df', color: '#6b4b00' }}>
+        Recommended next backend step: save Assessment, AssessmentQuestion, AssessmentAttempt, and AssessmentResponse records so teachers can see real class averages, pass rates, and most-missed questions.
+      </div>
+
+      <div className="teacher-groups-area" style={{ marginTop: 16 }}>
+        <div className="teacher-mini-heading">
+          <div>
+            <h3>Lesson-to-Quiz Checklist</h3>
+            <p>Each lesson should have at least one objective quiz plus writing or speech evidence for stronger effectiveness measurement.</p>
+          </div>
+        </div>
+
+        <div className="teacher-groups-grid">
+          {quizzes.map(({ lesson, questions, profile }) => {
+            const coverage = [profile.hasObjectiveQuiz, profile.hasWriting, profile.hasSpeech].filter(Boolean).length;
+            return (
+              <div className="teacher-group-item" key={lesson.id || lesson.title}>
+                <div className="teacher-group-item-top">
+                  <div>
+                    <strong>{lesson.title || 'Untitled lesson'}</strong>
+                    <p>{lesson.subject || 'Filipino'} • Grade {lesson.gradeLevel || '—'}</p>
+                  </div>
+                  <span className="lms-mini-pill">{questions.length} item{questions.length === 1 ? '' : 's'}</span>
+                </div>
+                <div className="teacher-progress-cell" style={{ marginTop: 12 }}>
+                  <span>{coverage}/3 evidence types</span>
+                  <div className="teacher-progress-track"><div style={{ width: `${Math.max(8, (coverage / 3) * 100)}%` }} /></div>
+                </div>
+                <p style={{ marginTop: 10 }}>
+                  {profile.hasObjectiveQuiz ? '✅ Quiz/Matching' : '⚠️ Add quiz'} • {profile.hasWriting ? '✅ Writing' : 'Add writing'} • {profile.hasSpeech ? '✅ Speech' : 'Add speech'}
+                </p>
+              </div>
+            );
+          })}
+          {!lessons.length && (
+            <div className="teacher-empty-panel">
+              <div>🧠</div>
+              <strong>No lessons yet.</strong>
+              <p>Create lessons first, then the Quiz tab will automatically show assessment cards.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TeacherEffectivenessPanel({ rows = [], lessons = [], groups = [] }) {
+  const avgProgress = rows.length
+    ? Math.round(rows.reduce((sum, row) => sum + Number(row.percent || 0), 0) / rows.length)
+    : 0;
+  const completed = rows.reduce((sum, row) => sum + Number(row.completed || 0), 0);
+  const totalLessons = rows.reduce((sum, row) => sum + Number(row.totalLessons || 0), 0);
+  const completionRate = totalLessons ? Math.round((completed / totalLessons) * 100) : 0;
+  const groupTaskCount = groups.reduce((sum, group) => sum + asArray(group.tasks).length, 0);
+  const band = effectivenessBand(avgProgress || completionRate);
+  const assessmentMix = lessons.reduce((acc, lesson) => {
+    const profile = lessonAssessmentProfile(lesson.activities || []);
+    acc.content += profile.hasContent ? 1 : 0;
+    acc.quiz += profile.hasObjectiveQuiz ? 1 : 0;
+    acc.writing += profile.hasWriting ? 1 : 0;
+    acc.speech += profile.hasSpeech ? 1 : 0;
+    return acc;
+  }, { content: 0, quiz: 0, writing: 0, speech: 0 });
+
+  return (
+    <div className="teacher-workspace-card" style={{ margin: '18px 0', background: 'linear-gradient(135deg, #fbfffd, #fffdf0)', boxShadow: 'none' }}>
+      <div className="teacher-workspace-heading">
+        <div>
+          <div className="lms-section-label">Learning Effectiveness</div>
+          <h2>{band.icon} {band.label}</h2>
+          <p>{band.note} Use quiz scores, writing, speech, group output, and self-checks instead of completion only.</p>
+        </div>
+      </div>
+
+      <div className="teacher-monitor-summary">
+        <div><span>Completion Rate</span><strong>{completionRate}%</strong></div>
+        <div><span>Average Progress</span><strong>{avgProgress}%</strong></div>
+        <div><span>Group Tasks</span><strong>{groupTaskCount}</strong></div>
+      </div>
+
+      <div className="teacher-monitor-summary" style={{ marginTop: 12 }}>
+        <div><span>Lessons with Quiz/Matching</span><strong>{assessmentMix.quiz}/{lessons.length}</strong></div>
+        <div><span>Lessons with Writing</span><strong>{assessmentMix.writing}/{lessons.length}</strong></div>
+        <div><span>Lessons with Speech</span><strong>{assessmentMix.speech}/{lessons.length}</strong></div>
+      </div>
+
+      <div className="lms-empty-line" style={{ marginTop: 14, background: '#ffffff', color: '#264136' }}>
+        Suggested teacher decision: if completion is high but quiz/speech/writing evidence is low, add a short post-test or reteaching activity before awarding full mastery.
+      </div>
+    </div>
+  );
+}
 
 
 
