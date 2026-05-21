@@ -5,7 +5,7 @@ import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
 import QuizResults from './components/student/quizzes/QuizResults';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
-import { asArray, displayDue, effectivenessBand, fmtDate, getBestQuizAttempt, lessonAssessmentProfile, lessonXp, levelForXp, masteryFromPercent, subjectTheme, taskCompletionPercent, xpPercent } from './utils/studentHelpers';
+import { asArray, displayDue, effectivenessBand, fmtDate, getBestQuizAttempt, lessonAssessmentProfile, lessonXp, levelForXp, masteryFromPercent, rolesForGradeLevel, subjectTheme, taskCompletionPercent, xpPercent } from './utils/studentHelpers';
 import { EarlyStudentSubpageStyles, Grade46ReferenceStyles, MissionStyles, TeacherRedesignStyles } from './components/styles/StyleBlocks';
 import { ProgressBar, Screen, Stat } from './components/common/CommonUI';
 import { AdminLogin, StudentLogin, TeacherLogin } from './pages/Login/LoginScreens';
@@ -1014,24 +1014,7 @@ function getGroupTasks(data) {
   return groups.flatMap(g => asArray(g.tasks).map(t => ({ ...t, groupName: g.name })));
 }
 
-const EARLY_GROUP_ROLES = [
-  { id: 'reader', icon: '📖', label: 'Reader', helper: 'Basahin ang salita o kuwento.' },
-  { id: 'speaker', icon: '🎤', label: 'Speaker', helper: 'Bigkasin ang sagot nang malinaw.' },
-  { id: 'helper', icon: '⭐', label: 'Helper', helper: 'Tumulong sa kaklase.' },
-  { id: 'checker', icon: '✅', label: 'Checker', helper: 'Tingnan kung tapos na ang gawain.' }
-];
 
-const UPPER_GROUP_ROLES = [
-  { id: 'leader', icon: '👑', label: 'Leader', helper: 'Guide the group and keep everyone on task.' },
-  { id: 'reader', icon: '📖', label: 'Reader', helper: 'Read the passage or instructions.' },
-  { id: 'writer', icon: '✍️', label: 'Writer', helper: 'Prepare the group answer or summary.' },
-  { id: 'reporter', icon: '🎙️', label: 'Reporter', helper: 'Present the group output.' },
-  { id: 'checker', icon: '✅', label: 'Checker', helper: 'Review the answer before submission.' }
-];
-
-function rolesForGradeLevel(gradeLevel) {
-  return Number(gradeLevel || 4) <= 2 ? EARLY_GROUP_ROLES : UPPER_GROUP_ROLES;
-}
 
 function quizStorageKey(studentId) {
   return `tuklas_quiz_attempts_${studentId || 'demo'}`;

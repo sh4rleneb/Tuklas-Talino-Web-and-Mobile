@@ -1,3 +1,4 @@
+import { EARLY_GROUP_ROLES, UPPER_GROUP_ROLES } from '../constants/studentConstants';
 export function levelForXp(xp = 0) {
   return Math.max(1, Math.floor(Number(xp || 0) / 100) + 1);
 }
@@ -77,4 +78,8 @@ export function getBestQuizAttempt(attempts = {}, quizId) {
   const rows = asArray(attempts?.[quizId]);
   if (!rows.length) return null;
   return rows.reduce((best, row) => Number(row.percent || 0) > Number(best.percent || 0) ? row : best, rows[0]);
+}
+
+export function rolesForGradeLevel(gradeLevel) {
+  return Number(gradeLevel || 4) <= 2 ? EARLY_GROUP_ROLES : UPPER_GROUP_ROLES;
 }

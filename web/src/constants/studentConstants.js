@@ -102,3 +102,18 @@ export const MISSION_GAMES = [
     minCompleted: 3
   }
 ];
+
+export const EARLY_GROUP_ROLES = [
+  { id: 'reader', icon: '📖', label: 'Reader', helper: 'Basahin ang salita o kuwento.' },
+  { id: 'speaker', icon: '🎤', label: 'Speaker', helper: 'Bigkasin ang sagot nang malinaw.' },
+  { id: 'helper', icon: '⭐', label: 'Helper', helper: 'Tumulong sa kaklase.' },
+  { id: 'checker', icon: '✅', label: 'Checker', helper: 'Tingnan kung tapos na ang gawain.' }
+];
+
+export const UPPER_GROUP_ROLES = [
+  { id: 'leader', icon: '👑', label: 'Leader', helper: 'Guide the group and keep everyone on task.' },
+  { id: 'reader', icon: '📖', label: 'Reader', helper: 'Read the passage or instructions.' },
+  { id: 'writer', icon: '✍️', label: 'Writer', helper: 'Prepare the group answer or summary.' },
+  { id: 'reporter', icon: '🎙️', label: 'Reporter', helper: 'Present the group output.' },
+  { id: 'checker', icon: '✅', label: 'Checker', helper: 'Review the answer before submission.' }
+];
