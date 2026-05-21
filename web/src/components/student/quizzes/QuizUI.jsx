@@ -832,6 +832,162 @@ function QuizSharedStyles() {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+
+      /* Grade 1-2 Quiz Time pastel subject tabs */
+      .g12-page .quiz-game-subject-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin: 20px 0 24px;
+        align-items: center;
+      }
+
+      .g12-page .quiz-game-subject-chip {
+        min-height: 64px;
+        padding: 14px 24px;
+        border-radius: 24px;
+        background: #fffdf7;
+        border: 2px solid rgba(21, 150, 90, 0.12);
+        color: #203451;
+        font-size: 19px;
+        font-weight: 1000;
+        letter-spacing: -0.02em;
+        box-shadow: 0 8px 18px rgba(31, 73, 61, 0.045);
+      }
+
+      .g12-page .quiz-game-subject-chip:nth-child(1) {
+        background: #edf8f1;
+      }
+
+      .g12-page .quiz-game-subject-chip:nth-child(2) {
+        background: #eef8ff;
+      }
+
+      .g12-page .quiz-game-subject-chip:nth-child(3) {
+        background: #fff8e8;
+      }
+
+      .g12-page .quiz-game-subject-chip:nth-child(4) {
+        background: #f6efff;
+      }
+
+      .g12-page .quiz-game-subject-chip:nth-child(5) {
+        background: #fff1f4;
+      }
+
+
+      /* Grade 1-2 Quiz Time active filter state */
+      .g12-page .quiz-game-subject-chip {
+        cursor: pointer;
+        transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+      }
+
+      .g12-page .quiz-game-subject-chip:hover {
+        transform: translateY(-1px);
+      }
+
+      .g12-page .quiz-game-subject-chip.active {
+        background: #15965a !important;
+        border-color: #0f7d49 !important;
+        color: #ffffff !important;
+        box-shadow: 0 8px 18px rgba(21, 150, 90, 0.16) !important;
+        transform: translateY(-2px);
+      }
+
+      .g12-page .quiz-game-subject-chip.active:hover {
+        transform: translateY(-2px);
+      }
+
+
+      /* Grade 1-2 Quiz Time card redesign */
+      .g12-page .quiz-card-grid {
+        gap: 22px;
+      }
+
+      .g12-page .quiz-card.early-quiz-card {
+        min-height: 188px;
+        display: grid !important;
+        grid-template-columns: 96px minmax(0, 1fr) 76px;
+        align-items: center;
+        gap: 22px;
+        padding: 28px 28px !important;
+        border-radius: 32px !important;
+        text-align: left;
+        background:
+          radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.88), transparent 26%),
+          linear-gradient(135deg, #F8FCFF, #FFFDF7) !important;
+        border: 2px solid rgba(21, 150, 90, 0.10) !important;
+        box-shadow: 0 14px 28px rgba(31, 73, 61, 0.08) !important;
+      }
+
+      .g12-page .quiz-card.early-quiz-card.pink,
+      .g12-page .quiz-card.early-quiz-card.green,
+      .g12-page .quiz-card.early-quiz-card.blue,
+      .g12-page .quiz-card.early-quiz-card.yellow,
+      .g12-page .quiz-card.early-quiz-card.purple {
+        background:
+          radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.9), transparent 28%),
+          linear-gradient(135deg, #F8FCFF, #FFFDF7) !important;
+      }
+
+      .g12-page .quiz-card.early-quiz-card > div:first-child {
+        display: contents;
+      }
+
+      .g12-page .quiz-card.early-quiz-card .quiz-card-head {
+        grid-column: 1;
+        margin: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+
+      .g12-page .quiz-card.early-quiz-card .quiz-card-icon {
+        width: 82px !important;
+        height: 82px !important;
+        border-radius: 26px !important;
+        font-size: 42px !important;
+        box-shadow: 0 10px 18px rgba(31, 73, 61, 0.06) !important;
+      }
+
+      .g12-page .quiz-card.early-quiz-card h3 {
+        grid-column: 2;
+        margin: 0 0 8px !important;
+        font-size: 32px !important;
+        line-height: 1.05 !important;
+        letter-spacing: -0.04em !important;
+        color: #203451 !important;
+      }
+
+      .g12-page .quiz-card.early-quiz-card p {
+        grid-column: 2;
+        margin: 0 !important;
+        font-size: 19px !important;
+        font-weight: 950 !important;
+        color: #526988 !important;
+      }
+
+      .g12-page .quiz-card.early-quiz-card .quiz-action {
+        grid-column: 3;
+        width: 66px !important;
+        min-width: 66px !important;
+        height: 66px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        justify-self: center !important;
+        align-self: center !important;
+        background: #FFFDF6 !important;
+        border: 2px solid #E7EFE8 !important;
+        color: #149b55 !important;
+        font-size: 42px !important;
+        font-weight: 1000 !important;
+        line-height: 0.9 !important;
+        box-shadow: 0 6px 14px rgba(27, 46, 70, 0.06) !important;
+      }
+
       .g12-page .quiz-card {
         min-height: 210px;
         border-radius: 34px;

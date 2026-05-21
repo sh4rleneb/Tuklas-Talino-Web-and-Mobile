@@ -21,6 +21,7 @@ export default function QuizzesPage({
 }) {
   const student = data?.student || {};
   const early = Number(student?.gradeLevel || 4) <= 2;
+  const [quizSubjectFilter, setQuizSubjectFilter] = React.useState("ALL");
 
   const quizzes =
     typeof buildStudentQuizzes === "function"
@@ -34,8 +35,51 @@ export default function QuizzesPage({
 
   const maxQuizAttempts = 2;
 
+  function shortEarlyQuizTitle(quiz = {}) {
+    const subject = String(quiz.subject || "").trim();
+    const title = String(quiz.title || "").trim();
+
+    const withoutQuiz = title.replace(/\s*quiz\s*$/i, "").trim();
+
+    if (/^gawa$/i.test(withoutQuiz)) return "Gawa";
+    if (/^gawa\b/i.test(withoutQuiz)) return "Gawa";
+
+    const prefix = withoutQuiz
+      .replace(/^([^:]+)\s*:\s*.+$/, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (prefix && prefix.length <= 22) {
+      if (/oral|bigkas|speech|komunikasyon/i.test(prefix)) {
+        const number = prefix.match(/\d+/)?.[0];
+        return number ? `Bigkas ${number}` : "Bigkas";
+      }
+
+      if (/pagsulat|sulatin|patlang|writing/i.test(prefix)) {
+        const number = prefix.match(/\d+/)?.[0];
+        return number ? `Patlang ${number}` : "Patlang";
+      }
+
+      return prefix;
+    }
+
+    if (/bokabularyo/i.test(subject) || /bokabularyo/i.test(title)) return "Bokabularyo";
+    if (/pagbasa/i.test(subject) || /pagbasa/i.test(title)) return "Pagbasa";
+    if (/panitikan/i.test(subject) || /panitikan/i.test(title)) return "Panitikan";
+    if (/oral|bigkas|speech|komunikasyon/i.test(subject) || /oral|bigkas|speech|komunikasyon/i.test(title)) return "Bigkas";
+    if (/pagsulat|sulatin|patlang|writing/i.test(subject) || /pagsulat|sulatin|patlang|writing/i.test(title)) return "Patlang";
+
+    return prefix || subject || "Quiz";
+  }
+
+  const visibleQuizzes =
+    quizSubjectFilter === "ALL"
+      ? quizzes
+      : quizzes.filter((quiz) => quiz.subject === quizSubjectFilter);
+
   const recommendedQuiz =
-    quizzes.find((quiz) => asArray(quizAttempts?.[quiz.id]).length < maxQuizAttempts) ||
+    visibleQuizzes.find((quiz) => asArray(quizAttempts?.[quiz.id]).length < maxQuizAttempts) ||
+    visibleQuizzes[0] ||
     quizzes[0];
 
   const subjectCounts = subjects
@@ -45,7 +89,7 @@ export default function QuizzesPage({
     }))
     .filter((item) => item.count > 0);
 
-  const cards = quizzes.map((quiz, index) => {
+  const cards = visibleQuizzes.map((quiz, index) => {
     const attempts = asArray(quizAttempts?.[quiz.id]);
     const attemptsUsed = attempts.length;
     const attemptsDone = attemptsUsed >= maxQuizAttempts;
@@ -79,17 +123,17 @@ export default function QuizzesPage({
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
-                {early ? "🧠 Mga Quiz" : "Quiz List"}
+                {early ? "🧠 Quiz Time" : "Quiz List"}
               </h2>
 
-              <p className={early ? "g12-section-subtitle" : "g46-ref-muted"}>
-                {early
-                  ? "Sagutan muna. Feedback after final try."
-                  : "Answer first. Review feedback after your final try."}
-              </p>
+              {!early && (
+                <p className="g46-ref-muted">
+                  Answer first. Review feedback after your final try.
+                </p>
+              )}
             </div>
 
-            {recommendedQuiz && (
+            {!early && recommendedQuiz && (
               <button
                 type="button"
                 className="quiz-secondary"
@@ -101,11 +145,24 @@ export default function QuizzesPage({
           </div>
 
           {subjectCounts.length > 0 && (
-            <div className="quiz-game-subject-row" aria-label="Quiz subject counts">
+            <div className="quiz-game-subject-row" aria-label="Quiz subject filters">
+              <button
+                type="button"
+                className={`quiz-game-subject-chip ${quizSubjectFilter === "ALL" ? "active" : ""}`}
+                onClick={() => setQuizSubjectFilter("ALL")}
+              >
+                🌎 All
+              </button>
+
               {subjectCounts.map((subject) => (
-                <span className="quiz-game-subject-chip" key={subject.name}>
-                  {subject.icon} {subject.name}: {subject.count}
-                </span>
+                <button
+                  type="button"
+                  className={`quiz-game-subject-chip ${quizSubjectFilter === subject.name ? "active" : ""}`}
+                  key={subject.name}
+                  onClick={() => setQuizSubjectFilter(subject.name)}
+                >
+                  {subject.icon} {subject.name}{!early && `: ${subject.count}`}
+                </button>
               ))}
             </div>
           )}
@@ -114,7 +171,7 @@ export default function QuizzesPage({
             {cards.map(({ quiz, best, mastery, tone, icon, attemptsUsed, attemptsDone }) => (
               <button
                 type="button"
-                className={`quiz-card ${tone}`}
+                className={`quiz-card ${tone} ${early ? "early-quiz-card" : ""}`}
                 key={quiz.id}
                 onClick={() => attemptsDone && typeof openQuizResult === "function" ? openQuizResult(quiz) : openQuiz(quiz)}
               >
@@ -122,36 +179,54 @@ export default function QuizzesPage({
                   <div className="quiz-card-head">
                     <span className="quiz-card-icon">{icon}</span>
 
-                    <span className="quiz-pill">
-                      {best ? `${best.percent}% ${mastery.label}` : "Not taken yet"}
-                    </span>
-                  </div>
-
-                  <h3>{quiz.title}</h3>
-
-                  <p>
-                    {quiz.subject} • Grade {quiz.gradeLevel} •{" "}
-                    {quiz.questions.length} question
-                    {quiz.questions.length === 1 ? "" : "s"} • +{quiz.xpReward} XP
-                  </p>
-
-                  <div className="quiz-pill-row">
-                    <span className="quiz-pill">{quiz.type}</span>
-
-                    <span className="quiz-pill">
-                      Attempts: {Math.min(attemptsUsed, maxQuizAttempts)}/{maxQuizAttempts}
-                    </span>
-
-                    {best && (
+                    {!early && (
                       <span className="quiz-pill">
-                        Best: {best.score}/{best.total}
+                        {best ? `${best.percent}% ${mastery.label}` : "Not taken yet"}
                       </span>
                     )}
                   </div>
+
+                  <h3>{early ? shortEarlyQuizTitle(quiz) : quiz.title}</h3>
+
+                  <p>
+                    {early ? (
+                      <>
+                        {quiz.questions.length} tanong • ⭐ {quiz.xpReward} XP
+                      </>
+                    ) : (
+                      <>
+                        {quiz.subject} • Grade {quiz.gradeLevel} •{" "}
+                        {quiz.questions.length} question
+                        {quiz.questions.length === 1 ? "" : "s"} • +{quiz.xpReward} XP
+                      </>
+                    )}
+                  </p>
+
+                  {!early && (
+                    <div className="quiz-pill-row">
+                      <span className="quiz-pill">{quiz.type}</span>
+
+                      <span className="quiz-pill">
+                        Attempts: {Math.min(attemptsUsed, maxQuizAttempts)}/{maxQuizAttempts}
+                      </span>
+
+                      {best && (
+                        <span className="quiz-pill">
+                          Best: {best.score}/{best.total}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <span className="quiz-action" role="button" tabIndex={-1}>
-                  {attemptsDone ? "Review" : best ? "Try Again" : "Start"}
+                  {early
+                    ? "›"
+                    : attemptsDone
+                      ? "Review"
+                      : best
+                        ? "Try Again"
+                        : "Start"}
                 </span>
               </button>
             ))}
@@ -160,6 +235,12 @@ export default function QuizzesPage({
           {!quizzes.length && (
             <div className={early ? "g12-empty" : "g46-ref-empty"}>
               No quizzes yet. Create lessons with MCQ or matching activities first.
+            </div>
+          )}
+
+          {quizzes.length > 0 && !visibleQuizzes.length && (
+            <div className={early ? "g12-empty" : "g46-ref-empty"}>
+              No quizzes found for this subject yet.
             </div>
           )}
         </section>
@@ -174,8 +255,8 @@ export default function QuizzesPage({
         activeTab="quizzes"
         go={go}
         icon="🧠"
-        title="Quiz Quest"
-        subtitle="Sagutin ang quiz para malaman kung naintindihan ang lesson."
+        title="Quiz Time"
+        subtitle=""
       >
         {quizContent}
       </EarlyStudentChrome>

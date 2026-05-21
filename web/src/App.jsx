@@ -2369,7 +2369,38 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
       }
 
 
-      /* Grade 1-2 balanced font sizing: playful, readable, and not oversized. */
+      
+        .g12-filter-row .g12-chip {
+          min-height: 66px !important;
+          padding: 16px 26px !important;
+          border-radius: 24px !important;
+          font-size: 20px !important;
+          font-weight: 900 !important;
+        }
+        /* Grade 1-2 balanced lesson card arrow override */
+        .g12-tile .g12-arrow {
+          width: 66px !important;
+          min-width: 66px !important;
+          height: 66px !important;
+          border-radius: 50% !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          margin-left: auto !important;
+          margin-right: 34px !important;
+          align-self: center !important;
+          transform: translateX(-24px) !important;
+          background: #FFFDF6 !important;
+          border: 2px solid #E7EFE8 !important;
+          color: #149b55 !important;
+          font-size: 38px !important;
+          font-weight: 900 !important;
+          line-height: 1 !important;
+          box-shadow: 0 6px 14px rgba(27, 46, 70, 0.06) !important;
+          flex-shrink: 0 !important;
+        }
+
+/* Grade 1-2 balanced font sizing: playful, readable, and not oversized. */
       .g12-brand {
         font-size: 28px;
       }
@@ -2623,14 +2654,14 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
 
         <section className="g12-section-card">
           <h2 className="g12-section-title">🌎 Learning Worlds ⭐</h2>
-          <p className="g12-section-subtitle">Piliin ang iyong paboritong aralin.</p>
+          <p className="g12-section-subtitle"></p>
 
           <div className="g12-subject-grid">
             {mainStats.map((item) => {
               const subjectInfo = SUBJECTS.find((subj) => subj.name === item.subj) || {};
               const tone = item.tone || subjectInfo.tone || 'green';
               const icon = item.icon || subjectInfo.icon || '📚';
-              const desc = subjectInfo.desc || 'Buksan ang module na ito.';
+              const desc = subjectInfo.desc || '';
               const pct = Math.max(0, Math.min(100, item.pct || 0));
 
               return (
@@ -3030,13 +3061,13 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
       go={go}
       icon="📖"
       title="Mga Aralin"
-      subtitle="Pumili ng module o lesson na gusto mong simulan."
+      subtitle=""
     >
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
             <h2 className="g12-section-title">📚 Lesson Library</h2>
-            <p className="g12-section-subtitle">{lessons.length} lesson{lessons.length === 1 ? '' : 's'} available for your grade.</p>
+
           </div>
         </div>
 
@@ -3063,9 +3094,11 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
               <button type="button" className={`g12-tile ${tone}`} key={lesson.id} onClick={() => openLesson(lesson)}>
                 <div className="g12-tile-icon">{meta.icon}</div>
                 <div>
-                  <h3>{lesson.title}</h3>
-                  <p>{lesson.subject} • Grade {lesson.gradeLevel} • +{lesson.xpReward || 0} XP</p>
-                  <span className="g12-status-pill">{lesson.completed ? '✅ Summary' : '▶ Start'}</span>
+                  <h3>{shortEarlyLessonTitle(lesson)}</h3>
+                  <p>⭐ {lesson.xpReward || 0} XP</p>
+                  {lesson.completed && (
+                    <span className="g12-status-pill">✅ Summary</span>
+                  )}
                 </div>
                 <div className="g12-arrow">›</div>
               </button>
@@ -3550,6 +3583,62 @@ function extractSectionFromLessonPlan(raw = '', startLabels = [], endLabels = []
   }
 
   return cleanLessonTextForKids(text.slice(contentStart, endIndex));
+}
+
+function shortEarlyLessonTitle(lesson = {}) {
+  const subject = String(lesson.subject || "").trim();
+  const title = String(lesson.title || "").trim();
+
+  const withoutExtra = title
+    .replace(/\s*lesson\s*$/i, "")
+    .replace(/\s*quiz\s*$/i, "")
+    .trim();
+
+  if (/^gawa$/i.test(withoutExtra)) return "Gawa";
+  if (/^gawa\b/i.test(withoutExtra)) return "Gawa";
+
+  const prefix = withoutExtra
+    .replace(/^([^:]+)\s*:\s*.+$/, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (prefix && prefix.length <= 24) {
+    if (/oral|bigkas|speech|komunikasyon/i.test(prefix)) {
+      const number = prefix.match(/\d+/)?.[0];
+      return number ? `Bigkas ${number}` : "Bigkas";
+    }
+
+    if (/pagsulat|sulatin|patlang|writing/i.test(prefix)) {
+      const number = prefix.match(/\d+/)?.[0];
+      return number ? `Patlang ${number}` : "Patlang";
+    }
+
+    return prefix;
+  }
+
+  const number = title.match(/\b\d+\b/)?.[0];
+
+  if (/bokabularyo/i.test(subject) || /bokabularyo/i.test(title)) {
+    return number ? `Bokabularyo ${number}` : "Bokabularyo";
+  }
+
+  if (/pagbasa/i.test(subject) || /pagbasa/i.test(title)) {
+    return number ? `Pagbasa ${number}` : "Pagbasa";
+  }
+
+  if (/panitikan/i.test(subject) || /panitikan/i.test(title)) {
+    return number ? `Panitikan ${number}` : "Panitikan";
+  }
+
+  if (/oral|bigkas|speech|komunikasyon/i.test(subject) || /oral|bigkas|speech|komunikasyon/i.test(title)) {
+    return number ? `Bigkas ${number}` : "Bigkas";
+  }
+
+  if (/pagsulat|sulatin|patlang|writing/i.test(subject) || /pagsulat|sulatin|patlang|writing/i.test(title)) {
+    return number ? `Patlang ${number}` : "Patlang";
+  }
+
+  return prefix || subject || "Aralin";
 }
 
 function makeStudentFriendlyPassage(lesson) {
@@ -4579,7 +4668,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
         <section className="g12-mission-banner">
           <div className="g12-mission-topline">
             <div>
-              <h2>{lesson?.title || 'Aralin'} 🌟</h2>
+              <h2>{shortEarlyLessonTitle(lesson)} 🌟</h2>
               <p>Hakbang {safeStep + 1} of {missionSteps.length}</p>
             </div>
             <div className="g12-mission-xp">⚡ +{lesson?.xpReward || 0} XP</div>
