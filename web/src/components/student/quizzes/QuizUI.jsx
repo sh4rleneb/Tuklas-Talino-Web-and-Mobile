@@ -265,6 +265,38 @@ function QuizSharedStyles() {
         color: var(--quiz-yellow-deep);
       }
 
+
+      /* Grade 1-2 quiz start spacing polish */
+      .g12-page .quiz-game-landing-card {
+        grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.55fr) !important;
+        gap: 22px !important;
+        padding: 28px 34px !important;
+        align-items: center !important;
+      }
+
+      .g12-page .quiz-game-copy h2 {
+        max-width: 820px !important;
+      }
+
+      .g12-page .quiz-game-copy p {
+        max-width: 620px !important;
+      }
+
+      .g12-page .quiz-game-mascot-scene {
+        min-height: 215px !important;
+        max-width: 430px !important;
+        width: 100% !important;
+        justify-self: end !important;
+        overflow: visible !important;
+      }
+
+      .g12-page .quiz-game-mascot {
+        width: 132px !important;
+        height: 132px !important;
+        font-size: 72px !important;
+        border-radius: 38px !important;
+      }
+
       .quiz-stat-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1148,24 +1180,10 @@ function QuizStartCard({ quiz, best, onStart, onBack }) {
   return (
     <section className="quiz-game-landing-card" aria-label="Quiz start">
       <div className="quiz-game-copy">
-        <div className="quiz-pill-row">
-          <span className="quiz-pill">
-            {subjectTheme(quiz?.subject).icon || "📚"}{" "}
-            {quiz?.subject || "Filipino"}
-          </span>
-
-          <span className="quiz-pill">
-            {questionCount} question{questionCount === 1 ? "" : "s"}
-          </span>
-
-          <span className="quiz-pill">Up to +20 XP</span>
-        </div>
-
-        <h2>Ready ka na sa Quiz Quest?</h2>
+        <h2>Ready ka na sa Quiz?</h2>
 
         <p>
-          Basahin ang bawat tanong at piliin ang pinakamagandang sagot. Makikita
-          ang score at review feedback pagkatapos mong i-submit ang quiz.
+          Basahin ang tanong at piliin ang tamang sagot.
         </p>
 
         {best && (
