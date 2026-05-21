@@ -70,6 +70,36 @@ export const AdminProfile = sequelize.define('AdminProfile', {
   name: { type: DataTypes.STRING(160), allowNull: false }
 }, { tableName: 'admins' });
 
+export const TeacherAssignment = sequelize.define('TeacherAssignment', {
+  teacherId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'teacher_id'
+  },
+  gradeLevel: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    field: 'grade_level'
+  },
+  section: {
+    type: DataTypes.STRING(80),
+    allowNull: false
+  },
+  status: {
+    type: DataTypes.ENUM('active', 'archived'),
+    allowNull: false,
+    defaultValue: 'active'
+  }
+}, {
+  tableName: 'teacher_assignments',
+  indexes: [
+    {
+      unique: true,
+      fields: ['teacher_id', 'grade_level', 'section']
+    }
+  ]
+});
+
 export const Lesson = sequelize.define('Lesson', {
   lessonCode: { type: DataTypes.STRING(40), allowNull: false, unique: true },
   gradeLevel: { type: DataTypes.INTEGER, allowNull: false },
@@ -282,6 +312,8 @@ User.hasOne(Student, { foreignKey: 'userId' });
 Student.belongsTo(User, { foreignKey: 'userId' });
 User.hasOne(Teacher, { foreignKey: 'userId' });
 Teacher.belongsTo(User, { foreignKey: 'userId' });
+Teacher.hasMany(TeacherAssignment, { foreignKey: 'teacherId', as: 'assignments' });
+TeacherAssignment.belongsTo(Teacher, { foreignKey: 'teacherId' });
 User.hasOne(AdminProfile, { foreignKey: 'userId' });
 AdminProfile.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Notification, { foreignKey: 'userId' });

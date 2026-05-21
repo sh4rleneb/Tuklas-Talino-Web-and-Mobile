@@ -7,6 +7,7 @@ import {
 
 import {
   Lesson,
+  TeacherAssignment,
   LessonActivity,
   MCQQuestion,
   MCQOption,
@@ -134,6 +135,25 @@ router.get('/', async (req, res, next) => {
       where.subject = req.query.subject;
     }
 
+    if (req.role === 'teacher') {
+      where.createdByUserId = req.user.id;
+
+      const assignments = await TeacherAssignment.findAll({
+        where: {
+          teacherId: req.teacher?.id || 0,
+          status: 'active'
+        }
+      });
+
+      const assignedGrades = [...new Set(assignments.map((assignment) => Number(assignment.gradeLevel)))];
+
+      if (!assignedGrades.length) {
+        where.gradeLevel = [];
+      } else if (!req.query.gradeLevel) {
+        where.gradeLevel = assignedGrades;
+      }
+    }
+
     const lessons = await Lesson.findAll({
       where,
       order: [
@@ -157,6 +177,10 @@ router.get('/:id', async (req, res, next) => {
 
     if (!lesson) {
       return res.status(404).json({ message: 'Lesson not found.' });
+    }
+
+    if (req.role === 'teacher' && Number(lesson.createdByUserId) !== Number(req.user.id)) {
+      return res.status(403).json({ message: 'You can only view lessons you created.' });
     }
 
     const lessonJson = lesson.toJSON();

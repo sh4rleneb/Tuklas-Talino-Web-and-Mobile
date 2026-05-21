@@ -23,6 +23,10 @@ const router = Router();
 router.use(authenticate);
 router.use(requirePasswordChanged);
 
+function teacherOwnsGroup(req, group) {
+  return req.role !== 'teacher' || Number(group?.createdByTeacherId) === Number(req.teacher?.id);
+}
+
 function notifyTeacherAndLeaderboard(payload) {
   emitRealtime('teachers', 'student:activity', payload);
   emitRealtime('leaderboard', 'leaderboard:update', {});
@@ -60,7 +64,14 @@ router.get('/', async (req, res, next) => {
       });
     }
 
+    const groupWhere = {};
+
+    if (req.role === 'teacher') {
+      groupWhere.createdByTeacherId = req.teacher?.id || 0;
+    }
+
     const groups = await Group.findAll({
+      where: groupWhere,
       include: [
         {
           model: GroupMember,
@@ -111,6 +122,10 @@ router.patch('/:id', requireRole('teacher', 'admin'), async (req, res, next) => 
       return res.status(404).json({ message: 'Group not found.' });
     }
 
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({ message: 'You can only manage your own groups.' });
+    }
+
     for (const key of ['name', 'description', 'status']) {
       if (req.body[key] !== undefined) {
         group[key] = req.body[key];
@@ -138,6 +153,10 @@ router.delete('/:id', requireRole('teacher', 'admin'), async (req, res, next) =>
 
     if (!group) {
       return res.status(404).json({ message: 'Group not found.' });
+    }
+
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({ message: 'You can only manage your own groups.' });
     }
 
     group.status = 'archived';

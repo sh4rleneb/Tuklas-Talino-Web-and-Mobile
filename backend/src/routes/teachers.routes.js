@@ -1,13 +1,73 @@
 import { Router } from 'express';
+import { Op } from 'sequelize';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Teacher, Student, CompletedLesson, Lesson, Group, GroupMember } from '../models/index.js';
+import { Role, User, Teacher, TeacherAssignment, Student, CompletedLesson, Lesson, Group, GroupMember, QuizAttempt } from '../models/index.js';
 import { teacherSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
 
 function generateTemporaryPin() {
   return Array.from({ length: 6 }, () => crypto.randomInt(2, 10)).join('');
+}
+
+async function getTeacherAssignments(req) {
+  if (req.role === 'admin') return null;
+  if (!req.teacher?.id) return [];
+
+  return TeacherAssignment.findAll({
+    where: {
+      teacherId: req.teacher.id,
+      status: 'active'
+    },
+    order: [
+      ['gradeLevel', 'ASC'],
+      ['section', 'ASC']
+    ]
+  });
+}
+
+function assignedStudentWhere(assignments) {
+  if (assignments === null) return {};
+  if (!assignments.length) return { id: [] };
+
+  return {
+    [Op.or]: assignments.map((assignment) => ({
+      gradeLevel: assignment.gradeLevel,
+      section: assignment.section
+    }))
+  };
+}
+
+function assignedLessonWhere(assignments) {
+  const where = { status: 'published' };
+  if (assignments === null) return where;
+  if (!assignments.length) return { ...where, gradeLevel: [] };
+
+  where.gradeLevel = [...new Set(assignments.map((assignment) => Number(assignment.gradeLevel)))];
+  return where;
+}
+
+async function getAssignedStudentIds(assignments) {
+  const where = assignedStudentWhere(assignments);
+  const students = await Student.findAll({
+    where,
+    attributes: ['id']
+  });
+
+  return students.map((student) => Number(student.id));
+}
+
+function assignmentPayload(assignments) {
+  if (!Array.isArray(assignments)) return [];
+
+  return assignments.map((assignment) => ({
+    id: assignment.id,
+    teacherId: assignment.teacherId,
+    gradeLevel: assignment.gradeLevel,
+    section: assignment.section,
+    status: assignment.status
+  }));
 }
 
 const router = Router();
@@ -54,24 +114,59 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
 
 router.get('/dashboard', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
+    const assignments = await getTeacherAssignments(req);
+    const studentWhere = assignedStudentWhere(assignments);
+    const lessonWhere = assignedLessonWhere(assignments);
+    const assignedStudentIds = assignments === null ? null : await getAssignedStudentIds(assignments);
+
+    const completedWhere = {};
+    if (assignedStudentIds) completedWhere.studentId = assignedStudentIds;
+
+    const groupWhere = { status: 'active' };
+    if (req.role === 'teacher') groupWhere.createdByTeacherId = req.teacher?.id || 0;
+
     const [students, lessons, completed, groups] = await Promise.all([
-      Student.count({ where: { status: 'active' } }),
-      Lesson.count({ where: { status: 'published' } }),
-      CompletedLesson.count(),
-      Group.count({ where: { status: 'active' } })
+      Student.count({ where: { ...studentWhere, status: 'active' } }),
+      Lesson.count({ where: lessonWhere }),
+      CompletedLesson.count({ where: completedWhere }),
+      Group.count({ where: groupWhere })
     ]);
-    const recentStudents = await Student.findAll({ order: [['updatedAt','DESC']], limit: 8 });
-    res.json({ stats: { students, lessons, completed, groups }, recentStudents });
+
+    const recentStudents = await Student.findAll({
+      where: studentWhere,
+      order: [['updatedAt','DESC']],
+      limit: 8
+    });
+
+    res.json({
+      stats: { students, lessons, completed, groups },
+      recentStudents,
+      assignedClasses: assignmentPayload(assignments)
+    });
   } catch (err) { next(err); }
 });
 
 router.get('/monitoring/stats', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
-    const students = await Student.findAll({ order: [['gradeLevel','ASC'], ['name','ASC']] });
-    const totalLessons = await Lesson.count({ where: { status: 'published' } });
+    const assignments = await getTeacherAssignments(req);
+    const studentWhere = assignedStudentWhere(assignments);
+
+    const students = await Student.findAll({
+      where: studentWhere,
+      order: [['gradeLevel','ASC'], ['name','ASC']]
+    });
+
     const rows = [];
+
     for (const s of students) {
       const completed = await CompletedLesson.count({ where: { studentId: s.id } });
+      const totalLessons = await Lesson.count({
+        where: {
+          gradeLevel: s.gradeLevel,
+          status: 'published'
+        }
+      });
+
       rows.push({
         id: s.id,
         studentCode: s.studentCode,
@@ -85,9 +180,123 @@ router.get('/monitoring/stats', requireRole('teacher', 'admin'), async (req, res
         status: s.status
       });
     }
-    res.json({ rows });
+
+    res.json({
+      rows,
+      assignedClasses: assignmentPayload(assignments)
+    });
   } catch (err) { next(err); }
 });
+
+
+function quizStatus(percent = 0) {
+  const value = Number(percent || 0);
+
+  if (value >= 90) return 'Advanced';
+  if (value >= 75) return 'Proficient';
+  if (value >= 50) return 'Developing';
+  return 'Needs Support';
+}
+
+router.get('/quiz-performance', requireRole('teacher', 'admin'), async (req, res, next) => {
+  try {
+    const assignments = await getTeacherAssignments(req);
+    const assignedStudentIds = assignments === null ? null : await getAssignedStudentIds(assignments);
+    const attemptWhere = {};
+
+    if (assignedStudentIds) {
+      attemptWhere.studentId = assignedStudentIds;
+    }
+
+    const attempts = await QuizAttempt.findAll({
+      where: attemptWhere,
+      include: [Student, Lesson],
+      order: [
+        ['studentId', 'ASC'],
+        ['quizId', 'ASC'],
+        ['attemptNo', 'ASC'],
+        ['submittedAt', 'ASC']
+      ]
+    });
+
+    const grouped = new Map();
+
+    for (const attempt of attempts) {
+      const row = attempt.toJSON();
+      const student = row.Student || {};
+      const lesson = row.Lesson || {};
+      const key = `${row.studentId}-${row.quizId}`;
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          key,
+          studentId: row.studentId,
+          studentName: student.name || 'Student',
+          gradeLevel: student.gradeLevel || lesson.gradeLevel || null,
+          section: student.section || '',
+          lessonId: row.lessonId,
+          quizId: row.quizId,
+          quizTitle: row.quizTitle || lesson.title || 'Quiz',
+          attempts: [],
+          attempt1: null,
+          attempt2: null,
+          bestPercent: 0,
+          latestPercent: 0,
+          status: 'Needs Support'
+        });
+      }
+
+      const item = grouped.get(key);
+      const attemptData = {
+        id: row.id,
+        attemptNo: row.attemptNo,
+        score: row.score,
+        total: row.total,
+        percent: row.percent,
+        xpAwarded: row.xpAwarded,
+        submittedAt: row.submittedAt
+      };
+
+      item.attempts.push(attemptData);
+
+      if (Number(row.attemptNo) === 1) item.attempt1 = attemptData;
+      if (Number(row.attemptNo) === 2) item.attempt2 = attemptData;
+
+      item.bestPercent = Math.max(item.bestPercent, Number(row.percent || 0));
+      item.latestPercent = Number(row.percent || item.latestPercent || 0);
+      item.status = quizStatus(item.bestPercent);
+    }
+
+    const rows = Array.from(grouped.values()).sort((a, b) => {
+      if (a.gradeLevel !== b.gradeLevel) return Number(a.gradeLevel || 0) - Number(b.gradeLevel || 0);
+      return String(a.studentName).localeCompare(String(b.studentName));
+    });
+
+    const needsSupport = rows.filter(row => row.bestPercent < 50).length;
+    const developing = rows.filter(row => row.bestPercent >= 50 && row.bestPercent < 75).length;
+    const proficient = rows.filter(row => row.bestPercent >= 75 && row.bestPercent < 90).length;
+    const advanced = rows.filter(row => row.bestPercent >= 90).length;
+    const averageBest = rows.length
+      ? Math.round(rows.reduce((sum, row) => sum + Number(row.bestPercent || 0), 0) / rows.length)
+      : 0;
+
+    res.json({
+      summary: {
+        total: rows.length,
+        averageBest,
+        needsSupport,
+        developing,
+        proficient,
+        advanced
+      },
+      rows,
+      assignedClasses: assignmentPayload(assignments)
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 
 router.get('/students/:studentId', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {

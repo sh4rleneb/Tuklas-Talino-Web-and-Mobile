@@ -35,13 +35,15 @@ export default function App() {
   const [quizAttempts, setQuizAttempts] = useState({});
   const [selectedMissionGameId, setSelectedMissionGameId] = useState('word-match');
   const [lessonFeedback, setLessonFeedback] = useState('');
-  const [teacherData, setTeacherData] = useState({ stats: null, rows: [], groups: [], students: [], lessons: [] });
+  const [teacherData, setTeacherData] = useState({ stats: null, rows: [], groups: [], students: [], lessons: [], assignedClasses: [] });
 const [adminData, setAdminData] = useState({
   stats: null,
   students: [],
   archivedStudents: [],
   teachers: [],
   archivedTeachers: [],
+  teacherAssignments: [],
+  classOptions: [],
   logs: []
 });
   const [loading, setLoading] = useState(false);
@@ -135,13 +137,15 @@ useEffect(() => {
     setSelectedQuiz(null);
     setQuizResult(null);
     setQuizAttempts({});
-    setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [] });
+    setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [], assignedClasses: [] });
 setAdminData({
   stats: null,
   students: [],
   archivedStudents: [],
   teachers: [],
   archivedTeachers: [],
+  teacherAssignments: [],
+  classOptions: [],
   logs: []
 });
     go('screen-landing');
@@ -578,6 +582,7 @@ if (role === 'admin') {
 
     setTeacherData({
       stats: dash.stats,
+      assignedClasses: dash.assignedClasses || monitoring.assignedClasses || quizPerformance.assignedClasses || [],
       rows: monitoring.rows || [],
       groups: groups.groups || [],
       students: students.students || [],
@@ -706,12 +711,13 @@ if (role === 'admin') {
 }
 
 async function loadAdminDashboard() {
-  const [stats, students, archivedStudents, teachers, archivedTeachers, logs] = await Promise.all([
+  const [stats, students, archivedStudents, teachers, archivedTeachers, enrollments, logs] = await Promise.all([
     api('/admin/stats'),
     api('/students?status=active'),
     api('/students?status=archived'),
     api('/teachers?status=active'),
     api('/teachers?status=archived'),
+    api('/admin/enrollments'),
     api('/admin/audit-logs?limit=50')
   ]);
 
@@ -721,6 +727,8 @@ async function loadAdminDashboard() {
     archivedStudents: archivedStudents.students || [],
     teachers: teachers.teachers || [],
     archivedTeachers: archivedTeachers.teachers || [],
+    teacherAssignments: enrollments.teacherAssignments || [],
+    classOptions: enrollments.classOptions || [],
     logs: logs.logs || []
   });
 }
@@ -759,6 +767,40 @@ async function loadAdminDashboard() {
       notify('Teacher added.');
       await loadAdminDashboard();
     });
+  }
+
+  async function assignTeacherClass() {
+    await safeRun(async () => {
+      const teacherId = read('a-assign-teacher');
+      const gradeLevel = Number(read('a-assign-grade'));
+      const section = read('a-assign-section');
+
+      if (!teacherId || !gradeLevel || !section) {
+        window.alert('Please select a teacher, grade level, and section.');
+        return;
+      }
+
+      await api(`/admin/teachers/${teacherId}/assignments`, {
+        method: 'POST',
+        body: { gradeLevel, section }
+      });
+
+      notify('Teacher class assignment saved.');
+      await loadAdminDashboard();
+      await loadTeacherDashboard().catch(() => null);
+    }, 'Hindi na-save ang teacher assignment.');
+  }
+
+  async function removeTeacherAssignment(id) {
+    const confirmed = window.confirm('Remove this teacher class assignment?');
+    if (!confirmed) return;
+
+    await safeRun(async () => {
+      await api(`/admin/teacher-assignments/${id}`, { method: 'DELETE' });
+      notify('Teacher class assignment removed.');
+      await loadAdminDashboard();
+      await loadTeacherDashboard().catch(() => null);
+    }, 'Hindi na-remove ang teacher assignment.');
   }
 
   async function archiveStudent(id) {
@@ -1169,6 +1211,8 @@ async function archiveTeacher(id) {
   resetStudent={resetStudent}
   archiveTeacher={archiveTeacher}
   reactivateTeacher={reactivateTeacher}
+  assignTeacherClass={assignTeacherClass}
+  removeTeacherAssignment={removeTeacherAssignment}
   reload={() => safeRun(loadAdminDashboard)}
 />
       </Screen>
@@ -6884,6 +6928,7 @@ function TeacherDashboard({
   const lessons = data.lessons || [];
   const groups = data.groups || [];
   const students = data.students || [];
+  const assignedClasses = data.assignedClasses || [];
   const rows = data.rows || [];
   const stats = data.stats || {};
   const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
@@ -7021,6 +7066,28 @@ function TeacherDashboard({
             <button className="teacher-logout-btn light" type="button" onClick={() => openTab('students')}>
               🎓 Monitor Students
             </button>
+          </div>
+        </section>
+
+        <section className="teacher-workspace-card" style={{ marginBottom: 16 }}>
+          <div className="lms-section-label">Assigned Classes</div>
+          <h2>Your Handled Classes</h2>
+          <p className="muted">
+            These are the grade and section assignments set by the admin. Your students, monitoring, quiz attempts, and reports are filtered using these classes.
+          </p>
+
+          <div className="divider" />
+
+          <div className="row" style={{ flexWrap: 'wrap', gap: 10 }}>
+            {assignedClasses.length ? assignedClasses.map(item => (
+              <span className="pill" key={item.id || `${item.gradeLevel}-${item.section}`}>
+                Grade {item.gradeLevel} • {item.section}
+              </span>
+            )) : (
+              <span className="muted">
+                No assigned class yet. Ask the admin to assign your grade and section.
+              </span>
+            )}
           </div>
         </section>
 
@@ -8312,7 +8379,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
             <div className="teacher-design-heading">
               <div className="teacher-design-step">5</div>
               <div>
-                <h2>Recently Created Lessons</h2>
+                <h2>My Created Lessons</h2>
                 <p>Your most recent lessons.</p>
               </div>
               <button className="lms-view-lessons-btn" type="button" onClick={toggleShowAllLessons}>
@@ -8741,9 +8808,93 @@ function AdminDashboard({
   resetTeacherPassword,
   archiveTeacher,
   reactivateTeacher,
+  assignTeacherClass,
+  removeTeacherAssignment,
   reload
 }) {
-  return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div>
+  const teachers = data.teachers || [];
+  const teacherAssignments = data.teacherAssignments || [];
+  const classOptions = data.classOptions || [];
+  const [assignGradeFilter, setAssignGradeFilter] = useState('');
+  const sectionOptions = [...new Set(
+    classOptions
+      .filter(option => !assignGradeFilter || Number(option.gradeLevel) === Number(assignGradeFilter))
+      .map(option => option.section)
+      .filter(Boolean)
+  )];
+
+  function assignmentLabel(assignment) {
+    return `Grade ${assignment.gradeLevel} • ${assignment.section}`;
+  }
+
+  function teacherNameForAssignment(assignment) {
+    return assignment.Teacher?.name || teachers.find(t => Number(t.id) === Number(assignment.teacherId))?.name || 'Teacher';
+  }
+
+  return <><div className="top-nav"><div className="logo">🛡️ Admin Dashboard</div><div className="row"><div className="pill">⚙️ Manage Accounts</div><button className="btn btn-outline btn-sm" onClick={logout}>Logout</button></div></div><div className="scroll"><div className="card" style={{ background: 'linear-gradient(135deg,var(--purple),#8E44AD)', color: 'white' }}><div className="section-title" style={{ color: 'white' }}>👥 Account Management</div><div className="muted" style={{ color: 'white', opacity: .9 }}>Magdagdag at mag-manage ng Students at Teachers.</div></div><div className="grid grid-3"><Stat icon="👥" label="Users" value={data.stats?.users || 0} /><Stat icon="👨‍🎓" label="Students" value={data.stats?.students || 0} /><Stat icon="👩‍🏫" label="Teachers" value={data.stats?.teachers || 0} /></div><div className="grid grid-2"><div className="card"><div className="section-title">👨‍🎓 Add Student</div><input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-name" placeholder="Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-section" placeholder="Section" /><div style={{ height: 10 }} /><input className="input-field" id="a-stu-password" placeholder="Password (default student123)" /><div className="divider" /><button className="btn btn-green" onClick={addStudent}>Add Student</button></div><div className="card"><div className="section-title">👩‍🏫 Add Teacher</div><input className="input-field" id="a-t-username" placeholder="Username (unique)" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-name" placeholder="Teacher Name" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-code" placeholder="Employee Code" /><div style={{ height: 10 }} /><input className="input-field" id="a-t-password" placeholder="Password" /><div className="divider" /><button className="btn btn-blue" onClick={addTeacher}>Add Teacher</button></div></div><div className="card">
+  <div className="section-title">🏫 Assign Teacher to Class</div>
+  <div className="muted">
+    Choose which grade and section each teacher handles. This controls what they see in monitoring, reports, quiz attempts, and student lists.
+  </div>
+
+  <div className="divider" />
+
+  <div className="grid grid-2">
+    <select className="input-field" id="a-assign-teacher" defaultValue="">
+      <option value="">Select teacher</option>
+      {teachers.map(t => (
+        <option key={t.id} value={t.id}>{t.name}</option>
+      ))}
+    </select>
+
+    <select
+      className="input-field"
+      id="a-assign-grade"
+      value={assignGradeFilter}
+      onChange={(event) => setAssignGradeFilter(event.target.value)}
+    >
+      <option value="">Grade</option>
+      {[1, 2, 3, 4, 5, 6].map(grade => (
+        <option key={grade} value={grade}>Grade {grade}</option>
+      ))}
+    </select>
+
+    <select className="input-field" id="a-assign-section" defaultValue="">
+      <option value="">Section</option>
+      {sectionOptions.map(section => (
+        <option key={section} value={section}>{section}</option>
+      ))}
+      {!sectionOptions.length && (
+        <option value="" disabled>No sections found for this grade</option>
+      )}
+    </select>
+
+    <button className="btn btn-blue" onClick={assignTeacherClass}>
+      Save Assignment
+    </button>
+  </div>
+
+  <div className="divider" />
+
+  <div className="grid grid-2">
+    {teacherAssignments.map(assignment => (
+      <div className="lesson-card" key={assignment.id}>
+        <div className="lesson-icon">🏫</div>
+        <div style={{ flex: 1 }}>
+          <b>{teacherNameForAssignment(assignment)}</b>
+          <div className="muted">{assignmentLabel(assignment)}</div>
+        </div>
+        <button className="btn btn-danger btn-sm" onClick={() => removeTeacherAssignment(assignment.id)}>
+          Remove
+        </button>
+      </div>
+    ))}
+
+    {!teacherAssignments.length && (
+      <div className="muted">No teacher class assignments yet.</div>
+    )}
+  </div>
+</div><div className="card"><div className="section-title">📋 Students</div><div className="row"><button className="btn btn-outline btn-sm" onClick={reload}>Refresh</button></div><div className="divider" /><div id="admin-students-wrap">{data.students.map(s => <div className="lesson-card" key={s.id}><div className="lesson-icon">{s.avatar || '👨‍🎓'}</div><div style={{ flex: 1 }}><b>{s.name}</b><div className="muted">{s.studentCode} • Grade {s.gradeLevel} • {s.section}</div></div>
  <button
   className="btn btn-outline btn-sm"
   onClick={() => resetStudentPassword(s.id, s.name)}

@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion, Notification } from '../models/index.js';
+import { Role, User, Student, TeacherAssignment, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion, Notification } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
@@ -16,9 +16,42 @@ const router = Router();
 router.use(authenticate);
 router.use(requirePasswordChanged);
 
+async function getTeacherAssignments(req) {
+  if (req.role === 'admin') return null;
+  if (req.role !== 'teacher') return null;
+  if (!req.teacher?.id) return [];
+
+  return TeacherAssignment.findAll({
+    where: {
+      teacherId: req.teacher.id,
+      status: 'active'
+    }
+  });
+}
+
+function assignedStudentWhere(assignments) {
+  if (assignments === null) return {};
+  if (!assignments.length) return { id: [] };
+
+  return {
+    [Op.or]: assignments.map((assignment) => ({
+      gradeLevel: assignment.gradeLevel,
+      section: assignment.section
+    }))
+  };
+}
+
 async function getStudentForRequest(req, idParam) {
   if (req.role === 'student') return req.student;
-  return Student.findByPk(idParam);
+  if (req.role === 'admin') return Student.findByPk(idParam);
+
+  const assignments = await getTeacherAssignments(req);
+  const where = {
+    ...assignedStudentWhere(assignments),
+    id: idParam
+  };
+
+  return Student.findOne({ where });
 }
 
 async function dashboardPayload(student) {
@@ -123,10 +156,18 @@ async function dashboardPayload(student) {
 
 router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
-    const where = {};
+    const assignments = await getTeacherAssignments(req);
+    const where = assignedStudentWhere(assignments);
+
     if (req.query.status) where.status = req.query.status;
     if (req.query.q) where.name = { [Op.like]: `%${req.query.q}%` };
-    const students = await Student.findAll({ where, include: [User], order: [['gradeLevel','ASC'], ['name','ASC']] });
+
+    const students = await Student.findAll({
+      where,
+      include: [User],
+      order: [['gradeLevel','ASC'], ['name','ASC']]
+    });
+
     res.json({ students });
   } catch (err) { next(err); }
 });
@@ -197,7 +238,7 @@ router.get('/dashboard', requireRole('student'), async (req, res, next) => {
 
 router.get('/:id/dashboard', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
-    const student = await Student.findByPk(req.params.id);
+    const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
     res.json(await dashboardPayload(student));
   } catch (err) { next(err); }
