@@ -31,6 +31,47 @@ export async function api(path, options = {}) {
   return data;
 }
 
-export function downloadUrl(path) {
-  return `${API_URL}${path}`;
+export async function downloadFile(path, fallbackFilename = 'download') {
+  const headers = new Headers();
+  const token = getToken();
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_URL}${path}`, { headers });
+
+  if (!response.ok) {
+    const contentType = response.headers.get('content-type') || '';
+    let message = 'Download failed';
+
+    try {
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        message = data?.message || message;
+      } else {
+        const text = await response.text();
+        message = text || message;
+      }
+    } catch {
+      message = 'Download failed';
+    }
+
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const disposition = response.headers.get('content-disposition') || '';
+  const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+  const filename = filenameMatch?.[1] || fallbackFilename;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

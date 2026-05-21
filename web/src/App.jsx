@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { api, downloadUrl } from './api/client';
+import { api, downloadFile } from './api/client';
 import { useAuth } from './contexts/AuthContext';
 import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
@@ -922,16 +922,22 @@ async function archiveTeacher(id) {
     });
   }
 
-  function exportStudentsCSV() {
-    window.location.href = downloadUrl('/reports/students.csv');
+  async function exportStudentsCSV() {
+    await safeRun(async () => {
+      await downloadFile('/reports/students.csv', 'tuklas-talino-students.csv');
+    }, 'Hindi ma-download ang students CSV.');
   }
 
-  function exportLogsCSV() {
-    window.location.href = downloadUrl('/reports/activity-logs.csv');
+  async function exportLogsCSV() {
+    await safeRun(async () => {
+      await downloadFile('/reports/activity-logs.csv', 'tuklas-talino-activity-logs.csv');
+    }, 'Hindi ma-download ang activity logs CSV.');
   }
 
-  function downloadSummaryReport() {
-    window.location.href = downloadUrl('/reports/summary.txt');
+  async function downloadSummaryReport() {
+    await safeRun(async () => {
+      await downloadFile('/reports/summary.txt', 'tuklas-talino-summary-report.txt');
+    }, 'Hindi ma-download ang summary report.');
   }
 
   const lessonsBySubject = useMemo(() => {
