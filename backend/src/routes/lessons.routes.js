@@ -227,6 +227,24 @@ router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
     const body = validate(lessonSchema, req.body);
     const { activities = [], ...lessonPayload } = body;
 
+    if (req.role === 'teacher') {
+      const assignments = await TeacherAssignment.findAll({
+        where: {
+          teacherId: req.teacher?.id || 0,
+          status: 'active'
+        }
+      });
+
+      const assignedGrades = [...new Set(assignments.map((assignment) => Number(assignment.gradeLevel)))];
+      const requestedGrade = Number(body.gradeLevel);
+
+      if (!assignedGrades.includes(requestedGrade)) {
+        return res.status(403).json({
+          message: 'You can only create lessons for your assigned grade levels.'
+        });
+      }
+    }
+
     const lesson = await Lesson.create({
       ...lessonPayload,
       createdByUserId: req.user.id,

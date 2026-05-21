@@ -6965,6 +6965,181 @@ function TeacherDashboard({
       <TeacherRedesignStyles />
 
       <style>{`
+        /* lesson-builder-readable-text */
+        .teacher-builder-workflow {
+          gap: 12px;
+          padding: 14px;
+        }
+
+        .teacher-builder-step {
+          font-size: 1rem !important;
+          padding: 14px 18px !important;
+        }
+
+        .teacher-builder-layout .teacher-design-card,
+        .teacher-builder-layout .teacher-side-card,
+        .teacher-builder-layout .teacher-tool-box {
+          padding: 24px !important;
+        }
+
+        .teacher-builder-layout .lms-section-label {
+          font-size: 0.9rem !important;
+          letter-spacing: 0.08em;
+        }
+
+        .teacher-builder-layout h2 {
+          font-size: 1.65rem !important;
+          line-height: 1.2 !important;
+        }
+
+        .teacher-builder-layout h3 {
+          font-size: 1.2rem !important;
+          line-height: 1.25 !important;
+        }
+
+        .teacher-builder-layout p,
+        .teacher-builder-layout .muted,
+        .teacher-builder-layout small,
+        .teacher-builder-layout li {
+          font-size: 1rem !important;
+          line-height: 1.55 !important;
+        }
+
+        .teacher-builder-layout label,
+        .teacher-builder-layout .field-label {
+          font-size: 1rem !important;
+          font-weight: 900 !important;
+        }
+
+        .teacher-builder-layout .input-field,
+        .teacher-builder-layout input,
+        .teacher-builder-layout select,
+        .teacher-builder-layout textarea {
+          font-size: 1rem !important;
+          min-height: 48px;
+          padding: 13px 15px !important;
+        }
+
+        .teacher-builder-layout textarea.input-field,
+        .teacher-builder-layout textarea {
+          min-height: 120px;
+        }
+
+        .teacher-builder-layout .teacher-activity-block,
+        .teacher-builder-layout .teacher-activity-item {
+          padding: 20px !important;
+        }
+
+        .teacher-builder-layout .lms-mini-pill,
+        .teacher-builder-layout .pill {
+          font-size: 0.9rem !important;
+          padding: 8px 12px !important;
+        }
+
+        .teacher-builder-layout .lms-action-primary,
+        .teacher-builder-layout .lms-action-secondary,
+        .teacher-builder-layout .lms-main-action,
+        .teacher-builder-layout .lms-outline-action,
+        .teacher-builder-layout button {
+          font-size: 0.98rem;
+        }
+
+        .lms-bottom-action-bar {
+          padding: 16px !important;
+          gap: 12px !important;
+        }
+
+        .lms-bottom-action-bar button {
+          font-size: 1rem !important;
+          padding: 13px 18px !important;
+        }
+
+        .teacher-builder-layout .lms-live-preview,
+        .teacher-builder-layout .lms-live-preview * {
+          font-size: 1rem;
+          line-height: 1.55;
+        }
+
+        .teacher-builder-layout .lms-live-preview h2 {
+          font-size: 1.7rem !important;
+        }
+
+        .teacher-builder-layout .lms-live-preview h3 {
+          font-size: 1.25rem !important;
+        }
+
+        .teacher-builder-layout .lms-recent-table,
+        .teacher-builder-layout .lms-recent-table * {
+          font-size: 1rem !important;
+        }
+
+        @media (max-width: 860px) {
+          .teacher-builder-layout h2 {
+            font-size: 1.45rem !important;
+          }
+
+          .teacher-builder-step {
+            font-size: 0.95rem !important;
+          }
+        }
+      `}</style>
+
+      <style>{`
+        .teacher-builder-layout > .teacher-builder-main > section,
+        .teacher-builder-layout > .teacher-builder-side > section {
+          display: none !important;
+        }
+
+        .teacher-builder-layout.builder-tab-source > .teacher-builder-main > section:nth-of-type(1) {
+          display: block !important;
+        }
+
+        .teacher-builder-layout.builder-tab-details > .teacher-builder-main > section:nth-of-type(2),
+        .teacher-builder-layout.builder-tab-details > .teacher-builder-main > section:nth-of-type(3) {
+          display: block !important;
+        }
+
+        .teacher-builder-layout.builder-tab-activities > .teacher-builder-main > section:nth-of-type(4),
+        .teacher-builder-layout.builder-tab-activities > .teacher-builder-main > section:nth-of-type(5),
+        .teacher-builder-layout.builder-tab-activities > .teacher-builder-side > section:nth-of-type(2),
+        .teacher-builder-layout.builder-tab-activities > .teacher-builder-side > section:nth-of-type(3) {
+          display: block !important;
+        }
+
+        .teacher-builder-layout.builder-tab-preview {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .teacher-builder-layout.builder-tab-preview > .teacher-builder-main {
+          display: none !important;
+        }
+
+        .teacher-builder-layout.builder-tab-preview > .teacher-builder-side {
+          max-width: 820px;
+          width: 100%;
+          margin: 0 auto;
+        }
+
+        .teacher-builder-layout.builder-tab-preview > .teacher-builder-side > section:nth-of-type(1) {
+          display: block !important;
+        }
+
+        .teacher-builder-layout.builder-tab-lessons {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .teacher-builder-layout.builder-tab-lessons > .teacher-builder-side {
+          display: none !important;
+        }
+
+        .teacher-builder-layout.builder-tab-lessons > .teacher-builder-main > section:nth-of-type(6) {
+          display: block !important;
+        }
+      `}</style>
+
+
+
+      <style>{`
         .admin-clean-table {
           display: flex;
           flex-direction: column;
@@ -7204,7 +7379,7 @@ function TeacherDashboard({
 
         {teacherTab === 'lessons' && (
           <section className="teacher-clean-panel">
-            <TeacherLessonManager lessons={lessons} createLesson={createLesson} />
+            <TeacherLessonManager lessons={lessons} createLesson={createLesson} assignedClasses={assignedClasses} />
           </section>
         )}
 
@@ -7453,7 +7628,8 @@ function TeacherDashboard({
 
 
 
-function TeacherLessonManager({ lessons, createLesson }) {
+function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
+  const [builderTab, setBuilderTab] = useState('source');
   const [lessonDraft, setLessonDraft] = useState({
     gradeLevel: 1,
     subject: 'Pagbasa',
@@ -7463,6 +7639,24 @@ function TeacherLessonManager({ lessons, createLesson }) {
     instructions: '',
     passage: ''
   });
+
+  const assignedGrades = [...new Set((assignedClasses || [])
+    .map(item => Number(item.gradeLevel))
+    .filter(Boolean)
+  )].sort((a, b) => a - b);
+
+  useEffect(() => {
+    if (!assignedGrades.length) return;
+
+    if (!assignedGrades.includes(Number(lessonDraft.gradeLevel))) {
+      setLessonDraft(prev => ({
+        ...prev,
+        gradeLevel: assignedGrades[0]
+      }));
+    }
+  }, [assignedGrades.join('|'), lessonDraft.gradeLevel]);
+
+
 
   const [activities, setActivities] = useState([]);
   const [lessonPlanText, setLessonPlanText] = useState('');
@@ -8095,9 +8289,22 @@ function TeacherLessonManager({ lessons, createLesson }) {
 
     setActivities(generatedActivities);
     setAiDraftNotice('Generated a lesson draft. Please review and edit everything before publishing.');
+    setBuilderTab('details');
   }
 
   async function submitLessonBuilder() {
+    if (!assignedGrades.length) {
+      window.alert('Please ask the admin to assign your grade level before creating lessons.');
+      setBuilderTab('details');
+      return;
+    }
+
+    if (!assignedGrades.includes(Number(lessonDraft.gradeLevel))) {
+      window.alert('You can only create lessons for your assigned grade levels.');
+      setBuilderTab('details');
+      return;
+    }
+
     if (!lessonDraft.title.trim()) {
       alert('Please enter a lesson title.');
       return;
@@ -8127,6 +8334,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
     });
 
     setActivities([]);
+    setBuilderTab('lessons');
   }
 
   const validActivities = cleanActivities();
@@ -8179,9 +8387,122 @@ function TeacherLessonManager({ lessons, createLesson }) {
 
   return (
     <>
-      <div className="teacher-builder-layout">
+          <style>{`
+            .teacher-builder-workflow {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 10px;
+              margin: 0 0 18px;
+              padding: 12px;
+              border-radius: 24px;
+              background: #f4fbf7;
+              border: 1px solid #dcefe2;
+            }
+
+            .teacher-builder-step {
+              border: 0;
+              border-radius: 18px;
+              padding: 12px 16px;
+              background: #ffffff;
+              color: #315241;
+              font-weight: 900;
+              cursor: pointer;
+              box-shadow: 0 8px 18px rgba(13, 71, 45, 0.06);
+              transition: transform .18s ease, background .18s ease, color .18s ease;
+            }
+
+            .teacher-builder-step:hover {
+              transform: translateY(-1px);
+            }
+
+            .teacher-builder-step.active {
+              background: linear-gradient(135deg, var(--green), #46b56d);
+              color: #ffffff;
+            }
+
+            .teacher-builder-layout .builder-panel,
+            .teacher-builder-layout .builder-side-preview,
+            .teacher-builder-layout .builder-side-activities,
+            .teacher-builder-layout .builder-side-tips {
+              display: none;
+            }
+
+            .builder-tab-source .builder-panel-source,
+            .builder-tab-source .builder-side-tips,
+            .builder-tab-details .builder-panel-details,
+            .builder-tab-details .builder-panel-content,
+            .builder-tab-details .builder-side-tips,
+            .builder-tab-activities .builder-panel-activities,
+            .builder-tab-activities .builder-panel-coverage,
+            .builder-tab-activities .builder-side-activities,
+            .builder-tab-preview .builder-side-preview,
+            .builder-tab-preview .builder-side-activities,
+            .builder-tab-lessons .builder-panel-lessons {
+              display: block;
+            }
+
+            .builder-tab-preview .teacher-builder-main,
+            .builder-tab-lessons .teacher-builder-side {
+              display: none;
+            }
+
+            .builder-tab-preview {
+              grid-template-columns: minmax(0, 1fr);
+            }
+
+            .builder-tab-preview .teacher-builder-side {
+              max-width: 760px;
+              width: 100%;
+              margin: 0 auto;
+            }
+
+            .builder-tab-lessons {
+              grid-template-columns: minmax(0, 1fr);
+            }
+
+            .builder-tab-lessons .teacher-builder-main {
+              max-width: 100%;
+            }
+
+            .teacher-builder-focus-note {
+              margin: 0 0 16px;
+              padding: 14px 16px;
+              border-radius: 18px;
+              background: #fffdf1;
+              border: 1px solid #f4e7aa;
+              color: #5f5022;
+              font-weight: 800;
+            }
+
+            @media (max-width: 860px) {
+              .teacher-builder-step {
+                flex: 1 1 calc(50% - 10px);
+              }
+            }
+          `}</style>
+
+          <div className="teacher-builder-workflow" aria-label="Lesson builder steps">
+            {[
+              ['source', '✨ Source / AI'],
+              ['details', '📝 Lesson Details'],
+              ['activities', '🧩 Activities'],
+              ['preview', '👁 Preview'],
+              ['lessons', '📚 My Lessons']
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={`teacher-builder-step ${builderTab === key ? 'active' : ''}`}
+                onClick={() => setBuilderTab(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+      <div className={`teacher-builder-layout builder-tab-${builderTab}`}>
         <div className="teacher-builder-main">
-          <section className="teacher-design-card soft" style={{ border: '2px solid #dcefe2', background: 'linear-gradient(135deg, #fbfffd, #f3fbf6)' }}>
+          <section className="teacher-design-card soft builder-panel builder-panel-source" style={{ border: '2px solid #dcefe2', background: 'linear-gradient(135deg, #fbfffd, #f3fbf6)' }}>
             <div className="teacher-design-heading">
               <div className="teacher-design-step">AI</div>
               <div>
@@ -8269,15 +8590,17 @@ function TeacherLessonManager({ lessons, createLesson }) {
                 <label>Grade Level</label>
                 <select
                   className="input-field"
-                  value={lessonDraft.gradeLevel}
+                  value={assignedGrades.length ? lessonDraft.gradeLevel : ''}
+                  disabled={!assignedGrades.length}
                   onChange={(e) => updateLesson('gradeLevel', Number(e.target.value))}
                 >
-                  <option value="1">Grade 1</option>
-                  <option value="2">Grade 2</option>
-                  <option value="3">Grade 3</option>
-                  <option value="4">Grade 4</option>
-                  <option value="5">Grade 5</option>
-                  <option value="6">Grade 6</option>
+                  {assignedGrades.length ? (
+                    assignedGrades.map(grade => (
+                      <option key={grade} value={grade}>Grade {grade}</option>
+                    ))
+                  ) : (
+                    <option value="">No assigned grade yet</option>
+                  )}
                 </select>
               </div>
 
@@ -8514,7 +8837,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
         </div>
 
         <aside className="teacher-builder-side">
-          <section className="teacher-side-card lms-live-preview">
+          <section className="teacher-side-card lms-live-preview builder-side-preview">
             <div className="teacher-design-heading">
               <div className="teacher-design-step">👁</div>
               <div>
@@ -8552,7 +8875,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
             </div>
           </section>
 
-          <section className="teacher-side-card">
+          <section className="teacher-side-card builder-side-activities">
             <div className="teacher-design-heading">
               <div>
                 <h2>Activities in this Lesson</h2>
@@ -8587,7 +8910,7 @@ function TeacherLessonManager({ lessons, createLesson }) {
             </button>
           </section>
 
-          <section className="teacher-side-card">
+          <section className="teacher-side-card builder-side-tips">
             <div className="teacher-design-heading">
               <div>
                 <h2>💡 Tips for Great Lessons</h2>
@@ -8618,15 +8941,60 @@ function TeacherLessonManager({ lessons, createLesson }) {
       </div>
 
       <div className="lms-bottom-action-bar">
-        <button className="lms-action-secondary" type="button">
-          📋 Save Draft
-        </button>
-        <button className="lms-action-secondary" type="button" onClick={() => document.querySelector('.lms-live-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-          👁 Preview Lesson
-        </button>
-        <button className="lms-action-primary" type="button" onClick={submitLessonBuilder}>
-          🚀 Create Lesson
-        </button>
+        {builderTab === 'source' && (
+          <>
+            <button className="lms-action-secondary" type="button">
+              📋 Save Draft
+            </button>
+            <button className="lms-action-primary" type="button" onClick={() => setBuilderTab('details')}>
+              Next: Lesson Details →
+            </button>
+          </>
+        )}
+
+        {builderTab === 'details' && (
+          <>
+            <button className="lms-action-secondary" type="button" onClick={() => setBuilderTab('source')}>
+              ← Back to Source
+            </button>
+            <button className="lms-action-primary" type="button" onClick={() => setBuilderTab('activities')}>
+              Next: Activities →
+            </button>
+          </>
+        )}
+
+        {builderTab === 'activities' && (
+          <>
+            <button className="lms-action-secondary" type="button" onClick={() => setBuilderTab('details')}>
+              ← Back to Details
+            </button>
+            <button className="lms-action-primary" type="button" onClick={() => setBuilderTab('preview')}>
+              Next: Preview →
+            </button>
+          </>
+        )}
+
+        {builderTab === 'preview' && (
+          <>
+            <button className="lms-action-secondary" type="button" onClick={() => setBuilderTab('activities')}>
+              ← Back to Activities
+            </button>
+            <button className="lms-action-primary" type="button" onClick={submitLessonBuilder}>
+              🚀 Create Lesson
+            </button>
+          </>
+        )}
+
+        {builderTab === 'lessons' && (
+          <>
+            <button className="lms-action-secondary" type="button" onClick={() => setBuilderTab('preview')}>
+              ← Back to Preview
+            </button>
+            <button className="lms-action-primary" type="button" onClick={() => setBuilderTab('source')}>
+              ✨ Create Another Lesson
+            </button>
+          </>
+        )}
       </div>
     </>
   );
