@@ -3814,6 +3814,366 @@ export function TeacherRedesignStyles() {
       }
 
 
+
+      /* Teacher readability upgrade */
+      .teacher-redesign-page {
+        font-size: 17px;
+        line-height: 1.58;
+      }
+
+      .teacher-main-header {
+        min-height: 96px;
+      }
+
+      .teacher-brand-text strong {
+        font-size: 21px;
+      }
+
+      .teacher-brand-text small,
+      .teacher-top-user small,
+      .teacher-workspace-heading p,
+      .teacher-mini-heading p,
+      .teacher-group-item p,
+      .teacher-monitor-table td small {
+        font-size: 14.5px;
+        line-height: 1.5;
+      }
+
+      .teacher-nav-links button,
+      .teacher-monitor-actions button,
+      .lms-report-button,
+      .quiz-secondary {
+        font-size: 15.5px;
+        min-height: 46px;
+        padding: 11px 17px;
+      }
+
+      .teacher-workspace-heading h2 {
+        font-size: clamp(29px, 3vw, 40px);
+        line-height: 1.14;
+      }
+
+      .teacher-mini-heading h3,
+      .teacher-group-item strong {
+        font-size: 19.5px;
+      }
+
+      .teacher-workspace-card {
+        padding: clamp(22px, 2.5vw, 32px);
+      }
+
+      .teacher-monitor-summary div {
+        min-height: 108px;
+        padding: 19px;
+      }
+
+      .teacher-monitor-summary span {
+        font-size: 14.5px;
+      }
+
+      .teacher-monitor-summary strong {
+        font-size: clamp(28px, 3vw, 38px);
+      }
+
+      .teacher-monitor-table th,
+      .teacher-monitor-table td {
+        font-size: 16px;
+        padding: 17px 15px;
+      }
+
+      .teacher-monitor-table th {
+        font-size: 13px;
+      }
+
+      .teacher-monitor-table td strong {
+        font-size: 17px;
+      }
+
+      .teacher-progress-cell span,
+      .lms-mini-pill,
+      .lms-section-label {
+        font-size: 14px;
+      }
+
+      .teacher-empty-panel strong {
+        font-size: 21px;
+      }
+
+      .teacher-empty-panel p {
+        font-size: 15.5px;
+      }
+
+
+
+      /* Teacher control size upgrade */
+      .teacher-main-header-clean {
+        min-height: 104px;
+        padding: 0 42px;
+      }
+
+      .teacher-main-header-clean .teacher-brand-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 20px;
+        font-size: 28px;
+      }
+
+      .teacher-main-header-clean .teacher-brand-text strong {
+        font-size: 24px;
+        line-height: 1.1;
+      }
+
+      .teacher-main-header-clean .teacher-brand-text small {
+        font-size: 12.5px;
+        line-height: 1.35;
+      }
+
+      .teacher-main-header-clean .teacher-nav-links {
+        gap: 14px;
+      }
+
+      .teacher-main-header-clean .teacher-nav-links button {
+        min-height: 56px;
+        padding: 14px 22px;
+        border-radius: 18px;
+        font-size: 17px;
+        font-weight: 950;
+        gap: 10px;
+      }
+
+      .teacher-header-actions {
+        gap: 18px;
+      }
+
+      .teacher-profile-pill {
+        min-height: 72px;
+        padding: 12px 18px;
+        border-radius: 22px;
+        gap: 14px;
+      }
+
+      .teacher-profile-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        font-size: 26px;
+      }
+
+      .teacher-profile-text strong {
+        font-size: 18px;
+      }
+
+      .teacher-profile-text small {
+        font-size: 14px;
+      }
+
+      .teacher-logout-btn {
+        min-height: 62px;
+        padding: 0 28px;
+        border-radius: 20px;
+        font-size: 17px;
+        font-weight: 950;
+      }
+
+      .teacher-clean-actions {
+        gap: 16px;
+      }
+
+      .teacher-clean-actions .lms-view-button,
+      .teacher-clean-actions .teacher-logout-btn.light {
+        min-height: 66px;
+        padding: 0 30px;
+        border-radius: 22px;
+        font-size: 17px;
+        font-weight: 950;
+      }
+
+      .teacher-clean-tabs {
+        gap: 16px;
+        padding: 16px;
+      }
+
+      .teacher-clean-tabs button {
+        min-height: 68px;
+        padding: 16px 24px;
+        border-radius: 20px;
+        font-size: 17px;
+        font-weight: 950;
+        gap: 12px;
+      }
+
+      .teacher-clean-tabs button span {
+        font-size: 22px;
+      }
+
+
+
+      /* Teacher sidebar LMS layout */
+      .teacher-main-header-clean .teacher-brand-area {
+        gap: 0;
+      }
+
+      .teacher-main-header-clean .teacher-brand-mark {
+        border-right: 0;
+        padding-right: 0;
+      }
+
+      .teacher-sidebar-layout {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .teacher-main-workarea {
+        min-width: 0;
+      }
+
+      .teacher-side-nav {
+        position: sticky;
+        top: 124px;
+        align-self: start;
+        display: grid;
+        gap: 10px;
+        padding: 18px;
+        border-radius: 28px;
+        background: #ffffff;
+        border: 1px solid #e5eee8;
+        box-shadow: 0 14px 34px rgba(30, 71, 44, 0.07);
+      }
+
+      .teacher-side-nav-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px 14px;
+        color: #07884b;
+        font-size: 15px;
+        font-weight: 1000;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .teacher-sidebar-button {
+        width: 100%;
+        min-height: 62px;
+        border: 0;
+        border-radius: 20px;
+        background: transparent;
+        color: #26354d;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 16px;
+        text-align: left;
+        cursor: pointer;
+        transition: 0.18s ease;
+      }
+
+      .teacher-sidebar-button span {
+        width: 34px;
+        height: 34px;
+        border-radius: 13px;
+        display: grid;
+        place-items: center;
+        background: #f2f7f4;
+        font-size: 18px;
+        flex: 0 0 auto;
+      }
+
+      .teacher-sidebar-button strong {
+        font-size: 16.5px;
+        line-height: 1.2;
+        font-weight: 950;
+      }
+
+      .teacher-sidebar-button:hover,
+      .teacher-sidebar-button.active {
+        background: #eaf8ef;
+        color: #07884b;
+        transform: translateX(2px);
+      }
+
+      .teacher-sidebar-button.active {
+        box-shadow: inset 4px 0 0 #0c9b59;
+      }
+
+      .teacher-sidebar-button.danger {
+        margin-top: 10px;
+        color: #9b1f3c;
+        background: #fff5f7;
+      }
+
+      .teacher-sidebar-button.danger span {
+        background: #ffe6ec;
+      }
+
+      .teacher-sidebar-button.danger:hover {
+        background: #ffeaf0;
+        color: #851531;
+      }
+
+      .teacher-clean-tabs {
+        display: none;
+      }
+
+      @media (max-width: 1050px) {
+        .teacher-sidebar-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .teacher-side-nav {
+          position: static;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .teacher-side-nav-title {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .teacher-side-nav {
+          grid-template-columns: 1fr;
+        }
+      }
+
+
+
+      /* Teacher sidebar spacing refinement */
+      .teacher-main-content-clean {
+        max-width: none;
+        width: 100%;
+        padding: 24px 34px 42px 28px;
+      }
+
+      .teacher-sidebar-layout {
+        grid-template-columns: 300px minmax(0, 1fr);
+        gap: 22px;
+      }
+
+      .teacher-side-nav {
+        margin-left: 0;
+      }
+
+      .teacher-main-workarea {
+        width: 100%;
+      }
+
+      .teacher-clean-hero,
+      .teacher-clean-metrics,
+      .teacher-clean-panel,
+      .teacher-workspace-card {
+        width: 100%;
+      }
+
+      @media (max-width: 1050px) {
+        .teacher-main-content-clean {
+          padding: 20px;
+        }
+      }
+
+
       /* Fix monitoring action buttons so they are clearly clickable and never covered by nearby layout layers. */
       .teacher-workspace-heading.monitor {
         position: relative;

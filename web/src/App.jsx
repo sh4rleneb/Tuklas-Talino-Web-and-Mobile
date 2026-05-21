@@ -531,12 +531,13 @@ if (role === 'admin') {
   }
 
   async function loadTeacherDashboard() {
-    const [dash, monitoring, groups, students, lessons] = await Promise.all([
+    const [dash, monitoring, groups, students, lessons, quizPerformance] = await Promise.all([
       api('/teachers/dashboard'),
       api('/teachers/monitoring/stats'),
       api('/groups'),
       api('/students?status=active'),
-      api('/lessons')
+      api('/lessons'),
+      api('/teachers/quiz-performance')
     ]);
 
     const sortedLessons = [...(lessons.lessons || [])].sort((a, b) => {
@@ -553,7 +554,8 @@ if (role === 'admin') {
       rows: monitoring.rows || [],
       groups: groups.groups || [],
       students: students.students || [],
-      lessons: sortedLessons
+      lessons: sortedLessons,
+      quizPerformance: quizPerformance || { summary: {}, rows: [] }
     });
   }
 
@@ -6253,7 +6255,173 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go }) {
 
 
 
-function TeacherAssessmentCenter({ lessons = [], rows = [] }) {
+function TeacherQuizPerformanceMonitor({ quizPerformance = {} }) {
+  const summary = quizPerformance.summary || {};
+  const rows = asArray(quizPerformance.rows);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [showAll, setShowAll] = useState(false);
+
+  const statusOptions = ['All', 'Needs Support', 'Developing', 'Proficient', 'Advanced'];
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const filteredRows = rows.filter(row => {
+    const matchesStatus = statusFilter === 'All' || String(row.status || '') === statusFilter;
+    const haystack = [
+      row.studentName,
+      row.quizTitle,
+      row.quizId,
+      row.section,
+      row.gradeLevel ? `grade ${row.gradeLevel}` : ''
+    ].join(' ').toLowerCase();
+
+    return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery));
+  });
+
+  const visibleRows = showAll ? filteredRows : filteredRows.slice(0, 8);
+  const hiddenCount = Math.max(0, filteredRows.length - visibleRows.length);
+
+  function scoreText(attempt) {
+    if (!attempt) return '—';
+    return `${attempt.percent ?? 0}%`;
+  }
+
+  function statusClass(status = '') {
+    const value = String(status).toLowerCase();
+    if (value.includes('advanced') || value.includes('proficient')) return 'good';
+    if (value.includes('developing')) return 'warn';
+    return 'bad';
+  }
+
+  return (
+    <div className="teacher-workspace-card" style={{ margin: '18px 0', boxShadow: 'none', background: '#fbfffd' }}>
+      <div className="teacher-workspace-heading">
+        <div>
+          <div className="lms-section-label">Quiz Performance Monitor</div>
+          <h2>Student Quiz Attempts</h2>
+          <p>Search, filter, and review quiz scores without making the table too long.</p>
+        </div>
+      </div>
+
+      <div className="teacher-monitor-summary">
+        <div><span>Quiz Records</span><strong>{summary.total || rows.length || 0}</strong></div>
+        <div><span>Average Best</span><strong>{summary.averageBest || 0}%</strong></div>
+        <div><span>Needs Support</span><strong>{summary.needsSupport || 0}</strong></div>
+        <div><span>Proficient+</span><strong>{Number(summary.proficient || 0) + Number(summary.advanced || 0)}</strong></div>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(220px, 1fr) auto',
+          gap: 12,
+          alignItems: 'center',
+          marginTop: 16
+        }}
+      >
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setShowAll(false);
+          }}
+          placeholder="Search student or quiz..."
+          style={{
+            minHeight: 46,
+            borderRadius: 16,
+            border: '1px solid #dce7df',
+            padding: '0 16px',
+            fontWeight: 800,
+            color: '#14223b'
+          }}
+        />
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
+          {statusOptions.map(option => (
+            <button
+              key={option}
+              type="button"
+              className={statusFilter === option ? 'lms-report-button' : 'quiz-secondary'}
+              onClick={() => {
+                setStatusFilter(option);
+                setShowAll(false);
+              }}
+              style={{ minHeight: 42 }}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10, color: '#526988', fontWeight: 800 }}>
+        Showing {visibleRows.length} of {filteredRows.length} quiz record{filteredRows.length === 1 ? '' : 's'}
+      </div>
+
+      <div className="teacher-table-wrapper" style={{ marginTop: 16 }}>
+        <table className="teacher-monitor-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Quiz</th>
+              <th>Try 1</th>
+              <th>Try 2</th>
+              <th>Best</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.length ? visibleRows.map(row => (
+              <tr key={row.key || `${row.studentId}-${row.quizId}`}>
+                <td>
+                  <strong>{row.studentName}</strong>
+                  <small>Grade {row.gradeLevel || '—'} • {row.section || 'No section'}</small>
+                </td>
+                <td>
+                  <strong>{row.quizTitle}</strong>
+                  <small>{row.quizId}</small>
+                </td>
+                <td>{scoreText(row.attempt1)}</td>
+                <td>{scoreText(row.attempt2)}</td>
+                <td><strong>{row.bestPercent || 0}%</strong></td>
+                <td>
+                  <span className={`lms-mini-pill ${statusClass(row.status)}`}>
+                    {row.status || 'Needs Support'}
+                  </span>
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan="6">
+                  <div className="teacher-empty-panel" style={{ boxShadow: 'none' }}>
+                    <div>🧠</div>
+                    <strong>No matching quiz records.</strong>
+                    <p>Try another search or filter.</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {filteredRows.length > 8 && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
+          <button
+            type="button"
+            className="lms-report-button"
+            onClick={() => setShowAll(prev => !prev)}
+          >
+            {showAll ? 'Show Less' : `Show More (${hiddenCount} more)`}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TeacherAssessmentCenter({ lessons = [], rows = [], quizPerformance = {} }) {
   const quizzes = lessons.map(lesson => ({
     lesson,
     questions: buildQuizQuestionsFromLesson(lesson),
@@ -6286,9 +6454,7 @@ function TeacherAssessmentCenter({ lessons = [], rows = [] }) {
         <div><span>Passing Target</span><strong>75%</strong></div>
       </div>
 
-      <div className="lms-empty-line" style={{ marginTop: 14, background: '#fff8df', color: '#6b4b00' }}>
-        Recommended next backend step: save Assessment, AssessmentQuestion, AssessmentAttempt, and AssessmentResponse records so teachers can see real class averages, pass rates, and most-missed questions.
-      </div>
+      <TeacherQuizPerformanceMonitor quizPerformance={quizPerformance} />
 
       <div className="teacher-groups-area" style={{ marginTop: 16 }}>
         <div className="teacher-mini-heading">
@@ -6403,6 +6569,7 @@ function TeacherDashboard({
   const students = data.students || [];
   const rows = data.rows || [];
   const stats = data.stats || {};
+  const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
   const teacherName = user?.displayName || 'Teacher 1';
 
   const publishedLessons = lessons.filter(lesson => (lesson.status || 'published') === 'published').length;
@@ -6443,39 +6610,6 @@ function TeacherDashboard({
             </div>
           </div>
 
-          <nav className="teacher-nav-links" aria-label="Teacher navigation">
-            <button
-              className={teacherTab === 'lessons' ? 'active' : ''}
-              type="button"
-              onClick={() => openTab('lessons')}
-            >
-              📚 Lessons
-            </button>
-            <button
-              className={teacherTab === 'groups' ? 'active' : ''}
-              type="button"
-              onClick={() => openTab('groups')}
-            >
-              👥 Groups
-            </button>
-            <button
-              className={teacherTab === 'assessments' ? 'active' : ''}
-              type="button"
-              onClick={() => openTab('assessments')}
-            >
-              🧠 Assessments
-            </button>
-            <button
-              className={teacherTab === 'students' ? 'active' : ''}
-              type="button"
-              onClick={() => openTab('students')}
-            >
-              🎓 Students
-            </button>
-            <button type="button" onClick={downloadSummaryReport}>
-              📊 Report
-            </button>
-          </nav>
         </div>
 
         <div className="teacher-header-actions">
@@ -6488,13 +6622,73 @@ function TeacherDashboard({
             <span>⌄</span>
           </div>
 
-          <button className="teacher-logout-btn" onClick={logout}>
-            ⇥ Logout
-          </button>
         </div>
       </header>
 
       <main className="teacher-main-content teacher-main-content-clean" id="teacher-dashboard-top">
+        <div className="teacher-sidebar-layout">
+          <aside className="teacher-side-nav" aria-label="Teacher workspace navigation">
+            <div className="teacher-side-nav-title">
+              <span>📘</span>
+              <strong>Workspace</strong>
+            </div>
+
+            <button
+              className={`teacher-sidebar-button ${teacherTab === 'lessons' ? 'active' : ''}`}
+              type="button"
+              onClick={() => openTab('lessons')}
+            >
+              <span>📚</span>
+              <strong>Lesson Builder</strong>
+            </button>
+
+            <button
+              className={`teacher-sidebar-button ${teacherTab === 'groups' ? 'active' : ''}`}
+              type="button"
+              onClick={() => openTab('groups')}
+            >
+              <span>👥</span>
+              <strong>Group Manager</strong>
+            </button>
+
+            <button
+              className={`teacher-sidebar-button ${teacherTab === 'assessments' ? 'active' : ''}`}
+              type="button"
+              onClick={() => openTab('assessments')}
+            >
+              <span>🧠</span>
+              <strong>Assessments</strong>
+            </button>
+
+            <button
+              className={`teacher-sidebar-button ${teacherTab === 'students' ? 'active' : ''}`}
+              type="button"
+              onClick={() => openTab('students')}
+            >
+              <span>🎓</span>
+              <strong>Student Monitoring</strong>
+            </button>
+
+            <button
+              className="teacher-sidebar-button"
+              type="button"
+              onClick={downloadSummaryReport}
+            >
+              <span>📊</span>
+              <strong>Report</strong>
+            </button>
+
+            <button
+              className="teacher-sidebar-button danger"
+              type="button"
+              onClick={logout}
+            >
+              <span>⇥</span>
+              <strong>Logout</strong>
+            </button>
+          </aside>
+
+          <div className="teacher-main-workarea" id="teacher-dashboard-workspace">
         <section className="teacher-clean-hero">
           <div className="teacher-clean-hero-copy">
             <div className="lms-section-label">Teacher Workspace</div>
@@ -6542,41 +6736,6 @@ function TeacherDashboard({
               <small>Class Progress</small>
               <strong>{averageProgress}%</strong>
             </span>
-          </button>
-        </section>
-
-        <section className="teacher-clean-tabs" id="teacher-dashboard-workspace">
-          <button
-            className={teacherTab === 'lessons' ? 'active' : ''}
-            type="button"
-            onClick={() => openTab('lessons')}
-          >
-            <span>📚</span>
-            Lesson Builder
-          </button>
-          <button
-            className={teacherTab === 'groups' ? 'active' : ''}
-            type="button"
-            onClick={() => openTab('groups')}
-          >
-            <span>👥</span>
-            Group Manager
-          </button>
-          <button
-            className={teacherTab === 'assessments' ? 'active' : ''}
-            type="button"
-            onClick={() => openTab('assessments')}
-          >
-            <span>🧠</span>
-            Assessments
-          </button>
-          <button
-            className={teacherTab === 'students' ? 'active' : ''}
-            type="button"
-            onClick={() => openTab('students')}
-          >
-            <span>🎓</span>
-            Student Monitoring
           </button>
         </section>
 
@@ -6686,7 +6845,7 @@ function TeacherDashboard({
         )}
 
         {teacherTab === 'assessments' && (
-          <TeacherAssessmentCenter lessons={lessons} rows={rows} />
+          <TeacherAssessmentCenter lessons={lessons} rows={rows} quizPerformance={quizPerformance} />
         )}
 
         {teacherTab === 'students' && (
@@ -6776,6 +6935,8 @@ function TeacherDashboard({
           <span>© 2026 Tuklas Talino. All rights reserved.</span>
           <span>Privacy Policy · Terms of Service · Help Center</span>
         </footer>
+          </div>
+        </div>
       </main>
     </div>
   );
