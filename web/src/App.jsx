@@ -5,7 +5,7 @@ import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
 import QuizResults from './components/student/quizzes/QuizResults';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
-import { asArray, fmtDate, levelForXp, masteryFromPercent, subjectTheme, xpPercent } from './utils/studentHelpers';
+import { asArray, displayDue, effectivenessBand, fmtDate, getBestQuizAttempt, lessonAssessmentProfile, lessonXp, levelForXp, masteryFromPercent, subjectTheme, taskCompletionPercent, xpPercent } from './utils/studentHelpers';
 import { EarlyStudentSubpageStyles, Grade46ReferenceStyles, MissionStyles, TeacherRedesignStyles } from './components/styles/StyleBlocks';
 import { ProgressBar, Screen, Stat } from './components/common/CommonUI';
 import { AdminLogin, StudentLogin, TeacherLogin } from './pages/Login/LoginScreens';
@@ -987,10 +987,6 @@ async function archiveTeacher(id) {
 
 
 
-function lessonXp(lesson) {
-  return lesson?.xpReward ?? lesson?.xp ?? 0;
-}
-
 function subjectStatsFor(data) {
   const lessons = asArray(data?.lessons);
   return SUBJECTS.map(({ name }) => {
@@ -1011,13 +1007,6 @@ function pickDailyLesson(data) {
 function nextLessonForSubject(data, subject) {
   const lessons = asArray(data?.lessons).filter(l => l.subject === subject);
   return lessons.find(l => !l.completed) || lessons[0] || null;
-}
-
-function displayDue(dateValue) {
-  if (!dateValue) return 'Walang due date';
-  try {
-    return new Date(dateValue).toLocaleDateString('fil-PH', { month: 'short', day: 'numeric', year: 'numeric' });
-  } catch { return String(dateValue); }
 }
 
 function getGroupTasks(data) {
@@ -1042,33 +1031,6 @@ const UPPER_GROUP_ROLES = [
 
 function rolesForGradeLevel(gradeLevel) {
   return Number(gradeLevel || 4) <= 2 ? EARLY_GROUP_ROLES : UPPER_GROUP_ROLES;
-}
-
-function taskCompletionPercent(task = {}, localDone = false) {
-  if (localDone || task.completed || task.isCompleted || task.status === 'completed') return 100;
-  if (task.status === 'submitted') return 75;
-  if (task.status === 'in_progress') return 45;
-  return 15;
-}
-
-function effectivenessBand(percent = 0) {
-  const value = Number(percent || 0);
-  if (value >= 85) return { label: 'Mastery', icon: '🏆', note: 'Students are showing strong understanding.' };
-  if (value >= 70) return { label: 'Developing', icon: '🌱', note: 'Most students are progressing, but some need practice.' };
-  if (value >= 40) return { label: 'Needs Support', icon: '🧭', note: 'Review missed skills and give guided practice.' };
-  return { label: 'Starting', icon: '✨', note: 'Students are beginning the activity or need more attempts.' };
-}
-
-function lessonAssessmentProfile(activities = []) {
-  const rows = asArray(activities);
-  const has = (type) => rows.some(activity => activity?.type === type);
-  return {
-    hasContent: has('infographic') || has('vocabulary'),
-    hasObjectiveQuiz: has('mcq') || has('matching'),
-    hasWriting: has('writing'),
-    hasSpeech: has('speech'),
-    activityCount: rows.length
-  };
 }
 
 function quizStorageKey(studentId) {
@@ -1100,12 +1062,6 @@ function appendQuizAttempt(studentId, attempts, quizId, result) {
   };
   saveQuizAttempts(studentId, next);
   return next;
-}
-
-function getBestQuizAttempt(attempts = {}, quizId) {
-  const rows = asArray(attempts?.[quizId]);
-  if (!rows.length) return null;
-  return rows.reduce((best, row) => Number(row.percent || 0) > Number(best.percent || 0) ? row : best, rows[0]);
 }
 
 

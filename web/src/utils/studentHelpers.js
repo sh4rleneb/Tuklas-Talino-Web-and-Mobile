@@ -34,3 +34,47 @@ export function masteryFromPercent(percent = 0) {
   if (value >= 50) return { label: 'Developing', icon: '🌱', tone: 'yellow', note: 'You are getting there. Review the missed questions.' };
   return { label: 'Needs Practice', icon: '🧭', tone: 'pink', note: 'Try again after reviewing the lesson.' };
 }
+
+export function lessonXp(lesson) {
+  return lesson?.xpReward ?? lesson?.xp ?? 0;
+}
+
+export function displayDue(dateValue) {
+  if (!dateValue) return 'Walang due date';
+  try {
+    return new Date(dateValue).toLocaleDateString('fil-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return String(dateValue); }
+}
+
+export function taskCompletionPercent(task = {}, localDone = false) {
+  if (localDone || task.completed || task.isCompleted || task.status === 'completed') return 100;
+  if (task.status === 'submitted') return 75;
+  if (task.status === 'in_progress') return 45;
+  return 15;
+}
+
+export function effectivenessBand(percent = 0) {
+  const value = Number(percent || 0);
+  if (value >= 85) return { label: 'Mastery', icon: '🏆', note: 'Students are showing strong understanding.' };
+  if (value >= 70) return { label: 'Developing', icon: '🌱', note: 'Most students are progressing, but some need practice.' };
+  if (value >= 40) return { label: 'Needs Support', icon: '🧭', note: 'Review missed skills and give guided practice.' };
+  return { label: 'Starting', icon: '✨', note: 'Students are beginning the activity or need more attempts.' };
+}
+
+export function lessonAssessmentProfile(activities = []) {
+  const rows = asArray(activities);
+  const has = (type) => rows.some(activity => activity?.type === type);
+  return {
+    hasContent: has('infographic') || has('vocabulary'),
+    hasObjectiveQuiz: has('mcq') || has('matching'),
+    hasWriting: has('writing'),
+    hasSpeech: has('speech'),
+    activityCount: rows.length
+  };
+}
+
+export function getBestQuizAttempt(attempts = {}, quizId) {
+  const rows = asArray(attempts?.[quizId]);
+  if (!rows.length) return null;
+  return rows.reduce((best, row) => Number(row.percent || 0) > Number(best.percent || 0) ? row : best, rows[0]);
+}
