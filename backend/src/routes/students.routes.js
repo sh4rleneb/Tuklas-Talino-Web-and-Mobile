@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, GroupMember, Group, GroupTask, GroupTaskCompletion } from '../models/index.js';
+import { Role, User, Student, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
@@ -30,6 +30,38 @@ async function dashboardPayload(student) {
   const completedIds = new Set(completed.map(c => c.lessonId));
   const badges = await StudentBadge.findAll({ where: { studentId: student.id }, include: [Badge] });
   const xpLogs = await XpLog.findAll({ where: { studentId: student.id }, order: [['createdAt', 'DESC']], limit: 10 });
+  const quizAttemptRows = await QuizAttempt.findAll({
+    where: { studentId: student.id },
+    order: [['submittedAt', 'ASC'], ['id', 'ASC']]
+  });
+
+  const quizAttempts = quizAttemptRows.reduce((map, attempt) => {
+    const row = attempt.toJSON();
+    const quizId = row.quizId || `lesson-${row.lessonId}`;
+
+    if (!map[quizId]) map[quizId] = [];
+
+    map[quizId].push({
+      id: row.id,
+      quizId,
+      quizTitle: row.quizTitle,
+      lessonId: row.lessonId,
+      score: row.score,
+      total: row.total,
+      percent: row.percent,
+      mastery: row.masteryLabel ? { label: row.masteryLabel } : undefined,
+      masteryLabel: row.masteryLabel,
+      attemptNo: row.attemptNo,
+      xpAwarded: row.xpAwarded,
+      xpPossible: row.xpPossible,
+      review: row.reviewJson || [],
+      submittedAt: row.submittedAt,
+      backendSaved: true,
+    });
+
+    return map;
+  }, {});
+
   const memberships = await GroupMember.findAll({ where: { studentId: student.id }, include: [{ model: Group, include: [{ model: GroupTask, as: 'tasks' }] }] });
 
   return {
@@ -44,6 +76,7 @@ async function dashboardPayload(student) {
     lessons: lessons.map(l => ({ ...l.toJSON(), completed: completedIds.has(l.id) })),
     badges: badges.map(sb => sb.Badge),
     xpLogs,
+    quizAttempts,
     groups: memberships.map(m => m.Group)
   };
 }
@@ -212,6 +245,7 @@ router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) 
       CompletedLesson.destroy({ where: { studentId: student.id } }),
       XpLog.destroy({ where: { studentId: student.id } }),
       QuizHistory.destroy({ where: { studentId: student.id } }),
+      QuizAttempt.destroy({ where: { studentId: student.id } }),
       StudentBadge.destroy({ where: { studentId: student.id } }),
       GroupTaskCompletion.destroy({ where: { studentId: student.id } })
     ]);

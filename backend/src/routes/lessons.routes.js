@@ -14,6 +14,7 @@ import {
   SpeechTask,
   CompletedLesson,
   QuizHistory,
+  QuizAttempt,
   WritingSubmission,
   SpeechAttempt,
   XpLog,
@@ -414,12 +415,52 @@ function quizMasteryLabel(percent = 0) {
   return 'Needs Practice';
 }
 
+function formatQuizAttempt(attempt) {
+  const row = attempt.toJSON ? attempt.toJSON() : attempt;
+
+  return {
+    id: row.id,
+    quizId: row.quizId,
+    quizTitle: row.quizTitle,
+    lessonId: row.lessonId,
+    score: row.score,
+    total: row.total,
+    percent: row.percent,
+    masteryLabel: row.masteryLabel,
+    mastery: row.masteryLabel ? { label: row.masteryLabel } : undefined,
+    attemptNo: row.attemptNo,
+    xpAwarded: row.xpAwarded,
+    xpPossible: row.xpPossible,
+    review: row.reviewJson || [],
+    submittedAt: row.submittedAt,
+    backendSaved: true,
+  };
+}
+
 router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) => {
   try {
     const lesson = await Lesson.findByPk(req.params.id);
 
     if (!lesson) {
       return res.status(404).json({ message: 'Lesson not found.' });
+    }
+
+    const quizId = String(req.body.quizId || `lesson-${lesson.id}`);
+
+    const existingAttempts = await QuizAttempt.findAll({
+      where: {
+        studentId: req.student.id,
+        lessonId: lesson.id,
+        quizId,
+      },
+      order: [['attemptNo', 'ASC'], ['id', 'ASC']],
+    });
+
+    if (existingAttempts.length >= 2) {
+      return res.status(409).json({
+        message: 'Maximum quiz attempts reached.',
+        quizAttempts: existingAttempts.map(formatQuizAttempt),
+      });
     }
 
     const score = Number(req.body.score || 0);
@@ -432,6 +473,7 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
         : 0;
 
     const xpPossible = quizXpForPercent(percent);
+    const masteryLabel = quizMasteryLabel(percent);
 
     const existingQuizXp = await XpLog.findOne({
       where: {
@@ -492,34 +534,53 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       savedAnswers += 1;
     }
 
+    const attempt = await QuizAttempt.create({
+      studentId: req.student.id,
+      lessonId: lesson.id,
+      quizId,
+      quizTitle: req.body.quizTitle || lesson.title,
+      score,
+      total,
+      percent,
+      attemptNo: existingAttempts.length + 1,
+      xpAwarded,
+      xpPossible,
+      masteryLabel,
+      reviewJson: review,
+    });
+
+    const allAttempts = [...existingAttempts, attempt].map(formatQuizAttempt);
+
     await audit(req.user.id, 'quiz.result', 'lesson', lesson.id, {
       score,
       total,
       percent,
       xpAwarded,
-      attemptNo: req.body.attemptNo || null,
+      attemptNo: attempt.attemptNo,
     });
 
     res.status(201).json({
       quizResult: {
         lessonId: lesson.id,
-        quizId: req.body.quizId || null,
+        quizId,
         quizTitle: req.body.quizTitle || lesson.title,
         score,
         total,
         percent,
-        masteryLabel: quizMasteryLabel(percent),
-        attemptNo: req.body.attemptNo || null,
+        masteryLabel,
+        attemptNo: attempt.attemptNo,
         xpPossible,
         xpAwarded,
         xpAlreadyAwarded: Boolean(existingQuizXp),
         savedAnswers,
       },
+      quizAttempts: allAttempts,
     });
   } catch (err) {
     next(err);
   }
 });
+
 
 
 router.post('/:id/writing', requireRole('student'), async (req, res, next) => {

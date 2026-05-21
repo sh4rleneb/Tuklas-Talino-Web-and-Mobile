@@ -64,12 +64,6 @@ const [adminData, setAdminData] = useState({
     return () => clearTimeout(t);
   }, [notice]);
 
-  useEffect(() => {
-    const studentId = studentDash?.student?.id || user?.student?.id;
-    if (!studentId) return;
-    setQuizAttempts(loadQuizAttempts(studentId));
-  }, [studentDash?.student?.id, user?.student?.id]);
-
 useEffect(() => {
   if (!booting && user) {
     if (user.mustChangePassword) {
@@ -253,6 +247,7 @@ if (role === 'admin') {
   async function loadStudentDashboard() {
     const data = await api('/students/dashboard');
     setStudentDash(data);
+    setQuizAttempts(data.quizAttempts || {});
     if (data.student?.avatar) setSelectedAvatar(data.student.avatar);
   }
 
@@ -331,6 +326,7 @@ if (role === 'admin') {
       maxAttemptsReached: result.attemptNo >= maxQuizAttempts,
     };
 
+    let backendAttemptsForQuiz = null;
     let backendWarning = '';
 
     const lessonId = quiz.lessonId || selectedLesson?.id;
@@ -351,9 +347,11 @@ if (role === 'admin') {
         });
 
         const saved = data?.quizResult || {};
+        backendAttemptsForQuiz = Array.isArray(data?.quizAttempts) ? data.quizAttempts : null;
 
         finalResult = {
           ...finalResult,
+          attemptNo: Number(saved.attemptNo || finalResult.attemptNo),
           xpAwarded: Number(saved.xpAwarded || 0),
           xpPossible: Number(saved.xpPossible || 0),
           xpAlreadyAwarded: Boolean(saved.xpAlreadyAwarded),
@@ -371,7 +369,9 @@ if (role === 'admin') {
       }
     }
 
-    const updatedAttempts = appendQuizAttempt(studentId, quizAttempts, quiz.id, finalResult);
+    const updatedAttempts = backendAttemptsForQuiz
+      ? { ...quizAttempts, [quiz.id]: backendAttemptsForQuiz }
+      : appendQuizAttempt(studentId, quizAttempts, quiz.id, finalResult);
     const attemptHistory = updatedAttempts?.[quiz.id] || [];
 
     finalResult = {
