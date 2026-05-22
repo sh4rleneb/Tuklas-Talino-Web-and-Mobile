@@ -2113,3 +2113,125 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
   object-position: center center !important;
   transform: translateX(-12px) translateY(4px) !important;
 }
+
+/* === Student login balanced layout fix START === */
+.student-visual-card {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  gap: 18px !important;
+  padding-top: 44px !important;
+}
+
+.student-visual-card h2 {
+  margin: 0 0 14px !important;
+}
+
+.student-visual-card p {
+  margin: 0 0 18px !important;
+  max-width: 440px !important;
+}
+
+.student-hero-illustration.login-hero-png-wrap,
+.student-visual-card .login-hero-png-wrap {
+  margin-top: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+.student-visual-card .login-hero-png.student {
+  transform: translateY(0) !important;
+  width: min(82%, 320px) !important;
+  max-height: 330px !important;
+}
+
+.student-visual-card .login-info-card {
+  margin-top: 8px !important;
+}
+
+@media (max-width: 900px) {
+  .student-visual-card {
+    padding-top: 28px !important;
+  }
+
+  .student-visual-card .login-hero-png.student {
+    width: min(80%, 260px) !important;
+    max-height: 270px !important;
+  }
+}
+/* === Student login balanced layout fix END === */
+
+/* === Student login bottom space fix START === */
+.student-visual-card {
+  min-height: 100% !important;
+}
+
+.student-visual-card .login-info-card {
+  margin-top: auto !important;
+  margin-bottom: 34px !important;
+}
+
+.student-visual-card .login-hero-png.student {
+  width: min(84%, 335px) !important;
+  max-height: 345px !important;
+}
+
+@media (max-width: 900px) {
+  .student-visual-card .login-info-card {
+    margin-top: 18px !important;
+    margin-bottom: 18px !important;
+  }
+}
+/* === Student login bottom space fix END === */
+
+/* === Student login final clean layout START === */
+.student-visual-card {
+  justify-content: flex-start !important;
+  gap: 16px !important;
+  padding-top: 42px !important;
+}
+
+.student-visual-card h2 {
+  margin: 0 0 12px !important;
+}
+
+.student-visual-card p {
+  margin: 0 0 12px !important;
+  max-width: 440px !important;
+}
+
+.student-hero-illustration.login-hero-png-wrap,
+.student-visual-card .login-hero-png-wrap {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.student-visual-card .login-hero-png.student {
+  transform: translateY(0) !important;
+  width: min(82%, 318px) !important;
+  max-height: 320px !important;
+}
+
+.student-visual-card .login-info-card {
+  margin-top: 8px !important;
+  margin-bottom: 26px !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+@media (max-width: 900px) {
+  .student-visual-card {
+    padding-top: 28px !important;
+  }
+
+  .student-visual-card .login-hero-png.student {
+    width: min(80%, 260px) !important;
+    max-height: 270px !important;
+  }
+
+  .student-visual-card .login-info-card {
+    margin-top: 10px !important;
+    margin-bottom: 18px !important;
+  }
+}
+/* === Student login final clean layout END === */
+

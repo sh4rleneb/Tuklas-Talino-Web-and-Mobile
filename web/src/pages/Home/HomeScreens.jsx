@@ -153,18 +153,6 @@ export function LandingScreen({ go }) {
           <div><span>📊</span><strong>Teacher Monitoring</strong><small>Progress records for better guidance.</small></div>
         </div>
       </section>
-
-      <section className="tt-ready-card" aria-label="Get started">
-        <div className="tt-ready-art" aria-hidden="true"><span>👦</span><span>👧</span><span>👦</span><div>📚</div></div>
-        <div className="tt-ready-copy">
-          <h2>Handa nang magsimula?</h2>
-          <p>Pumili ng inyong role at simulan ang mas organisado, masaya, at guided na pagkatuto.</p>
-          <div className="tt-ready-actions">
-            <button onClick={() => go('screen-login-student')}>Student Login <span>→</span></button>
-            <button className="secondary" onClick={() => selectPublicPage('help')}>Need help?</button>
-          </div>
-        </div>
-      </section>
     </>
   );
 
@@ -391,21 +379,6 @@ export function HomeScreen({ go, notify }) {
         <div className="role-card role-card-v2 role-student" onClick={() => go('screen-login-student')}><div className="role-tag">Para sa Mag-aaral</div><div className="role-illustration student-scene"><img src="/landing-student-boy.png" alt="" className="role-illustration-img student" /></div><div className="role-info"><h3>Mag-aaral</h3><p>Kumpletuhin ang mga aralin, sumali sa gawain, at kumita ng badges!</p><span className="role-arrow">→</span></div></div>
         <div className="role-card role-card-v2 role-teacher" onClick={() => go('screen-login-teacher')}><div className="role-tag">Para sa Guro</div><div className="role-illustration teacher-scene"><img src="/landing-teacher.png" alt="" className="role-illustration-img teacher" /></div><div className="role-info"><h3>Guro</h3><p>Gumawa ng aralin, grupo, at subaybayan ang progreso.</p><span className="role-arrow">→</span></div></div>
         <div className="role-card role-card-v2 role-admin" onClick={() => go('screen-login-admin')}><div className="role-tag">Para sa Admin</div><div className="role-illustration admin-scene"><img src="/landing-admin.png" alt="" className="role-illustration-img admin" /></div><div className="role-info"><h3>Admin</h3><p>Pamahalaan ang accounts, settings, at system activity logs.</p><span className="role-arrow">→</span></div></div>
-      </div>
-      <div className="demo-panel-v2">
-        <div className="demo-accounts-v2">
-          <div className="section-title">✨ Quick Demo Accounts</div>
-          <div className="demo-line"><span className="demo-icon purple">🛡️</span><b>Admin:</b> username <strong>admin</strong> / password <strong>admin123</strong></div>
-          <div className="demo-line"><span className="demo-icon blue">👩‍🏫</span><b>Teacher:</b> username <strong>teacher1</strong> / password <strong>teach123</strong></div>
-          <div className="demo-line"><span className="demo-icon green">🎒</span><b>Student IDs:</b> <strong>STU-2025-001</strong> ... <strong>STU-2025-006</strong></div>
-          <div className="demo-tip">💡 Tip: Students use password <strong>student123</strong> by default.</div>
-        </div>
-        <div className="feature-grid-v2">
-          <div className="feature-mini"><span>👥</span><div><b>Kolaborasyon</b><p>Gumawa ng grupo at makilahok sa mga gawain.</p></div></div>
-          <div className="feature-mini"><span>🏅</span><div><b>Gamified Learning</b><p>Kumita ng XP, level up, at badges.</p></div></div>
-          <div className="feature-mini"><span>📈</span><div><b>Progreso Tracking</b><p>Subaybayan ang pag-unlad.</p></div></div>
-          <div className="feature-mini"><span>🔒</span><div><b>Ligtas at Maayos</b><p>May roles para sa student, teacher, at admin.</p></div></div>
-        </div>
       </div>
       <div className="reset-area-v2"><button className="btn btn-green reset-btn-v2" onClick={() => notify('Database reset is done from backend: npm.cmd run reset', 'warn')}>♻️ Reset Demo Data</button><div className="muted">For full reset, run backend reset command.</div></div>
     </div>
