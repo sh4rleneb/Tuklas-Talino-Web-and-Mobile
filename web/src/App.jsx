@@ -1023,7 +1023,163 @@ async function archiveTeacher(id) {
           from { opacity: 0; transform: scale(0.92) translateY(12px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
-      `}</style>
+  
+      .word-match-toast {
+        padding: 14px 16px;
+        border-radius: 18px;
+        font-weight: 1000;
+        box-shadow: 0 10px 24px rgba(60, 103, 135, .10);
+      }
+
+      .word-match-toast.info {
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        color: #1D4ED8;
+      }
+
+      .word-match-toast.good {
+        background: #EFFFF5;
+        border: 1px solid #18B865;
+        color: #0B743D;
+      }
+
+      .word-match-toast.warn {
+        background: #FFF8E5;
+        border: 1px solid #F7D77A;
+        color: #7A5200;
+      }
+
+      .word-match-picture {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        min-height: 104px;
+        text-align: center;
+      }
+
+      .word-match-picture-icon {
+        width: 78px;
+        height: 78px;
+        border-radius: 24px;
+        font-size: 42px;
+      }
+
+      .word-match-picture-label {
+        display: none;
+      }
+
+      .word-match-word.matched.tone-0,
+      .word-match-picture.matched.tone-0 {
+        border-color: #22C55E;
+        background: #ECFFF5;
+        color: #0B743D;
+      }
+
+      .word-match-word.matched.tone-1,
+      .word-match-picture.matched.tone-1 {
+        border-color: #3B82F6;
+        background: #EFF6FF;
+        color: #1D4ED8;
+      }
+
+      .word-match-word.matched.tone-2,
+      .word-match-picture.matched.tone-2 {
+        border-color: #A855F7;
+        background: #FAF5FF;
+        color: #7E22CE;
+      }
+
+      .word-match-word.matched.tone-3,
+      .word-match-picture.matched.tone-3 {
+        border-color: #F59E0B;
+        background: #FFF7ED;
+        color: #B45309;
+      }
+
+      .word-match-word.matched.tone-4,
+      .word-match-picture.matched.tone-4 {
+        border-color: #EC4899;
+        background: #FFF1F2;
+        color: #BE185D;
+      }
+
+      .word-match-word.matched.tone-5,
+      .word-match-picture.matched.tone-5 {
+        border-color: #14B8A6;
+        background: #ECFEFF;
+        color: #0F766E;
+      }
+
+      .mission-play-action:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* === Word Match shuffled picture polish START === */
+    
+
+      .word-match-game {
+        position: relative;
+      }
+
+      .word-match-toast {
+        position: fixed;
+        left: 50%;
+        top: 46%;
+        transform: translate(-50%, -50%);
+        z-index: 999;
+        min-width: min(420px, 82vw);
+        max-width: min(520px, 86vw);
+        padding: 22px 30px;
+        border-radius: 24px;
+        text-align: center;
+        font-size: 28px;
+        line-height: 1.2;
+        font-weight: 1000;
+        box-shadow: 0 22px 60px rgba(20, 40, 70, .18);
+        animation: wordMatchPop .18s ease-out;
+      }
+
+      .word-match-toast.info {
+        background: rgba(239, 246, 255, .96);
+        border: 2px solid #BFDBFE;
+        color: #1D4ED8;
+      }
+
+      .word-match-toast.good {
+        background: rgba(255, 255, 255, .96);
+        border: 3px solid #F8DE7E;
+        color: #13243D;
+      }
+
+      .word-match-toast.warn {
+        background: rgba(255, 248, 229, .97);
+        border: 2px solid #F7D77A;
+        color: #7A5200;
+      }
+
+      @keyframes wordMatchPop {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -46%) scale(.94);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+
+      @media (max-width: 720px) {
+        .word-match-toast {
+          top: 50%;
+          font-size: 22px;
+          padding: 18px 22px;
+        }
+      }
+
+      /* === Word Match toast overlay polish START === */
+    
+    `}</style>
 
       <Notification notice={notice} />
 
@@ -3831,7 +3987,6 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
         go={go}
         icon="✅"
         title="Lesson Summary"
-        subtitle="Completed lesson only. Step-by-step mission is closed."
       >
         <style>{`
           .g12-complete-summary {
@@ -6066,6 +6221,349 @@ function getMissionDemo(gameId) {
   return demos[gameId] || demos['word-match'];
 }
 
+function getWordMatchItemsForGrade(gradeLevel = 4) {
+  const earlyItems = [
+    { id: 'bahay', word: 'bahay', picture: '🏠', label: 'Bahay' },
+    { id: 'aso', word: 'aso', picture: '🐶', label: 'Aso' },
+    { id: 'aklat', word: 'aklat', picture: '📚', label: 'Aklat' },
+    { id: 'lapis', word: 'lapis', picture: '✏️', label: 'Lapis' },
+    { id: 'guro', word: 'guro', picture: '👩‍🏫', label: 'Guro' },
+    { id: 'pusa', word: 'pusa', picture: '🐱', label: 'Pusa' },
+    { id: 'isda', word: 'isda', picture: '🐟', label: 'Isda' },
+    { id: 'puno', word: 'puno', picture: '🌳', label: 'Puno' },
+    { id: 'araw', word: 'araw', picture: '☀️', label: 'Araw' },
+    { id: 'payong', word: 'payong', picture: '☂️', label: 'Payong' },
+  ];
+
+  const upperItems = [
+    { id: 'pamayanan', word: 'pamayanan', picture: '🏘️', label: 'Pamayanan' },
+    { id: 'kalikasan', word: 'kalikasan', picture: '🌳', label: 'Kalikasan' },
+    { id: 'paaralan', word: 'paaralan', picture: '🏫', label: 'Paaralan' },
+    { id: 'manggagamot', word: 'manggagamot', picture: '🩺', label: 'Manggagamot' },
+    { id: 'aklatan', word: 'aklatan', picture: '📖', label: 'Aklatan' },
+    { id: 'malikhain', word: 'malikhain', picture: '🎨', label: 'Malikhain' },
+    { id: 'masipag', word: 'masipag', picture: '💪', label: 'Masipag' },
+    { id: 'mapagkakatiwalaan', word: 'mapagkakatiwalaan', picture: '🤝', label: 'Mapagkakatiwalaan' },
+    { id: 'kaalaman', word: 'kaalaman', picture: '💡', label: 'Kaalaman' },
+    { id: 'panitikan', word: 'panitikan', picture: '📜', label: 'Panitikan' },
+    { id: 'talasalitaan', word: 'talasalitaan', picture: '🔤', label: 'Talasalitaan' },
+    { id: 'pakikipagkapwa', word: 'pakikipagkapwa', picture: '👥', label: 'Pakikipagkapwa' },
+  ];
+
+  return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
+}
+
+function getWordMatchAttemptItems(gradeLevel = 4) {
+  const pool = getWordMatchItemsForGrade(gradeLevel);
+  const itemCount = Number(gradeLevel || 4) <= 2 ? 5 : 6;
+  return shuffleWordMatchItems(pool).slice(0, Math.min(itemCount, pool.length));
+}
+
+function shuffleWordMatchItems(items = []) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
+function playMissionSuccessSound() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99];
+
+    notes.forEach((frequency, index) => {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, now + index * 0.12);
+
+      gain.gain.setValueAtTime(0.001, now + index * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + index * 0.12 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + index * 0.12 + 0.18);
+
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+
+      oscillator.start(now + index * 0.12);
+      oscillator.stop(now + index * 0.12 + 0.2);
+    });
+  } catch {
+    // Optional sound only.
+  }
+}
+
+function WordMatchStyles() {
+  return (
+    <style>{`
+      .word-match-game {
+        display: grid;
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .word-match-guide {
+        padding: 16px 18px;
+        border-radius: 20px;
+        background: #F8FBFF;
+        border: 1px solid #DDEBFF;
+        color: #38526B;
+        font-weight: 900;
+        line-height: 1.55;
+      }
+
+      .word-match-board {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+        gap: 18px;
+      }
+
+      .word-match-column {
+        display: grid;
+        gap: 12px;
+      }
+
+      .word-match-column h3 {
+        margin: 0 0 4px;
+        color: #17334A;
+        font-size: 18px;
+      }
+
+      .word-match-word,
+      .word-match-picture {
+        min-height: 72px;
+        border: 2px solid #DDEBFF;
+        border-radius: 20px;
+        background: #FFFFFF;
+        color: #17334A;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 10px 22px rgba(60, 103, 135, .08);
+        transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+      }
+
+      .word-match-word {
+        padding: 16px 18px;
+        text-align: left;
+        font-size: 22px;
+      }
+
+      .word-match-picture {
+        padding: 12px 14px;
+        display: grid;
+        grid-template-columns: 58px 1fr;
+        align-items: center;
+        gap: 12px;
+        text-align: left;
+      }
+
+      .word-match-picture-icon {
+        width: 58px;
+        height: 58px;
+        display: grid;
+        place-items: center;
+        border-radius: 18px;
+        background: #F0FFF4;
+        font-size: 32px;
+      }
+
+      .word-match-picture-label {
+        font-size: 18px;
+        font-weight: 1000;
+      }
+
+      .word-match-word:hover,
+      .word-match-picture:hover {
+        transform: translateY(-2px);
+        border-color: #9BDDB6;
+      }
+
+      .word-match-word.selected {
+        border-color: #15A85A;
+        background: #ECFFF3;
+        box-shadow: 0 12px 26px rgba(21, 168, 90, .15);
+      }
+
+      .word-match-word.matched,
+      .word-match-picture.matched {
+        border-color: #18B865;
+        background: #EFFFF5;
+        color: #0B743D;
+      }
+
+      .word-match-word.matched::after,
+      .word-match-picture.matched::after {
+        content: " ✓";
+      }
+
+      .word-match-feedback {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: #FFF8E5;
+        border: 1px solid #F7D77A;
+        color: #7A5200;
+        font-weight: 950;
+      }
+
+      .word-match-feedback.good {
+        background: #EFFFF5;
+        border-color: #18B865;
+        color: #0B743D;
+      }
+
+      .word-match-complete {
+        padding: 18px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #EFFFF5, #F8FFFB);
+        border: 1px solid #BDEFCF;
+        color: #0B743D;
+        font-weight: 1000;
+        text-align: center;
+      }
+
+      @media (max-width: 820px) {
+        .word-match-board {
+          grid-template-columns: 1fr;
+        }
+
+        .word-match-word {
+          font-size: 20px;
+        }
+      }
+
+      .mission-complete-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1200;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: rgba(20, 30, 40, .38);
+        backdrop-filter: blur(7px);
+        animation: missionFadeIn .18s ease-out;
+      }
+
+      .mission-complete-modal {
+        width: min(560px, 92vw);
+        border-radius: 34px;
+        padding: 34px 34px 30px;
+        text-align: center;
+        background:
+          radial-gradient(circle at 6% 10%, rgba(255, 230, 135, .42), transparent 23%),
+          radial-gradient(circle at 92% 94%, rgba(42, 201, 119, .18), transparent 28%),
+          #FFFEF7;
+        border: 3px solid #F6D979;
+        box-shadow: 0 26px 80px rgba(25, 47, 72, .28);
+        animation: missionPopIn .2s ease-out;
+      }
+
+      .mission-complete-icon {
+        width: 92px;
+        height: 92px;
+        margin: 0 auto 16px;
+        display: grid;
+        place-items: center;
+        border-radius: 26px;
+        background: #FFF2BD;
+        border: 3px solid #FFE08A;
+        font-size: 48px;
+      }
+
+      .mission-complete-modal h3 {
+        margin: 0;
+        color: #0B934C;
+        font-size: clamp(34px, 4vw, 52px);
+        line-height: 1;
+      }
+
+      .mission-complete-modal p {
+        margin: 14px 0 20px;
+        color: #263E59;
+        font-size: 18px;
+        font-weight: 950;
+      }
+
+      .mission-complete-xp {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 22px;
+        padding: 14px 26px;
+        border-radius: 22px;
+        background: #FFFFFF;
+        border: 2px solid #F6D979;
+        color: #12213A;
+        font-size: 26px;
+        font-weight: 1000;
+      }
+
+      .mission-complete-actions {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .mission-complete-btn {
+        border: 2px solid #13A85B;
+        border-radius: 18px;
+        padding: 14px 20px;
+        background: #FFFFFF;
+        color: #0B934C;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 10px 20px rgba(60, 103, 135, .10);
+      }
+
+      .mission-complete-btn.purple {
+        border-color: #7C3AED;
+        background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+        color: #FFFFFF;
+      }
+
+      .mission-complete-btn.light {
+        border-color: #BDEFCF;
+        background: #F6FFF9;
+      }
+
+      @keyframes missionFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @keyframes missionPopIn {
+        from {
+          opacity: 0;
+          transform: translateY(14px) scale(.96);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @media (max-width: 720px) {
+        .mission-complete-modal {
+          padding: 28px 20px 24px;
+        }
+
+        .mission-complete-actions {
+          flex-direction: column;
+        }
+
+        .mission-complete-btn {
+          width: 100%;
+        }
+      }
+
+      /* === Word Match complete modal polish START === */
+
+    `}</style>
+  );
+}
+
 function missionGamesForStudent(data) {
   const lessons = asArray(data?.lessons);
   const completedLessons = lessons.filter(lesson => lesson?.completed).length;
@@ -6153,7 +6651,7 @@ function StudentMissions({ data, go, onPlayMission }) {
           <div className="missions-section-head">
             <div>
               <h3>🎮 Available Learning Games</h3>
-              <p>Tap Play to open a Filipino learning game. Earn XP preview and keep your streak going!</p>
+              <p>Tap Play and Earn XP points!</p>
             </div>
           </div>
 
@@ -6217,7 +6715,7 @@ function StudentMissions({ data, go, onPlayMission }) {
         go={go}
         icon="🎮"
         title="Tuklas Missions"
-        subtitle="Pumili ng game, pindutin ang Play, at sagutin ang challenge."
+        subtitle=""
       >
         {content}
       </EarlyStudentChrome>
@@ -6241,6 +6739,13 @@ function StudentMissions({ data, go, onPlayMission }) {
 function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack }) {
   const [missionChoice, setMissionChoice] = useState('');
   const [missionResult, setMissionResult] = useState('');
+  const [selectedWordId, setSelectedWordId] = useState('');
+  const [matchedPairs, setMatchedPairs] = useState({});
+  const [wordMatchMessage, setWordMatchMessage] = useState('');
+  const [wordMatchItems, setWordMatchItems] = useState([]);
+  const [wordMatchPictures, setWordMatchPictures] = useState([]);
+  const [wordMatchToast, setWordMatchToast] = useState(null);
+  const [wordMatchCompleteModal, setWordMatchCompleteModal] = useState(false);
   const student = data?.student || {};
   const gradeLevel = Number(student?.gradeLevel || 4);
   const early = gradeLevel <= 2;
@@ -6249,11 +6754,36 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
   const selectedGame = games.find(game => game.id === selectedGameId) || games[0];
   const demo = getMissionDemo(selectedGame?.id);
   const locked = selectedGame?.status === 'Locked';
+  const isWordMatch = selectedGame?.id === 'word-match';
+  const fallbackWordMatchItems = getWordMatchAttemptItems(gradeLevel);
+  const activeWordMatchItems = wordMatchItems.length ? wordMatchItems : fallbackWordMatchItems;
+  const visibleWordMatchPictures = wordMatchPictures.length ? wordMatchPictures : activeWordMatchItems;
+  const wordMatchDoneCount = Object.keys(matchedPairs).length;
+  const wordMatchComplete = isWordMatch && wordMatchDoneCount === activeWordMatchItems.length;
 
   useEffect(() => {
+    const nextItems = getWordMatchAttemptItems(gradeLevel);
+
     setMissionChoice('');
     setMissionResult('');
-  }, [selectedGame?.id]);
+    setSelectedWordId('');
+    setMatchedPairs({});
+    setWordMatchMessage('');
+    setWordMatchItems(nextItems);
+    setWordMatchToast(null);
+    setWordMatchCompleteModal(false);
+    setWordMatchPictures(shuffleWordMatchItems(nextItems));
+  }, [selectedGame?.id, gradeLevel]);
+
+  useEffect(() => {
+    if (!wordMatchToast) return undefined;
+
+    const timer = setTimeout(() => {
+      setWordMatchToast(null);
+    }, wordMatchToast.type === 'good' ? 1200 : 1500);
+
+    return () => clearTimeout(timer);
+  }, [wordMatchToast]);
 
   const openTab = (tab) => {
     if (tab === 'home') return go('screen-student');
@@ -6284,13 +6814,71 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
   };
 
   const restartDemo = () => {
+    const nextItems = getWordMatchAttemptItems(gradeLevel);
+
     setMissionChoice('');
     setMissionResult('');
+    setSelectedWordId('');
+    setMatchedPairs({});
+    setWordMatchMessage('');
+    setWordMatchItems(nextItems);
+    setWordMatchToast(null);
+    setWordMatchCompleteModal(false);
+    setWordMatchPictures(shuffleWordMatchItems(nextItems));
+  };
+
+  const selectWordMatchWord = (itemId) => {
+    if (locked || matchedPairs[itemId]) return;
+    setSelectedWordId(itemId);
+    setWordMatchMessage('');
+    setWordMatchToast({ type: 'info', message: 'Piliin ang larawan.' });
+  };
+
+  const selectWordMatchPicture = (itemId) => {
+    if (locked || matchedPairs[itemId]) return;
+
+    if (!selectedWordId) {
+      setWordMatchMessage('');
+      setWordMatchToast({ type: 'warn', message: 'Pumili muna ng salita.' });
+      return;
+    }
+
+    if (selectedWordId === itemId) {
+      const matchedItem = activeWordMatchItems.find(item => item.id === itemId);
+      const nextPairs = { ...matchedPairs, [itemId]: true };
+      setMatchedPairs(nextPairs);
+      setSelectedWordId('');
+      setWordMatchMessage('');
+      setWordMatchToast({ type: 'good', message: 'Tama!' });
+
+      if (Object.keys(nextPairs).length === activeWordMatchItems.length) {
+        setMissionResult('');
+        setWordMatchToast({ type: 'good', message: 'Mahusay! Lahat ng pares ay tama.' });
+      }
+
+      return;
+    }
+
+    setWordMatchMessage('');
+    setWordMatchToast({ type: 'warn', message: 'Hindi pa tugma. Subukan muli!' });
+  };
+
+  const completeWordMatchMission = () => {
+    if (!wordMatchComplete) {
+      setWordMatchToast({ type: 'warn', message: 'Tapusin muna ang lahat ng pares.' });
+      return;
+    }
+
+    setMissionResult('');
+    setWordMatchToast(null);
+    setWordMatchCompleteModal(true);
+    playMissionSuccessSound();
   };
 
   const content = (
     <>
       <MissionStyles />
+      <WordMatchStyles />
 
       <div className={`missions-wrap ${early ? 'early' : 'standard'}`}>
         <section className="mission-play-shell">
@@ -6321,24 +6909,118 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
               </>
             ) : (
               <>
-                <div className="mission-prompt-box">
-                  <strong>Mission:</strong> {demo?.prompt}
-                  <br />
-                  <strong>Clue:</strong> {demo?.sample}
-                </div>
+                {isWordMatch ? (
+                  <div className="word-match-game" aria-label="Word Match game">
+                    <div className="word-match-guide">
+                      Piliin ang salitang Filipino sa kaliwa, pagkatapos piliin ang tamang larawan sa kanan.
+                    </div>
 
-                <div className="mission-play-options" aria-label="Mission choices">
-                  {(demo?.options || []).map(choice => (
-                    <button
-                      type="button"
-                      className={`mission-play-choice ${missionChoice === choice ? 'selected' : ''}`}
-                      key={choice}
-                      onClick={() => checkMissionAnswer(choice)}
-                    >
-                      {choice}
-                    </button>
-                  ))}
-                </div>
+                    {wordMatchToast && (
+                      <div className={`word-match-toast ${wordMatchToast.type || 'info'}`}>
+                        {wordMatchToast.message}
+                      </div>
+                    )}
+
+                    <div className="word-match-board">
+                      <div className="word-match-column">
+                        <h3>Mga Salita</h3>
+                        {activeWordMatchItems.map((item, index) => {
+                          const matched = Boolean(matchedPairs[item.id]);
+                          const toneClass = matched ? `tone-${index % 6}` : '';
+                          return (
+                            <button
+                              type="button"
+                              key={item.id}
+                              className={`word-match-word ${selectedWordId === item.id ? 'selected' : ''} ${matched ? 'matched' : ''} ${toneClass}`}
+                              onClick={() => selectWordMatchWord(item.id)}
+                              disabled={matched}
+                            >
+                              {item.word}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="word-match-column">
+                        <h3>Mga Larawan</h3>
+                        {visibleWordMatchPictures.map(item => {
+                          const matched = Boolean(matchedPairs[item.id]);
+                          const originalIndex = Math.max(0, activeWordMatchItems.findIndex(row => row.id === item.id));
+                          const toneClass = matched ? `tone-${originalIndex % 6}` : '';
+                          return (
+                            <button
+                              type="button"
+                              key={item.id}
+                              className={`word-match-picture ${matched ? 'matched' : ''} ${toneClass}`}
+                              onClick={() => selectWordMatchPicture(item.id)}
+                              disabled={matched}
+                              aria-label={item.label}
+                              title={item.label}
+                            >
+                              <span className="word-match-picture-icon">{item.picture}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {wordMatchMessage && (
+                      <div className={`word-match-feedback ${wordMatchMessage.includes('Tama') ? 'good' : ''}`}>
+                        {wordMatchMessage}
+                      </div>
+                    )}
+
+                    {wordMatchComplete && (
+                      <div className="word-match-complete">
+                        Lahat ng pares ay tama! Pwede mo nang tapusin ang mission.
+                      </div>
+                    )}
+
+                    {wordMatchCompleteModal && (
+                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Mission complete">
+                        <div className="mission-complete-modal">
+                          <div className="mission-complete-icon">🏆</div>
+                          <h3>Mission Complete!</h3>
+                          <p>Ang galing mo! Natapos mo ang Word Match.</p>
+                          <div className="mission-complete-xp">⚡ +{selectedGame?.xp || 0} XP Preview</div>
+
+                          <div className="mission-complete-actions">
+                            <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
+                              🔄 Play Again
+                            </button>
+                            <button type="button" className="mission-complete-btn" onClick={backToMissions}>
+                              🎮 Missions
+                            </button>
+                            <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
+                              🏠 Home
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="mission-prompt-box">
+                      <strong>Mission:</strong> {demo?.prompt}
+                      <br />
+                      <strong>Clue:</strong> {demo?.sample}
+                    </div>
+
+                    <div className="mission-play-options" aria-label="Mission choices">
+                      {(demo?.options || []).map(choice => (
+                        <button
+                          type="button"
+                          className={`mission-play-choice ${missionChoice === choice ? 'selected' : ''}`}
+                          key={choice}
+                          onClick={() => checkMissionAnswer(choice)}
+                        >
+                          {choice}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 {missionResult && (
                   <div className={`mission-result ${missionResult.includes('✅') ? 'good' : ''}`}>
@@ -6353,14 +7035,16 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
                   <button type="button" className="mission-play-action" onClick={restartDemo}>
                     🔄 Restart
                   </button>
-                  <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
-                    📖 Go to Lessons
-                  </button>
+                  {isWordMatch ? (
+                    <button type="button" className="mission-play-action purple" onClick={completeWordMatchMission} disabled={!wordMatchComplete}>
+                      ✅ Complete Mission
+                    </button>
+                  ) : (
+                    <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
+                      📖 Go to Lessons
+                    </button>
+                  )}
                 </div>
-
-                <p style={{ margin: '18px 0 0', color: '#526988', fontWeight: 850 }}>
-                  Frontend demo only: XP is previewed here. Real mission completion, saved XP, streaks, and badge unlocks can be connected to backend routes later.
-                </p>
               </>
             )}
           </div>
