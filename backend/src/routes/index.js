@@ -1,3 +1,4 @@
+import speechRoutes from './speech.routes.js';
 import { Router } from 'express';
 import authRoutes from './auth.routes.js';
 import studentRoutes from './students.routes.js';
@@ -6,6 +7,7 @@ import lessonRoutes from './lessons.routes.js';
 import groupRoutes from './groups.routes.js';
 import adminRoutes from './admin.routes.js';
 import reportRoutes from './reports.routes.js';
+import missionsRoutes from './missions.routes.js';
 
 const router = Router();
 
@@ -17,5 +19,7 @@ router.use('/lessons', lessonRoutes);
 router.use('/groups', groupRoutes);
 router.use('/admin', adminRoutes);
 router.use('/reports', reportRoutes);
+router.use('/missions', missionsRoutes);
+router.use('/speech', speechRoutes);
 
 export default router;

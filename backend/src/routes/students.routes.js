@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Student, TeacherAssignment, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion, Notification } from '../models/index.js';
+import { Role, User, Student, TeacherAssignment, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, WritingSubmission, SpeechAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion, MissionCompletion, Notification } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
@@ -370,8 +370,11 @@ router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) 
       XpLog.destroy({ where: { studentId: student.id } }),
       QuizHistory.destroy({ where: { studentId: student.id } }),
       QuizAttempt.destroy({ where: { studentId: student.id } }),
+      WritingSubmission.destroy({ where: { studentId: student.id } }),
+      SpeechAttempt.destroy({ where: { studentId: student.id } }),
       StudentBadge.destroy({ where: { studentId: student.id } }),
-      GroupTaskCompletion.destroy({ where: { studentId: student.id } })
+      GroupTaskCompletion.destroy({ where: { studentId: student.id } }),
+      MissionCompletion.destroy({ where: { studentId: student.id } })
     ]);
     student.xp = 0;
     await student.save();

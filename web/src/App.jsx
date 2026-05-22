@@ -18,6 +18,39 @@ function read(id) {
 
 
 
+
+function StartupLoader() {
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        padding: 24,
+        background: 'linear-gradient(135deg, #F1FFF5, #FFF9E8)'
+      }}
+    >
+      <div
+        style={{
+          width: 'min(520px, 92vw)',
+          padding: '36px 30px',
+          borderRadius: 32,
+          background: '#FFFFFF',
+          border: '2px solid #CDEFD8',
+          boxShadow: '0 24px 70px rgba(36, 91, 64, 0.14)',
+          textAlign: 'center'
+        }}
+      >
+        <div style={{ fontSize: 48, marginBottom: 12 }}>🏠</div>
+        <h1 style={{ margin: 0, color: '#07924A', fontSize: 38 }}>Loading Tuklas Talino</h1>
+        <p style={{ margin: '10px 0 0', color: '#435970', fontWeight: 800 }}>
+          Please wait...
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function Notification({ notice }) {
   if (!notice) return <div className="notif-wrap" id="notif-wrap" />;
   return <div className="notif-wrap" id="notif-wrap"><div className={`notif ${notice.type || ''}`}>{notice.text}</div></div>;
@@ -48,6 +81,12 @@ const [adminData, setAdminData] = useState({
 });
   const [loading, setLoading] = useState(false);
   const [subjectFilter, setSubjectFilter] = useState('ALL');
+  const [hadSavedSessionOnBoot] = useState(() =>
+    typeof window !== 'undefined' && Boolean(window.localStorage.getItem('tuklas_token'))
+  );
+  const [startupDelayDone, setStartupDelayDone] = useState(() =>
+    !(typeof window !== 'undefined' && Boolean(window.localStorage.getItem('tuklas_token')))
+  );
 
   const activeRole = screen.includes('teacher') ? 'teacher' : screen.includes('admin') ? 'admin' : screen.includes('student') || screen.includes('stu') || screen.includes('lesson') ? 'student' : '';
   const gradeLevel = studentDash?.student?.gradeLevel ?? user?.student?.gradeLevel ?? null;
@@ -65,6 +104,19 @@ const [adminData, setAdminData] = useState({
     const t = setTimeout(() => setNotice(null), 3600);
     return () => clearTimeout(t);
   }, [notice]);
+
+  useEffect(() => {
+    if (!hadSavedSessionOnBoot) {
+      setStartupDelayDone(true);
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setStartupDelayDone(true);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [hadSavedSessionOnBoot]);
 
 useEffect(() => {
   if (!booting && user) {
@@ -439,6 +491,10 @@ if (role === 'admin') {
 
       if (!silent) {
         notify(data.xpAwarded ? `🎉 Natapos! +${data.xpAwarded} XP` : 'Nagawa mo na ang lesson na ito.');
+      }
+
+      if (data?.xpAwarded) {
+        playMissionSuccessSound();
       }
 
       await loadStudentDashboard();
@@ -967,15 +1023,14 @@ async function archiveTeacher(id) {
       : lessons.filter(lesson => lesson.subject === subjectFilter);
   }, [studentDash, subjectFilter]);
 
-  if (booting) {
-    return (
-      <div className="home-wrap">
-        <div className="home-card">
-          <div className="home-title">Tuklas Talino</div>
-          <div className="muted">Starting Tuklas Talino...</div>
-        </div>
-      </div>
-    );
+  const hasSavedSession = typeof window !== 'undefined' && Boolean(window.localStorage.getItem('tuklas_token'));
+  const restoringSession =
+    booting ||
+    (hadSavedSessionOnBoot && !startupDelayDone) ||
+    (hasSavedSession && screen === 'screen-landing');
+
+  if (restoringSession) {
+    return <StartupLoader />;
   }
 
   return (
@@ -1188,7 +1243,6 @@ async function archiveTeacher(id) {
           <div className="notif">⏳ Loading...</div>
         </div>
       )}
-
       <Screen id="screen-landing" active={screen === 'screen-landing'}>
         <LandingScreen go={go} />
       </Screen>
@@ -1328,6 +1382,7 @@ async function archiveTeacher(id) {
           go={go}
           selectedGameId={selectedMissionGameId}
           onBack={() => go('screen-stu-missions')}
+          refresh={loadStudentDashboard}
         />
       </Screen>
 
@@ -4983,7 +5038,6 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                 </div>
               </div>
 
-              <StudentSelfEvaluation isEarlyGrade={true} />
 
               {feedback && (
                 <div className="g12-mission-feedback">
@@ -4991,20 +5045,25 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                 </div>
               )}
 
-              <div className="g12-mission-actions">
-                {!isReviewMode && (
-                  <div className="g12-mission-actions-left">
-                    <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
-                  </div>
-                )}
-
-                <div className="g12-mission-actions-right">
+              <div className="g12-mission-actions" style={{ justifyContent: 'center' }}>
+                <div className="g12-mission-actions-right" style={{ justifyContent: 'center', width: '100%' }}>
                   {!isReviewMode ? (
-                    <button className="g12-mission-btn" onClick={claimReward}>⭐ Claim XP</button>
+                    <button
+                      className="g12-mission-btn"
+                      onClick={claimReward}
+                      style={{
+                        minWidth: 260,
+                        minHeight: 78,
+                        fontSize: 24,
+                        borderRadius: 26,
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ⭐ Claim XP
+                    </button>
                   ) : (
                     <button className="g12-mission-btn purple" onClick={() => go('screen-student')}>🏠 Go Home</button>
                   )}
-                  <button className="g12-mission-btn secondary" onClick={() => go('screen-lessons')}>📖 More Lessons</button>
                 </div>
               </div>
             </>
@@ -5373,18 +5432,57 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
   const [earlyLocked, setEarlyLocked] = useState(false);
   const [earlyStatus, setEarlyStatus] = useState('');
 
+  const earlyActivityKey = [
+    activity?.id,
+    activity?.writingTask?.id,
+    activity?.title,
+    activity?.writingTask?.prompt,
+    index
+  ].filter(Boolean).join('|') || `writing-${index}`;
+
+  const earlyFallbackSets = [
+    {
+      template: 'Ang bata ay ____.',
+      words: ['masaya', 'mabait', 'nagbabasa', 'tumutulong']
+    },
+    {
+      template: 'Ang guro ay ____.',
+      words: ['masaya', 'mabait', 'nagbabasa', 'tumutulong']
+    },
+    {
+      template: 'Ang bahay ay ____.',
+      words: ['maganda', 'malinis']
+    },
+    {
+      template: 'Ang paaralan ay ____.',
+      words: ['maganda', 'malinis']
+    },
+    {
+      template: 'Ang ____ ay mabait.',
+      words: ['bata', 'guro']
+    },
+    {
+      template: 'Ang ____ ay maganda.',
+      words: ['bahay', 'paaralan']
+    }
+  ];
+
+  const earlyFallbackIndex = String(earlyActivityKey)
+    .split('')
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0) % earlyFallbackSets.length;
+
+  const earlyFallback = earlyFallbackSets[earlyFallbackIndex];
+
   const prompt = activity.writingTask?.prompt || activity.prompt || 'Isulat ang iyong sagot.';
   const rawTemplate =
     activity.writingTask?.template ||
     activity.template ||
     activity.fillBlank ||
     activity.sentence ||
-    (isEarlyGrade && /_{2,}|\\[blank\\]/i.test(prompt) ? prompt : '');
+    (isEarlyGrade && /_{2,}|\\[blank\\]/i.test(prompt) ? prompt : '') ||
+    (isEarlyGrade ? earlyFallback.template : '');
 
-  const defaultEarlyWordBank = [
-    'bata', 'guro', 'bahay', 'paaralan',
-    'masaya', 'mabait', 'nagbabasa', 'tumutulong'
-  ];
+  const defaultEarlyWordBank = earlyFallback.words;
 
   const activityWordBank = asArray(
     activity.wordBank ||
@@ -5445,6 +5543,13 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
   const filledSentence = isEarlyGrade ? formatFilledSentence(sentenceTemplate, selectedWords) : writingText;
   const filledCount = selectedWords.filter(Boolean).length;
   const earlyAnswerReady = filledCount >= blankCount && !filledSentence.includes('____');
+
+  useEffect(() => {
+    setWritingText('');
+    setSelectedWords([]);
+    setEarlyLocked(false);
+    setEarlyStatus('');
+  }, [earlyActivityKey]);
 
   function addWord(word) {
     if (earlyLocked) return;
@@ -6736,7 +6841,7 @@ function StudentMissions({ data, go, onPlayMission }) {
   );
 }
 
-function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack }) {
+function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, refresh }) {
   const [missionChoice, setMissionChoice] = useState('');
   const [missionResult, setMissionResult] = useState('');
   const [selectedWordId, setSelectedWordId] = useState('');
@@ -6746,6 +6851,8 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
   const [wordMatchPictures, setWordMatchPictures] = useState([]);
   const [wordMatchToast, setWordMatchToast] = useState(null);
   const [wordMatchCompleteModal, setWordMatchCompleteModal] = useState(false);
+  const [missionSaving, setMissionSaving] = useState(false);
+  const [missionCompleteData, setMissionCompleteData] = useState(null);
   const student = data?.student || {};
   const gradeLevel = Number(student?.gradeLevel || 4);
   const early = gradeLevel <= 2;
@@ -6772,6 +6879,8 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
     setWordMatchItems(nextItems);
     setWordMatchToast(null);
     setWordMatchCompleteModal(false);
+    setMissionSaving(false);
+    setMissionCompleteData(null);
     setWordMatchPictures(shuffleWordMatchItems(nextItems));
   }, [selectedGame?.id, gradeLevel]);
 
@@ -6824,6 +6933,8 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
     setWordMatchItems(nextItems);
     setWordMatchToast(null);
     setWordMatchCompleteModal(false);
+    setMissionSaving(false);
+    setMissionCompleteData(null);
     setWordMatchPictures(shuffleWordMatchItems(nextItems));
   };
 
@@ -6863,16 +6974,41 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
     setWordMatchToast({ type: 'warn', message: 'Hindi pa tugma. Subukan muli!' });
   };
 
-  const completeWordMatchMission = () => {
+  const completeWordMatchMission = async () => {
     if (!wordMatchComplete) {
       setWordMatchToast({ type: 'warn', message: 'Tapusin muna ang lahat ng pares.' });
       return;
     }
 
+    setMissionSaving(true);
     setMissionResult('');
     setWordMatchToast(null);
-    setWordMatchCompleteModal(true);
-    playMissionSuccessSound();
+
+    try {
+      const result = await api(`/missions/${selectedGame?.id || 'word-match'}/complete`, {
+        method: 'POST',
+        body: {
+          matchedPairs: Object.keys(matchedPairs),
+          gradeLevel
+        }
+      });
+
+      setMissionCompleteData(result);
+
+      if (typeof refresh === 'function') {
+        await refresh();
+      }
+
+      setWordMatchCompleteModal(true);
+      playMissionSuccessSound();
+    } catch (err) {
+      setWordMatchToast({
+        type: 'warn',
+        message: err?.message || 'Hindi na-save ang mission. Subukan muli.'
+      });
+    } finally {
+      setMissionSaving(false);
+    }
   };
 
   const content = (
@@ -6981,8 +7117,12 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
                         <div className="mission-complete-modal">
                           <div className="mission-complete-icon">🏆</div>
                           <h3>Mission Complete!</h3>
-                          <p>Ang galing mo! Natapos mo ang Word Match.</p>
-                          <div className="mission-complete-xp">⚡ +{selectedGame?.xp || 0} XP Preview</div>
+                          <p>
+                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Word Match.'}
+                          </p>
+                          <div className="mission-complete-xp">
+                            ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Added` : 'XP already awarded'}
+                          </div>
 
                           <div className="mission-complete-actions">
                             <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
@@ -7036,8 +7176,8 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack })
                     🔄 Restart
                   </button>
                   {isWordMatch ? (
-                    <button type="button" className="mission-play-action purple" onClick={completeWordMatchMission} disabled={!wordMatchComplete}>
-                      ✅ Complete Mission
+                    <button type="button" className="mission-play-action purple" onClick={completeWordMatchMission} disabled={!wordMatchComplete || missionSaving}>
+                      {missionSaving ? 'Saving...' : '✅ Complete Mission'}
                     </button>
                   ) : (
                     <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
@@ -9712,7 +9852,7 @@ function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
     return withoutNoise
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 5000);
+      .slice(0, 3000);
   }
 
   async function handleLessonPlanFileUpload(event) {

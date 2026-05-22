@@ -256,6 +256,22 @@ export const GroupTaskCompletion = sequelize.define('GroupTaskCompletion', {
   completedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, { tableName: 'group_task_completions' });
 
+export const MissionCompletion = sequelize.define('MissionCompletion', {
+  studentId: { type: DataTypes.INTEGER, allowNull: false, field: 'student_id' },
+  missionId: { type: DataTypes.STRING(80), allowNull: false, field: 'mission_id' },
+  title: { type: DataTypes.STRING(160), allowNull: false },
+  xpAwarded: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0, field: 'xp_awarded' },
+  completedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW, field: 'completed_at' }
+}, {
+  tableName: 'mission_completions',
+  indexes: [
+    {
+      unique: true,
+      fields: ['student_id', 'mission_id']
+    }
+  ]
+});
+
 export const Badge = sequelize.define('Badge', {
   code: { type: DataTypes.STRING(40), allowNull: false, unique: true },
   name: { type: DataTypes.STRING(120), allowNull: false },
@@ -349,6 +365,9 @@ GroupTask.belongsTo(Group, { foreignKey: 'groupId' });
 GroupTask.hasMany(GroupTaskCompletion, { foreignKey: 'groupTaskId', as: 'completions' });
 GroupTaskCompletion.belongsTo(GroupTask, { foreignKey: 'groupTaskId' });
 
+Student.hasMany(MissionCompletion, { foreignKey: 'studentId' });
+MissionCompletion.belongsTo(Student, { foreignKey: 'studentId' });
+
 Student.hasMany(StudentBadge, { foreignKey: 'studentId' });
 StudentBadge.belongsTo(Student, { foreignKey: 'studentId' });
 Badge.hasMany(StudentBadge, { foreignKey: 'badgeId' });
@@ -358,7 +377,7 @@ export const models = {
   Role, User, Student, Teacher, AdminProfile, Lesson, LessonActivity,
   MCQQuestion, MCQOption, WritingTask, SpeechTask, CompletedLesson, QuizHistory,
   QuizAttempt, WritingSubmission, SpeechAttempt, Group, GroupMember, GroupTask,
-  GroupTaskCompletion, Badge, StudentBadge, XpLog, AuditLog, Notification, PasskeyCredential
+  GroupTaskCompletion, MissionCompletion, Badge, StudentBadge, XpLog, AuditLog, Notification, PasskeyCredential
 };
 
 export async function syncModels({ force = false } = {}) {
