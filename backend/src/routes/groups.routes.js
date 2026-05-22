@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
+import multer from 'multer';
+import { fileURLToPath } from 'url';
 import {
   authenticate,
   requireRole,
@@ -19,6 +23,28 @@ import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
 const router = Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const groupTaskUploadDir = path.join(__dirname, '../../uploads/group-tasks');
+
+fs.mkdirSync(groupTaskUploadDir, { recursive: true });
+
+const groupTaskUpload = multer({
+  storage: multer.diskStorage({
+    destination: groupTaskUploadDir,
+    filename: (req, file, cb) => {
+      const safeName = file.originalname
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(-120);
+      cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safeName}`);
+    },
+  }),
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+});
 
 router.use(authenticate);
 router.use(requirePasswordChanged);
@@ -184,15 +210,38 @@ router.delete('/:id', requireRole('teacher', 'admin'), async (req, res, next) =>
 
 router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
-    const [member] = await GroupMember.findOrCreate({
+    const group = await Group.findByPk(req.params.id);
+
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found.' });
+    }
+
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({ message: 'You can only manage your own groups.' });
+    }
+
+    const existingMemberCount = await GroupMember.count({
+      where: { groupId: req.params.id },
+    });
+
+    const [member, created] = await GroupMember.findOrCreate({
       where: {
         groupId: req.params.id,
         studentId: req.body.studentId,
       },
+      defaults: {
+        groupRole: existingMemberCount === 0 ? 'leader' : 'member',
+      },
     });
+
+    if (!created && !member.groupRole) {
+      member.groupRole = 'member';
+      await member.save();
+    }
 
     await audit(req.user.id, 'group.add_member', 'group', Number(req.params.id), {
       studentId: req.body.studentId,
+      groupRole: member.groupRole,
     });
 
     emitRealtime('teachers', 'group:member_added', {
@@ -202,6 +251,75 @@ router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, ne
     });
 
     res.status(201).json({ member });
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+router.post('/:id/members/:studentId/leader', requireRole('teacher', 'admin'), async (req, res, next) => {
+  try {
+    const group = await Group.findByPk(req.params.id);
+
+    if (!group) {
+      return res.status(404).json({ message: 'Group not found.' });
+    }
+
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({ message: 'You can only manage your own groups.' });
+    }
+
+    const targetMember = await GroupMember.findOne({
+      where: {
+        groupId: req.params.id,
+        studentId: req.params.studentId,
+      },
+    });
+
+    if (!targetMember) {
+      return res.status(404).json({ message: 'Group member not found.' });
+    }
+
+    await GroupMember.update(
+      { groupRole: 'member' },
+      { where: { groupId: req.params.id } }
+    );
+
+    await targetMember.update({ groupRole: 'leader' });
+
+    await audit(req.user.id, 'group.set_leader', 'group', Number(req.params.id), {
+      studentId: Number(req.params.studentId),
+    });
+
+    emitRealtime('teachers', 'group:leader_updated', {
+      groupId: Number(req.params.id),
+      studentId: Number(req.params.studentId),
+      message: 'Group leader updated',
+    });
+
+    const groupTasks = await GroupTask.findAll({
+      where: { groupId: group.id },
+      attributes: ['id'],
+    });
+
+    const groupTaskIds = groupTasks.map(task => task.id);
+
+    if (groupTaskIds.length) {
+      await GroupTaskCompletion.update(
+        {
+          submittedByStudentId: Number(req.params.studentId),
+          studentRole: 'Leader',
+        },
+        {
+          where: {
+            groupTaskId: groupTaskIds,
+            verificationStatus: 'pending',
+          },
+        }
+      );
+    }
+
+    res.json({ member: targetMember });
   } catch (err) {
     next(err);
   }
@@ -292,7 +410,7 @@ router.delete('/tasks/:taskId', requireRole('teacher', 'admin'), async (req, res
   }
 });
 
-router.post('/tasks/:taskId/complete', requireRole('student'), async (req, res, next) => {
+router.post('/tasks/:taskId/complete', requireRole('student'), groupTaskUpload.single('submissionFile'), async (req, res, next) => {
   try {
     const task = await GroupTask.findByPk(req.params.taskId);
 
@@ -300,44 +418,87 @@ router.post('/tasks/:taskId/complete', requireRole('student'), async (req, res, 
       return res.status(404).json({ message: 'Task not found.' });
     }
 
-    const [completion, created] = await GroupTaskCompletion.findOrCreate({
+    const leaderMembership = await GroupMember.findOne({
       where: {
-        groupTaskId: task.id,
+        groupId: task.groupId,
         studentId: req.student.id,
-      },
-      defaults: {
-        verificationStatus: 'pending',
-        submittedAt: new Date(),
-        xpAwarded: 0,
+        groupRole: 'leader',
       },
     });
 
-    if (!created && completion.verificationStatus === 'returned') {
-      await completion.update({
-        verificationStatus: 'pending',
-        submittedAt: new Date(),
-        teacherFeedback: null,
+    if (!leaderMembership) {
+      return res.status(403).json({
+        message: 'Only the assigned group leader can submit this group task.',
       });
     }
 
-    if (created || completion.verificationStatus === 'pending') {
-      notifyTeacherAndLeaderboard({
-        type: 'group_task_pending',
-        studentId: req.student.id,
-        studentName: req.student.name,
-        groupTaskId: task.id,
-        xp: 0,
-        message: `${req.student.name} submitted group task ${task.title} for teacher check`,
-      });
+    const members = await GroupMember.findAll({
+      where: { groupId: task.groupId },
+    });
+
+    if (!members.length) {
+      return res.status(422).json({ message: 'This group has no members.' });
     }
+
+    const filePayload = {
+      studentRole: String(req.body?.studentRole || 'Leader').trim() || 'Leader',
+      submittedByStudentId: req.student.id,
+      fileName: req.file?.originalname || null,
+      filePath: req.file ? `/uploads/group-tasks/${req.file.filename}` : null,
+      fileMimeType: req.file?.mimetype || null,
+      fileSize: req.file?.size || null,
+    };
+
+    const completions = [];
+
+    for (const member of members) {
+      const [completion, created] = await GroupTaskCompletion.findOrCreate({
+        where: {
+          groupTaskId: task.id,
+          studentId: member.studentId,
+        },
+        defaults: {
+          verificationStatus: 'pending',
+          submittedAt: new Date(),
+          xpAwarded: 0,
+          ...filePayload,
+        },
+      });
+
+      if (!created && completion.verificationStatus !== 'approved') {
+        await completion.update({
+          verificationStatus: 'pending',
+          submittedAt: new Date(),
+          teacherFeedback: null,
+          studentRole: filePayload.studentRole,
+          submittedByStudentId: filePayload.submittedByStudentId,
+          fileName: filePayload.fileName || completion.fileName || null,
+          filePath: filePayload.filePath || completion.filePath || null,
+          fileMimeType: filePayload.fileMimeType || completion.fileMimeType || null,
+          fileSize: filePayload.fileSize || completion.fileSize || null,
+        });
+      }
+
+      completions.push(completion);
+    }
+
+    notifyTeacherAndLeaderboard({
+      type: 'group_task_pending',
+      studentId: req.student.id,
+      studentName: req.student.name,
+      groupTaskId: task.id,
+      xp: 0,
+      message: `${req.student.name} submitted group task ${task.title} for group teacher check`,
+    });
 
     res.json({
-      completion,
+      completion: completions.find(item => Number(item.studentId) === Number(req.student.id)) || completions[0],
+      groupSubmission: true,
+      submittedByStudentId: req.student.id,
+      affectedMembers: members.length,
       xpAwarded: 0,
-      pendingTeacherCheck: completion.verificationStatus === 'pending',
-      message: completion.verificationStatus === 'approved'
-        ? 'This group task was already approved.'
-        : 'Group task submitted. Waiting for teacher check.',
+      pendingTeacherCheck: true,
+      message: 'Group task submitted. Waiting for teacher check.',
     });
   } catch (err) {
     next(err);
@@ -352,16 +513,26 @@ router.get('/task-completions/pending', requireRole('teacher', 'admin'), async (
     });
 
     const rows = [];
+    const seenTaskIds = new Set();
 
     for (const completion of completions) {
       const item = completion.toJSON ? completion.toJSON() : completion;
-      const student = await Student.findByPk(item.studentId);
+
+      if (seenTaskIds.has(Number(item.groupTaskId))) {
+        continue;
+      }
+
+      seenTaskIds.add(Number(item.groupTaskId));
+
       const task = await GroupTask.findByPk(item.groupTaskId);
       const group = task?.groupId ? await Group.findByPk(task.groupId) : null;
+      const submitterId = item.submittedByStudentId || item.studentId;
+      const student = await Student.findByPk(submitterId);
 
       rows.push({
         id: item.id,
-        studentId: item.studentId,
+        studentId: submitterId,
+        submittedByStudentId: submitterId,
         studentName: student?.name || 'Student',
         studentCode: student?.studentCode || '',
         gradeLevel: student?.gradeLevel || null,
@@ -373,6 +544,11 @@ router.get('/task-completions/pending', requireRole('teacher', 'admin'), async (
         groupName: group?.name || 'Group',
         verificationStatus: item.verificationStatus,
         submittedAt: item.submittedAt || item.createdAt,
+        studentRole: item.studentRole || 'Leader',
+        fileName: item.fileName || '',
+        fileUrl: item.filePath ? `${req.protocol}://${req.get('host')}${item.filePath}` : '',
+        fileMimeType: item.fileMimeType || '',
+        fileSize: item.fileSize || null,
       });
     }
 
@@ -396,85 +572,134 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
       return res.status(404).json({ message: 'Task not found.' });
     }
 
-    const completion = await GroupTaskCompletion.findOne({
+    const submitterId = Number(req.params.studentId);
+
+    const submitterCompletion = await GroupTaskCompletion.findOne({
       where: {
         groupTaskId: task.id,
-        studentId: req.params.studentId,
+        submittedByStudentId: submitterId,
+      },
+    }) || await GroupTaskCompletion.findOne({
+      where: {
+        groupTaskId: task.id,
+        studentId: submitterId,
       },
     });
 
-    if (!completion) {
+    if (!submitterCompletion) {
       return res.status(404).json({ message: 'Group task completion not found.' });
     }
 
-    const alreadyApproved = completion.verificationStatus === 'approved';
-    let xpAwarded = 0;
+    const members = await GroupMember.findAll({
+      where: { groupId: task.groupId },
+      include: [Student],
+    });
 
-    if (!alreadyApproved && Number(completion.xpAwarded || 0) <= 0) {
-      await awardXp(
-        completion.studentId,
-        task.xpReward,
-        'group_task',
-        task.id,
-        `Teacher approved ${task.title}`
-      );
-
-      xpAwarded = task.xpReward;
+    if (!members.length) {
+      return res.status(422).json({ message: 'This group has no members to approve.' });
     }
 
-    await completion.update({
-      verificationStatus: 'approved',
-      reviewedAt: new Date(),
-      reviewedByTeacherId: req.teacher?.id || null,
-      teacherFeedback: req.body?.teacherFeedback || null,
-      xpAwarded: Number(completion.xpAwarded || 0) || xpAwarded,
-      completedAt: completion.completedAt || new Date(),
-    });
+    let totalXpAwarded = 0;
+    let approvedCount = 0;
 
-    await audit(req.user.id, 'group_task.approve_completion', 'group_task', task.id, {
-      studentId: completion.studentId,
-      groupTaskCompletionId: completion.id,
-      xpAwarded,
-    });
+    for (const member of members) {
+      const [completion] = await GroupTaskCompletion.findOrCreate({
+        where: {
+          groupTaskId: task.id,
+          studentId: member.studentId,
+        },
+        defaults: {
+          verificationStatus: 'pending',
+          submittedAt: submitterCompletion.submittedAt || new Date(),
+          submittedByStudentId: submitterCompletion.submittedByStudentId || submitterId,
+          studentRole: submitterCompletion.studentRole || 'Leader',
+          fileName: submitterCompletion.fileName || null,
+          filePath: submitterCompletion.filePath || null,
+          fileMimeType: submitterCompletion.fileMimeType || null,
+          fileSize: submitterCompletion.fileSize || null,
+          xpAwarded: 0,
+        },
+      });
 
-    if (!alreadyApproved && xpAwarded > 0) {
-      const student = await Student.findByPk(completion.studentId);
-      const group = task.groupId ? await Group.findByPk(task.groupId) : null;
+      const alreadyApproved = completion.verificationStatus === 'approved';
+      let memberXpAwarded = 0;
 
-      if (student?.userId) {
+      if (!alreadyApproved && Number(completion.xpAwarded || 0) <= 0) {
+        await awardXp(
+          member.studentId,
+          task.xpReward,
+          'group_task',
+          task.id,
+          `Teacher approved group task: ${task.title}`
+        );
+
+        memberXpAwarded = task.xpReward;
+        totalXpAwarded += memberXpAwarded;
+      }
+
+      await completion.update({
+        verificationStatus: 'approved',
+        reviewedAt: new Date(),
+        reviewedByTeacherId: req.teacher?.id || null,
+        teacherFeedback: req.body?.teacherFeedback || null,
+        submittedByStudentId: submitterCompletion.submittedByStudentId || submitterId,
+        studentRole: submitterCompletion.studentRole || completion.studentRole || 'Leader',
+        fileName: submitterCompletion.fileName || completion.fileName || null,
+        filePath: submitterCompletion.filePath || completion.filePath || null,
+        fileMimeType: submitterCompletion.fileMimeType || completion.fileMimeType || null,
+        fileSize: submitterCompletion.fileSize || completion.fileSize || null,
+        xpAwarded: Number(completion.xpAwarded || 0) || memberXpAwarded,
+        completedAt: completion.completedAt || new Date(),
+      });
+
+      approvedCount += 1;
+
+      const student = member.Student || await Student.findByPk(member.studentId);
+
+      if (!alreadyApproved && memberXpAwarded > 0 && student?.userId) {
+        const group = task.groupId ? await Group.findByPk(task.groupId) : null;
+
         await Notification.create({
           userId: student.userId,
           role: 'student',
           type: 'group_task_approved',
           title: 'Team Mission Approved',
-          message: `Teacher approved ${group?.name || 'your team mission'}! +${xpAwarded} XP`,
+          message: `Teacher approved ${group?.name || 'your team mission'}! +${memberXpAwarded} XP`,
           metadata: {
-            studentId: completion.studentId,
+            studentId: member.studentId,
             groupTaskCompletionId: completion.id,
             groupTaskId: task.id,
             groupId: task.groupId || null,
             groupName: group?.name || null,
             taskTitle: task.title,
-            xpAwarded,
+            xpAwarded: memberXpAwarded,
           },
         });
       }
     }
 
+    await audit(req.user.id, 'group_task.approve_group_completion', 'group_task', task.id, {
+      submittedByStudentId: submitterCompletion.submittedByStudentId || submitterId,
+      approvedCount,
+      totalXpAwarded,
+    });
+
     notifyTeacherAndLeaderboard({
       type: 'group_task_approved',
-      studentId: completion.studentId,
+      studentId: submitterCompletion.submittedByStudentId || submitterId,
       groupTaskId: task.id,
-      xp: xpAwarded,
-      message: `Group task approved: ${task.title}`,
+      xp: totalXpAwarded,
+      message: `Group task approved for ${approvedCount} member(s): ${task.title}`,
     });
 
     res.json({
-      completion,
-      xpAwarded,
-      message: alreadyApproved
-        ? 'Group task was already approved.'
-        : 'Group task approved and XP awarded.',
+      completion: submitterCompletion,
+      groupApproval: true,
+      approvedCount,
+      xpAwarded: totalXpAwarded,
+      message: totalXpAwarded
+        ? `Group task approved for ${approvedCount} member(s).`
+        : 'Group task was already approved.',
     });
   } catch (err) {
     next(err);

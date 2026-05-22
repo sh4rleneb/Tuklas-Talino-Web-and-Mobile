@@ -2271,3 +2271,354 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
   stroke-linecap:round;
   stroke-linejoin:round;
 }
+
+
+/* === Grade 3-6 group submission polish START === */
+.g46-group-card{
+  margin-bottom:18px !important;
+  box-shadow:none !important;
+  background:linear-gradient(135deg,#fbfefc 0%,#f7fff9 100%) !important;
+  border:1px solid rgba(46,204,113,.16);
+}
+
+.g46-group-task-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.g46-group-task-head h3{
+  font-size:26px;
+  margin:0 0 6px;
+}
+
+.g46-group-task-head .g46-ref-muted{
+  margin:0;
+}
+
+.g46-group-status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  padding:10px 14px;
+  font-size:13px;
+  font-weight:900;
+  white-space:nowrap;
+  border:1px solid rgba(15,118,82,.12);
+}
+
+.g46-group-status.open{
+  color:#0f5132;
+  background:#ecfdf3;
+}
+
+.g46-group-status.pending{
+  color:#8a5a00;
+  background:#fff4cc;
+}
+
+.g46-group-status.approved{
+  color:#0f5132;
+  background:#dff8e8;
+}
+
+.g46-group-status.returned{
+  color:#8a1f1f;
+  background:#ffe4e4;
+}
+
+.g46-submit-box{
+  margin-top:16px;
+  padding:18px;
+  border:1px solid rgba(46,204,113,.22);
+  border-radius:22px;
+  background:#ffffff;
+  box-shadow:0 12px 28px rgba(15,118,82,.06);
+}
+
+.g46-submit-box.submitted{
+  background:linear-gradient(135deg,#ffffff 0%,#f8fffb 100%);
+}
+
+.g46-submit-box-head{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  margin-bottom:14px;
+}
+
+.g46-submit-box-head strong{
+  display:block;
+  font-size:18px;
+  color:var(--text);
+}
+
+.g46-submit-box-head p{
+  margin:4px 0 0;
+}
+
+.g46-submit-icon{
+  width:42px;
+  height:42px;
+  border-radius:16px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#ecfdf3;
+  box-shadow:inset 0 0 0 1px rgba(46,204,113,.16);
+}
+
+.g46-submit-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  align-items:start;
+}
+
+.g46-submit-field{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.g46-submit-field > span{
+  font-size:14px;
+  font-weight:900;
+  color:var(--green-dark);
+}
+
+.g46-file-hidden{
+  position:absolute;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
+
+.g46-upload-drop{
+  min-height:62px;
+  border:2px dashed rgba(46,204,113,.35);
+  border-radius:18px;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  cursor:pointer;
+  background:#fbfffd;
+  transition:all .2s ease;
+}
+
+.g46-upload-drop:hover{
+  border-color:var(--green);
+  background:#f2fff7;
+}
+
+.g46-upload-icon{
+  width:38px;
+  height:38px;
+  border-radius:14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#ecfdf3;
+  flex:0 0 auto;
+}
+
+.g46-upload-drop strong{
+  display:block;
+  color:var(--text);
+  font-size:14px;
+  line-height:1.2;
+}
+
+.g46-upload-drop small{
+  display:block;
+  margin-top:3px;
+  color:var(--muted);
+  font-weight:700;
+}
+
+.g46-submit-action{
+  margin-top:16px;
+  width:100%;
+  justify-content:center;
+}
+
+.g46-submitted-list{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.g46-submitted-list div{
+  padding:12px 14px;
+  border-radius:16px;
+  background:#f7fff9;
+  border:1px solid rgba(46,204,113,.16);
+}
+
+.g46-submitted-list span{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  margin-bottom:4px;
+}
+
+.g46-submitted-list strong{
+  display:block;
+  color:var(--text);
+  font-size:15px;
+  overflow-wrap:anywhere;
+}
+
+@media (max-width: 860px){
+  .g46-submit-grid,
+  .g46-submitted-list{
+    grid-template-columns:1fr;
+  }
+}
+/* === Grade 3-6 group submission polish END === */
+
+
+/* === Grade 3-6 group submission layout fix START === */
+.g46-ref-panel.g46-group-card{
+  display:block !important;
+  grid-template-columns:none !important;
+  gap:0 !important;
+  width:100% !important;
+  padding:22px !important;
+}
+
+.g46-ref-panel.g46-group-card > .g46-ref-panel-head{
+  margin-bottom:18px;
+}
+
+.g46-ref-panel.g46-group-card .g46-ref-task-row{
+  width:100% !important;
+  display:grid !important;
+  grid-template-columns:58px minmax(0,1fr) !important;
+  align-items:start !important;
+  margin-top:16px;
+}
+
+.g46-ref-panel.g46-group-card .g46-ref-task-row + .g46-ref-task-row{
+  margin-top:18px;
+}
+
+.g46-ref-panel.g46-group-card .g46-submit-box{
+  width:100%;
+  box-sizing:border-box;
+}
+
+.g46-ref-panel.g46-group-card .g46-submit-grid{
+  width:100%;
+}
+/* === Grade 3-6 group submission layout fix END === */
+
+
+/* === Teacher group submission evidence START === */
+.teacher-group-submission-evidence{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:12px 0;
+}
+
+.teacher-group-submission-evidence div{
+  padding:10px 12px;
+  border-radius:14px;
+  background:#f7fff9;
+  border:1px solid rgba(46,204,113,.18);
+}
+
+.teacher-group-submission-evidence span{
+  display:block;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+
+.teacher-group-submission-evidence strong{
+  display:block;
+  color:var(--text);
+  font-size:14px;
+  overflow-wrap:anywhere;
+}
+
+.teacher-file-link{
+  grid-column:1 / -1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:40px;
+  padding:10px 14px;
+  border-radius:14px;
+  background:#ecfdf3;
+  color:var(--green-dark);
+  font-weight:900;
+  text-decoration:none;
+  border:1px solid rgba(46,204,113,.24);
+}
+
+.teacher-file-link:hover{
+  background:#dcfce7;
+}
+
+@media(max-width:760px){
+  .teacher-group-submission-evidence{
+    grid-template-columns:1fr;
+  }
+}
+/* === Teacher group submission evidence END === */
+
+
+/* === Group leader controls START === */
+.teacher-group-member-chip{
+  display:flex !important;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  width:100%;
+  justify-content:space-between;
+}
+
+.teacher-group-member-chip small{
+  padding:4px 8px;
+  border-radius:999px;
+  background:#f1f5f9;
+  color:var(--muted);
+  font-weight:900;
+}
+
+.teacher-group-member-chip.leader small{
+  background:#dcfce7;
+  color:var(--green-dark);
+}
+
+.teacher-group-member-chip button{
+  border:0;
+  border-radius:999px;
+  padding:6px 10px;
+  background:#ecfdf3;
+  color:var(--green-dark);
+  font-weight:900;
+  cursor:pointer;
+}
+
+.teacher-group-member-chip button:hover{
+  background:#dcfce7;
+}
+
+.g46-member-waiting{
+  padding:4px 0;
+}
+/* === Group leader controls END === */

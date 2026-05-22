@@ -228,7 +228,8 @@ export const Group = sequelize.define('Group', {
 
 export const GroupMember = sequelize.define('GroupMember', {
   groupId: { type: DataTypes.INTEGER, allowNull: false },
-  studentId: { type: DataTypes.INTEGER, allowNull: false }
+  studentId: { type: DataTypes.INTEGER, allowNull: false },
+  groupRole: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'member' }
 }, { tableName: 'group_members' });
 
 export const GroupTask = sequelize.define('GroupTask', {
@@ -243,6 +244,7 @@ export const GroupTask = sequelize.define('GroupTask', {
 export const GroupTaskCompletion = sequelize.define('GroupTaskCompletion', {
   groupTaskId: { type: DataTypes.INTEGER, allowNull: false },
   studentId: { type: DataTypes.INTEGER, allowNull: false },
+  submittedByStudentId: { type: DataTypes.INTEGER, allowNull: true, field: 'submitted_by_student_id' },
   verificationStatus: {
     type: DataTypes.ENUM('pending', 'approved', 'returned'),
     allowNull: false,
@@ -252,6 +254,11 @@ export const GroupTaskCompletion = sequelize.define('GroupTaskCompletion', {
   reviewedAt: { type: DataTypes.DATE, allowNull: true },
   reviewedByTeacherId: { type: DataTypes.INTEGER, allowNull: true },
   teacherFeedback: { type: DataTypes.TEXT, allowNull: true },
+  studentRole: { type: DataTypes.STRING(80), allowNull: true },
+  fileName: { type: DataTypes.STRING(255), allowNull: true },
+  filePath: { type: DataTypes.STRING(255), allowNull: true },
+  fileMimeType: { type: DataTypes.STRING(120), allowNull: true },
+  fileSize: { type: DataTypes.INTEGER, allowNull: true },
   xpAwarded: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   completedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, { tableName: 'group_task_completions' });

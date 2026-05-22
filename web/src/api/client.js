@@ -31,6 +31,28 @@ export async function api(path, options = {}) {
   return data;
 }
 
+export async function uploadForm(path, formData, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const token = getToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    method: options.method || 'POST',
+    headers,
+    body: formData
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const data = contentType.includes('application/json') ? await response.json() : await response.text();
+  if (!response.ok) {
+    const error = new Error(data?.message || 'Request failed');
+    error.details = data?.details;
+    throw error;
+  }
+  return data;
+}
+
 export async function downloadFile(path, fallbackFilename = 'download') {
   const headers = new Headers();
   const token = getToken();

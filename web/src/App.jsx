@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { api, downloadFile } from './api/client';
+import { api, downloadFile, uploadForm } from './api/client';
 import { useAuth } from './contexts/AuthContext';
 import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
@@ -698,6 +698,15 @@ if (role === 'admin') {
     });
   }
 
+  async function teacherSetGroupLeader(groupId, studentId) {
+    if (!groupId || !studentId) return notify('Missing group leader details.', 'warn');
+    await safeRun(async () => {
+      await api(`/groups/${groupId}/members/${studentId}/leader`, { method: 'POST', body: {} });
+      notify('Group leader updated.');
+      await loadTeacherDashboard();
+    });
+  }
+
   async function teacherAddTask() {
     await safeRun(async () => {
       const groupId = read('t-task-group');
@@ -982,10 +991,20 @@ async function archiveTeacher(id) {
   });
 }
 
-  async function completeGroupTask(taskId) {
+  async function completeGroupTask(taskId, submission = {}) {
     await safeRun(async () => {
-      const data = await api(`/groups/tasks/${taskId}/complete`, { method: 'POST' });
-      notify(data.xpAwarded ? `Task completed! +${data.xpAwarded} XP` : 'Task already completed.');
+      let data;
+
+      if (submission.studentRole || submission.file) {
+        const formData = new FormData();
+        if (submission.studentRole) formData.append('studentRole', submission.studentRole);
+        if (submission.file) formData.append('submissionFile', submission.file);
+        data = await uploadForm(`/groups/tasks/${taskId}/complete`, formData);
+      } else {
+        data = await api(`/groups/tasks/${taskId}/complete`, { method: 'POST' });
+      }
+
+      notify(data.pendingTeacherCheck ? 'Task submitted. Waiting for teacher check.' : (data.xpAwarded ? `Task completed! +${data.xpAwarded} XP` : 'Task already completed.'));
       await loadStudentDashboard();
     });
   }
@@ -1419,6 +1438,7 @@ async function archiveTeacher(id) {
           createGroup={teacherCreateGroup}
           addTask={teacherAddTask}
           addMember={teacherAddMember}
+          setGroupLeader={teacherSetGroupLeader}
           approveGroupTaskCompletion={teacherApproveGroupTaskCompletion}
           createLesson={teacherCreateLesson}
           exportStudentsCSV={exportStudentsCSV}
@@ -7627,10 +7647,8 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
 function StudentGroups({ data, go, completeGroupTask }) {
   const early = Number(data?.student?.gradeLevel || 4) <= 2;
   const groups = data?.groups || [];
-  const roles = rolesForGradeLevel(data?.student?.gradeLevel);
-  const [selectedRoles, setSelectedRoles] = useState({});
-  const [taskNotes, setTaskNotes] = useState({});
-  const [taskRatings, setTaskRatings] = useState({});
+  const [taskRoles, setTaskRoles] = useState({});
+  const [taskFiles, setTaskFiles] = useState({});
   const [submittedTasks, setSubmittedTasks] = useState({});
 
   if (early) {
@@ -7638,8 +7656,21 @@ function StudentGroups({ data, go, completeGroupTask }) {
   }
 
   async function submitGroupTask(taskId) {
+    const studentRole = String(taskRoles[taskId] || 'Leader').trim();
+    const file = taskFiles[taskId] || null;
+
+    if (!studentRole) {
+      window.alert('Please type your role in the group before submitting.');
+      return;
+    }
+
+    if (!file) {
+      window.alert('Please upload your group output file before submitting.');
+      return;
+    }
+
     setSubmittedTasks(prev => ({ ...prev, [taskId]: true }));
-    await completeGroupTask(taskId);
+    await completeGroupTask(taskId, { studentRole, file });
   }
 
   return (
@@ -7649,18 +7680,18 @@ function StudentGroups({ data, go, completeGroupTask }) {
       go={go}
       icon="👥"
       title="Group Collaboration"
-      subtitle="Choose a role, submit group output, and record your contribution."
+      subtitle="Submit your group output and role for teacher review."
     >
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
             <h2>Group Tasks</h2>
-            <p className="g46-ref-muted">Teachers can judge collaboration better when students show role, output, and contribution evidence.</p>
+            <p className="g46-ref-muted">Upload your group output, add your role, and wait for your teacher to review it.</p>
           </div>
         </div>
 
         {groups.map(group => (
-          <div className="g46-ref-panel" key={group.id} style={{ marginBottom: 14, boxShadow: 'none', background: '#fbfefc' }}>
+          <div className="g46-ref-panel g46-group-card" key={group.id}>
             <div className="g46-ref-panel-head">
               <div>
                 <h3>👥 {group.name}</h3>
@@ -7669,59 +7700,111 @@ function StudentGroups({ data, go, completeGroupTask }) {
               <span className="g46-ref-tag">{group.tasks?.length || 0} task{(group.tasks?.length || 0) === 1 ? '' : 's'}</span>
             </div>
 
-            <div className="g46-ref-filter-row" style={{ marginBottom: 14 }}>
-              {roles.map(role => (
-                <button
-                  type="button"
-                  key={`${group.id}-${role.id}`}
-                  className={selectedRoles[group.id] === role.id ? 'active' : ''}
-                  onClick={() => setSelectedRoles(prev => ({ ...prev, [group.id]: role.id }))}
-                  title={role.helper}
-                >
-                  {role.icon} {role.label}
-                </button>
-              ))}
-            </div>
-
             {(group.tasks || []).map(task => {
-              const pct = taskCompletionPercent(task, submittedTasks[task.id]);
-              const band = effectivenessBand(pct);
+              const completion = task.completion || task.completions?.[0] || null;
+              const isApproved = completion?.verificationStatus === 'approved';
+              const isPending = completion?.verificationStatus === 'pending' || submittedTasks[task.id];
+              const isReturned = completion?.verificationStatus === 'returned';
+              const isLocked = isApproved || isPending;
+              const statusLabel = isApproved ? 'Approved' : isPending ? 'Waiting for teacher check' : isReturned ? 'Returned for revision' : 'Not submitted';
+              const isGroupLeader = group.currentStudentIsLeader || group.currentStudentGroupRole === 'leader';
+              const submittedRole = taskRoles[task.id] || completion?.studentRole || (isGroupLeader ? 'Leader' : '');
+              const submittedFileName = taskFiles[task.id]?.name || completion?.fileName || '';
+              const pct = taskCompletionPercent(task, submittedTasks[task.id] || isApproved);
               return (
                 <div className="g46-ref-task-row" key={task.id} style={{ gridTemplateColumns: '58px minmax(0, 1fr)', alignItems: 'start' }}>
-                  <span className="g46-ref-card-icon">{submittedTasks[task.id] ? '✅' : '📝'}</span>
+                  <span className="g46-ref-card-icon">{isApproved ? '🏆' : isPending ? '⏳' : '📝'}</span>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div className="g46-group-task-head">
                       <div>
-                        <h3 style={{ fontSize: 26, marginBottom: 6 }}>{task.title}</h3>
-                        <p className="g46-ref-muted" style={{ margin: 0 }}>Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP • {band.icon} {band.label}</p>
+                        <h3>{task.title}</h3>
+                        <p className="g46-ref-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
                       </div>
-                      <button type="button" className="g46-ref-primary-btn" onClick={() => submitGroupTask(task.id)}>
-                        {submittedTasks[task.id] ? 'Submitted' : 'Submit Task'}
-                      </button>
+                      <span className={`g46-group-status ${isApproved ? 'approved' : isPending ? 'pending' : isReturned ? 'returned' : 'open'}`}>
+                        {statusLabel}
+                      </span>
                     </div>
 
                     <div className="g46-ref-mini-track" style={{ marginTop: 12 }}><span style={{ width: `${pct}%` }} /></div>
+                    <div className={`g46-submit-box ${isLocked ? 'submitted' : ''}`}>
+                      {!isLocked ? (
+                        isGroupLeader ? (
+                        <>
+                          <div className="g46-submit-box-head">
+                            <span className="g46-submit-icon">📤</span>
+                            <div>
+                              <strong>Submit your task here</strong>
+                              <p className="g46-ref-muted">Type your role, upload your group output, then submit it for teacher checking.</p>
+                            </div>
+                          </div>
 
-                    <textarea
-                      className="input-field"
-                      rows="3"
-                      value={taskNotes[task.id] || ''}
-                      onChange={(e) => setTaskNotes(prev => ({ ...prev, [task.id]: e.target.value }))}
-                      placeholder="Write your group answer, summary, or contribution note here..."
-                      style={{ marginTop: 12, minHeight: 92 }}
-                    />
+                          <div className="g46-submit-grid">
+                            <label className="g46-submit-field" htmlFor={`group-role-${task.id}`}>
+                              <span>My Role in the Group</span>
+                              <input
+                                className="input-field"
+                                id={`group-role-${task.id}`}
+                                placeholder="Example: Leader, Writer, Presenter, Researcher"
+                                value={submittedRole}
+                                onChange={(event) => setTaskRoles(prev => ({ ...prev, [task.id]: event.target.value }))}
+                              />
+                            </label>
 
-                    <div className="g46-ref-filter-row" style={{ marginTop: 12, marginBottom: 0 }}>
-                      {['I helped a lot', 'I helped some', 'I need to participate more'].map(choice => (
-                        <button
-                          type="button"
-                          key={choice}
-                          className={taskRatings[task.id] === choice ? 'active' : ''}
-                          onClick={() => setTaskRatings(prev => ({ ...prev, [task.id]: choice }))}
-                        >
-                          {choice}
-                        </button>
-                      ))}
+                            <div className="g46-submit-field">
+                              <span>Upload Group Output</span>
+                              <input
+                                className="g46-file-hidden"
+                                id={`group-file-${task.id}`}
+                                type="file"
+                                onChange={(event) => setTaskFiles(prev => ({ ...prev, [task.id]: event.target.files?.[0] || null }))}
+                              />
+                              <label className="g46-upload-drop" htmlFor={`group-file-${task.id}`}>
+                                <span className="g46-upload-icon">📎</span>
+                                <strong>{submittedFileName || 'Click to upload group output'}</strong>
+                                <small>{submittedFileName ? 'File selected and ready to submit' : 'PDF, image, document, or screenshot'}</small>
+                              </label>
+                            </div>
+                          </div>
+
+                          <button type="button" className="g46-ref-primary-btn g46-submit-action" onClick={() => submitGroupTask(task.id)}>
+                            Submit Group Output
+                          </button>
+                        </>
+                        ) : (
+                          <div className="g46-member-waiting">
+                            <div className="g46-submit-box-head">
+                              <span className="g46-submit-icon">👥</span>
+                              <div>
+                                <strong>Your group leader will submit the output.</strong>
+                                <p className="g46-ref-muted">You can view this task here. Once your leader submits, your teacher will review it for the whole group.</p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      ) : (
+                        <div className="g46-submitted-summary">
+                          <div className="g46-submit-box-head">
+                            <span className="g46-submit-icon">{isApproved ? '🏆' : '⏳'}</span>
+                            <div>
+                              <strong>{isApproved ? 'Group output approved' : 'Group output submitted'}</strong>
+                              <p className="g46-ref-muted">
+                                {isApproved ? 'Your teacher approved this task and XP has been awarded.' : 'Waiting for your teacher to review your group output.'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="g46-submitted-list">
+                            <div>
+                              <span>Role</span>
+                              <strong>{submittedRole || '—'}</strong>
+                            </div>
+                            <div>
+                              <span>File</span>
+                              <strong>{submittedFileName || 'Uploaded group output'}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -8224,6 +8307,7 @@ function TeacherDashboard({
   createGroup,
   addTask,
   addMember,
+  setGroupLeader,
   approveGroupTaskCompletion,
   createLesson,
   exportStudentsCSV,
@@ -9168,7 +9252,7 @@ function TeacherDashboard({
                 <div>
                   <div className="lms-section-label">Teacher Verification</div>
                   <h3>Pending Group Checks</h3>
-                  <p>Approve group participation before XP is awarded.</p>
+                  <p>Review one leader submission before XP is awarded to the group.</p>
                 </div>
                 <span className="lms-mini-pill">⏳ {pendingGroupRows.length} pending</span>
               </div>
@@ -9186,6 +9270,27 @@ function TeacherDashboard({
                           </p>
                         </div>
                         <span className="lms-mini-pill">Waiting</span>
+                      </div>
+
+                      <div className="teacher-group-submission-evidence">
+                        <div>
+                          <span>Submitted By / Role</span>
+                          <strong>{row.studentName || 'Leader'} • {row.studentRole || 'Leader'}</strong>
+                        </div>
+                        <div>
+                          <span>Submitted File</span>
+                          <strong>{row.fileName || 'No file attached'}</strong>
+                        </div>
+                        {row.fileUrl && (
+                          <a
+                            className="teacher-file-link"
+                            href={row.fileUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open File
+                          </a>
+                        )}
                       </div>
 
                       <button
@@ -9375,10 +9480,18 @@ function TeacherDashboard({
                               <div className="teacher-group-chip-list">
                                 {members.map(member => {
                                   const student = member.Student || member.student || member;
+                                  const studentId = student.id || member.studentId;
+                                  const isLeader = member.groupRole === 'leader';
                                   return (
-                                    <span className="teacher-group-chip" key={member.id || student.id || student.studentCode || student.name}>
-                                      👤 {student.name || 'Student'}
-                                    </span>
+                                    <div className={`teacher-group-chip teacher-group-member-chip ${isLeader ? 'leader' : ''}`} key={member.id || studentId || student.studentCode || student.name}>
+                                      <span>👤 {student.name || 'Student'}</span>
+                                      <small>{isLeader ? 'Leader' : 'Member'}</small>
+                                      {!isLeader && (
+                                        <button type="button" onClick={() => setGroupLeader(group.id, studentId)}>
+                                          Set as Leader
+                                        </button>
+                                      )}
+                                    </div>
                                   );
                                 })}
                               </div>
