@@ -861,6 +861,7 @@
 .input-with-icon{display:flex;align-items:center;gap:12px;border:2.5px solid var(--green-light);border-radius:18px;padding:0 14px;background:white;transition:all .2s;}
 .input-with-icon:focus-within{border-color:var(--green);box-shadow:0 0 0 4px rgba(46,204,113,.12);}
 .input-with-icon .input-field{border:0;border-radius:0;padding:16px 4px;box-shadow:none;background:transparent;}
+.input-with-icon .input-field:placeholder-shown ~ .input-check{display:none;}
 .input-with-icon .input-check{color:var(--green-dark);font-weight:900;border:2px solid var(--green);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;}
 .login-main-btn{width:100%;justify-content:center;font-size:18px;margin-top:18px;min-height:56px;box-shadow:0 14px 32px rgba(46,204,113,.24);}
 .secure-note{text-align:center;font-size:13px;margin-top:8px;color:#77908A;font-weight:900;}

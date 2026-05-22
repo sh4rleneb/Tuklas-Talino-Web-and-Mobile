@@ -1,12 +1,35 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AVATARS } from '../../constants/studentConstants';
+import { api } from '../../api/client';
 
 export function StudentLogin({ go, selectedAvatar, setSelectedAvatar, onLogin }) {
+  const [studentIdValue, setStudentIdValue] = useState('');
+  const [studentIdExists, setStudentIdExists] = useState(false);
+
+  useEffect(() => {
+    const value = studentIdValue.trim();
+
+    setStudentIdExists(false);
+
+    if (value.length < 4) return;
+
+    const timeout = setTimeout(async () => {
+      try {
+        const data = await api(`/auth/check-student/${encodeURIComponent(value)}`);
+        setStudentIdExists(Boolean(data.exists));
+      } catch {
+        setStudentIdExists(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [studentIdValue]);
+
   return <>
     <div className="top-nav login-top-nav login-student-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-home')}>← Home</button><div className="logo">🎒 Student Login</div><div className="login-nav-pill">⭐ Tuklas. Matuto. Magsaya!</div></div>
     <div className="login-stage student-stage"><div className="login-shell student-shell">
       <aside className="login-visual-card student-visual-card"><div className="login-sparkles">✦</div><h2>Mag-login,<br />Estudyante! 👋</h2><p>Piliin ang avatar mo at ilagay ang Student ID para magpatuloy.</p><div className="student-hero-illustration login-hero-png-wrap" aria-hidden="true"><img src="/login-student-girl.png" alt="" className="login-hero-png student" /></div><div className="login-info-card"><span className="info-icon">🛡️</span><div><b>Ligtas • Masaya • Makabuluhan</b><br /><span>Tuklas Talino, kasama mo sa bawat hakbang.</span></div></div></aside>
-      <section className="login-form-panel student-form-panel"><div className="login-form-heading"><span className="heading-badge">👤</span><div><h3>Pumili ng Avatar</h3><p>Piliin ang avatar na gusto mong gamitin.</p></div></div><div className="avatar-grid avatar-grid-v2" id="stu-avatar-grid">{AVATARS.map(a => <button type="button" className={`avatar-circle ${selectedAvatar === a ? 'selected' : ''}`} onClick={() => setSelectedAvatar(a)} key={a}>{a}</button>)}</div><div className="login-divider" /><label className="login-label" htmlFor="stu-id">🪪 Student ID</label><div className="input-with-icon"><span>👤</span><input className="input-field" id="stu-id" placeholder="Halimbawa: STU-2025-001" /><span className="input-check">✓</span></div><label className="login-label" htmlFor="stu-password">🔒 Password</label><div className="input-with-icon"><span>🔐</span><input className="input-field" id="stu-password" placeholder="Default: student123" type="password" /></div><button className="btn btn-green login-main-btn" onClick={onLogin}>✨ Login</button><p className="secure-note">🔒 Ang iyong impormasyon ay ligtas at protektado.</p></section>
+      <section className="login-form-panel student-form-panel"><div className="login-form-heading"><span className="heading-badge">👤</span><div><h3>Pumili ng Avatar</h3><p>Piliin ang avatar na gusto mong gamitin.</p></div></div><div className="avatar-grid avatar-grid-v2" id="stu-avatar-grid">{AVATARS.map(a => <button type="button" className={`avatar-circle ${selectedAvatar === a ? 'selected' : ''}`} onClick={() => setSelectedAvatar(a)} key={a}>{a}</button>)}</div><div className="login-divider" /><label className="login-label" htmlFor="stu-id">🪪 Student ID</label><div className="input-with-icon"><span>👤</span><input className="input-field" id="stu-id" placeholder="Halimbawa: STU-2025-001" value={studentIdValue} onChange={(event) => setStudentIdValue(event.target.value)} />{studentIdExists && <span className="input-check">✓</span>}</div><label className="login-label" htmlFor="stu-password">🔒 Password</label><div className="input-with-icon"><span>🔐</span><input className="input-field" id="stu-password" placeholder="Default: student123" type="password" /></div><button className="btn btn-green login-main-btn" onClick={onLogin}>✨ Login</button><p className="secure-note">🔒 Ang iyong impormasyon ay ligtas at protektado.</p></section>
     </div></div>
   </>;
 }
