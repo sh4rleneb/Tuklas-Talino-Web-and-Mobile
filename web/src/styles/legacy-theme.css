@@ -1594,3 +1594,379 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
 @media(max-width:1260px){.g46-lite-module-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
 @media(max-width:860px){.g46-lite-module-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:540px){.g46-lite-module-grid{grid-template-columns:1fr;}.g46-lite-module-card{min-height:150px;}}
+
+/* === Tuklas Talino landing layout polish START === */
+@media (min-width: 901px) {
+  .tt-lms-nav {
+    padding-top: 18px;
+    padding-bottom: 18px;
+    gap: 16px;
+  }
+
+  .tt-main-menu {
+    gap: 16px;
+  }
+
+  .tt-main-menu button {
+    padding: 10px 6px;
+  }
+
+  .tt-main-menu button.active:after {
+    left: 10px;
+    right: 10px;
+    bottom: -20px;
+    height: 3px;
+  }
+
+  .tt-home-main {
+    width: min(1120px, calc(100% - 56px));
+    gap: 18px;
+  }
+
+  .tt-hero-card {
+    border-radius: 34px;
+    overflow: hidden;
+    box-shadow: 0 24px 70px rgba(91, 126, 158, .12);
+  }
+
+  .tt-hero-copy {
+    padding: 46px 48px;
+  }
+
+  .tt-hero-copy h1 {
+    max-width: 11.5ch;
+  }
+
+  .tt-role-section,
+  .tt-section {
+    margin-top: 10px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .tt-home-main {
+    width: min(1080px, calc(100% - 72px));
+  }
+}
+/* === Tuklas Talino landing layout polish END === */
+
+/* === Tuklas Talino public page tabs polish START === */
+.tt-public-page {
+  display: grid;
+  gap: 24px;
+}
+
+.tt-page-intro {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(241,255,246,.94));
+}
+
+.tt-page-intro:after {
+  content: "";
+  position: absolute;
+  right: -80px;
+  top: -70px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: rgba(46,204,113,.10);
+}
+
+.tt-page-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: #ECFAEF;
+  color: #0B934C;
+  font-size: 12px;
+  font-weight: 1000;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 16px;
+}
+
+.tt-page-intro h1 {
+  position: relative;
+  z-index: 1;
+  font-family: 'Fredoka One', cursive;
+  font-size: 42px;
+  line-height: 1.12;
+  color: #12384C;
+  margin: 0 0 14px;
+  max-width: 760px;
+}
+
+.tt-page-intro p {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  max-width: 820px;
+  color: #52697A;
+  font-size: 17px;
+  line-height: 1.7;
+  font-weight: 850;
+}
+
+.tt-system-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.tt-system-grid div {
+  padding: 22px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #F8FFFA, #FFFFFF);
+  border: 1px solid #DBF0E0;
+  box-shadow: 0 8px 22px rgba(60,103,135,.07);
+}
+
+.tt-system-grid span {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: #ECFAEF;
+  font-size: 30px;
+  margin-bottom: 14px;
+}
+
+.tt-system-grid strong {
+  display: block;
+  color: #17334A;
+  font-size: 16px;
+  font-weight: 1000;
+  margin-bottom: 6px;
+}
+
+.tt-system-grid small {
+  color: #536B7A;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.5;
+}
+
+.tt-about-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.tt-about-split article {
+  border-radius: 24px;
+  padding: 26px;
+  background: linear-gradient(135deg, #F4FAFF, #FFFFFF);
+  border: 1px solid #DDEFFF;
+}
+
+.tt-about-split article:nth-child(2) {
+  background: linear-gradient(135deg, #FBF6FF, #FFFFFF);
+  border-color: #EFE3FF;
+}
+
+.tt-about-split span {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 22px;
+  background: white;
+  font-size: 34px;
+  box-shadow: 0 10px 22px rgba(60,103,135,.08);
+  margin-bottom: 16px;
+}
+
+.tt-about-split h2 {
+  margin: 0 0 10px;
+  font-family: 'Fredoka One', cursive;
+  color: #17334A;
+  font-size: 24px;
+}
+
+.tt-about-split p {
+  margin: 0;
+  color: #52697A;
+  font-weight: 850;
+  line-height: 1.7;
+}
+
+.tt-flow-list {
+  display: grid;
+  gap: 14px;
+}
+
+.tt-flow-step {
+  display: grid;
+  grid-template-columns: 46px 64px 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 22px;
+  background: #F8FFFA;
+  border: 1px solid #DBF0E0;
+}
+
+.tt-flow-number {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #0E9F53;
+  color: white;
+  font-weight: 1000;
+}
+
+.tt-flow-step > span {
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background: white;
+  font-size: 30px;
+  box-shadow: 0 10px 20px rgba(60,103,135,.08);
+}
+
+.tt-flow-step h3 {
+  margin: 0 0 5px;
+  color: #17334A;
+  font-size: 17px;
+  font-weight: 1000;
+}
+
+.tt-flow-step p {
+  margin: 0;
+  color: #52697A;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 850;
+}
+
+.tt-help-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.tt-help-card {
+  padding: 24px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #FFFFFF, #F8FFFA);
+  border: 1px solid #DBF0E0;
+  box-shadow: 0 8px 22px rgba(60,103,135,.07);
+}
+
+.tt-help-card h3 {
+  margin: 0 0 10px;
+  color: #17334A;
+  font-size: 18px;
+  font-weight: 1000;
+}
+
+.tt-help-card p {
+  margin: 0;
+  color: #52697A;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.65;
+}
+
+.tt-help-support {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 22px;
+  padding: 28px;
+  border-radius: 24px;
+  background: linear-gradient(100deg, #0E9F53, #24C96C);
+  color: white;
+  box-shadow: 0 18px 42px rgba(14,159,83,.18);
+}
+
+.tt-help-support h2 {
+  margin: 0 0 8px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 28px;
+}
+
+.tt-help-support p {
+  margin: 0;
+  font-weight: 850;
+  line-height: 1.6;
+  opacity: .94;
+}
+
+.tt-help-support button,
+.tt-ready-actions button {
+  border: 0;
+  border-radius: 999px;
+  background: white;
+  color: #0E9F53;
+  padding: 14px 22px;
+  font-weight: 1000;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(0,0,0,.10);
+}
+
+.tt-ready-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tt-ready-actions button.secondary {
+  background: #ECFAEF;
+  color: #0E7C43;
+  box-shadow: none;
+}
+
+.tt-footer-logo-img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 6px 10px rgba(46,204,113,.16));
+}
+
+.tt-footer-brand span {
+  display: none;
+}
+
+@media(max-width:1100px){
+  .tt-system-grid,
+  .tt-help-grid,
+  .tt-about-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media(max-width:720px){
+  .tt-page-intro h1 {
+    font-size: 32px;
+  }
+
+  .tt-system-grid,
+  .tt-help-grid,
+  .tt-about-split {
+    grid-template-columns: 1fr;
+  }
+
+  .tt-flow-step {
+    grid-template-columns: 38px 1fr;
+  }
+
+  .tt-flow-step > span {
+    grid-row: span 2;
+  }
+
+  .tt-help-support {
+    grid-template-columns: 1fr;
+  }
+}
+/* === Tuklas Talino public page tabs polish END === */

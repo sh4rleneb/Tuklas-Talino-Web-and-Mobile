@@ -6,75 +6,364 @@ function read(id) {
 }
 
 export function LandingScreen({ go }) {
+  const [publicPage, setPublicPage] = useState('home');
+
+  const publicNav = [
+    { id: 'home', icon: '🏠', label: 'Home' },
+    { id: 'modules', icon: '📖', label: 'Modules' },
+    { id: 'about', icon: 'ℹ️', label: 'About' },
+    { id: 'help', icon: '❔', label: 'Help' },
+  ];
+
+  const selectPublicPage = (page) => {
+    setPublicPage(page);
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+  };
+
+  const roleCards = [
+    {
+      type: 'student',
+      icon: '👦',
+      title: 'Student',
+      desc: 'Access lessons, quizzes, missions, groups, XP, badges, and your learning progress.',
+      action: 'Student Login',
+      screen: 'screen-login-student',
+    },
+    {
+      type: 'teacher',
+      icon: '👩‍🏫',
+      title: 'Teacher',
+      desc: 'Create lessons, manage groups, monitor student progress, review outputs, and generate reports.',
+      action: 'Teacher Login',
+      screen: 'screen-login-teacher',
+    },
+    {
+      type: 'admin',
+      icon: '👨‍💻',
+      title: 'Admin',
+      desc: 'Manage users, teacher accounts, student access, content, and system settings.',
+      action: 'Admin Login',
+      screen: 'screen-login-admin',
+    },
+  ];
+
+  const lmsTools = [
+    { icon: '📝', title: 'Quizzes', desc: 'Students answer assessments while attempts, scores, and progress are recorded.', tone: 'blue' },
+    { icon: '🎮', title: 'Missions', desc: 'Game-like learning tasks help students practice lessons in a more engaging way.', tone: 'purple' },
+    { icon: '👥', title: 'Groups', desc: 'Students can work on collaborative tasks guided by teacher-created groups.', tone: 'yellow' },
+    { icon: '🏅', title: 'XP & Badges', desc: 'Reward features encourage participation, completion, and consistent learning.', tone: 'pink' },
+    { icon: '📊', title: 'Monitoring', desc: 'Teachers can track lesson completion, quiz performance, XP, and learner status.', tone: 'blue' },
+  ];
+
+  const howSteps = [
+    { icon: '🔐', title: 'Log in by role', desc: 'Students, teachers, and admins enter through their own secure dashboard.' },
+    { icon: '📚', title: 'Open learning content', desc: 'Students access grade-level lessons, modules, quizzes, missions, and group tasks.' },
+    { icon: '⭐', title: 'Complete activities', desc: 'The system records XP, badges, attempts, outputs, and learning progress.' },
+    { icon: '👩‍🏫', title: 'Monitor and guide', desc: 'Teachers review performance, monitor learners, and support students who need guidance.' },
+    { icon: '🛡️', title: 'Manage the system', desc: 'Admins manage accounts, access, and system-level records for organized use.' },
+  ];
+
+  const helpCards = [
+    {
+      title: 'Student Login Help',
+      desc: 'Students should use their assigned Student ID and password. If access does not work, they should ask their teacher for help.',
+    },
+    {
+      title: 'Teacher Account Help',
+      desc: 'Teachers can access their dashboard to manage lessons, groups, monitoring, reports, and student records.',
+    },
+    {
+      title: 'Admin Access Help',
+      desc: 'Admins manage users, account access, and system settings. Admin access should only be used by authorized users.',
+    },
+    {
+      title: 'Learning Progress Help',
+      desc: 'XP, badges, quiz attempts, and lesson completion are recorded so learners and teachers can track progress clearly.',
+    },
+  ];
+
+  const renderRoleCards = () => (
+    <section className="tt-panel tt-role-panel" aria-label="Role login cards">
+      <h2>👥 Mag-login bilang:</h2>
+      <div className="tt-role-cards">
+        {roleCards.map((role) => (
+          <article className={`tt-role-card ${role.type}`} key={role.type}>
+            <div className="tt-role-avatar">{role.icon}</div>
+            <div className="tt-role-content">
+              <h3>{role.title}</h3>
+              <p>{role.desc}</p>
+            </div>
+            <button onClick={() => go(role.screen)}>
+              {role.action} <span>→</span>
+            </button>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+
+  const renderHome = () => (
+    <>
+      <section className="tt-hero-card" aria-label="Tuklas Talino introduction">
+        <div className="tt-hero-copy">
+          <h1>Mas masaya ang pag-aaral sa Tuklas Talino!</h1>
+          <p>
+            Isang Filipino learning platform para sa <strong>Grades 1–6</strong> na may lessons,
+            quizzes, missions, badges, group tasks, at teacher progress monitoring.
+          </p>
+          <div className="tt-hero-points">
+            <div><span>📗</span><strong>Lessons</strong><small>Grade-level learning</small></div>
+            <div><span>📝</span><strong>Quizzes</strong><small>Attempts and scores</small></div>
+            <div><span>📊</span><strong>Monitoring</strong><small>Teacher guidance</small></div>
+          </div>
+        </div>
+        <div className="tt-hero-art" aria-hidden="true">
+          <div className="tt-art-window" /><div className="tt-art-shelf" /><div className="tt-art-desk" />
+          <div className="tt-child boy">👦</div><div className="tt-child girl">👧</div><div className="tt-laptop">💻</div>
+          <div className="tt-book-stack">📚</div><div className="tt-notebook">📖</div><div className="tt-pencil-cup">✏️</div>
+        </div>
+        <div className="tt-slider-dots" aria-hidden="true"><span /><span /><span /></div>
+      </section>
+
+      {renderRoleCards()}
+
+      <section className="tt-panel tt-system-preview-panel" aria-label="LMS feature overview">
+        <div className="tt-section-heading">
+          <h2>✨ Tuklas Talino Learning Features</h2>
+          <button onClick={() => selectPublicPage('modules')}>Explore modules →</button>
+        </div>
+        <div className="tt-system-grid">
+          <div><span>📚</span><strong>Lessons</strong><small>Organized learning content for Grades 1–6.</small></div>
+          <div><span>🎮</span><strong>Missions</strong><small>Gamified tasks that support engagement.</small></div>
+          <div><span>🏅</span><strong>XP & Badges</strong><small>Reward system for participation and completion.</small></div>
+          <div><span>📊</span><strong>Teacher Monitoring</strong><small>Progress records for better guidance.</small></div>
+        </div>
+      </section>
+
+      <section className="tt-ready-card" aria-label="Get started">
+        <div className="tt-ready-art" aria-hidden="true"><span>👦</span><span>👧</span><span>👦</span><div>📚</div></div>
+        <div className="tt-ready-copy">
+          <h2>Handa nang magsimula?</h2>
+          <p>Pumili ng inyong role at simulan ang mas organisado, masaya, at guided na pagkatuto.</p>
+          <div className="tt-ready-actions">
+            <button onClick={() => go('screen-login-student')}>Student Login <span>→</span></button>
+            <button className="secondary" onClick={() => selectPublicPage('help')}>Need help?</button>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+
+  const renderModules = () => (
+    <>
+      <section className="tt-panel tt-page-intro">
+        <div className="tt-page-kicker">Learning Modules</div>
+        <h1>Mga Learning Modules at System Tools</h1>
+        <p>
+          Tuklas Talino organizes Filipino learning through subject modules and system tools that support
+          lessons, quizzes, missions, group work, badges, and teacher monitoring.
+        </p>
+      </section>
+
+      <section className="tt-panel tt-modules-panel" aria-label="Learning modules">
+        <div className="tt-section-heading">
+          <h2>📚 Mga Learning Modules</h2>
+          <button onClick={() => go('screen-login-student')}>Open student dashboard →</button>
+        </div>
+        <div className="tt-module-grid">
+          {SUBJECTS.map((s) => (
+            <article className={`tt-module-card ${s.tone}`} key={s.name}>
+              <div className="tt-module-icon">{s.icon}</div>
+              <h3>{s.name}</h3>
+              <p>{s.desc}</p>
+              <div className="tt-progress"><span style={{ width: '78%' }} /></div>
+              <small>Learning Area</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="tt-panel tt-modules-panel" aria-label="LMS tools">
+        <div className="tt-section-heading">
+          <h2>🧩 System Tools</h2>
+          <button onClick={() => selectPublicPage('about')}>How it works →</button>
+        </div>
+        <div className="tt-module-grid">
+          {lmsTools.map((tool) => (
+            <article className={`tt-module-card ${tool.tone}`} key={tool.title}>
+              <div className="tt-module-icon">{tool.icon}</div>
+              <h3>{tool.title}</h3>
+              <p>{tool.desc}</p>
+              <div className="tt-progress"><span style={{ width: '82%' }} /></div>
+              <small>System Feature</small>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+
+  const renderAbout = () => (
+    <>
+      <section className="tt-panel tt-page-intro">
+        <div className="tt-page-kicker">About Tuklas Talino</div>
+        <h1>An AI-powered Filipino learning and gamified collaboration system for Grades 1–6</h1>
+        <p>
+          Tuklas Talino is designed to support Filipino learning through guided activities, gamified engagement, group tasks, automated feedback, teacher monitoring, and admin-managed access.
+        </p>
+      </section>
+
+      <section className="tt-panel tt-about-split" aria-label="About the system">
+        <article>
+          <span>🎯</span>
+          <h2>Purpose of the System</h2>
+          <p>
+            The system helps learners access lessons and activities in one place while allowing teachers
+            to monitor progress, review outputs, and guide students based on learning records.
+          </p>
+        </article>
+        <article>
+          <span>👥</span>
+          <h2>Built for Three Users</h2>
+          <p>
+            Students learn through lessons and activities, teachers manage and monitor learning, and admins
+            maintain user access and system organization.
+          </p>
+        </article>
+      </section>
+
+      <section className="tt-panel tt-why-panel" aria-label="Why use Tuklas Talino">
+        <h2>⭐ Bakit gamitin ang Tuklas Talino?</h2>
+        <div className="tt-why-grid">
+          <div><span>📗</span><strong>Grade-Level Learning</strong><small>Lessons and activities are organized for Grades 1–6 learners.</small></div>
+          <div><span>🎮</span><strong>Interactive Tasks</strong><small>Quizzes, missions, groups, XP, and badges help keep learning engaging.</small></div>
+          <div><span>📊</span><strong>Progress Monitoring</strong><small>Teachers can track completion, performance, attempts, and learner status.</small></div>
+          <div><span>🛡️</span><strong>Role-Based Access</strong><small>Students, teachers, and admins have separate dashboards and permissions.</small></div>
+        </div>
+      </section>
+
+      <section className="tt-panel tt-flow-panel" aria-label="How Tuklas Talino works">
+        <div className="tt-section-heading">
+          <h2>🔄 How Tuklas Talino Works</h2>
+          <button onClick={() => selectPublicPage('help')}>View help →</button>
+        </div>
+        <div className="tt-flow-list">
+          {howSteps.map((step, idx) => (
+            <article className="tt-flow-step" key={step.title}>
+              <div className="tt-flow-number">{idx + 1}</div>
+              <span>{step.icon}</span>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.desc}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+
+  const renderHelp = () => (
+    <>
+      <section className="tt-panel tt-page-intro">
+        <div className="tt-page-kicker">Help and Support</div>
+        <h1>Need help using Tuklas Talino?</h1>
+        <p>
+          This page guides students, teachers, and admins on where to start, how to log in,
+          and what to do when account or learning access concerns happen.
+        </p>
+      </section>
+
+      <section className="tt-panel" aria-label="Help cards">
+        <div className="tt-section-heading">
+          <h2>❔ Common Help Topics</h2>
+          <button onClick={() => selectPublicPage('home')}>Back to home →</button>
+        </div>
+        <div className="tt-help-grid">
+          {helpCards.map((item) => (
+            <article className="tt-help-card" key={item.title}>
+              <h3>{item.title}</h3>
+              <p>{item.desc}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="tt-help-support" aria-label="Support guidance">
+        <div>
+          <h2>For account concerns</h2>
+          <p>
+            Students should ask their teacher for Student ID or password concerns. Teachers may contact
+            the admin for account access or dashboard concerns.
+          </p>
+        </div>
+        <button onClick={() => go('screen-login-student')}>Go to Student Login <span>→</span></button>
+      </section>
+
+      {renderRoleCards()}
+    </>
+  );
+
+  const renderActivePage = () => {
+    if (publicPage === 'modules') return renderModules();
+    if (publicPage === 'about') return renderAbout();
+    if (publicPage === 'help') return renderHelp();
+    return renderHome();
+  };
+
   return (
     <div className="tt-lms-home">
       <header className="tt-lms-nav">
-        <button className="tt-logo" onClick={() => go('screen-landing')} aria-label="Tuklas Talino Home">
+        <button className="tt-logo" onClick={() => selectPublicPage('home')} aria-label="Tuklas Talino Home">
           <img src="/tuklas-talino-icon.png" alt="" className="tt-logo-img" />
           <span><strong>Tuklas Talino</strong><small>Matuto. Tuklasin. Magtagumpay.</small></span>
         </button>
+
         <nav className="tt-main-menu" aria-label="Main navigation">
-          <button className="active" onClick={() => go('screen-landing')}>🏠 Home</button>
-          <button onClick={() => document.getElementById('tt-modules')?.scrollIntoView({ behavior: 'smooth' })}>📖 Modules</button>
-          <button onClick={() => document.getElementById('tt-about')?.scrollIntoView({ behavior: 'smooth' })}>ℹ️ About</button>
-          <button onClick={() => document.getElementById('tt-help')?.scrollIntoView({ behavior: 'smooth' })}>❔ Help</button>
+          {publicNav.map((item) => (
+            <button
+              key={item.id}
+              className={publicPage === item.id ? 'active' : ''}
+              onClick={() => selectPublicPage(item.id)}
+            >
+              {item.icon} {item.label}
+            </button>
+          ))}
         </nav>
+
         <div className="tt-login-actions">
           <button className="tt-login-pill student" onClick={() => go('screen-login-student')}>👤 Student Login</button>
           <button className="tt-login-pill teacher" onClick={() => go('screen-login-teacher')}>🖥️ Teacher Login</button>
           <button className="tt-login-pill admin" onClick={() => go('screen-login-admin')}>🛡️ Admin Login</button>
         </div>
       </header>
+
       <main className="tt-home-main">
-        <section className="tt-hero-card" aria-label="Tuklas Talino introduction">
-          <div className="tt-hero-copy">
-            <h1>Mas masaya ang pag-aaral!</h1>
-            <p>Ang inyong learning space para sa <strong>Grades 1–6.</strong></p>
-            <div className="tt-hero-points">
-              <div><span>📗</span><strong>Matuto</strong><small>Interactive modules</small></div>
-              <div><span>🏆</span><strong>Tuklasin</strong><small>Fun missions at activities</small></div>
-              <div><span>⭐</span><strong>Magtagumpay</strong><small>Rewards at badges</small></div>
-            </div>
-          </div>
-          <div className="tt-hero-art" aria-hidden="true">
-            <div className="tt-art-window" /><div className="tt-art-shelf" /><div className="tt-art-desk" />
-            <div className="tt-child boy">👦</div><div className="tt-child girl">👧</div><div className="tt-laptop">💻</div>
-            <div className="tt-book-stack">📚</div><div className="tt-notebook">📖</div><div className="tt-pencil-cup">✏️</div>
-          </div>
-          <div className="tt-slider-dots" aria-hidden="true"><span /><span /><span /></div>
-        </section>
-        <section className="tt-panel tt-role-panel" aria-label="Role login cards">
-          <h2>👥 Mag-login bilang:</h2>
-          <div className="tt-role-cards">
-            <article className="tt-role-card student"><div className="tt-role-avatar">👦</div><div className="tt-role-content"><h3>Student</h3><p>Mag-access sa modules, activities at inyong progress.</p></div><button onClick={() => go('screen-login-student')}>Student Login <span>→</span></button></article>
-            <article className="tt-role-card teacher"><div className="tt-role-avatar">👩‍🏫</div><div className="tt-role-content"><h3>Teacher</h3><p>Pamahalaan ang klase, aralin at mga gawain ng inyong mag-aaral.</p></div><button onClick={() => go('screen-login-teacher')}>Teacher Login <span>→</span></button></article>
-            <article className="tt-role-card admin"><div className="tt-role-avatar">👨‍💻</div><div className="tt-role-content"><h3>Admin</h3><p>Pamahalaan ang users, content at system settings.</p></div><button onClick={() => go('screen-login-admin')}>Admin Login <span>→</span></button></article>
-          </div>
-        </section>
-        <section className="tt-panel tt-modules-panel" id="tt-modules" aria-label="Popular modules">
-          <div className="tt-section-heading"><h2>📚 Mga Popular na Modules</h2><button onClick={() => go('screen-login-student')}>View all modules →</button></div>
-          <div className="tt-module-grid">
-            {SUBJECTS.map((s, idx) => <article className={`tt-module-card ${s.tone}`} key={s.name}><div className="tt-module-icon">{s.icon}</div><h3>{s.name}</h3><p>{s.desc}</p><div className="tt-progress"><span style={{ width: `${[75,60,65,55,70][idx]}%` }} /></div><small>Integrated Module</small></article>)}
-          </div>
-        </section>
-        <section className="tt-panel tt-why-panel" id="tt-about" aria-label="Why use Tuklas Talino">
-          <h2>⭐ Bakit gamitin ang Tuklas Talino?</h2>
-          <div className="tt-why-grid">
-            <div><span>📗</span><strong>Batay sa MELC</strong><small>Alinsunod sa Most Essential Learning Competencies para sa Grades 1–6.</small></div>
-            <div><span>⭐</span><strong>Masaya at Interaktibo</strong><small>Mga laro, gawain, at aktibidad na makabuluhan at nakaka-engganyo.</small></div>
-            <div><span>👥</span><strong>Para sa Lahat</strong><small>Dinisenyo para sa estudyante, guro, at admin.</small></div>
-            <div><span>🛡️</span><strong>Ligtas at Maaasahan</strong><small>Ligtas na platform para sa bawat mag-aaral.</small></div>
-          </div>
-        </section>
-        <section className="tt-ready-card" id="tt-help" aria-label="Get started">
-          <div className="tt-ready-art" aria-hidden="true"><span>👦</span><span>👧</span><span>👦</span><div>📚</div></div>
-          <div className="tt-ready-copy"><h2>Handa nang magsimula?</h2><p>Pumili ng inyong role at simulan ang masayang paglalakbay tungo sa kaalaman!</p><button onClick={() => go('screen-home')}>Mag-login na! <span>→</span></button></div>
-        </section>
+        {renderActivePage()}
       </main>
+
       <footer className="tt-footer">
-        <div className="tt-footer-brand"><span>☀️</span><div><strong>Tuklas Talino</strong><small>Matuto. Tuklasin. Magtagumpay.</small></div></div>
-        <div><strong>Quick Links</strong><button onClick={() => go('screen-landing')}>Home</button><button onClick={() => document.getElementById('tt-modules')?.scrollIntoView({ behavior: 'smooth' })}>Modules</button><button onClick={() => document.getElementById('tt-about')?.scrollIntoView({ behavior: 'smooth' })}>About</button><button onClick={() => document.getElementById('tt-help')?.scrollIntoView({ behavior: 'smooth' })}>Help</button></div>
-        <div><strong>For Users</strong><button onClick={() => go('screen-login-student')}>Student Login</button><button onClick={() => go('screen-login-teacher')}>Teacher Login</button><button onClick={() => go('screen-login-admin')}>Admin Login</button></div>
+        <div className="tt-footer-brand">
+          <img src="/tuklas-talino-icon.png" alt="" className="tt-footer-logo-img" />
+          <div><strong>Tuklas Talino</strong><small>Matuto. Tuklasin. Magtagumpay.</small></div>
+        </div>
+        <div>
+          <strong>Quick Links</strong>
+          <button onClick={() => selectPublicPage('home')}>Home</button>
+          <button onClick={() => selectPublicPage('modules')}>Modules</button>
+          <button onClick={() => selectPublicPage('about')}>About</button>
+          <button onClick={() => selectPublicPage('help')}>Help</button>
+        </div>
+        <div>
+          <strong>For Users</strong>
+          <button onClick={() => go('screen-login-student')}>Student Login</button>
+          <button onClick={() => go('screen-login-teacher')}>Teacher Login</button>
+          <button onClick={() => go('screen-login-admin')}>Admin Login</button>
+        </div>
         <div><strong>Connect with Us</strong><p className="tt-socials">● ▶ ✉</p></div>
       </footer>
     </div>
