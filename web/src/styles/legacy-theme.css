@@ -2236,3 +2236,38 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
 }
 /* === Student login final clean layout END === */
 
+
+
+.input-with-icon .password-eye-btn{
+  border:0;
+  background:transparent;
+  cursor:pointer;
+  font-size:18px;
+  line-height:1;
+  padding:6px;
+  border-radius:999px;
+}
+
+.input-with-icon .password-eye-btn:hover{
+  background:rgba(46,204,113,.12);
+}
+
+.input-with-icon .password-eye-btn:focus-visible{
+  outline:3px solid rgba(46,204,113,.25);
+}
+
+
+.input-with-icon .password-eye-btn{
+  color:var(--green-dark);
+}
+
+.password-eye-svg{
+  width:20px;
+  height:20px;
+  display:block;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
