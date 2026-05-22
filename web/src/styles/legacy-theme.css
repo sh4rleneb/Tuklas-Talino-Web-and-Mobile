@@ -1064,7 +1064,7 @@
 .tt-lms-home button{font-family:'Nunito',sans-serif;}
 .tt-lms-nav{position:sticky;top:0;z-index:20;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:22px 7vw;background:rgba(255,255,255,.94);border-bottom:1px solid rgba(35,78,53,.08);box-shadow:0 14px 35px rgba(78,118,150,.08);backdrop-filter:blur(14px);}
 .tt-logo{border:0;background:transparent;display:flex;align-items:center;gap:12px;text-align:left;cursor:pointer;color:#108B4B;}
-.tt-sun{font-size:38px;filter:drop-shadow(0 6px 10px rgba(255,185,30,.22));}
+.tt-logo-img{width:64px;height:64px;object-fit:contain;display:block;filter:drop-shadow(0 6px 10px rgba(46,204,113,.18));}
 .tt-logo strong{display:block;font-family:'Fredoka One',cursive;font-size:32px;letter-spacing:.2px;line-height:1;color:#10A35A;}
 .tt-logo small{display:block;margin-top:5px;color:#596B75;font-weight:900;font-size:12px;}
 .tt-main-menu{display:flex;justify-content:center;align-items:center;gap:22px;}
@@ -1135,10 +1135,10 @@
     transform:translateY(-2px) scale(1.015);
     filter:drop-shadow(0 10px 16px rgba(46,204,113,.14));
   }
-  .tt-logo:hover .tt-sun{
+  .tt-logo:hover .tt-logo-img{
     transform:rotate(8deg) scale(1.08);
   }
-  .tt-sun{
+  .tt-logo-img{
     transition:transform .25s ease, filter .25s ease;
   }
 

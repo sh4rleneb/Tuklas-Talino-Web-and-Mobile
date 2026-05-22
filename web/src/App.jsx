@@ -2605,8 +2605,12 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
 
     <div className="g12-page">
       <header className="g12-topbar">
-        <div className="g12-brand">
-          <span className="g12-brand-icon">☀️</span>
+        <div className="g12-brand" aria-label="Tuklas Talino">
+          <img
+            src="/tuklas-talino-icon.png"
+            alt=""
+            style={{ width: '74px', height: '74px', objectFit: 'contain', display: 'block' }}
+          />
           <span>Tuklas Talino</span>
         </div>
 
@@ -2732,8 +2736,12 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
       <div className="g46-ref-page">
         <div className="g46-ref-frame">
           <aside className="g46-ref-sidebar" aria-label="Grade 3 to 6 student navigation">
-            <div className="g46-ref-brand">
-              <span>☀️</span>
+            <div className="g46-ref-brand" aria-label="Tuklas Talino">
+              <img
+                src="/tuklas-talino-icon.png"
+                alt=""
+                style={{ width: '42px', height: '42px', objectFit: 'contain', display: 'block' }}
+              />
               <strong>Tuklas Talino</strong>
             </div>
 
@@ -3005,8 +3013,12 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
       <EarlyStudentSubpageStyles />
       <div className="g12-page">
         <header className="g12-topbar">
-          <button type="button" className="g12-brand" onClick={() => goStudentTab('home')}>
-            <span className="g12-brand-icon">☀️</span>
+          <button type="button" className="g12-brand" onClick={() => goStudentTab('home')} aria-label="Go to Tuklas Talino home">
+            <img
+              src="/tuklas-talino-icon.png"
+              alt=""
+              style={{ width: '74px', height: '74px', objectFit: 'contain', display: 'block' }}
+            />
             <span>Tuklas Talino</span>
           </button>
 
@@ -8141,7 +8153,12 @@ function TeacherDashboard({
       <header className="teacher-main-header teacher-main-header-clean">
         <div className="teacher-brand-area">
           <div className="teacher-brand-mark">
-            <div className="teacher-brand-icon">🌱</div>
+            <img
+              src="/tuklas-talino-icon.png"
+              alt=""
+              className="teacher-brand-logo-img"
+              style={{ width: '52px', height: '52px', objectFit: 'contain', borderRadius: '14px', background: '#ffffff' }}
+            />
             <div className="teacher-brand-text">
               <strong>Tuklas Talino</strong>
               <small>Tuklasin. Matuto. Magningning.</small>
@@ -10365,7 +10382,12 @@ function AdminDashboard({
       <header className="teacher-main-header teacher-main-header-clean">
         <div className="teacher-brand-area">
           <div className="teacher-brand-mark">
-            <div className="teacher-brand-icon">🌱</div>
+            <img
+              src="/tuklas-talino-icon.png"
+              alt=""
+              className="teacher-brand-logo-img"
+              style={{ width: '52px', height: '52px', objectFit: 'contain', borderRadius: '14px', background: '#ffffff' }}
+            />
             <div className="teacher-brand-text">
               <strong>Tuklas Talino</strong>
               <small>Tuklasin. Matuto. Magningning.</small>

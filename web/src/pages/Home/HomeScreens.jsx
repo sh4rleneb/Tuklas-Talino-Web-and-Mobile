@@ -10,7 +10,7 @@ export function LandingScreen({ go }) {
     <div className="tt-lms-home">
       <header className="tt-lms-nav">
         <button className="tt-logo" onClick={() => go('screen-landing')} aria-label="Tuklas Talino Home">
-          <span className="tt-sun">☀️</span>
+          <img src="/tuklas-talino-icon.png" alt="" className="tt-logo-img" />
           <span><strong>Tuklas Talino</strong><small>Matuto. Tuklasin. Magtagumpay.</small></span>
         </button>
         <nav className="tt-main-menu" aria-label="Main navigation">
