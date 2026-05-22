@@ -27,7 +27,7 @@ export function LandingScreen({ go }) {
   const roleCards = [
     {
       type: 'student',
-      icon: '👦',
+      image: '/landing-student-boy.png',
       title: 'Student',
       desc: 'Access lessons, quizzes, missions, groups, XP, badges, and your learning progress.',
       action: 'Student Login',
@@ -35,7 +35,7 @@ export function LandingScreen({ go }) {
     },
     {
       type: 'teacher',
-      icon: '👩‍🏫',
+      image: '/landing-teacher.png',
       title: 'Teacher',
       desc: 'Create lessons, manage groups, monitor student progress, review outputs, and generate reports.',
       action: 'Teacher Login',
@@ -43,7 +43,7 @@ export function LandingScreen({ go }) {
     },
     {
       type: 'admin',
-      icon: '👨‍💻',
+      image: '/landing-admin.png',
       title: 'Admin',
       desc: 'Manage users, teacher accounts, student access, content, and system settings.',
       action: 'Admin Login',
@@ -92,7 +92,13 @@ export function LandingScreen({ go }) {
       <div className="tt-role-cards">
         {roleCards.map((role) => (
           <article className={`tt-role-card ${role.type}`} key={role.type}>
-            <div className="tt-role-avatar">{role.icon}</div>
+            <div className="tt-role-avatar">
+              {role.image ? (
+                <img src={role.image} alt="" className="tt-role-avatar-img" />
+              ) : (
+                role.icon
+              )}
+            </div>
             <div className="tt-role-content">
               <h3>{role.title}</h3>
               <p>{role.desc}</p>
@@ -110,21 +116,25 @@ export function LandingScreen({ go }) {
     <>
       <section className="tt-hero-card" aria-label="Tuklas Talino introduction">
         <div className="tt-hero-copy">
-          <h1>Mas masaya ang pag-aaral sa Tuklas Talino!</h1>
+          <h1>Masayang Matuto sa Tuklas Talino!</h1>
           <p>
-            Isang Filipino learning platform para sa <strong>Grades 1–6</strong> na may lessons,
-            quizzes, missions, badges, group tasks, at teacher progress monitoring.
+            Para sa <strong>Grades 1–6:</strong> lessons, quizzes, missions, badges,
+            group tasks, at teacher monitoring.
           </p>
           <div className="tt-hero-points">
-            <div><span>📗</span><strong>Lessons</strong><small>Grade-level learning</small></div>
-            <div><span>📝</span><strong>Quizzes</strong><small>Attempts and scores</small></div>
-            <div><span>📊</span><strong>Monitoring</strong><small>Teacher guidance</small></div>
+            <div><span>🤖</span><strong>AI Powered</strong><small>TTS & speech feedback</small></div>
+            <div><span>🎮</span><strong>Games</strong><small>Fun learning tasks</small></div>
+            <div><span>🏅</span><strong>XP & Badges</strong><small>Rewards and progress</small></div>
           </div>
         </div>
-        <div className="tt-hero-art" aria-hidden="true">
-          <div className="tt-art-window" /><div className="tt-art-shelf" /><div className="tt-art-desk" />
-          <div className="tt-child boy">👦</div><div className="tt-child girl">👧</div><div className="tt-laptop">💻</div>
-          <div className="tt-book-stack">📚</div><div className="tt-notebook">📖</div><div className="tt-pencil-cup">✏️</div>
+        <div className="tt-hero-art tt-hero-art-image" aria-hidden="true">
+          <div className="tt-hero-illustration-wrap">
+            <img
+              src="/home-hero-student.png"
+              alt=""
+              className="tt-hero-illustration"
+            />
+          </div>
         </div>
         <div className="tt-slider-dots" aria-hidden="true"><span /><span /><span /></div>
       </section>
@@ -378,9 +388,9 @@ export function HomeScreen({ go, notify }) {
       <div className="home-title home-title-v2">Tuklas <span>Talino</span></div>
       <div className="home-subtitle-v2">PH Filipino Learning + Gamified Collaboration • Baitang 1–6</div>
       <div className="role-cards role-cards-v2">
-        <div className="role-card role-card-v2 role-student" onClick={() => go('screen-login-student')}><div className="role-tag">Para sa Mag-aaral</div><div className="role-illustration student-scene"><span className="role-object bag">🎒</span><span className="role-person">👦</span><span className="role-object book">📖</span><span className="role-object sparkle">⭐</span></div><div className="role-info"><h3>Mag-aaral</h3><p>Kumpletuhin ang mga aralin, sumali sa gawain, at kumita ng badges!</p><span className="role-arrow">→</span></div></div>
-        <div className="role-card role-card-v2 role-teacher" onClick={() => go('screen-login-teacher')}><div className="role-tag">Para sa Guro</div><div className="role-illustration teacher-scene"><span className="role-person">👩‍🏫</span><span className="role-object board">🔤</span><span className="role-object check">✅</span></div><div className="role-info"><h3>Guro</h3><p>Gumawa ng aralin, grupo, at subaybayan ang progreso.</p><span className="role-arrow">→</span></div></div>
-        <div className="role-card role-card-v2 role-admin" onClick={() => go('screen-login-admin')}><div className="role-tag">Para sa Admin</div><div className="role-illustration admin-scene"><span className="role-person">🛡️</span><span className="role-object gear">⚙️</span><span className="role-object chart">📊</span></div><div className="role-info"><h3>Admin</h3><p>Pamahalaan ang accounts, settings, at system activity logs.</p><span className="role-arrow">→</span></div></div>
+        <div className="role-card role-card-v2 role-student" onClick={() => go('screen-login-student')}><div className="role-tag">Para sa Mag-aaral</div><div className="role-illustration student-scene"><img src="/landing-student-boy.png" alt="" className="role-illustration-img student" /></div><div className="role-info"><h3>Mag-aaral</h3><p>Kumpletuhin ang mga aralin, sumali sa gawain, at kumita ng badges!</p><span className="role-arrow">→</span></div></div>
+        <div className="role-card role-card-v2 role-teacher" onClick={() => go('screen-login-teacher')}><div className="role-tag">Para sa Guro</div><div className="role-illustration teacher-scene"><img src="/landing-teacher.png" alt="" className="role-illustration-img teacher" /></div><div className="role-info"><h3>Guro</h3><p>Gumawa ng aralin, grupo, at subaybayan ang progreso.</p><span className="role-arrow">→</span></div></div>
+        <div className="role-card role-card-v2 role-admin" onClick={() => go('screen-login-admin')}><div className="role-tag">Para sa Admin</div><div className="role-illustration admin-scene"><img src="/landing-admin.png" alt="" className="role-illustration-img admin" /></div><div className="role-info"><h3>Admin</h3><p>Pamahalaan ang accounts, settings, at system activity logs.</p><span className="role-arrow">→</span></div></div>
       </div>
       <div className="demo-panel-v2">
         <div className="demo-accounts-v2">

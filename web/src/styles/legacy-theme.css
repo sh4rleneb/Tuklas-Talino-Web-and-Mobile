@@ -1970,3 +1970,146 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
   }
 }
 /* === Tuklas Talino public page tabs polish END === */
+
+/* === Home hero PNG illustration === */
+.tt-hero-art-image {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 8px 18px 0;
+  min-height: 450px;
+}
+
+.tt-hero-illustration-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.tt-hero-illustration {
+  width: min(100%, 540px);
+  max-height: 500px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 14px 28px rgba(60, 103, 135, 0.12));
+}
+
+@media (max-width: 900px) {
+  .tt-hero-art-image {
+    min-height: 280px;
+    padding-top: 0;
+  }
+
+  .tt-hero-illustration {
+    width: min(100%, 300px);
+    max-height: 260px;
+  }
+}
+
+/* === Tuklas Talino PNG role/login visuals START === */
+.tt-role-avatar {
+  overflow: hidden;
+}
+
+.tt-role-avatar-img {
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
+  display: block;
+}
+
+.role-illustration-img {
+  width: min(100%, 150px);
+  max-height: 150px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 14px 22px rgba(60, 103, 135, .12));
+}
+
+.role-illustration-img.teacher {
+  width: min(100%, 160px);
+  max-height: 160px;
+}
+
+.role-illustration-img.admin {
+  width: min(100%, 145px);
+  max-height: 145px;
+}
+
+.login-hero-png-wrap {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-hero-png {
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 18px 28px rgba(60, 103, 135, .14));
+}
+
+.login-hero-png.student {
+  width: min(88%, 340px);
+  max-height: 360px;
+}
+
+.login-hero-png.teacher {
+  width: min(88%, 340px);
+  max-height: 360px;
+}
+
+.login-hero-png.admin {
+  width: min(78%, 300px);
+  max-height: 320px;
+}
+
+@media (max-width: 720px) {
+  .tt-role-avatar-img {
+    width: 70px;
+    height: 70px;
+  }
+
+  .role-illustration-img {
+    width: min(100%, 110px);
+    max-height: 120px;
+  }
+
+  .login-hero-png.student,
+  .login-hero-png.teacher,
+  .login-hero-png.admin {
+    width: min(80%, 240px);
+    max-height: 250px;
+  }
+}
+/* === Tuklas Talino PNG role/login visuals END === */
+
+/* === Admin role card PNG polish === */
+.role-illustration.admin-scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.role-illustration-img.admin {
+  width: min(100%, 118px);
+  max-height: 118px;
+  object-fit: contain;
+  transform: translateY(4px);
+}
+
+/* === Force center Admin role PNG === */
+.role-illustration.admin-scene {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.role-illustration.admin-scene .role-illustration-img.admin {
+  width: 135px !important;
+  max-height: 135px !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  transform: translateX(-12px) translateY(4px) !important;
+}
