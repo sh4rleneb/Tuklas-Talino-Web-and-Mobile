@@ -35,6 +35,35 @@ export default function QuizzesPage({
 
   const maxQuizAttempts = 2;
 
+  function grade46FilterStyle(active, subjectName = "ALL") {
+    if (early) return undefined;
+
+    const key = String(subjectName || "ALL").toLowerCase();
+    const palette = key.includes("pagbasa")
+      ? { border: "#7CC4FF", bg: "#EEF8FF", activeBg: "#DDF1FF", color: "#1268A8" }
+      : key.includes("bokabularyo")
+        ? { border: "#8BD7FF", bg: "#F0FAFF", activeBg: "#DFF5FF", color: "#1672A5" }
+        : key.includes("panitikan")
+          ? { border: "#F3C27A", bg: "#FFF8EA", activeBg: "#FFECC4", color: "#A45B00" }
+          : key.includes("oral")
+            ? { border: "#C9B6FF", bg: "#F7F2FF", activeBg: "#EDE4FF", color: "#5B3BB3" }
+            : key.includes("pagsulat")
+              ? { border: "#FFB6C9", bg: "#FFF2F6", activeBg: "#FFE0EA", color: "#A92E5A" }
+              : { border: "#9EE6C1", bg: "#F1FFF7", activeBg: "#DDFBEA", color: "#087A43" };
+
+    return {
+      minHeight: 46,
+      padding: "12px 18px",
+      borderRadius: 999,
+      border: `2px solid ${active ? palette.color : palette.border}`,
+      background: active ? palette.activeBg : palette.bg,
+      color: palette.color,
+      fontSize: 15,
+      fontWeight: 950,
+      boxShadow: active ? "0 10px 24px rgba(26, 122, 75, 0.14)" : "none"
+    };
+  }
+
   function shortEarlyQuizTitle(quiz = {}) {
     const subject = String(quiz.subject || "").trim();
     const title = String(quiz.title || "").trim();
@@ -89,12 +118,13 @@ export default function QuizzesPage({
     }))
     .filter((item) => item.count > 0);
 
+
   const cards = visibleQuizzes.map((quiz, index) => {
     const attempts = asArray(quizAttempts?.[quiz.id]);
     const attemptsUsed = attempts.length;
     const attemptsDone = attemptsUsed >= maxQuizAttempts;
     const best = getBest(quizAttempts, quiz.id);
-    const mastery = best?.mastery || masteryFromPercent(0);
+    const mastery = best?.mastery || null;
     const subjectMeta =
       subjects.find((subject) => subject.name === quiz.subject) ||
       subjects[index % subjects.length] ||
@@ -102,15 +132,28 @@ export default function QuizzesPage({
         tone: "green",
         icon: "📚",
       };
+    const subjectLook = subjectTheme(quiz.subject) || {};
+    const statusLabel = attemptsDone
+      ? "Final review available"
+      : attemptsUsed
+        ? `Attempt ${Math.min(attemptsUsed, maxQuizAttempts)}/${maxQuizAttempts} saved`
+        : "Ready to start";
+    const actionLabel = attemptsDone
+      ? "Review"
+      : attemptsUsed
+        ? "Try Again"
+        : "Start";
 
     return {
       quiz,
       best,
       mastery,
-      tone: mastery.tone || subjectMeta.tone || "green",
-      icon: subjectTheme(quiz.subject).icon || subjectMeta.icon || "📚",
+      tone: best ? (mastery?.tone || "green") : (subjectLook.tone || subjectMeta.tone || "green"),
+      icon: subjectLook.icon || subjectMeta.icon || "📚",
       attemptsUsed,
       attemptsDone,
+      statusLabel,
+      actionLabel,
     };
   });
 
@@ -119,36 +162,36 @@ export default function QuizzesPage({
       <QuizSharedStyles />
 
       <div className="quiz-shell">
-        <section className={early ? "g12-section-card" : "g46-ref-panel"}>
+        <section
+          className={early ? "g12-section-card" : "g46-ref-panel"}
+          style={!early ? { minHeight: 620 } : undefined}
+        >
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
                 {early ? "🧠 Quiz Time" : "Quiz List"}
               </h2>
 
-              {!early && (
-                <p className="g46-ref-muted">
-                  Answer first. Review feedback after your final try.
-                </p>
-              )}
             </div>
 
-            {!early && recommendedQuiz && (
-              <button
-                type="button"
-                className="quiz-secondary"
-                onClick={() => openQuiz(recommendedQuiz)}
-              >
-                Start Recommended
-              </button>
-            )}
           </div>
 
           {subjectCounts.length > 0 && (
-            <div className="quiz-game-subject-row" aria-label="Quiz subject filters">
+            <div
+              className="quiz-game-subject-row"
+              aria-label="Quiz subject filters"
+              style={!early ? {
+                gap: 12,
+                marginTop: 18,
+                marginBottom: 18,
+                alignItems: "center",
+                flexWrap: "wrap"
+              } : undefined}
+            >
               <button
                 type="button"
                 className={`quiz-game-subject-chip ${quizSubjectFilter === "ALL" ? "active" : ""}`}
+                style={grade46FilterStyle(quizSubjectFilter === "ALL", "ALL")}
                 onClick={() => setQuizSubjectFilter("ALL")}
               >
                 🌎 All
@@ -158,6 +201,7 @@ export default function QuizzesPage({
                 <button
                   type="button"
                   className={`quiz-game-subject-chip ${quizSubjectFilter === subject.name ? "active" : ""}`}
+                  style={grade46FilterStyle(quizSubjectFilter === subject.name, subject.name)}
                   key={subject.name}
                   onClick={() => setQuizSubjectFilter(subject.name)}
                 >
@@ -167,8 +211,11 @@ export default function QuizzesPage({
             </div>
           )}
 
-          <div className="quiz-card-grid">
-            {cards.map(({ quiz, best, mastery, tone, icon, attemptsUsed, attemptsDone }) => (
+          <div
+            className="quiz-card-grid"
+            style={!early ? { minHeight: 360, alignContent: "start" } : undefined}
+          >
+            {cards.map(({ quiz, best, mastery, tone, icon, attemptsUsed, attemptsDone, statusLabel, actionLabel }) => (
               <button
                 type="button"
                 className={`quiz-card ${tone} ${early ? "early-quiz-card" : ""}`}
@@ -181,52 +228,22 @@ export default function QuizzesPage({
 
                     {!early && (
                       <span className="quiz-pill">
-                        {best ? `${best.percent}% ${mastery.label}` : "Not taken yet"}
+                        {best ? `${best.percent}% ${mastery?.label || "Mastery"}` : statusLabel}
                       </span>
                     )}
                   </div>
 
                   <h3>{early ? shortEarlyQuizTitle(quiz) : quiz.title}</h3>
 
-                  <p>
-                    {early ? (
-                      <>
-                        {quiz.questions.length} tanong • ⭐ {quiz.xpReward} XP
-                      </>
-                    ) : (
-                      <>
-                        {quiz.subject} • Grade {quiz.gradeLevel} •{" "}
-                        {quiz.questions.length} question
-                        {quiz.questions.length === 1 ? "" : "s"} • +{quiz.xpReward} XP
-                      </>
-                    )}
-                  </p>
-
-                  {!early && (
-                    <div className="quiz-pill-row">
-                      <span className="quiz-pill">{quiz.type}</span>
-
-                      <span className="quiz-pill">
-                        Attempts: {Math.min(attemptsUsed, maxQuizAttempts)}/{maxQuizAttempts}
-                      </span>
-
-                      {best && (
-                        <span className="quiz-pill">
-                          Best: {best.score}/{best.total}
-                        </span>
-                      )}
-                    </div>
+                  {early && (
+                    <p>
+                      {quiz.questions.length} tanong • ⭐ {quiz.xpReward} XP
+                    </p>
                   )}
                 </div>
 
                 <span className="quiz-action" role="button" tabIndex={-1}>
-                  {early
-                    ? "›"
-                    : attemptsDone
-                      ? "Review"
-                      : best
-                        ? "Try Again"
-                        : "Start"}
+                  {early ? "›" : actionLabel}
                 </span>
               </button>
             ))}
@@ -271,7 +288,7 @@ export default function QuizzesPage({
         go={go}
         icon="🧠"
         title="Quizzes"
-        subtitle="Separate assessment space for scores, mastery, attempts, and review feedback."
+        subtitle=""
       >
         {quizContent}
       </Grade46StudentChrome>

@@ -1174,7 +1174,7 @@ function QuizGameHeader({ quiz, best, go, onBack }) {
   );
 }
 
-function QuizStartCard({ quiz, best, onStart, onBack }) {
+function QuizStartCard({ quiz, best, attemptsUsed = 0, maxAttempts = 2, onStart, onBack }) {
   const questionCount = asArray(quiz?.questions).length;
 
   return (
@@ -1192,6 +1192,10 @@ function QuizStartCard({ quiz, best, onStart, onBack }) {
             {best.percent}%) • {best.mastery?.label || "Progress saved"}
           </p>
         )}
+
+        <p>
+          <strong>Attempts:</strong> {attemptsUsed}/{maxAttempts}
+        </p>
 
         <div
           className="quiz-result-actions"
@@ -1296,6 +1300,32 @@ function QuizResultCard({ result }) {
     1,
     Math.min(5, Math.ceil(Number(result?.percent || 0) / 20))
   );
+  const hasBestScore = Boolean(result?.bestScoreText);
+  const rewardGridStyle = hasBestScore
+    ? {
+        display: "grid",
+        gridTemplateColumns: "repeat(4, minmax(150px, 1fr))",
+        width: "min(100%, 900px)",
+        margin: "0 auto",
+        gap: 16,
+        alignItems: "stretch",
+        justifyContent: "center"
+      }
+    : undefined;
+  const rewardBoxStyle = hasBestScore
+    ? {
+        border: "2px solid rgba(22, 45, 73, 0.18)",
+        color: "#142844",
+        minHeight: 108,
+        boxShadow: "0 10px 24px rgba(20, 40, 68, 0.06)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        gap: 8
+      }
+    : undefined;
 
   return (
     <section className="quiz-game-results" aria-label="Quiz result">
@@ -1310,24 +1340,48 @@ function QuizResultCard({ result }) {
           <StarRow count={starCount} max={5} />
         </div>
 
-        <p>{mastery.note}</p>
+        {mastery.note && (
+          <p style={hasBestScore ? { margin: "10px auto 0", maxWidth: 560 } : undefined}>
+            {mastery.note}
+          </p>
+        )}
 
-        <div className="quiz-score-badge">{result.percent}/100</div>
+        <div
+          className="quiz-score-badge"
+          style={hasBestScore ? {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            width: "fit-content",
+            minWidth: 240,
+            margin: "14px auto 34px"
+          } : undefined}
+        >
+          {result.percent}/100
+        </div>
 
-        <div className="quiz-result-rewards">
-          <div className="quiz-reward-box">
+        <div className="quiz-result-rewards" style={rewardGridStyle}>
+          <div className="quiz-reward-box" style={rewardBoxStyle}>
             <b>
               {result.score}/{result.total}
             </b>
             <span>Raw score</span>
           </div>
 
-          <div className="quiz-reward-box">
+          {result.bestScoreText && (
+            <div className="quiz-reward-box" style={rewardBoxStyle}>
+              <b>{result.bestScoreText}</b>
+              <span>Best score</span>
+            </div>
+          )}
+
+          <div className="quiz-reward-box" style={rewardBoxStyle}>
             <b>+{Number(result.xpAwarded ?? 0)}</b>
             <span>{Number(result.xpAwarded || 0) > 0 ? "XP earned" : "No extra XP"}</span>
           </div>
 
-          <div className="quiz-reward-box">
+          <div className="quiz-reward-box" style={rewardBoxStyle}>
             <b>{result.attemptNo || 1} of {result.maxAttempts || 2}</b>
             <span>Quiz attempts</span>
           </div>

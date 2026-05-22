@@ -36,13 +36,34 @@ export default function QuizResults({
   const activeReviewIndex = Math.min(selectedReviewIndex, Math.max(0, attemptHistory.length - 1));
   const activeAttempt = attemptHistory[activeReviewIndex] || result;
   const activeReviewItems = activeAttempt?.review || activeAttempt?.details || [];
+  const bestAttempt = attemptHistory.reduce((best, attempt) => {
+    const currentPercent = Number(attempt?.percent ?? 0);
+    const bestPercent = Number(best?.percent ?? -1);
+    return currentPercent > bestPercent ? attempt : best;
+  }, attemptHistory[0] || result);
+  const bestScoreText = bestAttempt
+    ? `${Number(bestAttempt.score ?? 0)}/${Number(bestAttempt.total ?? result?.total ?? 0)} • ${Number(bestAttempt.percent ?? 0)}%`
+    : '';
+
+  function reviewAttemptScore(attempt = {}) {
+    const score = Number(attempt?.score ?? 0);
+    const total = Number(attempt?.total ?? result?.total ?? 0);
+    const rawPercent = attempt?.percent;
+    const percent = rawPercent !== undefined && rawPercent !== null
+      ? Number(rawPercent)
+      : total
+        ? Math.round((score / total) * 100)
+        : 0;
+
+    return total ? `${score}/${total} • ${percent}%` : `${percent}%`;
+  }
 
   const resultContent = (
     <>
       <QuizSharedStyles />
 
       <div className="quiz-shell">
-        <QuizResultCard result={{ ...result, mastery }} />
+        <QuizResultCard result={{ ...result, mastery, bestScoreText: early ? '' : bestScoreText }} />
 
         <section className={early ? "g12-section-card" : "g46-ref-panel"}>
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
@@ -90,17 +111,43 @@ export default function QuizResults({
           ) : (
             <div className="quiz-review-list">
               <div className="quiz-result-actions" style={{ justifyContent: "flex-start", marginBottom: 12 }}>
-                {attemptHistory.map((attempt, attemptIndex) => (
-                  <button
-                    type="button"
-                    key={attempt.id || attemptIndex}
-                    className={activeReviewIndex === attemptIndex ? "quiz-primary" : "quiz-secondary"}
-                    onClick={() => setSelectedReviewIndex(attemptIndex)}
-                    style={early ? { fontSize: 20, padding: "14px 22px", borderRadius: 22, minHeight: 56 } : undefined}
-                  >
-                    Try {attempt.attemptNo || attemptIndex + 1}
-                  </button>
-                ))}
+                {attemptHistory.map((attempt, attemptIndex) => {
+                  const selected = activeReviewIndex === attemptIndex;
+
+                  return (
+                    <button
+                      type="button"
+                      key={attempt.id || attemptIndex}
+                      className={selected ? "quiz-primary" : "quiz-secondary"}
+                      onClick={() => setSelectedReviewIndex(attemptIndex)}
+                      style={early ? {
+                        fontSize: 20,
+                        padding: "14px 22px",
+                        borderRadius: 22,
+                        minHeight: 56
+                      } : {
+                        minHeight: 68,
+                        padding: "12px 20px",
+                        borderRadius: 20,
+                        display: "inline-flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                        lineHeight: 1.15,
+                        minWidth: 128,
+                        boxShadow: selected ? "0 12px 28px rgba(10, 126, 73, 0.18)" : "none"
+                      }}
+                    >
+                      <span>Try {attempt.attemptNo || attemptIndex + 1}</span>
+                      {!early && (
+                        <small style={{ fontSize: 12, fontWeight: 900, opacity: selected ? 0.95 : 0.78 }}>
+                          Score {reviewAttemptScore(attempt)}
+                        </small>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               <section style={{ display: "grid", gap: 12 }}>

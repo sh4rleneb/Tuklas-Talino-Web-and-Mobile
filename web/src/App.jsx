@@ -3014,7 +3014,9 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
                   <strong>{xp} XP</strong>
                   <i><span style={{ width: `${Math.max(6, pct)}%` }} /></i>
                 </div>
-                <p className="g46-ref-muted" style={{ margin: '10px 0 0' }}>Mayroon kang <b>{xp} XP</b>. {100 - pct} XP pa bago ang next level.</p>
+                {activeTab !== 'quizzes' && (
+<p className="g46-ref-muted" style={{ margin: '10px 0 0' }}>Mayroon kang <b>{xp} XP</b>. {100 - pct} XP pa bago ang next level.</p>
+)}
               </div>
             </section>
 

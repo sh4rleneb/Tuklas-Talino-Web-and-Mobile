@@ -37,6 +37,9 @@ export default function QuizPlayer({
 
   const selectedId = current ? answers[current.id] : null;
   const hasSelectedAnswer = Boolean(selectedId);
+  const currentAttempts = asArray(quizAttempts?.[quiz?.id]);
+  const attemptsUsed = Math.min(currentAttempts.length, 2);
+  const maxAttempts = 2;
 
   useEffect(() => {
     setStarted(false);
@@ -118,6 +121,8 @@ export default function QuizPlayer({
       <QuizStartCard
         quiz={quiz}
         best={best}
+        attemptsUsed={attemptsUsed}
+        maxAttempts={maxAttempts}
         onStart={() => setStarted(true)}
         onBack={() => go("screen-stu-quizzes")}
       />
@@ -241,11 +246,7 @@ export default function QuizPlayer({
         go={go}
         icon="🧠"
         title={quiz?.title || "Quiz"}
-        subtitle={
-          started
-            ? "Finish the quiz first before moving to another learning tab."
-            : "Answer each item, then review your score and feedback after submission."
-        }
+        subtitle="" 
         titleAction={
           <button
             type="button"

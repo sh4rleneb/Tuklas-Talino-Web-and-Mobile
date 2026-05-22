@@ -211,17 +211,17 @@ export function Grade46ReferenceStyles() {
       .g46-ref-pill,
       .g46-ref-soft-btn {
         border: 0;
-        min-height: 44px;
-        padding: 0 16px;
+        min-height: 54px;
+        padding: 0 22px;
         border-radius: 999px;
         background: var(--tt-green-soft);
         color: var(--tt-green-dark);
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 1000;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 10px;
       }
 
       .g46-ref-soft-btn {
