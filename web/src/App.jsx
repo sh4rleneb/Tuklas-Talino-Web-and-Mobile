@@ -3512,35 +3512,343 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     );
   }
 
+  const [lessonStep, setLessonStep] = useState(0);
+  const [maxUnlockedStep, setMaxUnlockedStep] = useState(0);
+  const [practiceStep, setPracticeStep] = useState(0);
+  const [completedPracticeKeys, setCompletedPracticeKeys] = useState([]);
+  const [activityFeedbackKey, setActivityFeedbackKey] = useState('');
+  const [reflectionChoice, setReflectionChoice] = useState('');
+
+  useEffect(() => {
+    setLessonStep(0);
+    setMaxUnlockedStep(0);
+    setPracticeStep(0);
+    setCompletedPracticeKeys([]);
+    setActivityFeedbackKey('');
+    setReflectionChoice('');
+
+    if (window?.speechSynthesis) {
+      speechSynthesis.cancel();
+    }
+  }, [lesson?.id]);
+
   function speakLesson() {
     const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`;
     speechSynthesis.cancel();
     speechSynthesis.speak(new SpeechSynthesisUtterance(text));
   }
 
-  return (
-    <>
-      <div className="top-nav">
-        <button className="btn btn-outline btn-sm" onClick={() => go('screen-lessons')}>
-          ← Back
-        </button>
+  const materialActivities = activities.filter(activity => activity?.type === 'material');
+  const practiceActivities = activities.filter(activity => activity?.type !== 'material');
+  const activityTotal = practiceActivities.length;
 
-        <div className="logo">
-          {isEarlyGrade ? '🌈 Learning Mission' : '📘 Lesson Workspace'}
-        </div>
+  function getPracticeKey(activity, index) {
+    return `${activity?.type || 'activity'}-${activity?.id || activity?.writingTask?.id || activity?.speechTask?.id || index}`;
+  }
 
-        <div className="pill">
-          ⚡ +{lesson?.xpReward || 0} XP
+  function activityRequiresSubmit(activity) {
+    return ['mcq', 'writing', 'speech'].includes(activity?.type);
+  }
+
+  function isPracticeActivityComplete(activity, index) {
+    if (!activityRequiresSubmit(activity)) return true;
+
+    const key = getPracticeKey(activity, index);
+    if (completedPracticeKeys.includes(key)) return true;
+
+    if (activity?.type === 'mcq') {
+      const questions = activity.questions || [];
+      return Boolean(questions.length) && questions.every(question => Boolean(question.mcqAttempt));
+    }
+
+    if (activity?.type === 'writing') {
+      return Boolean(
+        activity?.writingSubmission ||
+        activity?.submission ||
+        activity?.latestSubmission ||
+        activity?.writingTask?.submission ||
+        activity?.writingTask?.latestSubmission
+      );
+    }
+
+    if (activity?.type === 'speech') {
+      return Boolean(
+        activity?.speechAttempt ||
+        activity?.attempt ||
+        activity?.latestAttempt ||
+        activity?.speechTask?.attempt ||
+        activity?.speechTask?.latestAttempt
+      );
+    }
+
+    return true;
+  }
+
+  function markPracticeComplete(activity, index) {
+    const key = getPracticeKey(activity, index);
+    setCompletedPracticeKeys(prev => prev.includes(key) ? prev : [...prev, key]);
+  }
+
+  const currentPracticeIndex = activityTotal ? Math.min(practiceStep, activityTotal - 1) : 0;
+  const currentPracticeActivity = activityTotal ? practiceActivities[currentPracticeIndex] : null;
+  const currentPracticeComplete = currentPracticeActivity
+    ? isPracticeActivityComplete(currentPracticeActivity, currentPracticeIndex)
+    : true;
+  const allRequiredPracticeComplete = practiceActivities.every((activity, index) => isPracticeActivityComplete(activity, index));
+
+  const lessonSteps = [
+    {
+      key: 'overview',
+      eyebrow: 'Step 1',
+      title: 'Lesson Overview',
+      subtitle: 'Check the lesson goal, reward, and what you need to finish.'
+    },
+    ...(materialActivities.length ? [{
+      key: 'material',
+      eyebrow: 'Step 2',
+      title: 'Lesson Material',
+      subtitle: 'Open the attached slides or PDF before reading and answering.'
+    }] : []),
+    {
+      key: 'read',
+      eyebrow: `Step ${materialActivities.length ? 3 : 2}`,
+      title: 'Read the Lesson',
+      subtitle: 'Review the instructions and lesson text carefully.'
+    },
+    {
+      key: 'activities',
+      eyebrow: `Step ${materialActivities.length ? 4 : 3}`,
+      title: 'Practice Activities',
+      subtitle: activityTotal
+        ? `Activity ${currentPracticeIndex + 1} of ${activityTotal}`
+        : 'No practice activities yet for this lesson.'
+    },
+    {
+      key: 'reflection',
+      eyebrow: `Step ${materialActivities.length ? 5 : 4}`,
+      title: 'Reflection',
+      subtitle: 'Rate your confidence before finishing.'
+    },
+    {
+      key: 'complete',
+      eyebrow: `Step ${materialActivities.length ? 6 : 5}`,
+      title: 'Complete Lesson',
+      subtitle: 'Submit your lesson progress when you are ready.'
+    }
+  ];
+
+  const safeStep = Math.min(lessonStep, lessonSteps.length - 1);
+  const currentStep = lessonSteps[safeStep];
+  const canGoBack = safeStep > 0 || (currentStep?.key === 'activities' && currentPracticeIndex > 0);
+  const canGoNext = safeStep < lessonSteps.length - 1;
+
+  function goStep(delta) {
+    const targetStep = Math.max(0, Math.min(lessonSteps.length - 1, safeStep + delta));
+
+    if (delta > 0 && currentStep?.key === 'activities' && !allRequiredPracticeComplete) {
+      window.alert('Please submit the required activity before continuing.');
+      return;
+    }
+
+    if (targetStep > safeStep) {
+      setMaxUnlockedStep(prev => Math.max(prev, targetStep));
+    }
+
+    setLessonStep(targetStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleBack() {
+    if (currentStep?.key === 'activities' && currentPracticeIndex > 0) {
+      setActivityFeedbackKey('');
+      setPracticeStep(prev => Math.max(0, prev - 1));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    goStep(-1);
+  }
+
+  function handleNext() {
+    if (currentStep?.key === 'activities' && activityTotal) {
+      if (!currentPracticeComplete) {
+        window.alert('Please submit this activity before moving to the next one.');
+        return;
+      }
+
+      if (currentPracticeIndex < activityTotal - 1) {
+        setActivityFeedbackKey('');
+        setPracticeStep(prev => Math.min(activityTotal - 1, prev + 1));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      if (!allRequiredPracticeComplete) {
+        window.alert('Please submit all required activities before continuing.');
+        return;
+      }
+    }
+
+    if (currentStep?.key === 'activities') {
+      setActivityFeedbackKey('');
+    }
+
+    goStep(1);
+  }
+
+  function renderFeedbackCard(activity = currentPracticeActivity, index = currentPracticeIndex) {
+    if (!feedback || !activity) return null;
+
+    const currentKey = getPracticeKey(activity, index);
+    if (activityFeedbackKey !== currentKey) return null;
+
+    return (
+      <div
+        className="card"
+        style={{
+          border: feedback.includes('Tama') || feedback.includes('Na-save') || feedback.includes('Naisumite')
+            ? '2px solid #2ECC71'
+            : '2px solid #E67E22',
+          background: feedback.includes('Tama') ? '#E9FBEF' : '#FFFFFF',
+          marginTop: 14
+        }}
+      >
+        <div className="section-title">Activity Feedback</div>
+        <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.45 }}>
+          {feedback}
         </div>
       </div>
+    );
+  }
 
-      <div className="scroll">
+  function renderCompletedSummary() {
+    return (
+      <Grade46StudentChrome
+        data={data}
+        activeTab="lessons"
+        go={go}
+        icon="✅"
+        title={lesson?.title || "Lesson Summary"}
+        subtitle={`Completed • Grade ${lesson?.gradeLevel || '—'} • ${lesson?.subject || 'Filipino'}`}
+        titleAction={
+          <button
+            type="button"
+            className="g46-ref-soft-btn"
+            onClick={() => go('screen-lessons')}
+          >
+            ← Lessons
+          </button>
+        }
+      >
+        <div className="g46-ref-stack" style={{ display: 'grid', gap: 16 }}>
+          <section
+            className="g46-ref-panel"
+            style={{
+              border: '2px solid #22C55E',
+              background: 'linear-gradient(135deg, #F0FDF4, #FFFFFF)'
+            }}
+          >
+            <div className="g46-ref-panel-head">
+              <div>
+                <span className="g46-ref-tag">✅ Completed</span>
+                <h2 style={{ marginTop: 8 }}>Lesson Summary</h2>
+                <p className="g46-ref-muted">
+                  You already completed this lesson. Review the material if needed, or go back to the lesson library.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginTop: 16 }}>
+              {[
+                { icon: '📘', label: 'Subject', value: lesson?.subject || 'Filipino' },
+                { icon: '🎯', label: 'Activities', value: `${activityTotal} ${activityTotal === 1 ? 'Activity' : 'Activities'}` },
+                { icon: '⚡', label: 'Reward', value: `+${lesson?.xpReward || 0} XP` }
+              ].map(item => (
+                <div
+                  key={item.label}
+                  style={{
+                    borderRadius: 22,
+                    padding: '16px 18px',
+                    background: '#FFFFFF',
+                    border: '1px solid #DCFCE7',
+                    display: 'grid',
+                    gap: 6
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{item.icon}</span>
+                  <strong style={{ color: '#17324D', fontSize: 16 }}>{item.value}</strong>
+                  <small style={{ color: '#64748B', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {item.label}
+                  </small>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {materialActivities.length > 0 && (
+            <section className="g46-ref-panel">
+              <div className="g46-ref-panel-head">
+                <div>
+                  <h2>Review Lesson Material</h2>
+                  <p className="g46-ref-muted">You can still open the attached slides or PDF for review.</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: 12 }}>
+                {materialActivities.map((activity, index) => (
+                  <ActivityCard
+                    key={activity.id || index}
+                    activity={activity}
+                    index={index}
+                    total={materialActivities.length}
+                    isEarlyGrade={false}
+                    submitMcq={submitMcq}
+                    submitWriting={submitWriting}
+                    submitSpeech={submitSpeech}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section
+            className="g46-ref-panel"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap'
+            }}
+          >
+            <span className="g46-ref-muted" style={{ fontWeight: 900 }}>
+              Completed lesson summary
+            </span>
+
+            <button
+              type="button"
+              className="g46-ref-primary-btn"
+              onClick={() => go('screen-lessons')}
+            >
+              Back to Lessons
+            </button>
+          </section>
+        </div>
+      </Grade46StudentChrome>
+    );
+  }
+
+  if (lesson?.completed) {
+    return renderCompletedSummary();
+  }
+
+  function renderStepContent() {
+    if (currentStep.key === 'overview') {
+      return (
         <div
           className="card"
           style={{
-            background: isEarlyGrade
-              ? `linear-gradient(135deg, ${theme.bg}, #ffffff)`
-              : '#ffffff',
+            background: '#ffffff',
             border: `2px solid ${theme.accent}`,
           }}
         >
@@ -3557,60 +3865,97 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
                 Grade {lesson?.gradeLevel || '—'} • {lesson?.subject || 'Filipino'}
               </div>
 
-              <h2 style={{ margin: '4px 0 8px', fontSize: isEarlyGrade ? 30 : 24 }}>
-                {isEarlyGrade ? '🌟 ' : ''}{lesson?.title || 'Lesson'}
+              <h2 style={{ margin: '4px 0 8px', fontSize: 28, lineHeight: 1.1 }}>
+                {lesson?.title || 'Lesson'}
               </h2>
 
-              <div className="muted" style={{ fontSize: isEarlyGrade ? 17 : 14 }}>
-                {isEarlyGrade
-                  ? 'Makinig, magbasa, at sagutin ang gawain. Kaya mo ito!'
-                  : 'Read the lesson carefully, complete the activities, and track your progress.'}
+              <div className="muted" style={{ fontSize: 15, lineHeight: 1.55 }}>
+                Read the lesson carefully, open the attached material if available, complete the activities, and track your progress.
               </div>
             </div>
 
-            <div style={{ fontSize: isEarlyGrade ? 64 : 44 }}>
+            <div style={{ fontSize: 48 }}>
               {theme.icon || '📘'}
             </div>
           </div>
 
           <div className="divider" />
 
-          <div className="grid grid-3">
-            <Stat icon="📖" label="Type" value={theme.tag || 'Aralin'} />
-            <Stat icon="🎯" label="Activities" value={activities.length} />
-            <Stat icon="⚡" label="Reward" value={`+${lesson?.xpReward || 0}`} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+            {[
+              { icon: '📎', label: 'Material', value: materialActivities.length ? 'Attached' : 'None' },
+              { icon: '🎯', label: 'Activities', value: `${activityTotal} ${activityTotal === 1 ? 'Activity' : 'Activities'}` },
+              { icon: '⚡', label: 'Reward', value: `+${lesson?.xpReward || 0} XP` }
+            ].map(item => (
+              <div
+                key={item.label}
+                style={{
+                  borderRadius: 22,
+                  padding: '16px 18px',
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  display: 'grid',
+                  gap: 6
+                }}
+              >
+                <span style={{ fontSize: 22 }}>{item.icon}</span>
+                <strong style={{ color: '#17324D', fontSize: 16 }}>{item.value}</strong>
+                <small style={{ color: '#64748B', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {item.label}
+                </small>
+              </div>
+            ))}
           </div>
         </div>
+      );
+    }
 
-        <div className="card">
-          <div className="section-title">
-            {isEarlyGrade ? '1️⃣ Makinig at Basahin' : '1. Read the Lesson'}
-          </div>
+    if (currentStep.key === 'material') {
+      return (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {materialActivities.map((activity, index) => (
+            <ActivityCard
+              key={activity.id || index}
+              activity={activity}
+              index={index}
+              total={materialActivities.length}
+              isEarlyGrade={false}
+              submitMcq={submitMcq}
+              submitWriting={submitWriting}
+              submitSpeech={submitSpeech}
+            />
+          ))}
+        </div>
+      );
+    }
 
+    if (currentStep.key === 'read') {
+      return (
+        <div className="g46-ref-panel">
           {lesson?.instructions && (
             <div
               style={{
                 padding: 14,
                 borderRadius: 16,
-                background: isEarlyGrade ? '#FFF8CF' : '#F8FAFF',
+                background: '#F8FAFF',
                 marginBottom: 12,
                 lineHeight: 1.6,
-                fontSize: isEarlyGrade ? 18 : 15,
+                fontSize: 15,
               }}
             >
-              <b>{isEarlyGrade ? 'Panuto:' : 'Instructions:'}</b> {lesson.instructions}
+              <b>Instructions:</b> {lesson.instructions}
             </div>
           )}
 
           {lesson?.passage ? (
             <div
               style={{
-                padding: isEarlyGrade ? 20 : 18,
+                padding: 18,
                 borderRadius: 18,
-                background: isEarlyGrade ? '#F8FAFF' : '#FFFFFF',
+                background: '#FFFFFF',
                 border: '1px solid #E1E7FF',
-                lineHeight: isEarlyGrade ? 1.9 : 1.75,
-                fontSize: isEarlyGrade ? 21 : 16,
+                lineHeight: 1.75,
+                fontSize: 16,
               }}
             >
               {lesson.passage}
@@ -3623,7 +3968,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
 
           <div className="row">
             <button className="btn btn-blue" onClick={speakLesson}>
-              🔊 {isEarlyGrade ? 'Pakinggan' : 'Listen'}
+              🔊 Listen
             </button>
 
             <button className="btn btn-outline" onClick={() => speechSynthesis.cancel()}>
@@ -3631,1490 +3976,256 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
             </button>
           </div>
         </div>
+      );
+    }
 
-        {feedback && (
-          <div
-            className="card"
-            style={{
-              border: feedback.includes('Tama') || feedback.includes('Na-save') || feedback.includes('Naisumite')
-                ? '2px solid #2ECC71'
-                : '2px solid #E67E22',
-              background: feedback.includes('Tama') ? '#E9FBEF' : '#FFFFFF',
-            }}
-          >
-            <div className="section-title">
-              {isEarlyGrade ? '⭐ Feedback' : 'Feedback'}
+    if (currentStep.key === 'activities') {
+      const currentActivity = currentPracticeActivity;
+      return (
+        <div style={{ display: 'grid', gap: 14 }}>
+          {currentActivity ? (
+            <>
+              <ActivityCard
+                key={currentActivity.id || currentPracticeIndex}
+                activity={currentActivity}
+                index={currentPracticeIndex}
+                total={activityTotal}
+                isEarlyGrade={false}
+                submitMcq={async (...args) => {
+                  const result = await submitMcq(...args);
+                  markPracticeComplete(currentActivity, currentPracticeIndex);
+                  setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+                  return result;
+                }}
+                submitWriting={async (...args) => {
+                  const result = await submitWriting(...args);
+                  markPracticeComplete(currentActivity, currentPracticeIndex);
+                  setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+                  return result;
+                }}
+                submitSpeech={async (...args) => {
+                  const result = await submitSpeech(...args);
+                  markPracticeComplete(currentActivity, currentPracticeIndex);
+                  setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+                  return result;
+                }}
+              />
+
+              {renderFeedbackCard()}
+            </>
+          ) : (
+            <div className="g46-ref-panel">
+              <p className="g46-ref-muted" style={{ margin: 0 }}>
+                No practice activities yet for this lesson.
+              </p>
             </div>
-
-            <div style={{ fontSize: isEarlyGrade ? 20 : 16, fontWeight: 700 }}>
-              {feedback}
-            </div>
-          </div>
-        )}
-
-        <div className="card">
-          <div className="section-title">
-            {isEarlyGrade ? '2️⃣ Sagutan ang Activities' : '2. Complete the Activities'}
-          </div>
-
-          <div className="muted">
-            {activities.length
-              ? isEarlyGrade
-                ? 'Piliin, isulat, o bigkasin ang iyong sagot.'
-                : 'Answer the quiz, writing, and oral practice activities below.'
-              : 'Wala pang activities para sa lesson na ito.'}
-          </div>
-
-          <div className="divider" />
-
-          {activities.map((activity, index) => (
-            <ActivityCard
-              key={activity.id || index}
-              activity={activity}
-              index={index}
-              total={activities.length}
-              isEarlyGrade={isEarlyGrade}
-              submitMcq={submitMcq}
-              submitWriting={submitWriting}
-              submitSpeech={submitSpeech}
-            />
-          ))}
+          )}
         </div>
+      );
+    }
 
-        <div className="card">
-          <StudentSelfEvaluation isEarlyGrade={false} />
-        </div>
-
-        <div
-          className="card"
-          style={{
-            border: '2px solid #2ECC71',
-            background: isEarlyGrade ? '#F0FFF5' : '#FFFFFF',
-          }}
-        >
-          <div className="section-title">
-            {isEarlyGrade ? '3️⃣ Tapusin ang Lesson' : '3. Finish Lesson'}
-          </div>
-
-          <div className="muted">
-            Kapag tapos ka na, pindutin ito para maitala ang iyong progress at XP.
-          </div>
-
-          <div className="divider" />
-
-          <button className="btn btn-green" onClick={completeLesson}>
-            ✅ Mark as Completed
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-
-function StudentSelfEvaluation({ isEarlyGrade = false }) {
-  const [answers, setAnswers] = useState({});
-
-  const questions = isEarlyGrade
-    ? [
-        { id: 'understand', label: 'Naintindihan ko ang lesson.', options: ['😊 Oo', '😐 Konti lang', '😟 Hindi pa'] },
-        { id: 'practice', label: 'Kaya kong subukan ulit ang activity.', options: ['⭐ Kaya ko', '🌱 Kailangan pa', '🧑‍🏫 Help po'] }
-      ]
-    : [
-        { id: 'understand', label: 'I understood the lesson.', options: ['Strongly agree', 'Agree', 'Need review'] },
-        { id: 'useful', label: 'The activity helped me practice Filipino.', options: ['Strongly agree', 'Agree', 'Need review'] },
-        { id: 'confidence', label: 'I feel ready for a short quiz or task.', options: ['Ready', 'Almost ready', 'Need support'] }
+    if (currentStep.key === 'reflection') {
+      const reflectionOptions = [
+        'Kayang-kaya ko na',
+        'Kailangan ko pang mag-review',
+        'Magtatanong ako sa teacher'
       ];
 
-  const answered = Object.keys(answers).length;
-  const complete = answered === questions.length;
+      return (
+        <div className="g46-ref-panel">
+          <div style={{ display: 'grid', gap: 14 }}>
+            <div>
+              <h3 style={{ margin: '0 0 6px', color: '#17324D' }}>Kumusta ang aralin?</h3>
+              <p className="g46-ref-muted" style={{ margin: 0 }}>
+                Piliin ang pinakaakmang reflection bago tapusin ang lesson.
+              </p>
+            </div>
 
-  return (
-    <div
-      style={{
-        borderRadius: isEarlyGrade ? 30 : 22,
-        padding: isEarlyGrade ? 24 : 20,
-        background: 'linear-gradient(135deg, #fff8cf, #f0fff5)',
-        border: '2px solid rgba(246, 196, 83, 0.34)',
-        boxShadow: '0 14px 28px rgba(39, 87, 63, 0.06)'
-      }}
-    >
-      <div className="section-title" style={{ fontSize: isEarlyGrade ? 28 : 22, marginBottom: 8 }}>
-        {isEarlyGrade ? '🌟 Quick Check' : '🧾 Lesson Evaluation'}
-      </div>
-      <p className={isEarlyGrade ? 'g12-muted' : 'muted'} style={{ marginBottom: 16 }}>
-        {isEarlyGrade
-          ? 'Sagutin ito para malaman ni teacher kung madali o mahirap ang lesson.'
-          : 'This self-check helps teachers see if the lesson is clear, useful, and ready for assessment.'}
-      </p>
-
-      <div style={{ display: 'grid', gap: 14 }}>
-        {questions.map(question => (
-          <div key={question.id}>
-            <strong style={{ display: 'block', marginBottom: 8, color: '#14223b', fontSize: isEarlyGrade ? 18 : 15 }}>
-              {question.label}
-            </strong>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              {question.options.map(option => (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {reflectionOptions.map(option => (
                 <button
                   key={option}
                   type="button"
-                  className={answers[question.id] === option ? 'btn btn-green' : 'btn btn-outline'}
-                  onClick={() => setAnswers(prev => ({ ...prev, [question.id]: option }))}
+                  className={reflectionChoice === option ? 'g46-ref-primary-btn' : 'g46-ref-soft-btn'}
+                  onClick={() => setReflectionChoice(option)}
                   style={{
-                    minHeight: isEarlyGrade ? 54 : 42,
-                    borderRadius: isEarlyGrade ? 20 : 14,
-                    fontSize: isEarlyGrade ? 17 : 14,
-                    fontWeight: 900
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
+                    width: '100%',
+                    borderRadius: 18,
+                    padding: '14px 16px'
                   }}
                 >
-                  {option}
+                  {reflectionChoice === option ? '✅ ' : '○ '} {option}
                 </button>
               ))}
             </div>
+
+            {reflectionChoice && (
+              <div
+                style={{
+                  borderRadius: 18,
+                  padding: 14,
+                  background: '#F0FDF4',
+                  border: '1px solid #BBF7D0',
+                  color: '#166534',
+                  fontWeight: 900
+                }}
+              >
+                Reflection saved for this session: {reflectionChoice}
+              </div>
+            )}
           </div>
-        ))}
-      </div>
-
-      {complete && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: 14,
-            borderRadius: 18,
-            background: '#E9FBEF',
-            color: '#0d7f48',
-            fontWeight: 900
-          }}
-        >
-          ✅ {isEarlyGrade ? 'Salamat! Nakita ni teacher ang self-check mo.' : 'Evaluation saved in this session. Backend storage can be connected for reports.'}
         </div>
-      )}
-    </div>
-  );
-}
-
-
-
-function cleanLessonTextForKids(text = '') {
-  return String(text || '')
-    .replace(/\r/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
-function extractSectionFromLessonPlan(raw = '', startLabels = [], endLabels = []) {
-  const text = cleanLessonTextForKids(raw);
-  if (!text) return '';
-
-  const lower = text.toLowerCase();
-  let startIndex = -1;
-  let matchedLabel = '';
-
-  for (const label of startLabels) {
-    const idx = lower.indexOf(label.toLowerCase());
-    if (idx !== -1 && (startIndex === -1 || idx < startIndex)) {
-      startIndex = idx;
-      matchedLabel = label;
+      );
     }
-  }
-
-  if (startIndex === -1) return '';
-
-  let contentStart = startIndex + matchedLabel.length;
-  if (text[contentStart] === ':') contentStart += 1;
-
-  let endIndex = text.length;
-  const afterStart = lower.slice(contentStart);
-
-  for (const label of endLabels) {
-    const idx = afterStart.indexOf(label.toLowerCase());
-    if (idx !== -1) {
-      endIndex = Math.min(endIndex, contentStart + idx);
-    }
-  }
-
-  return cleanLessonTextForKids(text.slice(contentStart, endIndex));
-}
-
-function shortEarlyLessonTitle(lesson = {}) {
-  const subject = String(lesson.subject || "").trim();
-  const title = String(lesson.title || "").trim();
-
-  const withoutExtra = title
-    .replace(/\s*lesson\s*$/i, "")
-    .replace(/\s*quiz\s*$/i, "")
-    .trim();
-
-  if (/^gawa$/i.test(withoutExtra)) return "Gawa";
-  if (/^gawa\b/i.test(withoutExtra)) return "Gawa";
-
-  const prefix = withoutExtra
-    .replace(/^([^:]+)\s*:\s*.+$/, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (prefix && prefix.length <= 24) {
-    if (/oral|bigkas|speech|komunikasyon/i.test(prefix)) {
-      const number = prefix.match(/\d+/)?.[0];
-      return number ? `Bigkas ${number}` : "Bigkas";
-    }
-
-    if (/pagsulat|sulatin|patlang|writing/i.test(prefix)) {
-      const number = prefix.match(/\d+/)?.[0];
-      return number ? `Patlang ${number}` : "Patlang";
-    }
-
-    return prefix;
-  }
-
-  const number = title.match(/\b\d+\b/)?.[0];
-
-  if (/bokabularyo/i.test(subject) || /bokabularyo/i.test(title)) {
-    return number ? `Bokabularyo ${number}` : "Bokabularyo";
-  }
-
-  if (/pagbasa/i.test(subject) || /pagbasa/i.test(title)) {
-    return number ? `Pagbasa ${number}` : "Pagbasa";
-  }
-
-  if (/panitikan/i.test(subject) || /panitikan/i.test(title)) {
-    return number ? `Panitikan ${number}` : "Panitikan";
-  }
-
-  if (/oral|bigkas|speech|komunikasyon/i.test(subject) || /oral|bigkas|speech|komunikasyon/i.test(title)) {
-    return number ? `Bigkas ${number}` : "Bigkas";
-  }
-
-  if (/pagsulat|sulatin|patlang|writing/i.test(subject) || /pagsulat|sulatin|patlang|writing/i.test(title)) {
-    return number ? `Patlang ${number}` : "Patlang";
-  }
-
-  return prefix || subject || "Aralin";
-}
-
-function makeStudentFriendlyPassage(lesson) {
-  const raw = cleanLessonTextForKids(lesson?.passage || lesson?.instructions || lesson?.title || '');
-  if (!raw) return 'Makinig, magbasa, at sagutin ang gawain. Kaya mo ito!';
-
-  const extracted = extractSectionFromLessonPlan(
-    raw,
-    ['Main Lesson / Passage', 'Main Lesson', 'Passage', 'Lesson Content'],
-    ['Vocabulary Words', 'Mini Quiz', 'Matching Activity', 'Writing Activity', 'Speech Practice', 'Teacher Notes']
-  );
-
-  const source = extracted || raw
-    .replace(/TUKLAS TALINO SAMPLE LESSON PLAN/gi, '')
-    .replace(/Subject:\s*[^.\n]+/gi, '')
-    .replace(/Grade Level:\s*[^.\n]+/gi, '')
-    .replace(/Module:\s*[^.\n]+/gi, '')
-    .replace(/Lesson Title:\s*/gi, '')
-    .replace(/Estimated Duration:\s*[^.\n]+/gi, '')
-    .replace(/XP Reward:\s*[^.\n]+/gi, '')
-    .replace(/Learning Objectives:\s*/gi, '');
-
-  const sentences = cleanLessonTextForKids(source)
-    .replace(/\n+/g, ' ')
-    .split(/(?<=[.!?])\s+/)
-    .map(item => item.trim())
-    .filter(Boolean)
-    .filter(item => !/^(pagkatapos|teacher notes|correct answer|question\s*\d+)/i.test(item));
-
-  const shortText = sentences.slice(0, 4).join(' ');
-  const fallback = cleanLessonTextForKids(source).split('\n').slice(0, 4).join(' ');
-
-  return cleanLessonTextForKids(shortText || fallback || source).slice(0, 520);
-}
-
-function activityMissionMeta(activity, index = 0) {
-  const map = {
-    infographic: { icon: '🖼️', label: 'Tingnan' },
-    vocabulary: { icon: '🔤', label: 'Salita' },
-    matching: { icon: '🧩', label: 'Pares' },
-    mcq: { icon: '🎮', label: 'Quiz' },
-    speech: { icon: '🎤', label: 'Bigkas' },
-    writing: { icon: '🧩', label: 'Patlang' }
-  };
-
-  return map[activity?.type] || { icon: ['⭐', '🌟', '✨'][index % 3], label: 'Gawain' };
-}
-
-function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data, openLesson }) {
-  const activities = lesson?.activities || [];
-  const theme = subjectTheme(lesson?.subject);
-  const [missionStep, setMissionStep] = useState(0);
-  const [rewardModal, setRewardModal] = useState(null);
-  const [rewardClaimed, setRewardClaimed] = useState(Boolean(lesson?.completed));
-
-  useEffect(() => {
-    setMissionStep(0);
-    setRewardModal(null);
-    setRewardClaimed(Boolean(lesson?.completed));
-  }, [lesson?.id, lesson?.completed]);
-
-  const kidPassage = makeStudentFriendlyPassage(lesson);
-  const isReviewMode = Boolean(lesson?.completed || rewardClaimed);
-  const missionSteps = [
-    { type: 'listen', icon: '👂', label: 'Makinig' },
-    { type: 'read', icon: '📖', label: 'Basahin' },
-    ...activities.map((activity, index) => ({
-      type: 'activity',
-      activity,
-      activityIndex: index,
-      ...activityMissionMeta(activity, index)
-    })),
-    { type: 'finish', icon: isReviewMode ? '✅' : '⭐', label: isReviewMode ? 'Review' : 'Tapos' }
-  ];
-
-  const safeStep = Math.min(missionStep, missionSteps.length - 1);
-  const currentStep = missionSteps[safeStep];
-  const progress = Math.round(((safeStep + 1) / Math.max(1, missionSteps.length)) * 100);
-
-  function activityGuideText(step) {
-    const activity = step?.activity || {};
-
-    if (activity.speechTask || activity.targetText) {
-      return 'Pakinggan muna, tapos bigkasin. Tutulungan ka ng AI speech check sa pagbigkas.';
-    }
-
-    if (activity.writingTask || activity.prompt) {
-      return '';
-    }
-
-    return 'Piliin ang tamang sagot. Makikita mo agad ang feedback pagkatapos.';
-  }
-
-  function goNext() {
-    if (rewardModal) return;
-    setMissionStep(step => Math.min(step + 1, missionSteps.length - 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function goBackStep() {
-    if (rewardModal || rewardClaimed) return;
-    setMissionStep(step => Math.max(step - 1, 0));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function findNextLesson() {
-    const lessons = asArray(data?.lessons);
-    const currentId = Number(lesson?.id || 0);
-    const pending = lessons.filter(item => !item.completed && Number(item.id || 0) !== currentId);
-    return pending.find(item => item.subject === lesson?.subject) || pending[0] || null;
-  }
-
-  async function claimReward() {
-    if (rewardClaimed) return;
-
-    const result = await completeLesson({ stay: true, silent: true });
-    if (!result) return;
-
-    const xpEarned = Number(result.xpAwarded ?? lesson?.xpReward ?? 0);
-    setRewardClaimed(true);
-    setMissionStep(missionSteps.length - 1);
-    speechSynthesis.cancel();
-    setRewardModal({ xp: xpEarned });
-  }
-
-  function goHomeAfterReward() {
-    setRewardModal(null);
-    go('screen-student');
-  }
-
-  function goNextAfterReward() {
-    const nextLesson = findNextLesson();
-    setRewardModal(null);
-
-    if (nextLesson && typeof openLesson === 'function') {
-      openLesson(nextLesson);
-      return;
-    }
-
-    go('screen-student');
-  }
-
-  function speakFilipinoText(text) {
-    const cleanText = String(text || '').trim();
-
-    if (!cleanText) return;
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    const voices = speechSynthesis.getVoices();
-    const filipinoVoice = voices.find(voice =>
-      /fil|tagalog|philippines|filipino/i.test(`${voice.lang} ${voice.name}`)
-    );
-
-    utterance.lang = 'fil-PH';
-    utterance.rate = 0.86;
-    utterance.pitch = 1.05;
-
-    if (filipinoVoice) {
-      utterance.voice = filipinoVoice;
-    }
-
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
-  }
-
-  if (lesson?.completed && !rewardModal) {
-    const nextLesson = findNextLesson();
-    const summaryItems = [
-      { icon: theme.icon || '📘', label: lesson?.subject || 'Filipino' },
-      { icon: '⚡', label: `${lesson?.xpReward || 0} XP earned` },
-      { icon: '🎯', label: `${activities.length} activit${activities.length === 1 ? 'y' : 'ies'}` }
-    ];
 
     return (
-      <EarlyStudentChrome
-        data={data}
-        activeTab="lessons"
-        go={go}
-        icon="✅"
-        title="Lesson Summary"
+      <div
+        className="card"
+        style={{
+          border: '2px solid #2ECC71',
+          background: '#FFFFFF',
+        }}
       >
-        <style>{`
-          .g12-complete-summary {
-            max-width: 980px;
-            margin: 0 auto;
-            display: grid;
-            gap: 18px;
-          }
-
-          .g12-complete-hero {
-            position: relative;
-            overflow: hidden;
-            border-radius: 38px;
-            padding: 38px 34px;
-            background:
-              radial-gradient(circle at 14% 18%, rgba(255, 236, 163, 0.78), transparent 28%),
-              radial-gradient(circle at 88% 18%, rgba(219, 234, 254, 0.74), transparent 30%),
-              linear-gradient(135deg, #ffffff, #f0fff5);
-            border: 3px solid rgba(71, 206, 135, 0.28);
-            box-shadow: 0 20px 46px rgba(39, 87, 63, 0.09);
-            text-align: center;
-          }
-
-          .g12-complete-badge {
-            width: 128px;
-            height: 128px;
-            margin: 0 auto 18px;
-            border-radius: 42px;
-            display: grid;
-            place-items: center;
-            background: #fff3bd;
-            font-size: 76px;
-            box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.22), 0 18px 34px rgba(245, 158, 11, 0.13);
-          }
-
-          .g12-complete-hero h2 {
-            margin: 0;
-            color: #15965a;
-            font-size: clamp(42px, 5vw, 66px);
-            line-height: 0.95;
-            letter-spacing: -0.06em;
-            font-weight: 1000;
-          }
-
-          .g12-complete-hero p {
-            margin: 12px auto 0;
-            max-width: 720px;
-            color: #425a7c;
-            font-size: 20px;
-            font-weight: 900;
-            line-height: 1.5;
-          }
-
-          .g12-summary-chip-row {
-            margin-top: 24px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 12px;
-          }
-
-          .g12-summary-chip {
-            min-height: 56px;
-            padding: 0 20px;
-            border-radius: 20px;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.86);
-            border: 1px solid rgba(246, 196, 83, 0.34);
-            color: #14223b;
-            font-size: 17px;
-            font-weight: 1000;
-          }
-
-          .g12-summary-card {
-            padding: 30px;
-            border-radius: 34px;
-            background: rgba(255, 255, 255, 0.96);
-            border: 1px solid rgba(31, 154, 92, 0.08);
-            box-shadow: 0 16px 34px rgba(39, 87, 63, 0.07);
-          }
-
-          .g12-summary-card h3 {
-            margin: 0 0 14px;
-            color: #15965a;
-            font-size: clamp(28px, 3.2vw, 42px);
-            letter-spacing: -0.045em;
-            font-weight: 1000;
-          }
-
-          .g12-summary-text {
-            border-radius: 28px;
-            padding: 24px;
-            background: #f8fcff;
-            border: 1px solid #e1eefe;
-            color: #1f2d45;
-            font-size: clamp(22px, 2.5vw, 32px);
-            line-height: 1.55;
-            font-weight: 950;
-          }
-
-          .g12-summary-actions {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 12px;
-          }
-
-          .g12-summary-btn {
-            border: 0;
-            min-height: 64px;
-            padding: 0 28px;
-            border-radius: 24px;
-            background: linear-gradient(135deg, #47ce87, #1f9c60);
-            color: white;
-            font-size: 20px;
-            font-weight: 1000;
-            cursor: pointer;
-            box-shadow: 0 14px 22px rgba(32, 156, 96, 0.16);
-          }
-
-          .g12-summary-btn.secondary {
-            background: #ffffff;
-            color: #14975a;
-            border: 2px solid #2fbf73;
-            box-shadow: none;
-          }
-
-          .g12-summary-btn.purple {
-            background: linear-gradient(135deg, #a770ef, #7b4fd6);
-          }
-
-          /* Grade 1-2 completed-summary balanced font sizing. */
-          .g12-complete-hero {
-            padding: 30px 28px;
-            border-radius: 34px;
-          }
-
-          .g12-complete-badge {
-            width: 96px;
-            height: 96px;
-            border-radius: 32px;
-            font-size: 56px;
-          }
-
-          .g12-complete-hero h2 {
-            font-size: clamp(32px, 4vw, 48px);
-            line-height: 1;
-          }
-
-          .g12-complete-hero p {
-            font-size: 17px;
-          }
-
-          .g12-summary-chip {
-            min-height: 46px;
-            padding: 0 16px;
-            border-radius: 18px;
-            font-size: 15px;
-          }
-
-          .g12-summary-card {
-            padding: 24px;
-            border-radius: 30px;
-          }
-
-          .g12-summary-card h3 {
-            font-size: clamp(24px, 3vw, 34px);
-          }
-
-          .g12-summary-text {
-            padding: 22px;
-            border-radius: 24px;
-            font-size: clamp(18px, 2.1vw, 24px);
-            line-height: 1.6;
-          }
-
-          .g12-summary-btn {
-            min-height: 54px;
-            padding: 0 22px;
-            border-radius: 20px;
-            font-size: 17px;
-          }
-
-        `}</style>
-
-        <div className="g12-complete-summary">
-          <section className="g12-complete-hero">
-            <div className="g12-complete-badge">✅</div>
-            <h2>Lesson Completed!</h2>
-            <p>{lesson?.title || 'Natapos mo na ang lesson na ito.'}</p>
-            <div className="g12-summary-chip-row">
-              {summaryItems.map(item => (
-                <span className="g12-summary-chip" key={item.label}>
-                  <span>{item.icon}</span>
-                  {item.label}
-                </span>
-              ))}
-            </div>
-          </section>
-
-          <section className="g12-summary-card">
-            <h3>Maikling Summary</h3>
-            <div className="g12-summary-text">
-              {kidPassage}
-            </div>
-          </section>
-
-          <div className="g12-summary-actions">
-            {nextLesson && (
-              <button type="button" className="g12-summary-btn purple" onClick={() => openLesson(nextLesson)}>
-                Susunod na Lesson →
-              </button>
-            )}
-            <button type="button" className="g12-summary-btn" onClick={() => go('screen-student')}>
-              🏠 Home
-            </button>
-            <button type="button" className="g12-summary-btn secondary" onClick={() => go('screen-lessons')}>
-              📖 More Lessons
-            </button>
-          </div>
+        <div className="section-title">
+          Finish this lesson
         </div>
-      </EarlyStudentChrome>
+
+        <div className="muted" style={{ marginBottom: 14, lineHeight: 1.55 }}>
+          When you are done reading and answering the activities, submit your lesson progress.
+        </div>
+
+        <button
+          className="btn btn-green"
+          style={{
+            width: '100%',
+            minHeight: 56,
+            borderRadius: 18,
+            fontSize: 16,
+            fontWeight: 900
+          }}
+          onClick={() => completeLesson(lesson?.id)}
+        >
+          ✅ Complete Lesson
+        </button>
+      </div>
     );
   }
 
   return (
-    <EarlyStudentChrome
+    <Grade46StudentChrome
       data={data}
       activeTab="lessons"
       go={go}
-      icon={theme.icon || '📘'}
-      title="Learning Mission"
-      subtitle={`${lesson?.subject || 'Filipino'} • Grade ${lesson?.gradeLevel || '—'} • ${isReviewMode ? 'Review Mode' : `+${lesson?.xpReward || 0} XP`}`}
+      icon={theme.icon || "📘"}
+      title={lesson?.title || "Lesson"}
+      subtitle={`Grade ${lesson?.gradeLevel || '—'} • ${lesson?.subject || 'Filipino'} • +${lesson?.xpReward || 0} XP`}
+      titleAction={
+        <button
+          type="button"
+          className="g46-ref-soft-btn"
+          onClick={() => go('screen-lessons')}
+        >
+          ← Lessons
+        </button>
+      }
     >
-      <style>{`
-        .g12-mission-wrap {
-          display: grid;
-          gap: 18px;
-        }
-
-        .g12-mission-banner {
-          position: relative;
-          overflow: hidden;
-          border-radius: 34px;
-          padding: 26px 30px;
-          background:
-            radial-gradient(circle at 8% 22%, rgba(255, 236, 163, 0.72), transparent 30%),
-            radial-gradient(circle at 88% 18%, rgba(219, 234, 254, 0.75), transparent 32%),
-            linear-gradient(135deg, ${theme.bg || '#eaf8ef'}, #ffffff);
-          border: 1px solid rgba(31, 154, 92, 0.10);
-          box-shadow: 0 16px 32px rgba(39, 87, 63, 0.06);
-        }
-
-        .g12-mission-banner::after {
-          content: '✨';
-          position: absolute;
-          right: 28px;
-          top: 20px;
-          font-size: 34px;
-          opacity: 0.85;
-        }
-
-        .g12-mission-topline {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          margin-bottom: 18px;
-        }
-
-        .g12-mission-topline h2 {
-          margin: 0;
-          color: #15965a;
-          font-size: clamp(34px, 4vw, 54px);
-          line-height: 0.95;
-          letter-spacing: -0.06em;
-          font-weight: 1000;
-        }
-
-        .g12-mission-topline p {
-          margin: 8px 0 0;
-          color: #425a7c;
-          font-size: 17px;
-          font-weight: 900;
-        }
-
-        .g12-mission-xp {
-          min-width: 150px;
-          min-height: 62px;
-          padding: 0 20px;
-          border-radius: 24px;
-          display: grid;
-          place-items: center;
-          background: rgba(255, 255, 255, 0.82);
-          color: #14223b;
-          font-size: 23px;
-          font-weight: 1000;
-          border: 2px solid rgba(255, 217, 102, 0.35);
-        }
-
-        .g12-mission-path {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
-          gap: 10px;
-          margin-top: 16px;
-        }
-
-        .g12-mission-dot {
-          border: 0;
-          min-height: 74px;
-          border-radius: 22px;
-          background: rgba(255, 255, 255, 0.74);
-          color: #24324a;
-          display: grid;
-          place-items: center;
-          gap: 3px;
-          cursor: pointer;
-          box-shadow: inset 0 0 0 1px rgba(31, 154, 92, 0.08);
-        }
-
-        .g12-mission-dot span {
-          font-size: 28px;
-          line-height: 1;
-        }
-
-        .g12-mission-dot small {
-          font-size: 12px;
-          font-weight: 1000;
-        }
-
-        .g12-mission-dot.done {
-          background: #e9fbef;
-          color: #0d8b4e;
-        }
-
-        .g12-mission-dot:disabled {
-            cursor: not-allowed;
-            opacity: 0.72;
-          }
-
-          .g12-mission-dot:disabled small {
-            color: #50627A;
-          }
-
-          .g12-mission-dot.active {
-          background: #fff4c7;
-          color: #14223b;
-          box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.28), 0 10px 18px rgba(245, 158, 11, 0.10);
-        }
-
-        .g12-mission-card {
-          min-height: 420px;
-          border-radius: 36px;
-          padding: 34px;
-          background: rgba(255, 255, 255, 0.96);
-          border: 1px solid rgba(31, 154, 92, 0.08);
-          box-shadow: 0 16px 34px rgba(39, 87, 63, 0.07);
-          display: grid;
-          gap: 22px;
-        }
-
-        .g12-mission-step-head {
-          display: grid;
-          grid-template-columns: 92px minmax(0, 1fr);
-          gap: 20px;
-          align-items: center;
-        }
-
-        .g12-mission-big-icon {
-          width: 92px;
-          height: 92px;
-          border-radius: 30px;
-          display: grid;
-          place-items: center;
-          font-size: 50px;
-          background: #fff5cf;
-          box-shadow: inset 0 0 0 2px rgba(246, 196, 83, 0.20);
-        }
-
-        .g12-mission-step-head h3 {
-          margin: 0;
-          color: #15965a;
-          font-size: clamp(34px, 4vw, 52px);
-          line-height: 0.95;
-          letter-spacing: -0.055em;
-          font-weight: 1000;
-        }
-
-        .g12-mission-step-head p {
-          margin: 8px 0 0;
-          color: #425a7c;
-          font-size: 18px;
-          font-weight: 900;
-        }
-
-        .g12-mission-text-card {
-          border-radius: 30px;
-          padding: 26px;
-          background:
-            radial-gradient(circle at 94% 12%, rgba(255, 231, 128, 0.34), transparent 20%),
-            #f8fcff;
-          border: 1px solid #e1eefe;
-          color: #1f2d45;
-          font-size: clamp(26px, 3vw, 38px);
-          line-height: 1.55;
-          font-weight: 950;
-        }
-
-        .g12-mission-note {
-          border-radius: 24px;
-          padding: 18px 20px;
-          background: #fff8cf;
-          color: #27344c;
-          font-size: 18px;
-          line-height: 1.5;
-          font-weight: 850;
-        }
-
-        .g12-mission-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .g12-mission-actions-left,
-        .g12-mission-actions-right {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-
-        .g12-mission-btn {
-          border: 0;
-          min-height: 64px;
-          padding: 0 28px;
-          border-radius: 24px;
-          background: linear-gradient(135deg, #47ce87, #1f9c60);
-          color: white;
-          font-size: 20px;
-          font-weight: 1000;
-          cursor: pointer;
-          box-shadow: 0 14px 22px rgba(32, 156, 96, 0.16);
-        }
-
-        .g12-mission-btn.secondary {
-          background: #ffffff;
-          color: #14975a;
-          border: 2px solid #2fbf73;
-          box-shadow: none;
-        }
-
-        .g12-mission-btn.purple {
-          background: linear-gradient(135deg, #a770ef, #7b4fd6);
-        }
-
-        .g12-mission-activity {
-          border-radius: 30px;
-          overflow: hidden;
-        }
-
-        .g12-mission-activity .card {
-          margin: 0 !important;
-          border-radius: 30px !important;
-          box-shadow: none !important;
-        }
-
-        .g12-mission-feedback {
-          padding: 16px 18px;
-          border-radius: 22px;
-          background: #e9fbef;
-          color: #0d7f48;
-          font-size: 20px;
-          font-weight: 1000;
-          border: 1px solid #bfeacb;
-        }
-
-        .g12-finish-card {
-          min-height: 260px;
-          border-radius: 32px;
-          display: grid;
-          place-items: center;
-          text-align: center;
-          padding: 28px;
-          background:
-            radial-gradient(circle at 50% 18%, rgba(255, 235, 156, 0.58), transparent 30%),
-            linear-gradient(135deg, #f0fff5, #ffffff);
-          border: 2px solid #8ce0ae;
-        }
-
-        .g12-finish-card .big {
-          font-size: 78px;
-          line-height: 1;
-          margin-bottom: 12px;
-        }
-
-        .g12-finish-card h3 {
-          margin: 0;
-          color: #15965a;
-          font-size: clamp(34px, 4vw, 54px);
-          letter-spacing: -0.055em;
-        }
-
-        .g12-finish-card p {
-          margin: 10px 0 0;
-          color: #425a7c;
-          font-size: 20px;
-          font-weight: 900;
-        }
-
-        .g12-reward-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 250;
-          display: grid;
-          place-items: center;
-          padding: 24px;
-          background: rgba(18, 28, 48, 0.40);
-          backdrop-filter: blur(10px);
-        }
-
-        .g12-reward-modal {
-          position: relative;
-          width: min(620px, 100%);
-          overflow: hidden;
-          border-radius: 40px;
-          padding: 42px 36px 34px;
-          text-align: center;
-          background:
-            radial-gradient(circle at 20% 18%, rgba(255, 241, 179, 0.92), transparent 26%),
-            radial-gradient(circle at 82% 22%, rgba(219, 234, 254, 0.90), transparent 26%),
-            linear-gradient(135deg, #ffffff, #fff8dd 58%, #f0fff5);
-          border: 3px solid rgba(255, 217, 102, 0.72);
-          box-shadow: 0 28px 70px rgba(20, 34, 59, 0.24);
-          animation: g12RewardPop 0.35s ease-out both;
-        }
-
-        .g12-reward-modal::before,
-        .g12-reward-modal::after {
-          content: '';
-          position: absolute;
-          width: 170px;
-          height: 170px;
-          border-radius: 999px;
-          background: rgba(255, 224, 102, 0.25);
-          pointer-events: none;
-        }
-
-        .g12-reward-modal::before {
-          left: -72px;
-          top: -62px;
-        }
-
-        .g12-reward-modal::after {
-          right: -78px;
-          bottom: -82px;
-          background: rgba(71, 206, 135, 0.18);
-        }
-
-        .g12-reward-big {
-          position: relative;
-          z-index: 2;
-          width: 132px;
-          height: 132px;
-          margin: 0 auto 16px;
-          border-radius: 42px;
-          display: grid;
-          place-items: center;
-          background: #fff3bd;
-          font-size: 78px;
-          box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.25), 0 18px 34px rgba(245, 158, 11, 0.14);
-          animation: g12RewardBounce 0.95s ease-in-out infinite;
-        }
-
-        .g12-reward-modal h3 {
-          position: relative;
-          z-index: 2;
-          margin: 0;
-          color: #15965a;
-          font-size: clamp(42px, 5vw, 64px);
-          line-height: 0.95;
-          letter-spacing: -0.06em;
-          font-weight: 1000;
-        }
-
-        .g12-reward-modal p {
-          position: relative;
-          z-index: 2;
-          margin: 12px 0 0;
-          color: #31486b;
-          font-size: 20px;
-          font-weight: 900;
-        }
-
-        .g12-reward-xp {
-          position: relative;
-          z-index: 2;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 12px;
-          min-height: 76px;
-          margin: 22px auto 20px;
-          padding: 0 34px;
-          border-radius: 28px;
-          background: #ffffff;
-          color: #14223b;
-          font-size: 35px;
-          font-weight: 1000;
-          box-shadow: 0 14px 30px rgba(20, 34, 59, 0.10);
-          border: 2px solid rgba(255, 217, 102, 0.50);
-        }
-
-        .g12-reward-actions {
-          position: relative;
-          z-index: 2;
-          display: flex;
-          justify-content: center;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .g12-confetti-piece {
-          position: absolute;
-          z-index: 1;
-          top: -20px;
-          font-size: 28px;
-          animation: g12ConfettiFall 2.8s linear infinite;
-          pointer-events: none;
-        }
-
-        .g12-confetti-piece:nth-child(1) { left: 8%; animation-delay: 0s; }
-        .g12-confetti-piece:nth-child(2) { left: 20%; animation-delay: 0.35s; }
-        .g12-confetti-piece:nth-child(3) { left: 34%; animation-delay: 0.7s; }
-        .g12-confetti-piece:nth-child(4) { left: 48%; animation-delay: 0.15s; }
-        .g12-confetti-piece:nth-child(5) { left: 64%; animation-delay: 0.55s; }
-        .g12-confetti-piece:nth-child(6) { left: 78%; animation-delay: 0.95s; }
-        .g12-confetti-piece:nth-child(7) { left: 90%; animation-delay: 0.25s; }
-
-
-        /* Grade 1-2 lesson mission balanced font sizing. */
-        .g12-mission-banner {
-          padding: 24px 26px;
-          border-radius: 32px;
-        }
-
-        .g12-mission-topline h2 {
-          font-size: clamp(28px, 3.4vw, 42px);
-          line-height: 1;
-        }
-
-        .g12-mission-topline p {
-          font-size: 16px;
-          line-height: 1.45;
-        }
-
-        .g12-mission-xp {
-          min-width: 132px;
-          min-height: 54px;
-          border-radius: 20px;
-          font-size: 19px;
-        }
-
-        .g12-mission-dot {
-          min-height: 62px;
-          border-radius: 20px;
-        }
-
-        .g12-mission-dot span {
-          font-size: 24px;
-        }
-
-        .g12-mission-card {
-          min-height: 360px;
-          padding: 28px;
-          border-radius: 32px;
-        }
-
-        .g12-mission-step-head {
-          grid-template-columns: 78px minmax(0, 1fr);
-          gap: 18px;
-        }
-
-        .g12-mission-big-icon {
-          width: 78px;
-          height: 78px;
-          border-radius: 26px;
-          font-size: 42px;
-        }
-
-        .g12-mission-step-head h3 {
-          font-size: clamp(28px, 3.4vw, 40px);
-          line-height: 1;
-        }
-
-        .g12-mission-step-head p {
-          font-size: 16px;
-          line-height: 1.45;
-        }
-
-        .g12-mission-text-card {
-          padding: 24px;
-          border-radius: 26px;
-          font-size: clamp(20px, 2.4vw, 28px);
-          line-height: 1.6;
-        }
-
-        .g12-mission-note {
-          padding: 16px 18px;
-          border-radius: 22px;
-          font-size: 16px;
-        }
-
-        .g12-mission-btn {
-          min-height: 54px;
-          padding: 0 22px;
-          border-radius: 20px;
-          font-size: 17px;
-        }
-
-        .g12-mission-feedback {
-          font-size: 17px;
-        }
-
-        .g12-finish-card .big {
-          font-size: 58px;
-        }
-
-        .g12-finish-card h3 {
-          font-size: clamp(28px, 3.4vw, 42px);
-        }
-
-        .g12-finish-card p {
-          font-size: 17px;
-        }
-
-        .g12-reward-modal {
-          width: min(560px, 100%);
-          padding: 34px 30px 30px;
-          border-radius: 34px;
-        }
-
-        .g12-reward-big {
-          width: 102px;
-          height: 102px;
-          border-radius: 34px;
-          font-size: 58px;
-        }
-
-        .g12-reward-modal h3 {
-          font-size: clamp(32px, 4vw, 48px);
-          line-height: 1;
-        }
-
-        .g12-reward-modal p {
-          font-size: 17px;
-        }
-
-        .g12-reward-xp {
-          min-height: 60px;
-          padding: 0 26px;
-          border-radius: 24px;
-          font-size: 26px;
-        }
-
-        @keyframes g12RewardPop {
-          from { opacity: 0; transform: scale(0.88) translateY(20px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        @keyframes g12RewardBounce {
-          0%, 100% { transform: translateY(0) rotate(-2deg); }
-          50% { transform: translateY(-8px) rotate(2deg); }
-        }
-
-        @keyframes g12ConfettiFall {
-          0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
-          12% { opacity: 1; }
-          100% { transform: translateY(620px) rotate(360deg); opacity: 0; }
-        }
-
-        @media (max-width: 760px) {
-          .g12-mission-banner,
-          .g12-mission-card {
-            padding: 22px;
-            border-radius: 28px;
-          }
-
-          .g12-mission-topline,
-          .g12-mission-step-head {
-            grid-template-columns: 1fr;
-          }
-
-          .g12-mission-step-head {
-            gap: 12px;
-          }
-
-          .g12-mission-big-icon {
-            width: 76px;
-            height: 76px;
-            font-size: 40px;
-            border-radius: 24px;
-          }
-
-          .g12-mission-actions,
-          .g12-mission-actions-left,
-          .g12-mission-actions-right {
-            align-items: stretch;
-            flex-direction: column;
-          }
-
-          .g12-mission-btn {
-            width: 100%;
-          }
-        }
-      `}</style>
-
-      <div className="g12-mission-wrap">
-        {rewardModal && (
-          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Mission reward">
-            <div className="g12-reward-modal">
-              {['🎊', '⭐', '✨', '🌟', '🎉', '💛', '🌈'].map((piece, index) => (
-                <span className="g12-confetti-piece" key={index}>{piece}</span>
-              ))}
-
-              <div className="g12-reward-big">🏆</div>
-              <h3>Mission Complete!</h3>
-              <p>Ang galing mo! Natapos mo ang aralin.</p>
-              <div className="g12-reward-xp">⚡ +{rewardModal.xp || 0} XP</div>
-
-              <div className="g12-reward-actions">
-                <button type="button" className="g12-mission-btn purple" onClick={goNextAfterReward}>
-                  Susunod na Lesson →
-                </button>
-                <button type="button" className="g12-mission-btn secondary" onClick={goHomeAfterReward}>
-                  🏠 Home
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <section className="g12-mission-banner">
-          <div className="g12-mission-topline">
+      <div className="g46-ref-stack" style={{ display: 'grid', gap: 16 }}>
+        <section className="g46-ref-panel" style={{ padding: 14 }}>
+          <div className="g46-ref-panel-head" style={{ marginBottom: 8 }}>
             <div>
-              <h2>{shortEarlyLessonTitle(lesson)} 🌟</h2>
-              <p>Hakbang {safeStep + 1} of {missionSteps.length}</p>
+              <span className="g46-ref-tag">{currentStep.eyebrow} of {lessonSteps.length}</span>
+              <h2 style={{ margin: '6px 0 4px', fontSize: 24 }}>{currentStep.title}</h2>
+              <p className="g46-ref-muted">{currentStep.subtitle}</p>
             </div>
-            <div className="g12-mission-xp">⚡ +{lesson?.xpReward || 0} XP</div>
           </div>
 
-          <div className="g12-progress-track">
-            <span className="g12-progress-fill" style={{ width: `${progress}%` }} />
-          </div>
-
-          <div className="g12-mission-path" aria-label="Mission steps">
-            {missionSteps.map((step, index) => (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${lessonSteps.length}, minmax(0, 1fr))`,
+              gap: 6,
+              marginTop: 10
+            }}
+          >
+            {lessonSteps.map((step, index) => (
               <button
+                key={step.key}
                 type="button"
-                key={`${step.type}-${index}`}
-                className={`g12-mission-dot ${index < safeStep ? 'done' : ''} ${index === safeStep ? 'active' : ''}`}
-                disabled={rewardClaimed || rewardModal || index > safeStep}
-                aria-disabled={rewardClaimed || rewardModal || index > safeStep}
+                disabled={index > maxUnlockedStep}
                 onClick={() => {
-                  if (!rewardClaimed && !rewardModal && index <= safeStep) {
-                    setMissionStep(index);
-                  }
+                  if (index > maxUnlockedStep) return;
+                  setLessonStep(index);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-              >
-                <span>{step.icon}</span>
-                <small>{step.label}</small>
-              </button>
+                style={{
+                  border: 0,
+                  borderRadius: 999,
+                  minHeight: 10,
+                  cursor: index <= maxUnlockedStep ? 'pointer' : 'not-allowed',
+                  opacity: index <= maxUnlockedStep ? 1 : 0.55,
+                  background: index <= safeStep ? theme.accent : '#E2E8F0'
+                }}
+                aria-label={`Go to ${step.title}`}
+                title={index <= maxUnlockedStep ? step.title : 'Use Next to unlock this step'}
+              />
             ))}
           </div>
         </section>
 
-        <section className="g12-mission-card">
-          {currentStep.type === 'listen' && (
-            <>
-              <div className="g12-mission-step-head">
-                <div className="g12-mission-big-icon">👂</div>
-                <div>
-                  <h3>Makinig</h3>
-                </div>
-              </div>
+        {renderStepContent()}
 
-              <div className="g12-mission-text-card">
-                {lesson?.title || 'Handa ka na bang matuto?'}
-              </div>
+        <div
+          className="g46-ref-panel"
+          style={{
+            padding: 14,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap'
+          }}
+        >
+          <button
+            type="button"
+            className="g46-ref-soft-btn"
+            disabled={!canGoBack}
+            onClick={handleBack}
+            style={{ opacity: canGoBack ? 1 : 0.5 }}
+          >
+            ← Back
+          </button>
 
-              <div className="g12-mission-actions">
-                <div className="g12-mission-actions-left">
-                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
-                  <button className="g12-mission-btn secondary" onClick={() => speechSynthesis.cancel()}>⏹ Stop</button>
-                </div>
-                <div className="g12-mission-actions-right">
-                  <button className="g12-mission-btn purple" onClick={goNext}>Susunod →</button>
-                </div>
-              </div>
-            </>
+          <span className="g46-ref-muted" style={{ fontWeight: 900 }}>
+            {currentStep.key === 'activities' && activityTotal
+              ? `Activity ${currentPracticeIndex + 1} / ${activityTotal}`
+              : `${safeStep + 1} / ${lessonSteps.length}`}
+          </span>
+
+          {canGoNext ? (
+            <button
+              type="button"
+              className="g46-ref-primary-btn"
+              onClick={handleNext}
+            >
+              {currentStep.key === 'activities' && currentPracticeIndex < activityTotal - 1
+                ? 'Next Activity →'
+                : 'Next →'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="g46-ref-soft-btn"
+              onClick={() => go('screen-lessons')}
+            >
+              Back to Lessons
+            </button>
           )}
-
-          {currentStep.type === 'read' && (
-            <>
-              <div className="g12-mission-step-head">
-                <div className="g12-mission-big-icon">📖</div>
-                <div>
-                  <h3>Basahin at sabayan</h3>
-                  <p>Basahin nang dahan-dahan. Pwede mong pindutin ang speaker kung kailangan ng gabay.</p>
-                </div>
-              </div>
-
-              <div className="g12-mission-text-card">
-                {kidPassage}
-              </div>
-
-              <div className="g12-mission-actions">
-                <div className="g12-mission-actions-left">
-                  <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
-                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(kidPassage)}>🔊 Pakinggan</button>
-                </div>
-                <div className="g12-mission-actions-right">
-                  <button className="g12-mission-btn purple" onClick={goNext}>
-                    Gawin ang Activity →
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {currentStep.type === 'activity' && (
-            <>
-              <div className="g12-mission-step-head">
-                <div className="g12-mission-big-icon">{currentStep.icon}</div>
-                <div>
-                  <h3>{
-                    currentStep.activity?.writingTask ||
-                    currentStep.activity?.prompt ||
-                    currentStep.activity?.template ||
-                    currentStep.activity?.fillBlank ||
-                    currentStep.activity?.sentence
-                      ? 'Punan ang Patlang'
-                      : currentStep.label
-                  }</h3>
-                  {activityGuideText(currentStep) ? <p>{activityGuideText(currentStep)}</p> : null}
-                </div>
-              </div>
-
-              {feedback && (
-                <div className="g12-mission-feedback">
-                  {feedback.includes('+') ? feedback : `${feedback} ⭐`}
-                </div>
-              )}
-
-              <div className="g12-mission-activity">
-                <ActivityCard
-                  activity={currentStep.activity}
-                  index={currentStep.activityIndex}
-                  total={activities.length}
-                  isEarlyGrade={true}
-                  submitMcq={submitMcq}
-                  submitWriting={submitWriting}
-                  submitSpeech={submitSpeech}
-                />
-              </div>
-
-              <div className="g12-mission-actions">
-                <div className="g12-mission-actions-left">
-                  <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
-                </div>
-                <div className="g12-mission-actions-right">
-                  <button className="g12-mission-btn purple" onClick={goNext}>
-                    {safeStep >= missionSteps.length - 2 ? 'Tapusin →' : 'Susunod →'}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {currentStep.type === 'finish' && (
-            <>
-              <div className="g12-finish-card">
-                <div>
-                  <div className="big">{isReviewMode ? '✅' : '🎉'}</div>
-                  <h3>{isReviewMode ? 'Review Complete!' : 'Mission Complete!'}</h3>
-                  <p>
-                    {isReviewMode
-                      ? 'Natapos mo na ang lesson na ito. Maaari kang bumalik sa Home o pumili ng ibang lesson.'
-                      : `Kunin ang reward mo: +${lesson?.xpReward || 0} XP`}
-                  </p>
-                </div>
-              </div>
-
-
-              {feedback && (
-                <div className="g12-mission-feedback">
-                  {feedback}
-                </div>
-              )}
-
-              <div className="g12-mission-actions" style={{ justifyContent: 'center' }}>
-                <div className="g12-mission-actions-right" style={{ justifyContent: 'center', width: '100%' }}>
-                  {!isReviewMode ? (
-                    <button
-                      className="g12-mission-btn"
-                      onClick={claimReward}
-                      style={{
-                        minWidth: 260,
-                        minHeight: 78,
-                        fontSize: 24,
-                        borderRadius: 26,
-                        justifyContent: 'center'
-                      }}
-                    >
-                      ⭐ Claim XP
-                    </button>
-                  ) : (
-                    <button className="g12-mission-btn purple" onClick={() => go('screen-student')}>🏠 Go Home</button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </section>
+        </div>
       </div>
-    </EarlyStudentChrome>
+    </Grade46StudentChrome>
   );
-}
-
-function getActivityData(activity) {
-  if (!activity?.dataJson) return {};
-
-  if (typeof activity.dataJson === 'string') {
-    try {
-      return JSON.parse(activity.dataJson);
-    } catch {
-      return {};
-    }
-  }
-
-  return activity.dataJson || {};
 }
 
 function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq, submitWriting, submitSpeech }) {
@@ -5188,6 +4299,16 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
     );
   }
 
+  if (activity.type === 'material') {
+    return (
+      <MaterialActivity
+        activity={activity}
+        isEarlyGrade={isEarlyGrade}
+        activityBoxStyle={activityBoxStyle}
+      />
+    );
+  }
+
   if (activity.type === 'infographic') {
     return (
       <InfographicActivity
@@ -5205,6 +4326,153 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
       <div className="section-title">Activity</div>
       <div className="muted">
         This activity type is not supported yet: {activity.type}
+      </div>
+    </div>
+  );
+}
+
+function MaterialActivity({ activity, isEarlyGrade, activityBoxStyle }) {
+  const material = activity.dataJson || activity;
+  const fileName = material.fileName || activity.title || 'Lesson material';
+  const fileUrl = material.fileUrl || '';
+  const fileType = String(material.fileType || 'FILE').toUpperCase();
+  const mimeType = String(material.mimeType || '').toLowerCase();
+  const isPdf = fileType === 'PDF' || mimeType.includes('pdf') || fileName.toLowerCase().endsWith('.pdf');
+
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState('');
+  const [pdfPreviewError, setPdfPreviewError] = useState('');
+
+  useEffect(() => {
+    if (!isPdf || !fileUrl) {
+      setPdfPreviewUrl('');
+      setPdfPreviewError('');
+      return undefined;
+    }
+
+    let cancelled = false;
+    let objectUrl = '';
+
+    setPdfPreviewUrl('');
+    setPdfPreviewError('');
+
+    fetch(fileUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('PDF preview could not be loaded.');
+        }
+
+        return response.blob();
+      })
+      .then(blob => {
+        if (cancelled) return;
+
+        objectUrl = URL.createObjectURL(blob);
+        setPdfPreviewUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPdfPreviewError('Preview is not available here. Open the PDF in a new tab instead.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [isPdf, fileUrl]);
+
+  return (
+    <div className="card" style={activityBoxStyle}>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-title">
+          {isEarlyGrade ? '📎 Lesson Slides' : 'Lesson Material'}
+        </div>
+
+        <div className="pill">
+          {fileType}
+        </div>
+      </div>
+
+      {activity.instructions && (
+        <div className="muted" style={{ marginBottom: 10 }}>
+          {activity.instructions}
+        </div>
+      )}
+
+      <div
+        style={{
+          border: '1px solid #E2E8F0',
+          borderRadius: isEarlyGrade ? 24 : 18,
+          padding: isEarlyGrade ? 20 : 16,
+          background: '#F8FAFC',
+          display: 'grid',
+          gap: 12
+        }}
+      >
+        <strong style={{ fontSize: isEarlyGrade ? 22 : 17, lineHeight: 1.35 }}>
+          📄 {fileName}
+        </strong>
+
+        <span className="muted">
+          {isPdf
+            ? 'Preview the PDF below, or open it in a new tab.'
+            : 'Open the lesson slides before answering the activities.'}
+        </span>
+
+        {fileUrl && isPdf && (
+          <div
+            style={{
+              border: '1px solid #DCE7F3',
+              borderRadius: 16,
+              overflow: 'hidden',
+              background: '#FFFFFF',
+              minHeight: isEarlyGrade ? 420 : 520,
+              display: 'grid',
+              placeItems: pdfPreviewUrl ? 'stretch' : 'center'
+            }}
+          >
+            {pdfPreviewUrl ? (
+              <iframe
+                title={`Preview ${fileName}`}
+                src={pdfPreviewUrl}
+                style={{
+                  width: '100%',
+                  height: isEarlyGrade ? 420 : 520,
+                  border: 0,
+                  display: 'block'
+                }}
+              />
+            ) : (
+              <div
+                className="muted"
+                style={{
+                  padding: 24,
+                  textAlign: 'center',
+                  fontWeight: 800
+                }}
+              >
+                {pdfPreviewError || 'Loading PDF preview...'}
+              </div>
+            )}
+          </div>
+        )}
+
+        {fileUrl ? (
+          <a
+            className="btn btn-green"
+            href={fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{ width: 'fit-content', marginTop: 4 }}
+          >
+            {isPdf ? 'Open Full PDF' : 'Open Lesson Slides'}
+          </a>
+        ) : (
+          <span className="muted">No lesson file attached.</span>
+        )}
       </div>
     </div>
   );
@@ -5841,22 +5109,16 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
         <>
           <div
             style={{
-              padding: 14,
-              borderRadius: 16,
-              background: '#F7F9FC',
-              border: '1px solid #E8E8E8',
+              padding: isEarlyGrade ? 16 : 12,
+              borderRadius: isEarlyGrade ? 20 : 14,
+              background: isEarlyGrade ? '#FFF8CF' : '#F8FAFF',
+              border: '1px solid #E1E7FF',
               marginBottom: 12,
-              lineHeight: 1.55,
+              fontWeight: 800,
+              lineHeight: 1.45,
             }}
           >
-            <b>Writing guide:</b> Answer in complete Filipino sentences. You may start with
-            <span style={{ fontWeight: 900 }}> “Ang sagot ko ay...”</span> or
-            <span style={{ fontWeight: 900 }}> “Sa aking palagay...”</span>
-            <ul style={{ margin: '8px 0 0 18px', padding: 0 }}>
-              <li>Use a complete sentence.</li>
-              <li>Answer the question directly.</li>
-              <li>Read your answer once before submitting.</li>
-            </ul>
+            <strong>Gabay:</strong> Sumagot nang malinaw gamit ang buong pangungusap.
           </div>
 
           <textarea
@@ -9993,71 +9255,47 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const lowerName = file.name.toLowerCase();
-    const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
-    const isText = file.type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name);
-    const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf');
+    const isAllowed = /\.(ppt|pptx|pdf)$/i.test(file.name || '');
 
-    setLessonPlanFile({
-      name: file.name,
-      type: file.type || 'Unknown file type',
-      size: formatLessonPlanFileSize(file.size)
-    });
-    setLessonPlanFilePreview('');
-    setLessonPlanFileStatus('Reading uploaded lesson plan...');
+    if (!isAllowed) {
+      setLessonPlanFile(null);
+      setLessonPlanFilePreview('');
+      setLessonPlanFileStatus('Please upload a PPT, PPTX, or PDF lesson material.');
+      setAiDraftNotice('Unsupported file type. Use PPT, PPTX, or PDF only.');
+      event.target.value = '';
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('material', file);
+
+    setLessonPlanFileStatus('Uploading lesson material...');
     setAiDraftNotice('');
 
     try {
-      if (isImage) {
-        const previewUrl = URL.createObjectURL(file);
-        setLessonPlanFilePreview(previewUrl);
-        setLessonPlanFileStatus(
-          'Image uploaded. This is ready for the OCR/AI extraction step. For now, paste the readable lesson text below, then generate the draft.'
-        );
-        setAiDraftNotice('Photo selected. Next step is connecting OCR/backend extraction for scanned lesson plans.');
-        return;
-      }
+      const data = await uploadForm('/lessons/materials/upload', formData);
+      const material = data.material || {};
 
-      if (isText) {
-        const text = await file.text();
-        const cleaned = text.trim();
+      setLessonPlanFile({
+        name: material.fileName || file.name,
+        type: material.fileType || file.type || 'Lesson material',
+        size: formatLessonPlanFileSize(material.size || file.size),
+        fileName: material.fileName || file.name,
+        fileUrl: material.fileUrl,
+        fileType: material.fileType || '',
+        mimeType: material.mimeType || file.type || '',
+        rawSize: Number(material.size || file.size || 0)
+      });
 
-        if (!cleaned) {
-          setLessonPlanFileStatus('The uploaded text file is empty. Please choose another file or paste the lesson plan.');
-          return;
-        }
-
-        setLessonPlanText(cleaned);
-        setLessonPlanFileStatus('Text extracted successfully. You can review it, edit it, then generate a lesson draft.');
-        setAiDraftNotice('Lesson plan text was extracted from the uploaded file. Please review before generating.');
-        return;
-      }
-
-      if (isPdf) {
-        const rawText = await file.text();
-        const readableText = extractReadablePdfText(rawText);
-
-        if (readableText && readableText.length >= 120) {
-          setLessonPlanText(readableText);
-          setLessonPlanFileStatus(
-            'Basic PDF text extraction completed. Please review the text because PDF extraction may include extra spacing or missing words.'
-          );
-          setAiDraftNotice('A basic draft source was extracted from the PDF. Please review before generating.');
-        } else {
-          setLessonPlanFileStatus(
-            'PDF selected, but the browser could not read enough text. If this is scanned or picture-based, it needs OCR/backend extraction. Paste the lesson text below for now.'
-          );
-          setAiDraftNotice('PDF selected. Scanned lesson plans need OCR/backend extraction before AI generation.');
-        }
-        return;
-      }
-
-      setLessonPlanFileStatus(
-        'File selected, but this type needs backend extraction. Please upload TXT/PDF/image or paste the lesson plan text below.'
-      );
+      setLessonPlanFilePreview('');
+      setLessonPlanFileStatus('Lesson material uploaded. Students will see this file inside the lesson after you publish.');
+      setAiDraftNotice('Slides attached. Add lesson details and activities, then publish the lesson.');
     } catch (err) {
-      setLessonPlanFileStatus('Could not read the uploaded file. Please try another file or paste the lesson plan text.');
-      setAiDraftNotice(err?.message || 'File reading failed.');
+      setLessonPlanFile(null);
+      setLessonPlanFilePreview('');
+      setLessonPlanFileStatus(err?.message || 'Could not upload lesson material. Please try again.');
+      setAiDraftNotice('Upload failed.');
+      event.target.value = '';
     }
   }
 
@@ -10243,7 +9481,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     const rawPlan = lessonPlanText.trim();
 
     if (!rawPlan) {
-      setAiDraftNotice('Please upload a lesson plan file or paste the teacher lesson plan first.');
+      setAiDraftNotice('Please upload lesson slides or paste teacher notes first.');
       return;
     }
 
@@ -10325,7 +9563,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     }));
 
     setActivities(generatedActivities);
-    setAiDraftNotice('Generated a lesson draft. Please review and edit everything before publishing.');
+    setAiDraftNotice('Lesson details filled from notes. Please review and edit before publishing.');
     setBuilderTab('details');
   }
 
@@ -10347,15 +9585,30 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       return;
     }
 
+    const preparedActivities = cleanActivities();
+
+    if (lessonPlanFile?.fileUrl) {
+      preparedActivities.unshift({
+        type: 'material',
+        title: 'Lesson Slides',
+        instructions: 'Open the attached lesson material before answering the activities.',
+        fileName: lessonPlanFile.fileName || lessonPlanFile.name,
+        fileUrl: lessonPlanFile.fileUrl,
+        fileType: lessonPlanFile.fileType || lessonPlanFile.type,
+        mimeType: lessonPlanFile.mimeType || null,
+        size: Number(lessonPlanFile.rawSize || 0) || null
+      });
+    }
+
     const payload = {
       gradeLevel: Number(lessonDraft.gradeLevel),
       subject: lessonDraft.subject,
       title: lessonDraft.title.trim(),
       xpReward: Number(lessonDraft.xpReward || 25),
-      duration: lessonDraft.duration || '10 minuto',
+      duration: '10 minuto',
       instructions: lessonDraft.instructions || null,
       passage: lessonDraft.passage || null,
-      activities: cleanActivities()
+      activities: preparedActivities
     };
 
     await createLesson(payload);
@@ -10371,6 +9624,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     });
 
     setActivities([]);
+    clearLessonPlanSource();
     setBuilderTab('lessons');
   }
 
@@ -10520,7 +9774,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
           <div className="teacher-builder-workflow" aria-label="Lesson builder steps">
             {[
-              ['source', '✨ Source / AI'],
+              ['source', '📎 Lesson Material'],
               ['details', '📝 Lesson Details'],
               ['activities', '🧩 Activities'],
               ['preview', '👁 Preview'],
@@ -10543,18 +9797,18 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             <div className="teacher-design-heading">
               <div className="teacher-design-step">AI</div>
               <div>
-                <h2>AI-Assisted Lesson Builder</h2>
+                <h2>Lesson Material</h2>
 
               </div>
             </div>
 
             <div className="teacher-field">
-              <label>Upload Lesson Plan File</label>
+              <label>Upload Lesson Slides or PDF</label>
               <input
                 id="teacher-lesson-plan-file"
                 className="input-field"
                 type="file"
-                accept=".txt,.md,.csv,.pdf,.png,.jpg,.jpeg,.webp,text/plain,application/pdf,image/*"
+                accept=".ppt,.pptx,.pdf"
                 onChange={handleLessonPlanFileUpload}
               />
               <small style={{ color: '#6d7b73', fontWeight: 750, marginTop: 6 }}>
@@ -10582,7 +9836,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             )}
 
             <div className="teacher-field" style={{ marginTop: 16 }}>
-              <label>Lesson Plan Text / Extracted Content</label>
+              <label>Optional Teacher Notes</label>
               <textarea
                 className="input-field"
                 value={lessonPlanText}
@@ -10595,7 +9849,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
             <div className="row" style={{ marginTop: 14, gap: 10 }}>
               <button className="lms-main-action" type="button" onClick={generateFromLessonPlan}>
-                ✨ Generate Draft from Lesson Plan
+                Use Notes to Fill Lesson Details
               </button>
               <button
                 className="lms-outline-action"
@@ -10680,13 +9934,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             </div>
 
             <div className="teacher-field" style={{ marginTop: 16 }}>
-              <label>Estimated Duration</label>
-              <input
-                className="input-field"
-                value={lessonDraft.duration}
-                onChange={(e) => updateLesson('duration', e.target.value)}
-                placeholder="10 minuto"
-              />
             </div>
           </section>
 
@@ -10817,7 +10064,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
               <div className="teacher-design-step">5</div>
               <div>
                 <h2>My Created Lessons</h2>
-                <p>Your most recent lessons.</p>
+                <p>Your most recent published lessons.</p>
               </div>
               <button className="lms-view-lessons-btn" type="button" onClick={toggleShowAllLessons}>
                 {showAllLessons ? 'Show Less' : 'View All Lessons'}
@@ -10830,7 +10077,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                   <th>Lesson Title</th>
                   <th>Subject</th>
                   <th>Grade</th>
-                  <th>Duration</th>
                   <th>XP</th>
                   <th>Status</th>
                   <th>Updated</th>
@@ -10846,7 +10092,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                       <td>📘 {lesson.title}</td>
                       <td>{lesson.subject}</td>
                       <td>Grade {lesson.gradeLevel}</td>
-                      <td>{lesson.duration || '10 minuto'}</td>
                       <td>{lesson.xpReward || 0}</td>
                       <td>
                         <span className={`lms-status ${isPublished ? 'published' : 'draft'}`}>
@@ -10870,7 +10115,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
                 {!visibleRecentLessons.length && (
                   <tr>
-                    <td colSpan="8">No teacher-created lessons yet.</td>
+                    <td colSpan="7">No teacher-created lessons yet.</td>
                   </tr>
                 )}
               </tbody>
@@ -10905,7 +10150,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
               </div>
 
               <div className="lms-preview-stats">
-                <span className="lms-preview-stat">⏱ {lessonDraft.duration || '10 minuto'}</span>
                 <span className="lms-preview-stat">⭐ {lessonDraft.xpReward || 0} XP</span>
                 <span className="lms-preview-stat">🧩 {validActivities.length} activities</span>
               </div>

@@ -11,6 +11,16 @@ const activityBaseSchema = z.object({
   instructions: z.string().optional().nullable()
 });
 
+const materialActivitySchema = activityBaseSchema.extend({
+  type: z.literal('material'),
+  title: z.string().min(2).default('Lesson Slides'),
+  fileName: z.string().min(1),
+  fileUrl: z.string().min(1),
+  fileType: z.string().optional().nullable(),
+  mimeType: z.string().optional().nullable(),
+  size: z.number().optional().nullable()
+});
+
 const mcqActivitySchema = activityBaseSchema.extend({
   type: z.literal('mcq'),
   title: z.string().min(2).default('Multiple Choice Quiz'),
@@ -71,6 +81,7 @@ const infographicActivitySchema = activityBaseSchema.extend({
 });
 
 const lessonActivitySchema = z.discriminatedUnion('type', [
+  materialActivitySchema,
   mcqActivitySchema,
   writingActivitySchema,
   speechActivitySchema,

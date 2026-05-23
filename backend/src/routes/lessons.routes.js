@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import {
   authenticate,
   requireRole,
@@ -31,6 +35,40 @@ const router = Router();
 router.use(authenticate);
 router.use(requirePasswordChanged);
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const lessonMaterialUploadDir = path.join(__dirname, '../../uploads/lesson-materials');
+
+fs.mkdirSync(lessonMaterialUploadDir, { recursive: true });
+
+const lessonMaterialUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, lessonMaterialUploadDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const safeBase = path.basename(file.originalname || 'lesson-material', ext)
+        .replace(/[^a-z0-9-_]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80) || 'lesson-material';
+
+      cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safeBase}${ext}`);
+    }
+  }),
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const allowedExts = new Set(['.ppt', '.pptx', '.pdf']);
+
+    if (allowedExts.has(ext)) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new Error('Only PPT, PPTX, or PDF lesson materials are allowed.'));
+  },
+  limits: { fileSize: 25 * 1024 * 1024 }
+});
+
+
 const lessonIncludes = [
   {
     model: LessonActivity,
@@ -48,6 +86,16 @@ const lessonIncludes = [
 ];
 
 function buildActivityData(activity) {
+  if (activity.type === 'material') {
+    return {
+      fileName: activity.fileName || '',
+      fileUrl: activity.fileUrl || '',
+      fileType: activity.fileType || '',
+      mimeType: activity.mimeType || '',
+      size: activity.size || null
+    };
+  }
+
   if (activity.type === 'matching') {
     return { pairs: activity.pairs || [] };
   }
@@ -164,6 +212,30 @@ router.get('/', async (req, res, next) => {
     });
 
     res.json({ lessons });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/materials/upload', requireRole('admin', 'teacher'), lessonMaterialUpload.single('material'), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please upload a PPT, PPTX, or PDF file.' });
+    }
+
+    const ext = path.extname(req.file.originalname || '').toLowerCase();
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    const material = {
+      fileName: req.file.originalname,
+      storedName: req.file.filename,
+      fileUrl: `${baseUrl}/uploads/lesson-materials/${req.file.filename}`,
+      fileType: ext.replace('.', '').toUpperCase() || 'FILE',
+      mimeType: req.file.mimetype,
+      size: req.file.size
+    };
+
+    res.status(201).json({ material });
   } catch (err) {
     next(err);
   }
