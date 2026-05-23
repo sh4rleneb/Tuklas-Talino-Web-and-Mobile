@@ -4228,6 +4228,1327 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   );
 }
 
+function cleanLessonTextForKids(text = '') {
+  return String(text || '')
+    .replace(/\r/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function extractSectionFromLessonPlan(raw = '', startLabels = [], endLabels = []) {
+  const text = cleanLessonTextForKids(raw);
+  if (!text) return '';
+
+  const lower = text.toLowerCase();
+  let startIndex = -1;
+  let matchedLabel = '';
+
+  for (const label of startLabels) {
+    const idx = lower.indexOf(label.toLowerCase());
+    if (idx !== -1 && (startIndex === -1 || idx < startIndex)) {
+      startIndex = idx;
+      matchedLabel = label;
+    }
+  }
+
+  if (startIndex === -1) return '';
+
+  let contentStart = startIndex + matchedLabel.length;
+  if (text[contentStart] === ':') contentStart += 1;
+
+  let endIndex = text.length;
+  const afterStart = lower.slice(contentStart);
+
+  for (const label of endLabels) {
+    const idx = afterStart.indexOf(label.toLowerCase());
+    if (idx !== -1) {
+      endIndex = Math.min(endIndex, contentStart + idx);
+    }
+  }
+
+  return cleanLessonTextForKids(text.slice(contentStart, endIndex));
+}
+
+function shortEarlyLessonTitle(lesson = {}) {
+  const subject = String(lesson.subject || "").trim();
+  const title = String(lesson.title || "").trim();
+
+  const withoutExtra = title
+    .replace(/\s*lesson\s*$/i, "")
+    .replace(/\s*quiz\s*$/i, "")
+    .trim();
+
+  if (/^gawa$/i.test(withoutExtra)) return "Gawa";
+  if (/^gawa\b/i.test(withoutExtra)) return "Gawa";
+
+  const prefix = withoutExtra
+    .replace(/^([^:]+)\s*:\s*.+$/, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (prefix && prefix.length <= 24) {
+    if (/oral|bigkas|speech|komunikasyon/i.test(prefix)) {
+      const number = prefix.match(/\d+/)?.[0];
+      return number ? `Bigkas ${number}` : "Bigkas";
+    }
+
+    if (/pagsulat|sulatin|patlang|writing/i.test(prefix)) {
+      const number = prefix.match(/\d+/)?.[0];
+      return number ? `Patlang ${number}` : "Patlang";
+    }
+
+    return prefix;
+  }
+
+  const number = title.match(/\b\d+\b/)?.[0];
+
+  if (/bokabularyo/i.test(subject) || /bokabularyo/i.test(title)) {
+    return number ? `Bokabularyo ${number}` : "Bokabularyo";
+  }
+
+  if (/pagbasa/i.test(subject) || /pagbasa/i.test(title)) {
+    return number ? `Pagbasa ${number}` : "Pagbasa";
+  }
+
+  if (/panitikan/i.test(subject) || /panitikan/i.test(title)) {
+    return number ? `Panitikan ${number}` : "Panitikan";
+  }
+
+  if (/oral|bigkas|speech|komunikasyon/i.test(subject) || /oral|bigkas|speech|komunikasyon/i.test(title)) {
+    return number ? `Bigkas ${number}` : "Bigkas";
+  }
+
+  if (/pagsulat|sulatin|patlang|writing/i.test(subject) || /pagsulat|sulatin|patlang|writing/i.test(title)) {
+    return number ? `Patlang ${number}` : "Patlang";
+  }
+
+  return prefix || subject || "Aralin";
+}
+
+function makeStudentFriendlyPassage(lesson) {
+  const raw = cleanLessonTextForKids(lesson?.passage || lesson?.instructions || lesson?.title || '');
+  if (!raw) return 'Makinig, magbasa, at sagutin ang gawain. Kaya mo ito!';
+
+  const extracted = extractSectionFromLessonPlan(
+    raw,
+    ['Main Lesson / Passage', 'Main Lesson', 'Passage', 'Lesson Content'],
+    ['Vocabulary Words', 'Mini Quiz', 'Matching Activity', 'Writing Activity', 'Speech Practice', 'Teacher Notes']
+  );
+
+  const source = extracted || raw
+    .replace(/TUKLAS TALINO SAMPLE LESSON PLAN/gi, '')
+    .replace(/Subject:\s*[^.\n]+/gi, '')
+    .replace(/Grade Level:\s*[^.\n]+/gi, '')
+    .replace(/Module:\s*[^.\n]+/gi, '')
+    .replace(/Lesson Title:\s*/gi, '')
+    .replace(/Estimated Duration:\s*[^.\n]+/gi, '')
+    .replace(/XP Reward:\s*[^.\n]+/gi, '')
+    .replace(/Learning Objectives:\s*/gi, '');
+
+  const sentences = cleanLessonTextForKids(source)
+    .replace(/\n+/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .map(item => item.trim())
+    .filter(Boolean)
+    .filter(item => !/^(pagkatapos|teacher notes|correct answer|question\s*\d+)/i.test(item));
+
+  const shortText = sentences.slice(0, 4).join(' ');
+  const fallback = cleanLessonTextForKids(source).split('\n').slice(0, 4).join(' ');
+
+  return cleanLessonTextForKids(shortText || fallback || source).slice(0, 520);
+}
+
+function activityMissionMeta(activity, index = 0) {
+  const map = {
+    infographic: { icon: '🖼️', label: 'Tingnan' },
+    vocabulary: { icon: '🔤', label: 'Salita' },
+    matching: { icon: '🧩', label: 'Pares' },
+    mcq: { icon: '🎮', label: 'Quiz' },
+    speech: { icon: '🎤', label: 'Bigkas' },
+    writing: { icon: '🧩', label: 'Patlang' }
+  };
+
+  return map[activity?.type] || { icon: ['⭐', '🌟', '✨'][index % 3], label: 'Gawain' };
+}
+
+function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data, openLesson }) {
+  const activities = lesson?.activities || [];
+  const theme = subjectTheme(lesson?.subject);
+  const [missionStep, setMissionStep] = useState(0);
+  const [rewardModal, setRewardModal] = useState(null);
+  const [rewardClaimed, setRewardClaimed] = useState(Boolean(lesson?.completed));
+
+  useEffect(() => {
+    setMissionStep(0);
+    setRewardModal(null);
+    setRewardClaimed(Boolean(lesson?.completed));
+  }, [lesson?.id, lesson?.completed]);
+
+  const kidPassage = makeStudentFriendlyPassage(lesson);
+  const isReviewMode = Boolean(lesson?.completed || rewardClaimed);
+  const missionSteps = [
+    { type: 'listen', icon: '👂', label: 'Makinig' },
+    { type: 'read', icon: '📖', label: 'Basahin' },
+    ...activities.map((activity, index) => ({
+      type: 'activity',
+      activity,
+      activityIndex: index,
+      ...activityMissionMeta(activity, index)
+    })),
+    { type: 'finish', icon: isReviewMode ? '✅' : '⭐', label: isReviewMode ? 'Review' : 'Tapos' }
+  ];
+
+  const safeStep = Math.min(missionStep, missionSteps.length - 1);
+  const currentStep = missionSteps[safeStep];
+  const progress = Math.round(((safeStep + 1) / Math.max(1, missionSteps.length)) * 100);
+
+  function activityGuideText(step) {
+    const activity = step?.activity || {};
+
+    if (activity.speechTask || activity.targetText) {
+      return 'Pakinggan muna, tapos bigkasin. Tutulungan ka ng AI speech check sa pagbigkas.';
+    }
+
+    if (activity.writingTask || activity.prompt) {
+      return '';
+    }
+
+    return 'Piliin ang tamang sagot. Makikita mo agad ang feedback pagkatapos.';
+  }
+
+  function goNext() {
+    if (rewardModal) return;
+    setMissionStep(step => Math.min(step + 1, missionSteps.length - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goBackStep() {
+    if (rewardModal || rewardClaimed) return;
+    setMissionStep(step => Math.max(step - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function findNextLesson() {
+    const lessons = asArray(data?.lessons);
+    const currentId = Number(lesson?.id || 0);
+    const pending = lessons.filter(item => !item.completed && Number(item.id || 0) !== currentId);
+    return pending.find(item => item.subject === lesson?.subject) || pending[0] || null;
+  }
+
+  async function claimReward() {
+    if (rewardClaimed) return;
+
+    const result = await completeLesson({ stay: true, silent: true });
+    if (!result) return;
+
+    const xpEarned = Number(result.xpAwarded ?? lesson?.xpReward ?? 0);
+    setRewardClaimed(true);
+    setMissionStep(missionSteps.length - 1);
+    speechSynthesis.cancel();
+    setRewardModal({ xp: xpEarned });
+  }
+
+  function goHomeAfterReward() {
+    setRewardModal(null);
+    go('screen-student');
+  }
+
+  function goNextAfterReward() {
+    const nextLesson = findNextLesson();
+    setRewardModal(null);
+
+    if (nextLesson && typeof openLesson === 'function') {
+      openLesson(nextLesson);
+      return;
+    }
+
+    go('screen-student');
+  }
+
+  function speakFilipinoText(text) {
+    const cleanText = String(text || '').trim();
+
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voices = speechSynthesis.getVoices();
+    const filipinoVoice = voices.find(voice =>
+      /fil|tagalog|philippines|filipino/i.test(`${voice.lang} ${voice.name}`)
+    );
+
+    utterance.lang = 'fil-PH';
+    utterance.rate = 0.86;
+    utterance.pitch = 1.05;
+
+    if (filipinoVoice) {
+      utterance.voice = filipinoVoice;
+    }
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  }
+
+  if (lesson?.completed && !rewardModal) {
+    const nextLesson = findNextLesson();
+    const summaryItems = [
+      { icon: theme.icon || '📘', label: lesson?.subject || 'Filipino' },
+      { icon: '⚡', label: `${lesson?.xpReward || 0} XP earned` },
+      { icon: '🎯', label: `${activities.length} activit${activities.length === 1 ? 'y' : 'ies'}` }
+    ];
+
+    return (
+      <EarlyStudentChrome
+        data={data}
+        activeTab="lessons"
+        go={go}
+        icon="✅"
+        title="Lesson Summary"
+      >
+        <style>{`
+          .g12-complete-summary {
+            max-width: 980px;
+            margin: 0 auto;
+            display: grid;
+            gap: 18px;
+          }
+
+          .g12-complete-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 38px;
+            padding: 38px 34px;
+            background:
+              radial-gradient(circle at 14% 18%, rgba(255, 236, 163, 0.78), transparent 28%),
+              radial-gradient(circle at 88% 18%, rgba(219, 234, 254, 0.74), transparent 30%),
+              linear-gradient(135deg, #ffffff, #f0fff5);
+            border: 3px solid rgba(71, 206, 135, 0.28);
+            box-shadow: 0 20px 46px rgba(39, 87, 63, 0.09);
+            text-align: center;
+          }
+
+          .g12-complete-badge {
+            width: 128px;
+            height: 128px;
+            margin: 0 auto 18px;
+            border-radius: 42px;
+            display: grid;
+            place-items: center;
+            background: #fff3bd;
+            font-size: 76px;
+            box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.22), 0 18px 34px rgba(245, 158, 11, 0.13);
+          }
+
+          .g12-complete-hero h2 {
+            margin: 0;
+            color: #15965a;
+            font-size: clamp(42px, 5vw, 66px);
+            line-height: 0.95;
+            letter-spacing: -0.06em;
+            font-weight: 1000;
+          }
+
+          .g12-complete-hero p {
+            margin: 12px auto 0;
+            max-width: 720px;
+            color: #425a7c;
+            font-size: 20px;
+            font-weight: 900;
+            line-height: 1.5;
+          }
+
+          .g12-summary-chip-row {
+            margin-top: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+          }
+
+          .g12-summary-chip {
+            min-height: 56px;
+            padding: 0 20px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid rgba(246, 196, 83, 0.34);
+            color: #14223b;
+            font-size: 17px;
+            font-weight: 1000;
+          }
+
+          .g12-summary-card {
+            padding: 30px;
+            border-radius: 34px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(31, 154, 92, 0.08);
+            box-shadow: 0 16px 34px rgba(39, 87, 63, 0.07);
+          }
+
+          .g12-summary-card h3 {
+            margin: 0 0 14px;
+            color: #15965a;
+            font-size: clamp(28px, 3.2vw, 42px);
+            letter-spacing: -0.045em;
+            font-weight: 1000;
+          }
+
+          .g12-summary-text {
+            border-radius: 28px;
+            padding: 24px;
+            background: #f8fcff;
+            border: 1px solid #e1eefe;
+            color: #1f2d45;
+            font-size: clamp(22px, 2.5vw, 32px);
+            line-height: 1.55;
+            font-weight: 950;
+          }
+
+          .g12-summary-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+          }
+
+          .g12-summary-btn {
+            border: 0;
+            min-height: 64px;
+            padding: 0 28px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, #47ce87, #1f9c60);
+            color: white;
+            font-size: 20px;
+            font-weight: 1000;
+            cursor: pointer;
+            box-shadow: 0 14px 22px rgba(32, 156, 96, 0.16);
+          }
+
+          .g12-summary-btn.secondary {
+            background: #ffffff;
+            color: #14975a;
+            border: 2px solid #2fbf73;
+            box-shadow: none;
+          }
+
+          .g12-summary-btn.purple {
+            background: linear-gradient(135deg, #a770ef, #7b4fd6);
+          }
+
+          /* Grade 1-2 completed-summary balanced font sizing. */
+          .g12-complete-hero {
+            padding: 30px 28px;
+            border-radius: 34px;
+          }
+
+          .g12-complete-badge {
+            width: 96px;
+            height: 96px;
+            border-radius: 32px;
+            font-size: 56px;
+          }
+
+          .g12-complete-hero h2 {
+            font-size: clamp(32px, 4vw, 48px);
+            line-height: 1;
+          }
+
+          .g12-complete-hero p {
+            font-size: 17px;
+          }
+
+          .g12-summary-chip {
+            min-height: 46px;
+            padding: 0 16px;
+            border-radius: 18px;
+            font-size: 15px;
+          }
+
+          .g12-summary-card {
+            padding: 24px;
+            border-radius: 30px;
+          }
+
+          .g12-summary-card h3 {
+            font-size: clamp(24px, 3vw, 34px);
+          }
+
+          .g12-summary-text {
+            padding: 22px;
+            border-radius: 24px;
+            font-size: clamp(18px, 2.1vw, 24px);
+            line-height: 1.6;
+          }
+
+          .g12-summary-btn {
+            min-height: 54px;
+            padding: 0 22px;
+            border-radius: 20px;
+            font-size: 17px;
+          }
+
+        `}</style>
+
+        <div className="g12-complete-summary">
+          <section className="g12-complete-hero">
+            <div className="g12-complete-badge">✅</div>
+            <h2>Lesson Completed!</h2>
+            <p>{lesson?.title || 'Natapos mo na ang lesson na ito.'}</p>
+            <div className="g12-summary-chip-row">
+              {summaryItems.map(item => (
+                <span className="g12-summary-chip" key={item.label}>
+                  <span>{item.icon}</span>
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          <section className="g12-summary-card">
+            <h3>Maikling Summary</h3>
+            <div className="g12-summary-text">
+              {kidPassage}
+            </div>
+          </section>
+
+          <div className="g12-summary-actions">
+            {nextLesson && (
+              <button type="button" className="g12-summary-btn purple" onClick={() => openLesson(nextLesson)}>
+                Susunod na Lesson →
+              </button>
+            )}
+            <button type="button" className="g12-summary-btn" onClick={() => go('screen-student')}>
+              🏠 Home
+            </button>
+            <button type="button" className="g12-summary-btn secondary" onClick={() => go('screen-lessons')}>
+              📖 More Lessons
+            </button>
+          </div>
+        </div>
+      </EarlyStudentChrome>
+    );
+  }
+
+  return (
+    <EarlyStudentChrome
+      data={data}
+      activeTab="lessons"
+      go={go}
+      icon={theme.icon || '📘'}
+      title="Learning Mission"
+      subtitle={`${lesson?.subject || 'Filipino'} • Grade ${lesson?.gradeLevel || '—'} • ${isReviewMode ? 'Review Mode' : `+${lesson?.xpReward || 0} XP`}`}
+    >
+      <style>{`
+        .g12-mission-wrap {
+          display: grid;
+          gap: 18px;
+        }
+
+        .g12-mission-banner {
+          position: relative;
+          overflow: hidden;
+          border-radius: 34px;
+          padding: 26px 30px;
+          background:
+            radial-gradient(circle at 8% 22%, rgba(255, 236, 163, 0.72), transparent 30%),
+            radial-gradient(circle at 88% 18%, rgba(219, 234, 254, 0.75), transparent 32%),
+            linear-gradient(135deg, ${theme.bg || '#eaf8ef'}, #ffffff);
+          border: 1px solid rgba(31, 154, 92, 0.10);
+          box-shadow: 0 16px 32px rgba(39, 87, 63, 0.06);
+        }
+
+        .g12-mission-banner::after {
+          content: '✨';
+          position: absolute;
+          right: 28px;
+          top: 20px;
+          font-size: 34px;
+          opacity: 0.85;
+        }
+
+        .g12-mission-topline {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 18px;
+        }
+
+        .g12-mission-topline h2 {
+          margin: 0;
+          color: #15965a;
+          font-size: clamp(34px, 4vw, 54px);
+          line-height: 0.95;
+          letter-spacing: -0.06em;
+          font-weight: 1000;
+        }
+
+        .g12-mission-topline p {
+          margin: 8px 0 0;
+          color: #425a7c;
+          font-size: 17px;
+          font-weight: 900;
+        }
+
+        .g12-mission-xp {
+          min-width: 150px;
+          min-height: 62px;
+          padding: 0 20px;
+          border-radius: 24px;
+          display: grid;
+          place-items: center;
+          background: rgba(255, 255, 255, 0.82);
+          color: #14223b;
+          font-size: 23px;
+          font-weight: 1000;
+          border: 2px solid rgba(255, 217, 102, 0.35);
+        }
+
+        .g12-mission-path {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(86px, 1fr));
+          gap: 10px;
+          margin-top: 16px;
+        }
+
+        .g12-mission-dot {
+          border: 0;
+          min-height: 74px;
+          border-radius: 22px;
+          background: rgba(255, 255, 255, 0.74);
+          color: #24324a;
+          display: grid;
+          place-items: center;
+          gap: 3px;
+          cursor: pointer;
+          box-shadow: inset 0 0 0 1px rgba(31, 154, 92, 0.08);
+        }
+
+        .g12-mission-dot span {
+          font-size: 28px;
+          line-height: 1;
+        }
+
+        .g12-mission-dot small {
+          font-size: 12px;
+          font-weight: 1000;
+        }
+
+        .g12-mission-dot.done {
+          background: #e9fbef;
+          color: #0d8b4e;
+        }
+
+        .g12-mission-dot:disabled {
+            cursor: not-allowed;
+            opacity: 0.72;
+          }
+
+          .g12-mission-dot:disabled small {
+            color: #50627A;
+          }
+
+          .g12-mission-dot.active {
+          background: #fff4c7;
+          color: #14223b;
+          box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.28), 0 10px 18px rgba(245, 158, 11, 0.10);
+        }
+
+        .g12-mission-card {
+          min-height: 420px;
+          border-radius: 36px;
+          padding: 34px;
+          background: rgba(255, 255, 255, 0.96);
+          border: 1px solid rgba(31, 154, 92, 0.08);
+          box-shadow: 0 16px 34px rgba(39, 87, 63, 0.07);
+          display: grid;
+          gap: 22px;
+        }
+
+        .g12-mission-step-head {
+          display: grid;
+          grid-template-columns: 92px minmax(0, 1fr);
+          gap: 20px;
+          align-items: center;
+        }
+
+        .g12-mission-big-icon {
+          width: 92px;
+          height: 92px;
+          border-radius: 30px;
+          display: grid;
+          place-items: center;
+          font-size: 50px;
+          background: #fff5cf;
+          box-shadow: inset 0 0 0 2px rgba(246, 196, 83, 0.20);
+        }
+
+        .g12-mission-step-head h3 {
+          margin: 0;
+          color: #15965a;
+          font-size: clamp(34px, 4vw, 52px);
+          line-height: 0.95;
+          letter-spacing: -0.055em;
+          font-weight: 1000;
+        }
+
+        .g12-mission-step-head p {
+          margin: 8px 0 0;
+          color: #425a7c;
+          font-size: 18px;
+          font-weight: 900;
+        }
+
+        .g12-mission-text-card {
+          border-radius: 30px;
+          padding: 26px;
+          background:
+            radial-gradient(circle at 94% 12%, rgba(255, 231, 128, 0.34), transparent 20%),
+            #f8fcff;
+          border: 1px solid #e1eefe;
+          color: #1f2d45;
+          font-size: clamp(26px, 3vw, 38px);
+          line-height: 1.55;
+          font-weight: 950;
+        }
+
+        .g12-mission-note {
+          border-radius: 24px;
+          padding: 18px 20px;
+          background: #fff8cf;
+          color: #27344c;
+          font-size: 18px;
+          line-height: 1.5;
+          font-weight: 850;
+        }
+
+        .g12-mission-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .g12-mission-actions-left,
+        .g12-mission-actions-right {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .g12-mission-btn {
+          border: 0;
+          min-height: 64px;
+          padding: 0 28px;
+          border-radius: 24px;
+          background: linear-gradient(135deg, #47ce87, #1f9c60);
+          color: white;
+          font-size: 20px;
+          font-weight: 1000;
+          cursor: pointer;
+          box-shadow: 0 14px 22px rgba(32, 156, 96, 0.16);
+        }
+
+        .g12-mission-btn.secondary {
+          background: #ffffff;
+          color: #14975a;
+          border: 2px solid #2fbf73;
+          box-shadow: none;
+        }
+
+        .g12-mission-btn.purple {
+          background: linear-gradient(135deg, #a770ef, #7b4fd6);
+        }
+
+        .g12-mission-activity {
+          border-radius: 30px;
+          overflow: hidden;
+        }
+
+        .g12-mission-activity .card {
+          margin: 0 !important;
+          border-radius: 30px !important;
+          box-shadow: none !important;
+        }
+
+        .g12-mission-feedback {
+          padding: 16px 18px;
+          border-radius: 22px;
+          background: #e9fbef;
+          color: #0d7f48;
+          font-size: 20px;
+          font-weight: 1000;
+          border: 1px solid #bfeacb;
+        }
+
+        .g12-finish-card {
+          min-height: 260px;
+          border-radius: 32px;
+          display: grid;
+          place-items: center;
+          text-align: center;
+          padding: 28px;
+          background:
+            radial-gradient(circle at 50% 18%, rgba(255, 235, 156, 0.58), transparent 30%),
+            linear-gradient(135deg, #f0fff5, #ffffff);
+          border: 2px solid #8ce0ae;
+        }
+
+        .g12-finish-card .big {
+          font-size: 78px;
+          line-height: 1;
+          margin-bottom: 12px;
+        }
+
+        .g12-finish-card h3 {
+          margin: 0;
+          color: #15965a;
+          font-size: clamp(34px, 4vw, 54px);
+          letter-spacing: -0.055em;
+        }
+
+        .g12-finish-card p {
+          margin: 10px 0 0;
+          color: #425a7c;
+          font-size: 20px;
+          font-weight: 900;
+        }
+
+        .g12-reward-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 250;
+          display: grid;
+          place-items: center;
+          padding: 24px;
+          background: rgba(18, 28, 48, 0.40);
+          backdrop-filter: blur(10px);
+        }
+
+        .g12-reward-modal {
+          position: relative;
+          width: min(620px, 100%);
+          overflow: hidden;
+          border-radius: 40px;
+          padding: 42px 36px 34px;
+          text-align: center;
+          background:
+            radial-gradient(circle at 20% 18%, rgba(255, 241, 179, 0.92), transparent 26%),
+            radial-gradient(circle at 82% 22%, rgba(219, 234, 254, 0.90), transparent 26%),
+            linear-gradient(135deg, #ffffff, #fff8dd 58%, #f0fff5);
+          border: 3px solid rgba(255, 217, 102, 0.72);
+          box-shadow: 0 28px 70px rgba(20, 34, 59, 0.24);
+          animation: g12RewardPop 0.35s ease-out both;
+        }
+
+        .g12-reward-modal::before,
+        .g12-reward-modal::after {
+          content: '';
+          position: absolute;
+          width: 170px;
+          height: 170px;
+          border-radius: 999px;
+          background: rgba(255, 224, 102, 0.25);
+          pointer-events: none;
+        }
+
+        .g12-reward-modal::before {
+          left: -72px;
+          top: -62px;
+        }
+
+        .g12-reward-modal::after {
+          right: -78px;
+          bottom: -82px;
+          background: rgba(71, 206, 135, 0.18);
+        }
+
+        .g12-reward-big {
+          position: relative;
+          z-index: 2;
+          width: 132px;
+          height: 132px;
+          margin: 0 auto 16px;
+          border-radius: 42px;
+          display: grid;
+          place-items: center;
+          background: #fff3bd;
+          font-size: 78px;
+          box-shadow: inset 0 0 0 3px rgba(246, 196, 83, 0.25), 0 18px 34px rgba(245, 158, 11, 0.14);
+          animation: g12RewardBounce 0.95s ease-in-out infinite;
+        }
+
+        .g12-reward-modal h3 {
+          position: relative;
+          z-index: 2;
+          margin: 0;
+          color: #15965a;
+          font-size: clamp(42px, 5vw, 64px);
+          line-height: 0.95;
+          letter-spacing: -0.06em;
+          font-weight: 1000;
+        }
+
+        .g12-reward-modal p {
+          position: relative;
+          z-index: 2;
+          margin: 12px 0 0;
+          color: #31486b;
+          font-size: 20px;
+          font-weight: 900;
+        }
+
+        .g12-reward-xp {
+          position: relative;
+          z-index: 2;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          min-height: 76px;
+          margin: 22px auto 20px;
+          padding: 0 34px;
+          border-radius: 28px;
+          background: #ffffff;
+          color: #14223b;
+          font-size: 35px;
+          font-weight: 1000;
+          box-shadow: 0 14px 30px rgba(20, 34, 59, 0.10);
+          border: 2px solid rgba(255, 217, 102, 0.50);
+        }
+
+        .g12-reward-actions {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .g12-confetti-piece {
+          position: absolute;
+          z-index: 1;
+          top: -20px;
+          font-size: 28px;
+          animation: g12ConfettiFall 2.8s linear infinite;
+          pointer-events: none;
+        }
+
+        .g12-confetti-piece:nth-child(1) { left: 8%; animation-delay: 0s; }
+        .g12-confetti-piece:nth-child(2) { left: 20%; animation-delay: 0.35s; }
+        .g12-confetti-piece:nth-child(3) { left: 34%; animation-delay: 0.7s; }
+        .g12-confetti-piece:nth-child(4) { left: 48%; animation-delay: 0.15s; }
+        .g12-confetti-piece:nth-child(5) { left: 64%; animation-delay: 0.55s; }
+        .g12-confetti-piece:nth-child(6) { left: 78%; animation-delay: 0.95s; }
+        .g12-confetti-piece:nth-child(7) { left: 90%; animation-delay: 0.25s; }
+
+
+        /* Grade 1-2 lesson mission balanced font sizing. */
+        .g12-mission-banner {
+          padding: 24px 26px;
+          border-radius: 32px;
+        }
+
+        .g12-mission-topline h2 {
+          font-size: clamp(28px, 3.4vw, 42px);
+          line-height: 1;
+        }
+
+        .g12-mission-topline p {
+          font-size: 16px;
+          line-height: 1.45;
+        }
+
+        .g12-mission-xp {
+          min-width: 132px;
+          min-height: 54px;
+          border-radius: 20px;
+          font-size: 19px;
+        }
+
+        .g12-mission-dot {
+          min-height: 62px;
+          border-radius: 20px;
+        }
+
+        .g12-mission-dot span {
+          font-size: 24px;
+        }
+
+        .g12-mission-card {
+          min-height: 360px;
+          padding: 28px;
+          border-radius: 32px;
+        }
+
+        .g12-mission-step-head {
+          grid-template-columns: 78px minmax(0, 1fr);
+          gap: 18px;
+        }
+
+        .g12-mission-big-icon {
+          width: 78px;
+          height: 78px;
+          border-radius: 26px;
+          font-size: 42px;
+        }
+
+        .g12-mission-step-head h3 {
+          font-size: clamp(28px, 3.4vw, 40px);
+          line-height: 1;
+        }
+
+        .g12-mission-step-head p {
+          font-size: 16px;
+          line-height: 1.45;
+        }
+
+        .g12-mission-text-card {
+          padding: 24px;
+          border-radius: 26px;
+          font-size: clamp(20px, 2.4vw, 28px);
+          line-height: 1.6;
+        }
+
+        .g12-mission-note {
+          padding: 16px 18px;
+          border-radius: 22px;
+          font-size: 16px;
+        }
+
+        .g12-mission-btn {
+          min-height: 54px;
+          padding: 0 22px;
+          border-radius: 20px;
+          font-size: 17px;
+        }
+
+        .g12-mission-feedback {
+          font-size: 17px;
+        }
+
+        .g12-finish-card .big {
+          font-size: 58px;
+        }
+
+        .g12-finish-card h3 {
+          font-size: clamp(28px, 3.4vw, 42px);
+        }
+
+        .g12-finish-card p {
+          font-size: 17px;
+        }
+
+        .g12-reward-modal {
+          width: min(560px, 100%);
+          padding: 34px 30px 30px;
+          border-radius: 34px;
+        }
+
+        .g12-reward-big {
+          width: 102px;
+          height: 102px;
+          border-radius: 34px;
+          font-size: 58px;
+        }
+
+        .g12-reward-modal h3 {
+          font-size: clamp(32px, 4vw, 48px);
+          line-height: 1;
+        }
+
+        .g12-reward-modal p {
+          font-size: 17px;
+        }
+
+        .g12-reward-xp {
+          min-height: 60px;
+          padding: 0 26px;
+          border-radius: 24px;
+          font-size: 26px;
+        }
+
+        @keyframes g12RewardPop {
+          from { opacity: 0; transform: scale(0.88) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @keyframes g12RewardBounce {
+          0%, 100% { transform: translateY(0) rotate(-2deg); }
+          50% { transform: translateY(-8px) rotate(2deg); }
+        }
+
+        @keyframes g12ConfettiFall {
+          0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
+          12% { opacity: 1; }
+          100% { transform: translateY(620px) rotate(360deg); opacity: 0; }
+        }
+
+        @media (max-width: 760px) {
+          .g12-mission-banner,
+          .g12-mission-card {
+            padding: 22px;
+            border-radius: 28px;
+          }
+
+          .g12-mission-topline,
+          .g12-mission-step-head {
+            grid-template-columns: 1fr;
+          }
+
+          .g12-mission-step-head {
+            gap: 12px;
+          }
+
+          .g12-mission-big-icon {
+            width: 76px;
+            height: 76px;
+            font-size: 40px;
+            border-radius: 24px;
+          }
+
+          .g12-mission-actions,
+          .g12-mission-actions-left,
+          .g12-mission-actions-right {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .g12-mission-btn {
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      <div className="g12-mission-wrap">
+        {rewardModal && (
+          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Mission reward">
+            <div className="g12-reward-modal">
+              {['🎊', '⭐', '✨', '🌟', '🎉', '💛', '🌈'].map((piece, index) => (
+                <span className="g12-confetti-piece" key={index}>{piece}</span>
+              ))}
+
+              <div className="g12-reward-big">🏆</div>
+              <h3>Mission Complete!</h3>
+              <p>Ang galing mo! Natapos mo ang aralin.</p>
+              <div className="g12-reward-xp">⚡ +{rewardModal.xp || 0} XP</div>
+
+              <div className="g12-reward-actions">
+                <button type="button" className="g12-mission-btn purple" onClick={goNextAfterReward}>
+                  Susunod na Lesson →
+                </button>
+                <button type="button" className="g12-mission-btn secondary" onClick={goHomeAfterReward}>
+                  🏠 Home
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <section className="g12-mission-banner">
+          <div className="g12-mission-topline">
+            <div>
+              <h2>{shortEarlyLessonTitle(lesson)} 🌟</h2>
+              <p>Hakbang {safeStep + 1} of {missionSteps.length}</p>
+            </div>
+            <div className="g12-mission-xp">⚡ +{lesson?.xpReward || 0} XP</div>
+          </div>
+
+          <div className="g12-progress-track">
+            <span className="g12-progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+
+          <div className="g12-mission-path" aria-label="Mission steps">
+            {missionSteps.map((step, index) => (
+              <button
+                type="button"
+                key={`${step.type}-${index}`}
+                className={`g12-mission-dot ${index < safeStep ? 'done' : ''} ${index === safeStep ? 'active' : ''}`}
+                disabled={rewardClaimed || rewardModal || index > safeStep}
+                aria-disabled={rewardClaimed || rewardModal || index > safeStep}
+                onClick={() => {
+                  if (!rewardClaimed && !rewardModal && index <= safeStep) {
+                    setMissionStep(index);
+                  }
+                }}
+              >
+                <span>{step.icon}</span>
+                <small>{step.label}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="g12-mission-card">
+          {currentStep.type === 'listen' && (
+            <>
+              <div className="g12-mission-step-head">
+                <div className="g12-mission-big-icon">👂</div>
+                <div>
+                  <h3>Makinig</h3>
+                </div>
+              </div>
+
+              <div className="g12-mission-text-card">
+                {lesson?.title || 'Handa ka na bang matuto?'}
+              </div>
+
+              <div className="g12-mission-actions">
+                <div className="g12-mission-actions-left">
+                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn secondary" onClick={() => speechSynthesis.cancel()}>⏹ Stop</button>
+                </div>
+                <div className="g12-mission-actions-right">
+                  <button className="g12-mission-btn purple" onClick={goNext}>Susunod →</button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep.type === 'read' && (
+            <>
+              <div className="g12-mission-step-head">
+                <div className="g12-mission-big-icon">📖</div>
+                <div>
+                  <h3>Basahin at sabayan</h3>
+                  <p>Basahin nang dahan-dahan. Pwede mong pindutin ang speaker kung kailangan ng gabay.</p>
+                </div>
+              </div>
+
+              <div className="g12-mission-text-card">
+                {kidPassage}
+              </div>
+
+              <div className="g12-mission-actions">
+                <div className="g12-mission-actions-left">
+                  <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
+                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(kidPassage)}>🔊 Pakinggan</button>
+                </div>
+                <div className="g12-mission-actions-right">
+                  <button className="g12-mission-btn purple" onClick={goNext}>
+                    Gawin ang Activity →
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep.type === 'activity' && (
+            <>
+              <div className="g12-mission-step-head">
+                <div className="g12-mission-big-icon">{currentStep.icon}</div>
+                <div>
+                  <h3>{
+                    currentStep.activity?.writingTask ||
+                    currentStep.activity?.prompt ||
+                    currentStep.activity?.template ||
+                    currentStep.activity?.fillBlank ||
+                    currentStep.activity?.sentence
+                      ? 'Punan ang Patlang'
+                      : currentStep.label
+                  }</h3>
+                  {activityGuideText(currentStep) ? <p>{activityGuideText(currentStep)}</p> : null}
+                </div>
+              </div>
+
+              {feedback && (
+                <div className="g12-mission-feedback">
+                  {feedback.includes('+') ? feedback : `${feedback} ⭐`}
+                </div>
+              )}
+
+              <div className="g12-mission-activity">
+                <ActivityCard
+                  activity={currentStep.activity}
+                  index={currentStep.activityIndex}
+                  total={activities.length}
+                  isEarlyGrade={true}
+                  submitMcq={submitMcq}
+                  submitWriting={submitWriting}
+                  submitSpeech={submitSpeech}
+                />
+              </div>
+
+              <div className="g12-mission-actions">
+                <div className="g12-mission-actions-left">
+                  <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
+                </div>
+                <div className="g12-mission-actions-right">
+                  <button className="g12-mission-btn purple" onClick={goNext}>
+                    {safeStep >= missionSteps.length - 2 ? 'Tapusin →' : 'Susunod →'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep.type === 'finish' && (
+            <>
+              <div className="g12-finish-card">
+                <div>
+                  <div className="big">{isReviewMode ? '✅' : '🎉'}</div>
+                  <h3>{isReviewMode ? 'Review Complete!' : 'Mission Complete!'}</h3>
+                  <p>
+                    {isReviewMode
+                      ? 'Natapos mo na ang lesson na ito. Maaari kang bumalik sa Home o pumili ng ibang lesson.'
+                      : `Kunin ang reward mo: +${lesson?.xpReward || 0} XP`}
+                  </p>
+                </div>
+              </div>
+
+
+              {feedback && (
+                <div className="g12-mission-feedback">
+                  {feedback}
+                </div>
+              )}
+
+              <div className="g12-mission-actions" style={{ justifyContent: 'center' }}>
+                <div className="g12-mission-actions-right" style={{ justifyContent: 'center', width: '100%' }}>
+                  {!isReviewMode ? (
+                    <button
+                      className="g12-mission-btn"
+                      onClick={claimReward}
+                      style={{
+                        minWidth: 260,
+                        minHeight: 78,
+                        fontSize: 24,
+                        borderRadius: 26,
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ⭐ Claim XP
+                    </button>
+                  ) : (
+                    <button className="g12-mission-btn purple" onClick={() => go('screen-student')}>🏠 Go Home</button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
+    </EarlyStudentChrome>
+  );
+}
+
+function getActivityData(activity) {
+  if (!activity?.dataJson) return {};
+
+  if (typeof activity.dataJson === 'string') {
+    try {
+      return JSON.parse(activity.dataJson);
+    } catch {
+      return {};
+    }
+  }
+
+  return activity.dataJson || {};
+}
+
 function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq, submitWriting, submitSpeech }) {
   const activityBoxStyle = {
     boxShadow: 'none',
