@@ -652,7 +652,7 @@ if (role === 'admin') {
       stats: dash.stats,
       assignedClasses: dash.assignedClasses || monitoring.assignedClasses || quizPerformance.assignedClasses || [],
       rows: monitoring.rows || [],
-      groups: groups.groups || [],
+      groups: (groups.groups || []).filter(group => String(group?.status || 'active').toLowerCase() !== 'archived'),
       students: students.students || [],
       lessons: sortedLessons,
       quizPerformance: quizPerformance || { summary: {}, rows: [] },
@@ -703,6 +703,26 @@ if (role === 'admin') {
     await safeRun(async () => {
       await api(`/groups/${groupId}/members/${studentId}/leader`, { method: 'POST', body: {} });
       notify('Group leader updated.');
+      await loadTeacherDashboard();
+    });
+  }
+
+  async function teacherDeleteGroup(groupId, groupName = 'this group') {
+    if (!groupId) return notify('Missing group details.', 'warn');
+
+    const confirmed = window.confirm(
+      `Remove "${groupName}"? Students assigned to this group will no longer see it.`
+    );
+
+    if (!confirmed) return;
+
+    await safeRun(async () => {
+      await api(`/groups/${groupId}`, { method: 'DELETE' });
+      setTeacherData(prev => prev ? {
+        ...prev,
+        groups: (prev.groups || []).filter(group => String(group.id) !== String(groupId))
+      } : prev);
+      notify('Group removed.');
       await loadTeacherDashboard();
     });
   }
@@ -1439,6 +1459,7 @@ async function archiveTeacher(id) {
           addTask={teacherAddTask}
           addMember={teacherAddMember}
           setGroupLeader={teacherSetGroupLeader}
+          deleteGroup={teacherDeleteGroup}
           approveGroupTaskCompletion={teacherApproveGroupTaskCompletion}
           createLesson={teacherCreateLesson}
           exportStudentsCSV={exportStudentsCSV}
@@ -7266,7 +7287,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 }
 
 function EarlyGroupsScreen({ data, go, completeGroupTask }) {
-  const groups = asArray(data?.groups);
+  const groups = asArray(data?.groups).filter(group => String(group?.status || 'active').toLowerCase() !== 'archived');
   const roles = rolesForGradeLevel(data?.student?.gradeLevel);
   const [selectedGroupId, setSelectedGroupId] = useState(groups[0]?.id || null);
   const [selectedRoles, setSelectedRoles] = useState({});
@@ -7646,7 +7667,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
 
 function StudentGroups({ data, go, completeGroupTask }) {
   const early = Number(data?.student?.gradeLevel || 4) <= 2;
-  const groups = data?.groups || [];
+  const groups = (data?.groups || []).filter(group => String(group?.status || 'active').toLowerCase() !== 'archived');
   const [taskRoles, setTaskRoles] = useState({});
   const [taskFiles, setTaskFiles] = useState({});
   const [submittedTasks, setSubmittedTasks] = useState({});
@@ -8308,6 +8329,7 @@ function TeacherDashboard({
   addTask,
   addMember,
   setGroupLeader,
+  deleteGroup,
   approveGroupTaskCompletion,
   createLesson,
   exportStudentsCSV,
@@ -9527,6 +9549,15 @@ function TeacherDashboard({
                             onClick={() => toggleGroupTools(group.id)}
                           >
                             {isOpen ? 'Hide Add Member' : 'Add Member'}
+                          </button>
+
+                          <button
+                            className="lms-outline-action"
+                            type="button"
+                            style={{ color: '#b42318', borderColor: 'rgba(180, 35, 24, 0.28)' }}
+                            onClick={() => deleteGroup(group.id, group.name)}
+                          >
+                            Remove Group
                           </button>
                         </div>
 
