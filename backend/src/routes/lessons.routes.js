@@ -222,6 +222,37 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
+router.delete('/:id', requireRole('admin', 'teacher'), async (req, res, next) => {
+  try {
+    const lesson = await Lesson.findByPk(req.params.id);
+
+    if (!lesson) {
+      return res.status(404).json({ message: 'Lesson not found.' });
+    }
+
+    if (req.role === 'teacher' && Number(lesson.createdByUserId) !== Number(req.user.id)) {
+      return res.status(403).json({ message: 'You can only remove lessons you created.' });
+    }
+
+    lesson.status = 'archived';
+    await lesson.save();
+
+    await audit(req.user.id, 'lesson.archive', 'lesson', lesson.id);
+
+    emitRealtime('teachers', 'lesson:archived', {
+      lessonId: lesson.id,
+      title: lesson.title,
+      gradeLevel: lesson.gradeLevel,
+      subject: lesson.subject,
+      message: `Lesson archived: ${lesson.title}`,
+    });
+
+    res.json({ lesson });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
     const body = validate(lessonSchema, req.body);

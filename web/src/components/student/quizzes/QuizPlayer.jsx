@@ -131,12 +131,14 @@ export default function QuizPlayer({
     quizInnerContent = (
       <section className="quiz-game-stage" aria-label="Active quiz">
         <div className="quiz-game-stage-inner">
-          <QuizGameHeader
-            quiz={quiz}
-            best={best}
-            go={go}
-            onBack={() => goWithQuizGuard("screen-stu-quizzes")}
-          />
+          {early && (
+            <QuizGameHeader
+              quiz={quiz}
+              best={best}
+              go={go}
+              onBack={() => goWithQuizGuard("screen-stu-quizzes")}
+            />
+          )}
 
           <QuizGameProgress
             currentIndex={currentIndex}
@@ -167,13 +169,15 @@ export default function QuizPlayer({
 
           <div className="quiz-nav-actions">
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                className="quiz-secondary"
-                onClick={() => goWithQuizGuard("screen-stu-quizzes")}
-              >
-                ← Back to Quizzes
-              </button>
+              {early && (
+                <button
+                  type="button"
+                  className="quiz-secondary"
+                  onClick={() => goWithQuizGuard("screen-stu-quizzes")}
+                >
+                  ← Back to Quizzes
+                </button>
+              )}
 
               <button
                 type="button"

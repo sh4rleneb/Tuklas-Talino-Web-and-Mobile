@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Student, TeacherAssignment, Lesson, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, WritingSubmission, SpeechAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion, MissionCompletion, Notification } from '../models/index.js';
+import { Role, User, Student, TeacherAssignment, Lesson, LessonActivity, MCQQuestion, MCQOption, WritingTask, SpeechTask, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, WritingSubmission, SpeechAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion, MissionCompletion, Notification } from '../models/index.js';
 import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
@@ -57,7 +57,28 @@ async function getStudentForRequest(req, idParam) {
 async function dashboardPayload(student) {
   const lessons = await Lesson.findAll({
     where: { gradeLevel: student.gradeLevel, status: 'published' },
-    order: [['subject', 'ASC'], ['id', 'ASC']]
+    include: [
+      {
+        model: LessonActivity,
+        as: 'activities',
+        include: [
+          {
+            model: MCQQuestion,
+            as: 'questions',
+            include: [{ model: MCQOption, as: 'options' }]
+          },
+          { model: WritingTask, as: 'writingTask' },
+          { model: SpeechTask, as: 'speechTask' }
+        ]
+      }
+    ],
+    order: [
+      ['subject', 'ASC'],
+      ['id', 'ASC'],
+      [{ model: LessonActivity, as: 'activities' }, 'sortOrder', 'ASC'],
+      [{ model: LessonActivity, as: 'activities' }, { model: MCQQuestion, as: 'questions' }, 'sortOrder', 'ASC'],
+      [{ model: LessonActivity, as: 'activities' }, { model: MCQQuestion, as: 'questions' }, { model: MCQOption, as: 'options' }, 'sortOrder', 'ASC']
+    ]
   });
   const completed = await CompletedLesson.findAll({ where: { studentId: student.id } });
   const completedIds = new Set(completed.map(c => c.lessonId));
@@ -134,6 +155,8 @@ async function dashboardPayload(student) {
 
       return {
         ...group,
+        currentStudentGroupRole: m.groupRole || 'member',
+        currentStudentIsLeader: (m.groupRole || 'member') === 'leader',
         tasks: tasks.map(task => {
           const completion = groupTaskCompletionMap.get(Number(task.id)) || null;
           const verificationStatus = completion?.verificationStatus || null;

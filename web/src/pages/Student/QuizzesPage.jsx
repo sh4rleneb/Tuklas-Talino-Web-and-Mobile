@@ -251,7 +251,7 @@ export default function QuizzesPage({
 
           {!quizzes.length && (
             <div className={early ? "g12-empty" : "g46-ref-empty"}>
-              No quizzes yet. Create lessons with MCQ or matching activities first.
+              No quizzes yet. Create a lesson with a Quiz activity first.
             </div>
           )}
 

@@ -740,6 +740,26 @@ if (role === 'admin') {
     });
   }
 
+  async function teacherDeleteLesson(lessonId, lessonTitle = 'this lesson') {
+    if (!lessonId) return notify('Missing lesson details.', 'warn');
+
+    const confirmed = window.confirm(
+      `Remove "${lessonTitle}"? Students will no longer see this lesson or its Quiz Time quiz.`
+    );
+
+    if (!confirmed) return;
+
+    await safeRun(async () => {
+      await api(`/lessons/${lessonId}`, { method: 'DELETE' });
+      setTeacherData(prev => prev ? {
+        ...prev,
+        lessons: (prev.lessons || []).filter(lesson => String(lesson.id) !== String(lessonId))
+      } : prev);
+      notify('Lesson removed.');
+      await loadTeacherDashboard();
+    });
+  }
+
  async function teacherCreateLesson(payload = null) {
   await safeRun(async () => {
     let requestBody = payload;
@@ -754,7 +774,7 @@ if (role === 'admin') {
 
         activities.push({
           type: 'mcq',
-          title: 'Multiple Choice Quiz',
+          title: 'Quiz',
           questions: [
             {
               question,
@@ -1462,6 +1482,7 @@ async function archiveTeacher(id) {
           deleteGroup={teacherDeleteGroup}
           approveGroupTaskCompletion={teacherApproveGroupTaskCompletion}
           createLesson={teacherCreateLesson}
+          deleteLesson={teacherDeleteLesson}
           exportStudentsCSV={exportStudentsCSV}
           exportLogsCSV={exportLogsCSV}
           downloadSummaryReport={downloadSummaryReport}
@@ -1554,8 +1575,16 @@ function appendQuizAttempt(studentId, attempts, quizId, result) {
 }
 
 
-function normalizeQuizOption(option, index) {
-  const text = typeof option === 'string' ? option : (option?.text || option?.label || option?.value || `Choice ${index + 1}`);
+function normalizeQuizOption(option = {}, index = 0) {
+  const rawText =
+    option?.text ??
+    option?.optionText ??
+    option?.label ??
+    option?.value ??
+    `Choice ${index + 1}`;
+
+  const text = String(rawText || `Choice ${index + 1}`).trim() || `Choice ${index + 1}`;
+
   return {
     id: String(option?.id ?? option?.value ?? `opt-${index}-${text}`),
     text,
@@ -1611,52 +1640,9 @@ function buildQuizQuestionsFromLesson(lesson = {}) {
         });
       });
     }
-
-    if (activity?.type === 'matching') {
-      asArray(activity.pairs || activity.items).slice(0, 3).forEach((pair, pairIndex) => {
-        const left = pair.left || pair.word || pair.term || `Item ${pairIndex + 1}`;
-        const right = pair.right || pair.meaning || pair.answer || 'Tamang pares';
-        questions.push({
-          id: String(pair.id || `${lesson.id || 'lesson'}-match-${pairIndex}`),
-          type: 'mcq',
-          source: activity.title || 'Matching Check',
-          prompt: `Ano ang tamang pares o kahulugan ng "${left}"?`,
-          options: buildFallbackOptions(right, asArray(activity.pairs || activity.items).map(item => item.right || item.meaning || item.answer)),
-          points: 1
-        });
-      });
-    }
   });
 
-  if (!questions.length) {
-    const subject = lesson.subject || 'Filipino';
-    const title = lesson.title || 'Aralin';
-    questions.push(
-      {
-        id: `${lesson.id || title}-fallback-subject`,
-        type: 'mcq',
-        source: 'Lesson Check',
-        prompt: `Anong subject area ang pinakaakma sa araling "${title}"?`,
-        options: buildFallbackOptions(subject, SUBJECTS.map(item => item.name)),
-        points: 1
-      },
-      {
-        id: `${lesson.id || title}-fallback-purpose`,
-        type: 'mcq',
-        source: 'Lesson Check',
-        prompt: 'Ano ang dapat gawin pagkatapos basahin ang aralin?',
-        options: [
-          { id: 'purpose-0', text: 'Sagutin ang gawain at tingnan ang feedback', isCorrect: true },
-          { id: 'purpose-1', text: 'Isara agad ang lesson', isCorrect: false },
-          { id: 'purpose-2', text: 'Laktawan ang lahat ng activity', isCorrect: false },
-          { id: 'purpose-3', text: 'Hindi na kailangan mag-practice', isCorrect: false }
-        ],
-        points: 1
-      }
-    );
-  }
-
-  return questions.slice(0, 8);
+  return questions.slice(0, 25);
 }
 
 function buildStudentQuizzes(data = {}) {
@@ -5225,7 +5211,8 @@ function ActivityCard({ activity, index = 0, total = 1, isEarlyGrade, submitMcq,
 }
 
 function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, submitMcq }) {
-  const questions = activity.questions || [];
+  const allQuestions = activity.questions || [];
+  const questions = allQuestions.slice(0, 1);
 
   function getBackendMcqState() {
     const selectedAnswers = {};
@@ -5323,7 +5310,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
     <div className="card" style={activityBoxStyle}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="section-title">
-          {isEarlyGrade ? '🎮 Mini Quiz' : 'Multiple Choice Quiz'}
+          {isEarlyGrade ? '🎮 Mini Quiz' : 'Quiz'}
         </div>
 
         <div className="pill">
@@ -5341,7 +5328,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
         {submitted
           ? isEarlyGrade
             ? 'Done! Your answer is saved.'
-            : 'This MCQ is already submitted.'
+            : 'This quiz is already submitted.'
           : isEarlyGrade
             ? 'Choose your answer first. Tap See Score when done.'
             : 'Choose your answers first. Feedback appears after you click See Score.'}
@@ -8224,7 +8211,7 @@ function TeacherAssessmentCenter({ lessons = [], rows = [], quizPerformance = {}
         <div>
           <div className="lms-section-label">Assessment Hub</div>
           <h2>Quiz Builder & Effectiveness Preview</h2>
-          <p>Create the lesson first, then use each lesson's MCQ or matching activities as a separate student Quiz tab. Backend saving comes next.</p>
+          <p>Create the lesson first, then use each lesson's Quiz activities as a separate student Quiz tab. Backend saving comes next.</p>
         </div>
       </div>
 
@@ -8332,6 +8319,7 @@ function TeacherDashboard({
   deleteGroup,
   approveGroupTaskCompletion,
   createLesson,
+  deleteLesson,
   exportStudentsCSV,
   exportLogsCSV,
   downloadSummaryReport
@@ -9255,7 +9243,7 @@ function TeacherDashboard({
 
         {teacherTab === 'lessons' && (
           <section className="teacher-clean-panel">
-            <TeacherLessonManager lessons={lessons} createLesson={createLesson} assignedClasses={assignedClasses} />
+            <TeacherLessonManager lessons={lessons} createLesson={createLesson} deleteLesson={deleteLesson} assignedClasses={assignedClasses} />
           </section>
         )}
 
@@ -9677,7 +9665,7 @@ function TeacherDashboard({
 
 
 
-function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
+function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedClasses = [] }) {
   const [builderTab, setBuilderTab] = useState('source');
   const [lessonDraft, setLessonDraft] = useState({
     gradeLevel: 1,
@@ -9736,7 +9724,7 @@ function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
     const activityMap = {
       mcq: {
         ...base,
-        title: 'MCQ Quiz',
+        title: 'Quiz',
         questions: [
           {
             id: makeId(),
@@ -10114,7 +10102,7 @@ function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
 
           return {
             type: 'mcq',
-            title: activity.title || 'MCQ Quiz',
+            title: activity.title || 'Quiz',
             instructions: activity.instructions || null,
             questions
           };
@@ -10408,7 +10396,7 @@ function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
     { type: 'infographic', label: 'Info Card', icon: 'i', className: 'choice-infographic' },
     { type: 'vocabulary', label: 'Vocabulary', icon: 'Aa', className: 'choice-vocabulary' },
     { type: 'matching', label: 'Matching', icon: '⌘', className: 'choice-matching' },
-    { type: 'mcq', label: 'MCQ Quiz', icon: '?', className: 'choice-mcq' },
+    { type: 'mcq', label: 'Quiz', icon: '?', className: 'choice-mcq' },
     { type: 'speech', label: 'Speech Practice', icon: '🎙️', className: 'choice-speech' },
     { type: 'writing', label: 'Writing Prompt', icon: '✎', className: 'choice-writing' }
   ];
@@ -10846,6 +10834,7 @@ function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
                   <th>XP</th>
                   <th>Status</th>
                   <th>Updated</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -10865,13 +10854,23 @@ function TeacherLessonManager({ lessons, createLesson, assignedClasses = [] }) {
                         </span>
                       </td>
                       <td>{fmtDate(lesson.updatedAt || lesson.createdAt)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="lms-outline-action"
+                          style={{ color: '#b42318', borderColor: 'rgba(180, 35, 24, 0.28)', whiteSpace: 'nowrap' }}
+                          onClick={() => deleteLesson(lesson.id, lesson.title)}
+                        >
+                          Remove Lesson
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
 
                 {!visibleRecentLessons.length && (
                   <tr>
-                    <td colSpan="7">No teacher-created lessons yet.</td>
+                    <td colSpan="8">No teacher-created lessons yet.</td>
                   </tr>
                 )}
               </tbody>
@@ -11067,7 +11066,7 @@ function TeacherActivityBlock({
 }) {
   const typeMeta = {
     mcq: {
-      label: 'MCQ Quiz',
+      label: 'Quiz',
       desc: 'Multiple choice questions.',
       icon: '?',
       color: '#ec407a'
