@@ -5,7 +5,7 @@ import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
 import QuizResults from './components/student/quizzes/QuizResults';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
-import { asArray, displayDue, effectivenessBand, fmtDate, getBestQuizAttempt, lessonAssessmentProfile, lessonXp, levelForXp, masteryFromPercent, rolesForGradeLevel, subjectTheme, taskCompletionPercent, xpPercent } from './utils/studentHelpers';
+import { asArray, displayDue, effectivenessBand, fmtDate, getBestQuizAttempt, lessonAssessmentProfile, lessonXp, levelForXp, levelTitleForXp, shortLevelTitleForXp, masteryFromPercent, rolesForGradeLevel, subjectTheme, taskCompletionPercent, xpPercent } from './utils/studentHelpers';
 import { EarlyStudentSubpageStyles, Grade46ReferenceStyles, MissionStyles, TeacherRedesignStyles } from './components/styles/StyleBlocks';
 import { ProgressBar, Screen, Stat } from './components/common/CommonUI';
 import { AdminLogin, StudentLogin, TeacherLogin } from './pages/Login/LoginScreens';
@@ -55,6 +55,238 @@ function Notification({ notice }) {
   if (!notice) return <div className="notif-wrap" id="notif-wrap" />;
   return <div className="notif-wrap" id="notif-wrap"><div className={`notif ${notice.type || ''}`}>{notice.text}</div></div>;
 }
+
+
+function escapeBadgeText(value = '') {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function ensureBadgeUnlockPopupStyles() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('badge-unlock-popup-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'badge-unlock-popup-styles';
+  style.textContent = `
+    .badge-unlock-stack {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 99999;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 28px;
+    }
+
+    .badge-unlock-card {
+      pointer-events: auto;
+      width: min(420px, calc(100vw - 32px));
+      border-radius: 28px;
+      padding: 20px;
+      background: linear-gradient(135deg, #fffdf2, #ffffff 48%, #effdf4);
+      border: 2px solid rgba(250, 204, 21, 0.55);
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+      display: grid;
+      grid-template-columns: 76px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      animation: badgePopIn 0.55s cubic-bezier(.2, 1.2, .2, 1), badgeFloat 2.8s ease-in-out infinite;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .badge-unlock-card::before {
+      content: "✨";
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      font-size: 1.1rem;
+      animation: badgeSparkle 1.4s ease-in-out infinite;
+    }
+
+    .badge-unlock-card::after {
+      content: "🌟";
+      position: absolute;
+      right: 54px;
+      bottom: 12px;
+      font-size: 1.2rem;
+      animation: badgeSparkle 1.6s ease-in-out infinite reverse;
+    }
+
+    .badge-unlock-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 24px;
+      display: grid;
+      place-items: center;
+      font-size: 2.4rem;
+      background: linear-gradient(135deg, #fef3c7, #dcfce7);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.8), 0 10px 22px rgba(34, 197, 94, .18);
+      animation: badgeBounce 1s ease-in-out infinite;
+    }
+
+    .badge-unlock-eyebrow {
+      margin: 0 0 4px;
+      color: #ca8a04;
+      font-size: .78rem;
+      font-weight: 950;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .badge-unlock-title {
+      margin: 0;
+      color: #123524;
+      font-size: 1.25rem;
+      font-weight: 950;
+      line-height: 1.1;
+    }
+
+    .badge-unlock-desc {
+      margin: 6px 0 0;
+      color: #3f5f4b;
+      font-size: .94rem;
+      font-weight: 750;
+      line-height: 1.35;
+    }
+
+    .badge-unlock-close {
+      border: 0;
+      background: rgba(22, 101, 52, 0.08);
+      color: #166534;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      font-weight: 950;
+      cursor: pointer;
+      align-self: start;
+    }
+
+    @keyframes badgePopIn {
+      from {
+        opacity: 0;
+        transform: translateY(-28px) scale(.82) rotate(-2deg);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(0);
+      }
+    }
+
+    @keyframes badgeFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(4px); }
+    }
+
+    @keyframes badgeBounce {
+      0%, 100% { transform: translateY(0) scale(1); }
+      45% { transform: translateY(-5px) scale(1.06); }
+    }
+
+    @keyframes badgeSparkle {
+      0%, 100% { opacity: .45; transform: scale(.9) rotate(0); }
+      50% { opacity: 1; transform: scale(1.2) rotate(10deg); }
+    }
+
+    @media (max-width: 520px) {
+      .badge-unlock-stack {
+        padding-top: 18px;
+      }
+
+      .badge-unlock-card {
+        grid-template-columns: 58px 1fr auto;
+        padding: 16px;
+        border-radius: 22px;
+      }
+
+      .badge-unlock-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        font-size: 2rem;
+      }
+
+      .badge-unlock-title {
+        font-size: 1.08rem;
+      }
+
+      .badge-unlock-desc {
+        font-size: .86rem;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function showBadgeUnlockPopup(badges = []) {
+  if (typeof document === 'undefined') return;
+
+  const earnedBadges = Array.isArray(badges)
+    ? badges.filter(Boolean)
+    : badges
+      ? [badges]
+      : [];
+
+  if (!earnedBadges.length) return;
+
+  ensureBadgeUnlockPopupStyles();
+
+  let stack = document.getElementById('badge-unlock-stack');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.id = 'badge-unlock-stack';
+    stack.className = 'badge-unlock-stack';
+    document.body.appendChild(stack);
+  }
+
+  earnedBadges.slice(0, 3).forEach((badge, index) => {
+    window.setTimeout(() => {
+      const card = document.createElement('div');
+      card.className = 'badge-unlock-card';
+
+      const icon = escapeBadgeText(badge.icon || '🏅');
+      const name = escapeBadgeText(badge.name || 'Bagong Badge');
+      const description = escapeBadgeText(badge.description || 'May bago kang achievement!');
+
+      card.innerHTML = `
+        <div class="badge-unlock-icon">${icon}</div>
+        <div>
+          <p class="badge-unlock-eyebrow">Badge Unlocked!</p>
+          <h3 class="badge-unlock-title">${name}</h3>
+          <p class="badge-unlock-desc">${description}</p>
+        </div>
+        <button class="badge-unlock-close" type="button" aria-label="Close badge popup">×</button>
+      `;
+
+      const closeButton = card.querySelector('.badge-unlock-close');
+      const removeCard = () => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(-18px) scale(.96)';
+        card.style.transition = 'opacity .2s ease, transform .2s ease';
+
+        window.setTimeout(() => {
+          card.remove();
+
+          if (stack && !stack.children.length) {
+            stack.remove();
+          }
+        }, 220);
+      };
+
+      closeButton?.addEventListener('click', removeCard);
+      stack.appendChild(card);
+
+      window.setTimeout(removeCard, 5600);
+    }, index * 650);
+  });
+}
+
 
 export default function App() {
   const { user, login, logout: authLogout, booting, setUser } = useAuth();
@@ -491,6 +723,7 @@ if (role === 'admin') {
 
       if (!silent) {
         notify(data.xpAwarded ? `🎉 Natapos! +${data.xpAwarded} XP` : 'Nagawa mo na ang lesson na ito.');
+      showBadgeUnlockPopup(data?.newBadges);
       }
 
       if (data?.xpAwarded) {
@@ -676,6 +909,7 @@ if (role === 'admin') {
         ? `${row.studentName || 'Student'} earned +${data.xpAwarded} XP after teacher approval.`
         : `${row.studentName || 'Student'} was already approved.`
       );
+      showBadgeUnlockPopup(data?.newBadges);
       await loadTeacherDashboard();
     });
   }
@@ -1293,7 +1527,8 @@ async function archiveTeacher(id) {
 
       /* === Word Match toast overlay polish START === */
     
-    `}</style>
+    `}
+</style>
 
       <Notification notice={notice} />
 
@@ -2839,7 +3074,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         .g12-nav button { flex-direction: column; gap: 2px; font-size: 11px; }
         .g12-nav-icon { font-size: 26px; }
       }
-    `}</style>
+`}</style>
 
     <div className="g12-page">
       <header className="g12-topbar">
@@ -2884,7 +3119,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
   <span className="g12-progress-coin">🪙</span>
   <span>{s.xp || 0} XP</span>
   <span className="g12-progress-divider" />
-  <span>Level {level}</span>
+  <span>Level {level} • {shortLevelTitleForXp(s.xp)}</span>
 </div>
               <div className="g12-progress-track">
                 <span className="g12-progress-fill" style={{ width: `${xpPct}%` }} />
@@ -3000,7 +3235,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
               <div className="g46-ref-ring" style={{ background: `conic-gradient(var(--tt-yellow-deep) ${pct * 3.6}deg, rgba(255,255,255,0.20) 0deg)` }}>
                 <span>{pct}%</span>
               </div>
-              <b>Level {level}</b>
+              <b>Level {level} • {levelTitleForXp(xp)}</b>
               <small>{xp} XP earned</small>
             </div>
 
@@ -3021,7 +3256,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
 
               <div className="g46-ref-top-actions">
                 <span className="g46-ref-pill">⚡ {xp} XP</span>
-                <span className="g46-ref-pill">🏅 Level {level}</span>
+                <span className="g46-ref-pill">🏅 Level {level} • {levelTitleForXp(xp)}</span>
                 {titleAction}
               </div>
             </header>
@@ -3281,7 +3516,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
 
             {showProgress && (
               <div className="g12-mini-progress">
-                <strong>🪙 {s.xp || 0} XP • Level {level}</strong>
+                <strong>🪙 {s.xp || 0} XP • Level {level} • {shortLevelTitleForXp(s.xp)}</strong>
                 <div className="g12-progress-track">
                   <span className="g12-progress-fill" style={{ width: `${xpPct}%` }} />
                 </div>
@@ -4445,7 +4680,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     setRewardClaimed(true);
     setMissionStep(missionSteps.length - 1);
     speechSynthesis.cancel();
-    setRewardModal({ xp: xpEarned });
+    setRewardModal({ xp: xpEarned, badges: result?.newBadges || [] });
   }
 
   function goHomeAfterReward() {
@@ -5119,7 +5354,109 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           border: 2px solid rgba(255, 217, 102, 0.50);
         }
 
-        .g12-reward-actions {
+        
+        /* === Grade 1-2 Reward Badge Unlock === */
+        .g12-reward-badges {
+          position: relative;
+          z-index: 2;
+          width: min(460px, 100%);
+          margin: 0 auto 18px;
+          padding: 14px;
+          border-radius: 24px;
+          background: rgba(255, 255, 255, 0.82);
+          border: 2px solid rgba(250, 204, 21, 0.42);
+          box-shadow: 0 12px 28px rgba(20, 34, 59, 0.08);
+          animation: g12RewardBadgePop 0.45s ease both;
+        }
+
+        .g12-reward-badge-eyebrow {
+          margin: 0 0 10px !important;
+          color: #ca8a04 !important;
+          font-size: 16px !important;
+          font-weight: 1000 !important;
+          letter-spacing: 0.02em;
+        }
+
+        .g12-reward-badge-list {
+          display: grid;
+          gap: 10px;
+        }
+
+        .g12-reward-badge-chip {
+          display: grid;
+          grid-template-columns: 56px 1fr;
+          align-items: center;
+          gap: 12px;
+          text-align: left;
+          padding: 10px;
+          border-radius: 20px;
+          background: linear-gradient(135deg, #fff7cc, #ecfdf5);
+          border: 1px solid rgba(34, 197, 94, 0.18);
+        }
+
+        .g12-reward-badge-chip > span {
+          width: 54px;
+          height: 54px;
+          border-radius: 18px;
+          display: grid;
+          place-items: center;
+          background: #ffffff;
+          font-size: 30px;
+          box-shadow: 0 10px 20px rgba(20, 34, 59, 0.08);
+          animation: g12RewardBadgeBounce 0.95s ease-in-out infinite;
+        }
+
+        .g12-reward-badge-chip strong {
+          display: block;
+          color: #123524;
+          font-size: 18px;
+          line-height: 1.1;
+          font-weight: 1000;
+        }
+
+        .g12-reward-badge-chip small {
+          display: block;
+          margin-top: 4px;
+          color: #466351;
+          font-size: 13px;
+          line-height: 1.25;
+          font-weight: 800;
+        }
+
+        .g12-reward-badge-link {
+          margin-top: 12px;
+          border: 0;
+          border-radius: 999px;
+          padding: 10px 16px;
+          background: #15965a;
+          color: #ffffff;
+          font-weight: 950;
+          cursor: pointer;
+          box-shadow: 0 10px 22px rgba(21, 150, 90, 0.18);
+        }
+
+        @keyframes g12RewardBadgePop {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.96);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes g12RewardBadgeBounce {
+          0%, 100% {
+            transform: translateY(0) scale(1);
+          }
+          45% {
+            transform: translateY(-4px) scale(1.05);
+          }
+        }
+        /* === End Grade 1-2 Reward Badge Unlock === */
+
+.g12-reward-actions {
           position: relative;
           z-index: 2;
           display: flex;
@@ -5335,6 +5672,35 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <h3>Mission Complete!</h3>
               <p>Ang galing mo! Natapos mo ang aralin.</p>
               <div className="g12-reward-xp">⚡ +{rewardModal.xp || 0} XP</div>
+
+              {Array.isArray(rewardModal.badges) && rewardModal.badges.length > 0 && (
+                <div className="g12-reward-badges">
+                  <p className="g12-reward-badge-eyebrow">🏅 New Badge Unlocked!</p>
+
+                  <div className="g12-reward-badge-list">
+                    {rewardModal.badges.slice(0, 2).map((badge, badgeIndex) => (
+                      <div className="g12-reward-badge-chip" key={badge.id || badge.code || badge.name || badgeIndex}>
+                        <span>{badge.icon || '🏅'}</span>
+                        <div>
+                          <strong>{badge.name || 'Bagong Badge'}</strong>
+                          <small>{badge.description || 'May bago kang achievement!'}</small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="g12-reward-badge-link"
+                    onClick={() => {
+                      setRewardModal(null);
+                      go('screen-stu-badges');
+                    }}
+                  >
+                    Tingnan ang Aking Badges →
+                  </button>
+                </div>
+              )}
 
               <div className="g12-reward-actions">
                 <button type="button" className="g12-mission-btn purple" onClick={goNextAfterReward}>
@@ -7348,7 +7714,7 @@ function StudentMissions({ data, go, onPlayMission }) {
           </div>
 
           <div className="missions-progress-card">
-            <strong>🪙 {xp} XP • Level {level}</strong>
+            <strong>🪙 {xp} XP • Level {level} • {shortLevelTitleForXp(xp)}</strong>
             <div className="missions-progress-track">
               <span className="missions-progress-fill" style={{ width: `${Math.max(6, xpPct)}%` }} />
             </div>

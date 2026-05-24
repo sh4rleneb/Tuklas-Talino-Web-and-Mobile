@@ -1,16 +1,8 @@
-import { Router } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import {
-  authenticate,
+  Router } from 'express'; import multer from 'multer'; import path from 'path'; import fs from 'fs'; import { fileURLToPath } from 'url'; import {   authenticate,
   requireRole,
   requirePasswordChanged,
-} from '../middleware/auth.js';
-
-import {
-  Lesson,
+  } from '../middleware/auth.js';  import {   Lesson,
   TeacherAssignment,
   LessonActivity,
   MCQQuestion,
@@ -23,14 +15,52 @@ import {
   WritingSubmission,
   SpeechAttempt,
   XpLog,
-} from '../models/index.js';
-
-import { awardXp } from '../services/progress.service.js';
+  Badge,
+  StudentBadge } from '../models/index.js';  import { awardXp,
+  awardThresholdBadges
+} from '../services/progress.service.js';
 import { lessonSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
 const router = Router();
+
+function plainBadgeResponse(badge) {
+  const row = badge?.toJSON ? badge.toJSON() : badge;
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    description: row.description,
+    icon: row.icon || '🏅',
+    xpThreshold: row.xpThreshold ?? null
+  };
+}
+
+async function getStudentBadgeIds(studentId) {
+  const rows = await StudentBadge.findAll({
+    where: { studentId },
+    attributes: ['badgeId']
+  });
+
+  return new Set(rows.map(row => Number(row.badgeId)));
+}
+
+async function getNewBadgeResponses(studentId, beforeBadgeIds) {
+  const rows = await StudentBadge.findAll({
+    where: { studentId },
+    include: [Badge]
+  });
+
+  return rows
+    .filter(row => !beforeBadgeIds.has(Number(row.badgeId)))
+    .map(row => plainBadgeResponse(row.Badge))
+    .filter(Boolean);
+}
+
 
 router.use(authenticate);
 router.use(requirePasswordChanged);
@@ -446,14 +476,23 @@ router.post('/:id/complete', requireRole('student'), async (req, res, next) => {
       },
     });
 
+    let newBadges = [];
+    const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
+
     if (created) {
-      await awardXp(
+      const xpResult = await awardXp(
         req.student.id,
         lesson.xpReward,
         'lesson',
         lesson.id,
         `Completed ${lesson.title}`
       );
+
+      if (xpResult) {
+        await awardThresholdBadges(xpResult);
+      }
+
+      newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
 
       notifyTeacherAndLeaderboard({
         type: 'lesson_complete',
@@ -471,6 +510,7 @@ router.post('/:id/complete', requireRole('student'), async (req, res, next) => {
     res.json({
       completed,
       xpAwarded: created ? lesson.xpReward : 0,
+      newBadges,
     });
   } catch (err) {
     next(err);
@@ -497,6 +537,7 @@ router.post('/:id/mcq', requireRole('student'), async (req, res, next) => {
     });
 
     let xpAwarded = 0;
+    let newBadges = [];
 
     if (option.isCorrect) {
       const existingMcqXp = await XpLog.findOne({
@@ -508,7 +549,7 @@ router.post('/:id/mcq', requireRole('student'), async (req, res, next) => {
       });
 
       if (!existingMcqXp) {
-        await awardXp(
+        const xpResult = await awardXp(
           req.student.id,
           5,
           'mcq',
@@ -516,6 +557,7 @@ router.post('/:id/mcq', requireRole('student'), async (req, res, next) => {
           'Correct MCQ answer'
         );
 
+        newBadges = xpResult?.getDataValue?.('newBadges') || xpResult?.newBadges || [];
         xpAwarded = 5;
 
         notifyTeacherAndLeaderboard({
@@ -534,6 +576,7 @@ router.post('/:id/mcq', requireRole('student'), async (req, res, next) => {
       correct: option.isCorrect,
       history,
       xpAwarded,
+      newBadges,
       message: xpAwarded
         ? 'Correct answer. XP awarded once for this question.'
         : 'Answer saved. No extra XP for repeated or incorrect answers.',

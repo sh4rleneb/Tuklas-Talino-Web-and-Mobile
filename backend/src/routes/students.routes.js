@@ -1,10 +1,34 @@
-import { Router } from 'express';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import { Op } from 'sequelize';
-import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Student, TeacherAssignment, Lesson, LessonActivity, MCQQuestion, MCQOption, WritingTask, SpeechTask, CompletedLesson, Badge, StudentBadge, XpLog, QuizHistory, QuizAttempt, WritingSubmission, SpeechAttempt, GroupMember, Group, GroupTask, GroupTaskCompletion, MissionCompletion, Notification } from '../models/index.js';
-import { calculateLevel, nextLevelXp } from '../services/progress.service.js';
+import {
+  Router } from 'express'; import bcrypt from 'bcryptjs'; import crypto from 'crypto'; import { Op } from 'sequelize'; import { authenticate,
+  requireRole,
+  requirePasswordChanged } from '../middleware/auth.js'; import { Role,
+  User,
+  Student,
+  TeacherAssignment,
+  Lesson,
+  LessonActivity,
+  MCQQuestion,
+  MCQOption,
+  WritingTask,
+  SpeechTask,
+  CompletedLesson,
+  Badge,
+  StudentBadge,
+  XpLog,
+  QuizHistory,
+  QuizAttempt,
+  WritingSubmission,
+  SpeechAttempt,
+  GroupMember,
+  Group,
+  GroupTask,
+  GroupTaskCompletion,
+  MissionCompletion,
+  Notification
+} from '../models/index.js'; import { calculateLevel,
+  nextLevelXp,
+  levelTitleForXp
+} from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
 
@@ -13,6 +37,173 @@ function generateTemporaryPin() {
 }
 
 const router = Router();
+
+const CORE_BADGE_DEFINITIONS = [
+  {
+    code: 'first_lesson',
+    name: 'Unang Hakbang',
+    description: 'Natapos ang unang lesson.',
+    icon: '🌱',
+    xpThreshold: null,
+    target: 1,
+    metric: 'completedLessons'
+  },
+  {
+    code: 'reader_3',
+    name: 'Batang Mambabasa',
+    description: 'Makatapos ng 3 lessons.',
+    icon: '📖',
+    xpThreshold: null,
+    target: 3,
+    metric: 'completedLessons'
+  },
+  {
+    code: 'quiz_perfect',
+    name: 'Quiz Bayani',
+    description: 'Makakuha ng perfect score sa quiz.',
+    icon: '🧠',
+    xpThreshold: null,
+    target: 1,
+    metric: 'perfectQuizzes'
+  },
+  {
+    code: 'writing_3',
+    name: 'Malikhaing Manunulat',
+    description: 'Magsumite ng 3 writing activities.',
+    icon: '✍️',
+    xpThreshold: null,
+    target: 3,
+    metric: 'writingSubmissions'
+  },
+  {
+    code: 'speech_3',
+    name: 'Boses Bituin',
+    description: 'Magsumite ng 3 speech attempts.',
+    icon: '🎤',
+    xpThreshold: null,
+    target: 3,
+    metric: 'speechAttempts'
+  },
+  {
+    code: 'group_1',
+    name: 'Kaagapay sa Gawain',
+    description: 'Makatapos ng 1 approved group task.',
+    icon: '🤝',
+    xpThreshold: null,
+    target: 1,
+    metric: 'approvedGroupTasks'
+  },
+  {
+    code: 'xp_100',
+    name: 'Sipag Star',
+    description: 'Makaipon ng 100 XP.',
+    icon: '⭐',
+    xpThreshold: 100,
+    target: 100,
+    metric: 'xp'
+  },
+  {
+    code: 'level_10',
+    name: 'Tuklas Kampeon',
+    description: 'Maabot ang Level 10.',
+    icon: '🏆',
+    xpThreshold: null,
+    target: 10,
+    metric: 'level'
+  }
+];
+
+async function ensureCoreBadges() {
+  const badges = [];
+
+  for (const definition of CORE_BADGE_DEFINITIONS) {
+    const [badge] = await Badge.findOrCreate({
+      where: { code: definition.code },
+      defaults: {
+        code: definition.code,
+        name: definition.name,
+        description: definition.description,
+        icon: definition.icon,
+        xpThreshold: definition.xpThreshold
+      }
+    });
+
+    let changed = false;
+
+    for (const field of ['name', 'description', 'icon', 'xpThreshold']) {
+      if (badge[field] !== definition[field]) {
+        badge[field] = definition[field];
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await badge.save();
+    }
+
+    badges.push(badge);
+  }
+
+  return badges;
+}
+
+function badgeProgressValue(stats, metric) {
+  if (metric === 'completedLessons') return stats.completedLessons;
+  if (metric === 'perfectQuizzes') return stats.perfectQuizzes;
+  if (metric === 'writingSubmissions') return stats.writingSubmissions;
+  if (metric === 'speechAttempts') return stats.speechAttempts;
+  if (metric === 'approvedGroupTasks') return stats.approvedGroupTasks;
+  if (metric === 'xp') return stats.xp;
+  if (metric === 'level') return stats.level;
+
+  return 0;
+}
+
+async function buildBadgeProgress(studentId, xp = 0) {
+  const [
+    completedLessons,
+    perfectQuizzes,
+    writingSubmissions,
+    speechAttempts,
+    approvedGroupTasks
+  ] = await Promise.all([
+    CompletedLesson.count({ where: { studentId } }),
+    QuizAttempt.count({ where: { studentId, percent: 100 } }),
+    WritingSubmission.count({ where: { studentId } }),
+    SpeechAttempt.count({ where: { studentId } }),
+    GroupTaskCompletion.count({ where: { studentId, verificationStatus: 'approved' } })
+  ]);
+
+  const stats = {
+    completedLessons,
+    perfectQuizzes,
+    writingSubmissions,
+    speechAttempts,
+    approvedGroupTasks,
+    xp: Number(xp || 0),
+    level: calculateLevel(xp)
+  };
+
+  return CORE_BADGE_DEFINITIONS.map(definition => {
+    const current = badgeProgressValue(stats, definition.metric);
+    const target = definition.target || 1;
+    const percent = Math.min(100, Math.round((Math.min(current, target) / target) * 100));
+
+    return {
+      code: definition.code,
+      name: definition.name,
+      icon: definition.icon,
+      description: definition.description,
+      metric: definition.metric,
+      current,
+      target,
+      percent,
+      remaining: Math.max(0, target - current),
+      completed: current >= target
+    };
+  });
+}
+
 router.use(authenticate);
 router.use(requirePasswordChanged);
 
@@ -82,7 +273,9 @@ async function dashboardPayload(student) {
   });
   const completed = await CompletedLesson.findAll({ where: { studentId: student.id } });
   const completedIds = new Set(completed.map(c => c.lessonId));
+  const allBadges = await ensureCoreBadges();
   const badges = await StudentBadge.findAll({ where: { studentId: student.id }, include: [Badge] });
+  const badgeProgress = await buildBadgeProgress(student.id, student.xp);
   const xpLogs = await XpLog.findAll({ where: { studentId: student.id }, order: [['createdAt', 'DESC']], limit: 10 });
   const quizAttemptRows = await QuizAttempt.findAll({
     where: { studentId: student.id },
@@ -137,6 +330,7 @@ async function dashboardPayload(student) {
   return {
     student,
     level: calculateLevel(student.xp),
+    levelTitle: levelTitleForXp(student.xp),
     nextLevelXp: nextLevelXp(student.xp),
     progress: {
       completedLessons: completed.length,
@@ -145,6 +339,8 @@ async function dashboardPayload(student) {
     },
     lessons: lessons.map(l => ({ ...l.toJSON(), completed: completedIds.has(l.id) })),
     badges: badges.map(sb => sb.Badge),
+    allBadges,
+    badgeProgress,
     xpLogs,
     quizAttempts,
     groups: memberships.map(m => {
@@ -274,7 +470,7 @@ router.get('/:id/progress', requireRole('admin', 'teacher', 'student'), async (r
     if (req.role === 'student' && student.id !== req.student.id) return res.status(403).json({ message: 'Access denied.' });
     const completed = await CompletedLesson.count({ where: { studentId: student.id } });
     const total = await Lesson.count({ where: { gradeLevel: student.gradeLevel, status: 'published' } });
-    res.json({ xp: student.xp, level: calculateLevel(student.xp), completed, total, percent: total ? Math.round(completed / total * 100) : 0 });
+    res.json({ xp: student.xp, level: calculateLevel(student.xp), levelTitle: levelTitleForXp(student.xp), nextLevelXp: nextLevelXp(student.xp), completed, total, percent: total ? Math.round(completed / total * 100) : 0 });
   } catch (err) { next(err); }
 });
 
@@ -283,9 +479,10 @@ router.get('/:id/badges', requireRole('admin', 'teacher', 'student'), async (req
     const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
     if (req.role === 'student' && student.id !== req.student.id) return res.status(403).json({ message: 'Access denied.' });
+    const allBadges = await ensureCoreBadges();
     const badges = await StudentBadge.findAll({ where: { studentId: student.id }, include: [Badge] });
-    const allBadges = await Badge.findAll();
-    res.json({ badges: badges.map(b => b.Badge), allBadges });
+    const badgeProgress = await buildBadgeProgress(student.id, student.xp);
+    res.json({ badges: badges.map(b => b.Badge), allBadges, badgeProgress, level: calculateLevel(student.xp), levelTitle: levelTitleForXp(student.xp), nextLevelXp: nextLevelXp(student.xp) });
   } catch (err) { next(err); }
 });
 
