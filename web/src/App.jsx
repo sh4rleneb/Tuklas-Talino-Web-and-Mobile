@@ -9569,7 +9569,7 @@ function TeacherDashboard({
           display: none !important;
         }
 
-        .teacher-builder-layout.builder-tab-lessons > .teacher-builder-main > section:nth-of-type(6) {
+        .teacher-builder-layout.builder-tab-lessons > .teacher-builder-main > .builder-panel-lessons {
           display: block !important;
         }
       `}</style>
@@ -10997,6 +10997,72 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     setTimeout(scrollToRecentLessons, 0);
   }
 
+  function getActivityData(activity = {}) {
+    return activity?.dataJson || activity || {};
+  }
+
+  function getActivityMaterialInfo(activitiesList = []) {
+    const materialActivity = (activitiesList || []).find(activity => activity?.type === 'material');
+    if (!materialActivity) return null;
+
+    const material = getActivityData(materialActivity);
+    const fileName = material.fileName || material.name || materialActivity.title || 'Lesson material';
+    const rawType = String(
+      material.fileType ||
+      material.mimeType ||
+      String(fileName).split('.').pop() ||
+      'FILE'
+    ).toUpperCase();
+
+    const fileType = rawType.includes('PDF')
+      ? 'PDF'
+      : rawType.includes('PPTX')
+        ? 'PPTX'
+        : rawType.includes('PPT')
+          ? 'PPT'
+          : rawType.replace('APPLICATION/', '') || 'FILE';
+
+    return {
+      fileName,
+      fileType,
+      label: `${fileType} attached`
+    };
+  }
+
+  function getLessonMaterialLabel(lesson = {}) {
+    const info = getActivityMaterialInfo(lesson.activities || []);
+    return info ? info.fileType : 'None';
+  }
+
+  function countQuizItemsFromActivities(activitiesList = []) {
+    return (activitiesList || [])
+      .filter(activity => activity?.type === 'mcq')
+      .reduce((sum, activity) => sum + (activity.questions || []).length, 0);
+  }
+
+  function countLessonQuizItems(lesson = {}) {
+    return countQuizItemsFromActivities(lesson.activities || []);
+  }
+
+  function formatQuizItemCount(count = 0) {
+    return `${count} ${count === 1 ? 'item' : 'items'}`;
+  }
+
+  const draftMaterialInfo = lessonPlanFile
+    ? {
+      fileName: lessonPlanFile.fileName || lessonPlanFile.name,
+      fileType: String(lessonPlanFile.fileType || lessonPlanFile.type || 'FILE').toUpperCase()
+    }
+    : null;
+
+  const draftQuizItemCount = countQuizItemsFromActivities(validActivities);
+  const draftMiniQuizCount = validActivities.some(activity => activity.type === 'mcq' && (activity.questions || []).length)
+    ? 1
+    : 0;
+  const draftWritingCount = validActivities.filter(activity => activity.type === 'writing').length;
+  const draftSpeechCount = validActivities.filter(activity => activity.type === 'speech').length;
+  const draftOtherActivityCount = validActivities.filter(activity => !['mcq', 'writing', 'speech'].includes(activity.type)).length;
+
   return (
     <>
           <style>{`
@@ -11034,18 +11100,14 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
             .teacher-builder-layout .builder-panel,
             .teacher-builder-layout .builder-side-preview,
-            .teacher-builder-layout .builder-side-activities,
-            .teacher-builder-layout .builder-side-tips {
+            .teacher-builder-layout .builder-side-activities {
               display: none;
             }
 
             .builder-tab-source .builder-panel-source,
-            .builder-tab-source .builder-side-tips,
             .builder-tab-details .builder-panel-details,
             .builder-tab-details .builder-panel-content,
-            .builder-tab-details .builder-side-tips,
             .builder-tab-activities .builder-panel-activities,
-            .builder-tab-activities .builder-panel-coverage,
             .builder-tab-activities .builder-side-activities,
             .builder-tab-preview .builder-side-preview,
             .builder-tab-preview .builder-side-activities,
@@ -11091,7 +11153,92 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                 flex: 1 1 calc(50% - 10px);
               }
             }
-          `}</style>
+                      /* === My Created Lessons compact table polish === */
+            .teacher-builder-layout .lms-recent-table {
+              table-layout: auto;
+            }
+
+            .teacher-builder-layout .lms-recent-table th {
+              padding: 13px 12px;
+              font-size: 0.92rem;
+              line-height: 1.2;
+              vertical-align: middle;
+              white-space: nowrap;
+            }
+
+            .teacher-builder-layout .lms-recent-table td {
+              padding: 13px 12px;
+              font-size: 0.94rem;
+              line-height: 1.3;
+              vertical-align: middle;
+            }
+
+            .teacher-builder-layout .lms-recent-table td:nth-child(1) {
+              font-weight: 900;
+              max-width: 280px;
+            }
+
+            .teacher-builder-layout .lms-recent-table td:nth-child(6),
+            .teacher-builder-layout .lms-recent-table td:nth-child(7),
+            .teacher-builder-layout .lms-recent-table td:nth-child(8),
+            .teacher-builder-layout .lms-recent-table td:nth-child(9) {
+              white-space: nowrap;
+            }
+
+            .teacher-builder-layout .lms-recent-table .lms-status {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              padding: 7px 12px;
+              min-width: 0;
+              min-height: 0;
+              border-radius: 999px;
+              font-size: 0.88rem;
+              font-weight: 900;
+              line-height: 1;
+              white-space: nowrap;
+              box-shadow: none;
+            }
+
+            .teacher-builder-layout .lms-recent-table .lms-status::before {
+              font-size: 0.7rem;
+            }
+
+            .teacher-builder-layout .lms-recent-table .lms-outline-action {
+              padding: 9px 13px !important;
+              border-radius: 14px;
+              font-size: 0.88rem;
+              line-height: 1.1;
+              min-height: 0;
+              white-space: nowrap;
+            }
+
+            .teacher-builder-layout .lms-show-more {
+              margin-top: 14px;
+              font-size: 0.92rem;
+            }
+
+            @media (max-width: 1280px) {
+              .teacher-builder-layout .lms-recent-table th,
+              .teacher-builder-layout .lms-recent-table td {
+                padding: 11px 9px;
+                font-size: 0.88rem;
+              }
+
+              .teacher-builder-layout .lms-recent-table .lms-status {
+                padding: 6px 10px;
+                font-size: 0.84rem;
+              }
+
+              .teacher-builder-layout .lms-recent-table .lms-outline-action {
+                padding: 8px 10px !important;
+                font-size: 0.84rem;
+              }
+            }
+            /* === End My Created Lessons compact table polish === */
+
+`}</style>
 
           <div className="teacher-builder-workflow" aria-label="Lesson builder steps">
             {[
@@ -11116,7 +11263,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
         <div className="teacher-builder-main">
           <section className="teacher-design-card soft builder-panel builder-panel-source" style={{ border: '2px solid #dcefe2', background: 'linear-gradient(135deg, #fbfffd, #f3fbf6)' }}>
             <div className="teacher-design-heading">
-              <div className="teacher-design-step">AI</div>
+              <div className="teacher-design-step">FILE</div>
               <div>
                 <h2>Lesson Material</h2>
 
@@ -11133,13 +11280,13 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                 onChange={handleLessonPlanFileUpload}
               />
               <small style={{ color: '#6d7b73', fontWeight: 750, marginTop: 6 }}>
-                Accepted starter files: TXT, PDF, PNG, JPG, JPEG, WEBP. Text files can be extracted now. Scanned PDFs/images are prepared for OCR/backend extraction.
+                Accepted files: PPT, PPTX, or PDF. PDFs can preview inside the student lesson. PPT/PPTX files open as slides or download.
               </small>
             </div>
 
             {lessonPlanFile && (
               <div className="lms-empty-line" style={{ marginTop: 12, background: '#ffffff', color: '#264136' }}>
-                <strong>Selected file:</strong> {lessonPlanFile.name} • {lessonPlanFile.size}
+                <strong>Uploaded Material:</strong> {lessonPlanFile.name} • {lessonPlanFile.size}
                 <br />
                 <span>{lessonPlanFileStatus}</span>
               </div>
@@ -11162,7 +11309,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                 className="input-field"
                 value={lessonPlanText}
                 onChange={(e) => setLessonPlanText(e.target.value)}
-                placeholder={"Upload a lesson plan file above, or paste here.\n\nExample:\nGrade 1 Filipino\nPaksa: Mga Pangngalan\nLayunin: Natutukoy ang pangngalan sa pangungusap.\nGawain: Basahin ang maikling kwento at sagutan ang tanong."}
+                placeholder={"Upload lesson slides above, or paste short teacher notes here.\n\nExample:\nGrade 1 Filipino\nPaksa: Mga Pangngalan\nLayunin: Natutukoy ang pangngalan sa pangungusap.\nGawain: Basahin ang maikling kwento at sagutan ang tanong."}
                 rows="7"
                 style={{ minHeight: 190, lineHeight: 1.55 }}
               />
@@ -11355,32 +11502,8 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             </div>
           </section>
 
-          <section className="teacher-design-card soft">
-            <div className="teacher-design-heading">
-              <div className="teacher-design-step">4</div>
-              <div>
-                <h2>Assessment Coverage</h2>
-                <p>Use more than MCQ so teachers can check understanding, writing, speaking, and engagement.</p>
-              </div>
-              <span className="lms-mini-pill">{readinessScore}% ready</span>
-            </div>
-
-            <div className="teacher-monitor-summary">
-              {assessmentChecks.map(item => (
-                <div key={item.label} style={{ background: item.ok ? '#edf8f1' : '#fff8df' }}>
-                  <span>{item.ok ? '✅' : '⚠️'} {item.label}</span>
-                  <strong>{item.ok ? 'Added' : 'Missing'}</strong>
-                  <small style={{ display: 'block', marginTop: 6, color: '#526988', fontWeight: 800 }}>{item.note}</small>
-                </div>
-              ))}
-            </div>
-
-            <div className="lms-empty-line" style={{ marginTop: 14, background: '#ffffff', color: '#264136' }}>
-              Recommended flow: pre-check → lesson content → practice → quiz/test → writing or speech → student self-evaluation.
-            </div>
-          </section>
-
-          <section className="teacher-design-card soft" id="teacher-recent-lessons">
+                    {builderTab === 'lessons' && (
+<section className="teacher-design-card soft builder-panel builder-panel-lessons" id="teacher-recent-lessons">
             <div className="teacher-design-heading">
               <div className="teacher-design-step">5</div>
               <div>
@@ -11398,6 +11521,8 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                   <th>Lesson Title</th>
                   <th>Subject</th>
                   <th>Grade</th>
+                  <th>Material</th>
+                  <th>Quiz Items</th>
                   <th>XP</th>
                   <th>Status</th>
                   <th>Updated</th>
@@ -11413,7 +11538,9 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                       <td>📘 {lesson.title}</td>
                       <td>{lesson.subject}</td>
                       <td>Grade {lesson.gradeLevel}</td>
-                      <td>{lesson.xpReward || 0}</td>
+                      <td>{getLessonMaterialLabel(lesson)}</td>
+                      <td>{formatQuizItemCount(countLessonQuizItems(lesson))}</td>
+                      <td>+{lesson.xpReward || 0}</td>
                       <td>
                         <span className={`lms-status ${isPublished ? 'published' : 'draft'}`}>
                           ● {isPublished ? 'Published' : 'Draft'}
@@ -11436,7 +11563,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
                 {!visibleRecentLessons.length && (
                   <tr>
-                    <td colSpan="7">No teacher-created lessons yet.</td>
+                    <td colSpan="9">No teacher-created lessons yet.</td>
                   </tr>
                 )}
               </tbody>
@@ -11448,6 +11575,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
               </button>
             )}
           </section>
+          )}
         </div>
 
         <aside className="teacher-builder-side">
@@ -11455,36 +11583,124 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             <div className="teacher-design-heading">
               <div className="teacher-design-step">👁</div>
               <div>
-                <h2>Live Preview</h2>
-                <p>See how your lesson will appear to students.</p>
+                <h2>Student Preview</h2>
+                <p>Check the flow students will follow before publishing.</p>
               </div>
             </div>
 
-            <div className="lms-preview-card-inner">
+            <div className="lms-preview-card-inner" style={{ display: 'grid', gap: 14 }}>
               <div className="lms-preview-badges">
                 <span className="lms-preview-badge">{subjectMeta?.icon || '📘'} {lessonDraft.subject}</span>
                 <span className="lms-preview-badge">Grade {lessonDraft.gradeLevel}</span>
+                <span className="lms-preview-badge">⭐ {lessonDraft.xpReward || 0} XP</span>
               </div>
 
-              <div className="lms-preview-title">
-                {lessonDraft.title || 'Untitled Lesson'}
+              <div>
+                <div className="lms-preview-title">
+                  {lessonDraft.title || 'Untitled Lesson'}
+                </div>
+                <div className="g46-ref-muted" style={{ marginTop: 6 }}>
+                  Students will move through this lesson step by step.
+                </div>
               </div>
 
-              <div className="lms-preview-stats">
-                <span className="lms-preview-stat">⭐ {lessonDraft.xpReward || 0} XP</span>
-                <span className="lms-preview-stat">🧩 {validActivities.length} activities</span>
+              <div style={{ display: 'grid', gap: 12 }}>
+                {[
+                  {
+                    step: '1',
+                    icon: '📎',
+                    title: 'Lesson Material',
+                    value: draftMaterialInfo
+                      ? `${draftMaterialInfo.fileType} • ${draftMaterialInfo.fileName}`
+                      : 'No material attached yet',
+                    note: draftMaterialInfo
+                      ? 'Students see this first in the Lesson Material step.'
+                      : 'Upload a PPT, PPTX, or PDF in the Lesson Material tab.'
+                  },
+                  {
+                    step: '2',
+                    icon: '📖',
+                    title: 'Read Lesson',
+                    value: lessonDraft.instructions ? 'Instructions ready' : 'No instructions yet',
+                    note: lessonDraft.passage
+                      ? `${String(lessonDraft.passage).slice(0, 120)}${String(lessonDraft.passage).length > 120 ? '...' : ''}`
+                      : 'Add a passage or short reading text in Lesson Details.'
+                  },
+                  {
+                    step: '3',
+                    icon: '🧩',
+                    title: 'Practice Activities',
+                    value: `${validActivities.length} activity block${validActivities.length === 1 ? '' : 's'}`,
+                    note: `Mini Quiz: ${draftMiniQuizCount ? '1 question inside lesson' : 'not added'} • Quiz Time: ${formatQuizItemCount(draftQuizItemCount)}`
+                  },
+                  {
+                    step: '4',
+                    icon: '✍️',
+                    title: 'Evidence Tasks',
+                    value: `${draftWritingCount} writing • ${draftSpeechCount} speech`,
+                    note: draftOtherActivityCount
+                      ? `${draftOtherActivityCount} other activity block${draftOtherActivityCount === 1 ? '' : 's'} included.`
+                      : 'Add writing, speech, vocabulary, matching, or info cards as needed.'
+                  },
+                  {
+                    step: '5',
+                    icon: '✅',
+                    title: 'Complete Lesson',
+                    value: 'Student submits progress',
+                    note: 'After completing required activities, the student can finish the lesson.'
+                  }
+                ].map(item => (
+                  <div
+                    key={item.title}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '44px 1fr',
+                      gap: 12,
+                      padding: 14,
+                      borderRadius: 18,
+                      background: '#FFFFFF',
+                      border: '1px solid #DCEFE2'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 14,
+                        display: 'grid',
+                        placeItems: 'center',
+                        background: '#F0FDF4',
+                        color: '#166534',
+                        fontWeight: 950
+                      }}
+                    >
+                      {item.icon}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span className="g46-ref-tag">Step {item.step}</span>
+                        <strong style={{ color: '#17324D' }}>{item.title}</strong>
+                      </div>
+                      <div style={{ marginTop: 6, fontWeight: 900, color: '#315241' }}>{item.value}</div>
+                      <div className="g46-ref-muted" style={{ marginTop: 4, lineHeight: 1.45 }}>{item.note}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <div className="lms-preview-illustration">📖</div>
-
-              <strong>Instructions</strong>
-              <div className="lms-preview-textbox">
-                {lessonDraft.instructions || 'Instructions will appear here for students.'}
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 18,
+                  background: '#FFF8DF',
+                  border: '1px solid #F4E7AA',
+                  color: '#6B4B00',
+                  fontWeight: 850,
+                  lineHeight: 1.45
+                }}
+              >
+                Preview note: Grade 3-6 students see this as a guided flow. Grade 1-2 keeps its original child-friendly lesson UI.
               </div>
-
-              <button className="lms-student-preview-btn" type="button" onClick={() => document.querySelector('.lms-live-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-                👥 Student Preview
-              </button>
             </div>
           </section>
 
@@ -11523,34 +11739,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             </button>
           </section>
 
-          <section className="teacher-side-card builder-side-tips">
-            <div className="teacher-design-heading">
-              <div>
-                <h2>💡 Tips for Great Lessons</h2>
-                <p>Quick reminders before publishing.</p>
-              </div>
-            </div>
-
-            <div className="lms-tips-list">
-              <div className="lms-tip-item">
-                <span>💬</span>
-                <p>Keep instructions short and student-friendly.</p>
-              </div>
-              <div className="lms-tip-item">
-                <span>📘</span>
-                <p>Use stories and examples from real life.</p>
-              </div>
-              <div className="lms-tip-item">
-                <span>🧩</span>
-                <p>Include a variety of activities to keep learners engaged.</p>
-              </div>
-              <div className="lms-tip-item">
-                <span>👁</span>
-                <p>Preview your lesson before publishing.</p>
-              </div>
-            </div>
-          </section>
-        </aside>
+          </aside>
       </div>
 
       <div className="lms-bottom-action-bar">
