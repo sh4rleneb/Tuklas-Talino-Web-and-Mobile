@@ -10,6 +10,7 @@ import { signToken, authenticate, requireRole } from '../middleware/auth.js';
 import { Role, User, Student, Teacher, AdminProfile } from '../models/index.js';
 import { audit } from '../services/audit.service.js';
 
+import { assertSafeContentPayload } from '../validators/contentSafety.js';
 const router = Router();
 
 function publicUser(user) {
@@ -167,6 +168,8 @@ router.post('/register/student', async (req, res, next) => {
     const section = req.body.section || 'N/A';
     const avatar = req.body.avatar || '🙂';
 
+    assertSafeContentPayload({ name, section }, 'student registration');
+
     if (!name || !username || !password || !gradeLevel) {
       return res.status(422).json({
         message: 'Name, username, password, and grade level are required.'
@@ -255,6 +258,7 @@ router.post(
   async (req, res, next) => {
     try {
       const body = validate(teacherSchema, req.body);
+      assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher registration');
 
       const role = await Role.findOne({
         where: { name: 'teacher' }

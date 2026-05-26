@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { assertSafeText } from '../validators/contentSafety.js';
 import {
   authenticate,
   requireRole,
@@ -158,6 +159,7 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
 
     const gradeLevel = Number(req.body.gradeLevel);
     const section = String(req.body.section || '').trim();
+    assertSafeText(section, 'section');
 
     if (![1, 2, 3, 4, 5, 6].includes(gradeLevel)) {
       return res.status(422).json({
@@ -197,6 +199,7 @@ router.post('/teachers/:id/assignments', async (req, res, next) => {
 
     const gradeLevel = Number(req.body.gradeLevel);
     const section = String(req.body.section || '').trim();
+    assertSafeText(section, 'section');
 
     if (![1, 2, 3, 4, 5, 6].includes(gradeLevel)) {
       return res.status(422).json({

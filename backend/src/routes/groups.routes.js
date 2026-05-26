@@ -22,6 +22,7 @@ import { awardXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
+import { assertSafeContentPayload, assertSafeText } from '../validators/contentSafety.js';
 const router = Router();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -126,6 +127,8 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
+    assertSafeText(req.body.name || '', 'group name');
+    assertSafeText(req.body.description || '', 'group description');
     const group = await Group.create({
       name: req.body.name,
       description: req.body.description || '',
@@ -148,6 +151,7 @@ router.post('/', requireRole('teacher', 'admin'), async (req, res, next) => {
 
 router.patch('/:id', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
+    assertSafeContentPayload(req.body, 'group update');
     const group = await Group.findByPk(req.params.id);
 
     if (!group) {
@@ -362,6 +366,8 @@ router.delete(
 
 router.post('/:id/tasks', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
+    assertSafeText(req.body.title || '', 'group task title');
+    assertSafeText(req.body.description || '', 'group task description');
     const task = await GroupTask.create({
       groupId: req.params.id,
       title: req.body.title,
@@ -412,6 +418,7 @@ router.delete('/tasks/:taskId', requireRole('teacher', 'admin'), async (req, res
 
 router.post('/tasks/:taskId/complete', requireRole('student'), groupTaskUpload.single('submissionFile'), async (req, res, next) => {
   try {
+    assertSafeContentPayload(req.body, 'group task submission');
     const task = await GroupTask.findByPk(req.params.taskId);
 
     if (!task) {

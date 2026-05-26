@@ -32,6 +32,7 @@ import {
 import { audit } from '../services/audit.service.js';
 import { studentSchema, validate } from '../validators/common.js';
 
+import { assertSafeContentPayload } from '../validators/contentSafety.js';
 function generateTemporaryPin() {
   return Array.from({ length: 6 }, () => crypto.randomInt(2, 10)).join('');
 }
@@ -394,6 +395,7 @@ router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
 router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const body = validate(studentSchema, req.body);
+    assertSafeContentPayload({ name: body.name, section: body.section }, 'student account');
     const role = await Role.findOne({ where: { name: 'student' } });
     const user = await User.create({
   roleId: role.id,
@@ -490,6 +492,8 @@ router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
+    assertSafeContentPayload({ name: req.body.name, section: req.body.section }, 'student profile');
+
     const allowed = ['name','gradeLevel','section','avatar','status'];
     for (const key of allowed) if (req.body[key] !== undefined) student[key] = req.body[key];
     await student.save();

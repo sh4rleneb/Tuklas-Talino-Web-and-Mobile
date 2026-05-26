@@ -23,6 +23,7 @@ import { lessonSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
+import { assertSafeContentPayload, assertSafeText } from '../validators/contentSafety.js';
 const router = Router();
 
 function plainBadgeResponse(badge) {
@@ -358,6 +359,7 @@ router.delete('/:id', requireRole('admin', 'teacher'), async (req, res, next) =>
 router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
     const body = validate(lessonSchema, req.body);
+    assertSafeContentPayload(body, 'lesson content');
     const { activities = [], ...lessonPayload } = body;
 
     if (req.role === 'teacher') {
@@ -407,6 +409,7 @@ router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
 
 router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
+    assertSafeContentPayload(req.body, 'lesson update');
     const lesson = await Lesson.findByPk(req.params.id);
 
     if (!lesson) {
@@ -776,6 +779,7 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
     const lessonId = Number(req.params.id);
     const taskId = Number(req.body.taskId || 0);
     const content = String(req.body.content || '').trim();
+    assertSafeText(content, 'writing answer');
     const autoChecked = Boolean(req.body.autoChecked);
 
     if (!taskId) {
@@ -949,6 +953,7 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
 
 router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
   try {
+    assertSafeText(req.body.transcript || '', 'speech transcript');
     const attempt = await SpeechAttempt.create({
       studentId: req.student.id,
       lessonId: req.params.id,

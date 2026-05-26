@@ -7,6 +7,7 @@ import { Role, User, Teacher, TeacherAssignment, Student, CompletedLesson, Lesso
 import { teacherSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
 
+import { assertSafeContentPayload } from '../validators/contentSafety.js';
 function generateTemporaryPin() {
   return Array.from({ length: 6 }, () => crypto.randomInt(2, 10)).join('');
 }
@@ -97,6 +98,7 @@ router.get('/', requireRole('admin'), async (req, res, next) => {
 router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const body = validate(teacherSchema, req.body);
+    assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher account');
     const role = await Role.findOne({ where: { name: 'teacher' } });
     const user = await User.create({
   roleId: role.id,
@@ -311,6 +313,8 @@ router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const teacher = await Teacher.findByPk(req.params.id, { include: [User] });
     if (!teacher) return res.status(404).json({ message: 'Teacher not found.' });
+    assertSafeContentPayload({ name: req.body.name, employeeCode: req.body.employeeCode }, 'teacher profile');
+
     for (const key of ['name','employeeCode','status']) if (req.body[key] !== undefined) teacher[key] = req.body[key];
     await teacher.save();
     if (req.body.name && teacher.User) { teacher.User.displayName = req.body.name; await teacher.User.save(); }
