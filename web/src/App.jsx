@@ -2058,7 +2058,7 @@ function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLes
 }
 
 
-function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, logout }) {
+function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, logout, selectedAvatar }) {
   const s = data?.student || {};
   const stats = subjectStatsFor(data);
   const level = levelForXp(s.xp);
@@ -3146,6 +3146,975 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         }
         /* === End Grade 1-2 Logout Button Polish === */
 
+
+        /* === Grade 1-2 Bottom Nav Smooth Hover === */
+        .g12-bottom-nav button,
+        .g12-bottom-nav a,
+        .g12-nav button,
+        .g12-nav a,
+        .g12-tab-btn,
+        .g12-nav-btn,
+        .g12-bottom-tab,
+        .g12-floating-nav button {
+          transition:
+            color 0.22s ease,
+            background 0.22s ease,
+            border-color 0.22s ease,
+            box-shadow 0.22s ease,
+            transform 0.22s ease,
+            opacity 0.22s ease;
+        }
+
+        .g12-bottom-nav button span,
+        .g12-bottom-nav a span,
+        .g12-nav button span,
+        .g12-nav a span,
+        .g12-tab-btn span,
+        .g12-nav-btn span,
+        .g12-bottom-tab span,
+        .g12-floating-nav button span {
+          transition: transform 0.22s ease, filter 0.22s ease;
+        }
+
+        @media (hover: hover) {
+          .g12-bottom-nav button:hover,
+          .g12-bottom-nav a:hover,
+          .g12-nav button:hover,
+          .g12-nav a:hover,
+          .g12-tab-btn:hover,
+          .g12-nav-btn:hover,
+          .g12-bottom-tab:hover,
+          .g12-floating-nav button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(20, 34, 59, 0.10);
+          }
+
+          .g12-bottom-nav button:hover span,
+          .g12-bottom-nav a:hover span,
+          .g12-nav button:hover span,
+          .g12-nav a:hover span,
+          .g12-tab-btn:hover span,
+          .g12-nav-btn:hover span,
+          .g12-bottom-tab:hover span,
+          .g12-floating-nav button:hover span {
+            transform: scale(1.06);
+            filter: drop-shadow(0 4px 8px rgba(20, 34, 59, 0.12));
+          }
+        }
+
+        .g12-bottom-nav button:active,
+        .g12-bottom-nav a:active,
+        .g12-nav button:active,
+        .g12-nav a:active,
+        .g12-tab-btn:active,
+        .g12-nav-btn:active,
+        .g12-bottom-tab:active,
+        .g12-floating-nav button:active {
+          transform: translateY(0) scale(0.98);
+        }
+        /* === End Grade 1-2 Bottom Nav Smooth Hover === */
+
+
+        /* === Grade 1-2 Home Avatar Badge === */
+        .g12-home-greeting-row {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          flex-wrap: wrap;
+        }
+
+        .g12-home-avatar-badge {
+          width: 78px;
+          height: 78px;
+          border-radius: 28px;
+          display: grid;
+          place-items: center;
+          flex: 0 0 auto;
+          font-size: 42px;
+          background: linear-gradient(135deg, #fff7cf, #ffffff 46%, #eafff2);
+          border: 2px solid rgba(250, 204, 21, 0.42);
+          box-shadow:
+            0 16px 34px rgba(20, 34, 59, 0.10),
+            inset 0 0 0 2px rgba(255, 255, 255, 0.78);
+          transition:
+            transform 0.22s ease,
+            box-shadow 0.22s ease,
+            filter 0.22s ease;
+        }
+
+        .g12-home-avatar-badge:hover {
+          transform: translateY(-3px) rotate(-2deg) scale(1.04);
+          box-shadow:
+            0 20px 42px rgba(20, 34, 59, 0.14),
+            inset 0 0 0 2px rgba(255, 255, 255, 0.88);
+          filter: saturate(1.08);
+        }
+
+        @media (max-width: 720px) {
+          .g12-home-greeting-row {
+            gap: 12px;
+          }
+
+          .g12-home-avatar-badge {
+            width: 62px;
+            height: 62px;
+            border-radius: 22px;
+            font-size: 34px;
+          }
+        }
+        /* === End Grade 1-2 Home Avatar Badge === */
+
+
+        /* === Grade 1-2 Level Card Polish === */
+        .g12-hero-card .g12-level-card,
+        .g12-hero-card .g12-progress-card,
+        .g12-hero-card .g12-xp-card,
+        .g12-hero-card .g12-student-progress-card,
+        .g12-hero-card .g12-hero-progress-card,
+        .g12-hero-card [class*="level-card"],
+        .g12-hero-card [class*="progress-card"],
+        .g12-hero-card [class*="xp-card"] {
+          display: grid !important;
+          grid-template-columns: minmax(120px, 0.75fr) auto minmax(240px, 1.35fr) !important;
+          align-items: center !important;
+          gap: 18px !important;
+          padding: 30px 30px 24px !important;
+          border-radius: 30px !important;
+          overflow: hidden !important;
+        }
+
+        .g12-hero-card .g12-level-card strong,
+        .g12-hero-card .g12-progress-card strong,
+        .g12-hero-card .g12-xp-card strong,
+        .g12-hero-card .g12-student-progress-card strong,
+        .g12-hero-card .g12-hero-progress-card strong,
+        .g12-hero-card [class*="level-card"] strong,
+        .g12-hero-card [class*="progress-card"] strong,
+        .g12-hero-card [class*="xp-card"] strong {
+          line-height: 1.05 !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-hero-card .g12-level-card h2,
+        .g12-hero-card .g12-level-card h3,
+        .g12-hero-card .g12-progress-card h2,
+        .g12-hero-card .g12-progress-card h3,
+        .g12-hero-card .g12-xp-card h2,
+        .g12-hero-card .g12-xp-card h3,
+        .g12-hero-card .g12-student-progress-card h2,
+        .g12-hero-card .g12-student-progress-card h3,
+        .g12-hero-card .g12-hero-progress-card h2,
+        .g12-hero-card .g12-hero-progress-card h3,
+        .g12-hero-card [class*="level-card"] h2,
+        .g12-hero-card [class*="level-card"] h3,
+        .g12-hero-card [class*="progress-card"] h2,
+        .g12-hero-card [class*="progress-card"] h3,
+        .g12-hero-card [class*="xp-card"] h2,
+        .g12-hero-card [class*="xp-card"] h3 {
+          margin: 0 !important;
+          line-height: 1.15 !important;
+          font-size: clamp(30px, 3.1vw, 42px) !important;
+          letter-spacing: -0.045em !important;
+          text-align: center !important;
+          max-width: 100% !important;
+        }
+
+        .g12-hero-card .g12-level-card [class*="progress"],
+        .g12-hero-card .g12-progress-card [class*="progress"],
+        .g12-hero-card .g12-xp-card [class*="progress"],
+        .g12-hero-card .g12-student-progress-card [class*="progress"],
+        .g12-hero-card .g12-hero-progress-card [class*="progress"] {
+          max-width: 100% !important;
+        }
+
+        .g12-hero-card .g12-level-card > :last-child,
+        .g12-hero-card .g12-progress-card > :last-child,
+        .g12-hero-card .g12-xp-card > :last-child,
+        .g12-hero-card .g12-student-progress-card > :last-child,
+        .g12-hero-card .g12-hero-progress-card > :last-child,
+        .g12-hero-card [class*="level-card"] > :last-child,
+        .g12-hero-card [class*="progress-card"] > :last-child,
+        .g12-hero-card [class*="xp-card"] > :last-child {
+          grid-column: 1 / -1 !important;
+          width: 100% !important;
+        }
+
+        @media (max-width: 980px) {
+          .g12-hero-card .g12-level-card,
+          .g12-hero-card .g12-progress-card,
+          .g12-hero-card .g12-xp-card,
+          .g12-hero-card .g12-student-progress-card,
+          .g12-hero-card .g12-hero-progress-card,
+          .g12-hero-card [class*="level-card"],
+          .g12-hero-card [class*="progress-card"],
+          .g12-hero-card [class*="xp-card"] {
+            grid-template-columns: 1fr !important;
+            text-align: center !important;
+            gap: 12px !important;
+            padding: 24px 22px !important;
+          }
+
+          .g12-hero-card .g12-level-card > :last-child,
+          .g12-hero-card .g12-progress-card > :last-child,
+          .g12-hero-card .g12-xp-card > :last-child,
+          .g12-hero-card .g12-student-progress-card > :last-child,
+          .g12-hero-card .g12-hero-progress-card > :last-child,
+          .g12-hero-card [class*="level-card"] > :last-child,
+          .g12-hero-card [class*="progress-card"] > :last-child,
+          .g12-hero-card [class*="xp-card"] > :last-child {
+            grid-column: auto !important;
+          }
+        }
+        /* === End Grade 1-2 Level Card Polish === */
+
+
+        /* === Grade 1-2 Level Text Cleanup === */
+        .g12-hero-card .g12-level-card,
+        .g12-hero-card .g12-progress-card,
+        .g12-hero-card .g12-xp-card,
+        .g12-hero-card .g12-student-progress-card,
+        .g12-hero-card .g12-hero-progress-card,
+        .g12-hero-card [class*="level-card"],
+        .g12-hero-card [class*="progress-card"],
+        .g12-hero-card [class*="xp-card"] {
+          grid-template-columns: 130px 24px minmax(280px, 1fr) !important;
+          gap: 16px !important;
+          padding: 28px 30px 22px !important;
+          align-items: center !important;
+        }
+
+        .g12-hero-card .g12-level-card br,
+        .g12-hero-card .g12-progress-card br,
+        .g12-hero-card .g12-xp-card br,
+        .g12-hero-card .g12-student-progress-card br,
+        .g12-hero-card .g12-hero-progress-card br,
+        .g12-hero-card [class*="level-card"] br,
+        .g12-hero-card [class*="progress-card"] br,
+        .g12-hero-card [class*="xp-card"] br {
+          display: none !important;
+        }
+
+        .g12-hero-card .g12-level-card strong,
+        .g12-hero-card .g12-progress-card strong,
+        .g12-hero-card .g12-xp-card strong,
+        .g12-hero-card .g12-student-progress-card strong,
+        .g12-hero-card .g12-hero-progress-card strong,
+        .g12-hero-card [class*="level-card"] strong,
+        .g12-hero-card [class*="progress-card"] strong,
+        .g12-hero-card [class*="xp-card"] strong {
+          display: inline-flex !important;
+          align-items: baseline !important;
+          justify-content: center !important;
+          gap: 7px !important;
+          white-space: nowrap !important;
+          font-size: clamp(30px, 2.6vw, 38px) !important;
+          line-height: 1 !important;
+          letter-spacing: -0.035em !important;
+        }
+
+        .g12-hero-card .g12-level-card h2,
+        .g12-hero-card .g12-level-card h3,
+        .g12-hero-card .g12-progress-card h2,
+        .g12-hero-card .g12-progress-card h3,
+        .g12-hero-card .g12-xp-card h2,
+        .g12-hero-card .g12-xp-card h3,
+        .g12-hero-card .g12-student-progress-card h2,
+        .g12-hero-card .g12-student-progress-card h3,
+        .g12-hero-card .g12-hero-progress-card h2,
+        .g12-hero-card .g12-hero-progress-card h3,
+        .g12-hero-card [class*="level-card"] h2,
+        .g12-hero-card [class*="level-card"] h3,
+        .g12-hero-card [class*="progress-card"] h2,
+        .g12-hero-card [class*="progress-card"] h3,
+        .g12-hero-card [class*="xp-card"] h2,
+        .g12-hero-card [class*="xp-card"] h3 {
+          font-size: clamp(26px, 2.35vw, 34px) !important;
+          line-height: 1.08 !important;
+          white-space: nowrap !important;
+          text-align: center !important;
+          letter-spacing: -0.04em !important;
+        }
+
+        @media (max-width: 1120px) {
+          .g12-hero-card .g12-level-card,
+          .g12-hero-card .g12-progress-card,
+          .g12-hero-card .g12-xp-card,
+          .g12-hero-card .g12-student-progress-card,
+          .g12-hero-card .g12-hero-progress-card,
+          .g12-hero-card [class*="level-card"],
+          .g12-hero-card [class*="progress-card"],
+          .g12-hero-card [class*="xp-card"] {
+            grid-template-columns: 115px 18px minmax(230px, 1fr) !important;
+            gap: 12px !important;
+          }
+
+          .g12-hero-card .g12-level-card h2,
+          .g12-hero-card .g12-level-card h3,
+          .g12-hero-card .g12-progress-card h2,
+          .g12-hero-card .g12-progress-card h3,
+          .g12-hero-card .g12-xp-card h2,
+          .g12-hero-card .g12-xp-card h3,
+          .g12-hero-card [class*="level-card"] h2,
+          .g12-hero-card [class*="level-card"] h3,
+          .g12-hero-card [class*="progress-card"] h2,
+          .g12-hero-card [class*="progress-card"] h3,
+          .g12-hero-card [class*="xp-card"] h2,
+          .g12-hero-card [class*="xp-card"] h3 {
+            font-size: clamp(24px, 2.1vw, 30px) !important;
+          }
+        }
+        /* === End Grade 1-2 Level Text Cleanup === */
+
+
+        /* === Grade 1-2 Progress Card Exact Cleanup === */
+        .g12-progress-card {
+          width: min(560px, 100%);
+          padding: 28px 30px 24px !important;
+        }
+
+        .g12-progress-title-clean {
+          display: grid !important;
+          grid-template-columns: 58px minmax(110px, auto) 12px minmax(0, 1fr);
+          align-items: center !important;
+          justify-content: stretch !important;
+          gap: 16px !important;
+          margin-bottom: 20px !important;
+          text-align: left !important;
+        }
+
+        .g12-progress-xp-clean {
+          display: inline-flex;
+          align-items: baseline;
+          justify-content: center;
+          gap: 7px;
+          white-space: nowrap;
+          color: #14223b;
+          line-height: 1;
+        }
+
+        .g12-progress-xp-clean strong {
+          font-size: clamp(30px, 3vw, 40px);
+          font-weight: 1000;
+          letter-spacing: -0.04em;
+        }
+
+        .g12-progress-xp-clean span {
+          font-size: clamp(22px, 2.2vw, 30px);
+          font-weight: 1000;
+          letter-spacing: -0.035em;
+        }
+
+        .g12-progress-level-clean {
+          min-width: 0;
+          display: grid;
+          gap: 4px;
+          justify-items: center;
+          text-align: center;
+          color: #14223b;
+          line-height: 1.05;
+        }
+
+        .g12-progress-level-clean > span {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 28px;
+          padding: 4px 12px;
+          border-radius: 999px;
+          background: rgba(255, 246, 220, 0.82);
+          color: #7c5b12;
+          font-size: 16px;
+          font-weight: 1000;
+          letter-spacing: 0.01em;
+          white-space: nowrap;
+        }
+
+        .g12-progress-level-clean strong {
+          display: block;
+          max-width: 100%;
+          color: #14223b;
+          font-size: clamp(28px, 3vw, 38px);
+          font-weight: 1000;
+          line-height: 1.05;
+          letter-spacing: -0.045em;
+          text-wrap: balance;
+        }
+
+        .g12-progress-title-clean .g12-progress-divider {
+          width: 10px;
+          height: 10px;
+          justify-self: center;
+        }
+
+        @media (max-width: 980px) {
+          .g12-progress-title-clean {
+            grid-template-columns: 1fr;
+            gap: 10px !important;
+            text-align: center !important;
+          }
+
+          .g12-progress-title-clean .g12-progress-coin,
+          .g12-progress-title-clean .g12-progress-divider {
+            justify-self: center;
+          }
+
+          .g12-progress-level-clean strong {
+            font-size: 30px;
+          }
+        }
+        /* === End Grade 1-2 Progress Card Exact Cleanup === */
+
+
+        /* === Grade 1-2 Progress Card Fine Tune === */
+        .g12-progress-card {
+          padding: 26px 34px 24px !important;
+          width: min(540px, 100%) !important;
+        }
+
+        .g12-progress-title-clean {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 18px !important;
+          width: 100% !important;
+          margin-bottom: 18px !important;
+          text-align: center !important;
+        }
+
+        .g12-progress-title-clean .g12-progress-coin {
+          width: 54px !important;
+          height: 54px !important;
+          font-size: 30px !important;
+          flex: 0 0 auto !important;
+        }
+
+        .g12-progress-xp-clean {
+          min-width: 110px !important;
+          justify-content: flex-start !important;
+          gap: 6px !important;
+        }
+
+        .g12-progress-xp-clean strong {
+          font-size: 34px !important;
+          line-height: 1 !important;
+        }
+
+        .g12-progress-xp-clean span {
+          font-size: 24px !important;
+          line-height: 1 !important;
+        }
+
+        .g12-progress-title-clean .g12-progress-divider {
+          width: 10px !important;
+          height: 10px !important;
+          margin: 0 4px !important;
+          flex: 0 0 auto !important;
+        }
+
+        .g12-progress-level-clean {
+          min-width: 230px !important;
+          max-width: 260px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 6px !important;
+          text-align: center !important;
+        }
+
+        .g12-progress-level-clean > span {
+          min-height: 25px !important;
+          padding: 3px 12px !important;
+          font-size: 15px !important;
+          line-height: 1 !important;
+        }
+
+        .g12-progress-level-clean strong {
+          font-size: 32px !important;
+          line-height: 1.03 !important;
+          letter-spacing: -0.045em !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-track {
+          height: 12px !important;
+          margin-top: 4px !important;
+        }
+
+        @media (max-width: 980px) {
+          .g12-progress-title-clean {
+            gap: 12px !important;
+            flex-wrap: wrap !important;
+          }
+
+          .g12-progress-xp-clean {
+            min-width: auto !important;
+            justify-content: center !important;
+          }
+
+          .g12-progress-level-clean {
+            min-width: 190px !important;
+            max-width: 100% !important;
+          }
+
+          .g12-progress-level-clean strong {
+            font-size: 28px !important;
+          }
+        }
+        /* === End Grade 1-2 Progress Card Fine Tune === */
+
+
+        /* === Grade 1-2 Progress Card Center Fix === */
+        .g12-progress-title-centered {
+          display: grid !important;
+          grid-template-columns: minmax(160px, 1fr) 16px minmax(220px, 1fr) !important;
+          align-items: center !important;
+          justify-items: center !important;
+          gap: 18px !important;
+          width: 100% !important;
+          margin-bottom: 18px !important;
+        }
+
+        .g12-progress-xp-group-clean {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 14px !important;
+          min-width: 0 !important;
+          width: 100% !important;
+        }
+
+        .g12-progress-title-centered .g12-progress-xp-clean {
+          min-width: auto !important;
+          width: auto !important;
+          justify-content: center !important;
+        }
+
+        .g12-progress-title-centered .g12-progress-level-clean {
+          min-width: 0 !important;
+          max-width: none !important;
+          width: 100% !important;
+          justify-self: center !important;
+          align-items: center !important;
+          text-align: center !important;
+        }
+
+        .g12-progress-title-centered .g12-progress-level-clean strong {
+          white-space: nowrap !important;
+          text-align: center !important;
+        }
+
+        .g12-progress-title-centered .g12-progress-divider {
+          justify-self: center !important;
+          margin: 0 !important;
+        }
+
+        @media (max-width: 980px) {
+          .g12-progress-title-centered {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+
+          .g12-progress-xp-group-clean,
+          .g12-progress-title-centered .g12-progress-level-clean {
+            width: auto !important;
+          }
+        }
+        /* === End Grade 1-2 Progress Card Center Fix === */
+
+
+        /* === Grade 1-2 Progress Card Final Center === */
+        .g12-progress-card {
+          width: min(540px, 100%) !important;
+          padding: 26px 34px 24px !important;
+        }
+
+        .g12-progress-title-final {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 10px !important;
+          width: 100% !important;
+          margin: 0 0 18px !important;
+          text-align: center !important;
+        }
+
+        .g12-progress-meta-row-final {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 14px !important;
+          width: 100% !important;
+          color: #14223b !important;
+        }
+
+        .g12-progress-meta-row-final .g12-progress-coin {
+          width: 52px !important;
+          height: 52px !important;
+          font-size: 29px !important;
+          flex: 0 0 auto !important;
+        }
+
+        .g12-progress-xp-final {
+          display: inline-flex !important;
+          align-items: baseline !important;
+          justify-content: center !important;
+          gap: 6px !important;
+          white-space: nowrap !important;
+          line-height: 1 !important;
+        }
+
+        .g12-progress-xp-final strong {
+          font-size: 34px !important;
+          font-weight: 1000 !important;
+          line-height: 1 !important;
+          letter-spacing: -0.04em !important;
+        }
+
+        .g12-progress-xp-final span {
+          font-size: 24px !important;
+          font-weight: 1000 !important;
+          line-height: 1 !important;
+          letter-spacing: -0.035em !important;
+        }
+
+        .g12-progress-meta-row-final .g12-progress-divider {
+          width: 10px !important;
+          height: 10px !important;
+          margin: 0 2px !important;
+          flex: 0 0 auto !important;
+        }
+
+        .g12-progress-level-pill-final {
+          min-height: 28px !important;
+          padding: 5px 14px !important;
+          border-radius: 999px !important;
+          background: rgba(255, 246, 220, 0.9) !important;
+          color: #7c5b12 !important;
+          font-size: 16px !important;
+          font-weight: 1000 !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-level-name-final {
+          display: block !important;
+          width: 100% !important;
+          color: #14223b !important;
+          font-size: 34px !important;
+          font-weight: 1000 !important;
+          line-height: 1.05 !important;
+          letter-spacing: -0.045em !important;
+          text-align: center !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-track {
+          height: 12px !important;
+          margin-top: 2px !important;
+        }
+
+        @media (max-width: 980px) {
+          .g12-progress-meta-row-final {
+            gap: 10px !important;
+            flex-wrap: wrap !important;
+          }
+
+          .g12-progress-level-name-final {
+            font-size: 30px !important;
+          }
+        }
+        /* === End Grade 1-2 Progress Card Final Center === */
+
+
+        /* === Grade 1-2 Progress Card Repair Final === */
+        .g12-progress-card {
+          width: min(560px, 100%) !important;
+          padding: 28px 34px 24px !important;
+          border-radius: 34px !important;
+        }
+
+        .g12-progress-title-repaired {
+          display: grid !important;
+          grid-template-columns: 1fr 1.28fr !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 22px !important;
+          width: 100% !important;
+          margin: 0 0 20px !important;
+          text-align: center !important;
+          color: #14223b !important;
+        }
+
+        .g12-progress-xp-repaired {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 10px !important;
+          min-width: 0 !important;
+          width: 100% !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-xp-repaired .g12-progress-coin {
+          width: 54px !important;
+          height: 54px !important;
+          font-size: 30px !important;
+          flex: 0 0 auto !important;
+        }
+
+        .g12-progress-xp-repaired strong {
+          font-size: 36px !important;
+          line-height: 1 !important;
+          font-weight: 1000 !important;
+          letter-spacing: -0.04em !important;
+        }
+
+        .g12-progress-xp-repaired span:not(.g12-progress-coin) {
+          font-size: 25px !important;
+          line-height: 1 !important;
+          font-weight: 1000 !important;
+          letter-spacing: -0.035em !important;
+        }
+
+        .g12-progress-level-repaired {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 8px !important;
+          min-width: 0 !important;
+          width: 100% !important;
+          text-align: center !important;
+        }
+
+        .g12-progress-level-repaired > span {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          min-height: 28px !important;
+          padding: 5px 16px !important;
+          border-radius: 999px !important;
+          background: rgba(255, 246, 220, 0.95) !important;
+          color: #7c5b12 !important;
+          font-size: 16px !important;
+          font-weight: 1000 !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-level-repaired strong {
+          display: block !important;
+          color: #14223b !important;
+          font-size: 34px !important;
+          line-height: 1.05 !important;
+          font-weight: 1000 !important;
+          letter-spacing: -0.045em !important;
+          text-align: center !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-track {
+          height: 12px !important;
+          margin-top: 0 !important;
+        }
+
+        @media (max-width: 980px) {
+          .g12-progress-title-repaired {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+
+          .g12-progress-level-repaired strong {
+            font-size: 30px !important;
+          }
+        }
+        /* === End Grade 1-2 Progress Card Repair Final === */
+
+
+        /* === Grade 1-2 Progress Card Simple Center Final === */
+        .g12-progress-card {
+          width: min(560px, 100%) !important;
+          padding: 28px 36px 25px !important;
+          border-radius: 34px !important;
+        }
+
+        .g12-progress-title-simple {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 10px !important;
+          width: 100% !important;
+          margin: 0 0 18px !important;
+          padding: 0 !important;
+          text-align: center !important;
+          color: #14223b !important;
+        }
+
+        .g12-progress-meta-simple {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 12px !important;
+          width: 100% !important;
+          min-width: 0 !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-meta-simple .g12-progress-coin {
+          width: 48px !important;
+          height: 48px !important;
+          font-size: 27px !important;
+          flex: 0 0 auto !important;
+        }
+
+        .g12-progress-xp-simple {
+          color: #14223b !important;
+          font-size: 30px !important;
+          font-weight: 1000 !important;
+          letter-spacing: -0.04em !important;
+          line-height: 1 !important;
+        }
+
+        .g12-progress-dot-simple {
+          color: #f6c453 !important;
+          font-size: 28px !important;
+          font-weight: 1000 !important;
+          line-height: 1 !important;
+        }
+
+        .g12-progress-level-simple {
+          min-height: 28px !important;
+          padding: 5px 15px !important;
+          border-radius: 999px !important;
+          background: rgba(255, 246, 220, 0.95) !important;
+          color: #7c5b12 !important;
+          font-size: 16px !important;
+          font-weight: 1000 !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-name-simple {
+          display: block !important;
+          width: 100% !important;
+          color: #14223b !important;
+          font-size: 38px !important;
+          font-weight: 1000 !important;
+          line-height: 1.05 !important;
+          letter-spacing: -0.045em !important;
+          text-align: center !important;
+          white-space: nowrap !important;
+          margin: 0 !important;
+        }
+
+        .g12-progress-track {
+          width: 100% !important;
+          height: 12px !important;
+          margin-top: 0 !important;
+        }
+
+        @media (max-width: 980px) {
+          .g12-progress-meta-simple {
+            gap: 9px !important;
+            flex-wrap: wrap !important;
+          }
+
+          .g12-progress-xp-simple {
+            font-size: 27px !important;
+          }
+
+          .g12-progress-name-simple {
+            font-size: 32px !important;
+          }
+        }
+        /* === End Grade 1-2 Progress Card Simple Center Final === */
+
+
+        /* === Grade 1-2 Progress Card No Level Title === */
+        .g12-progress-card {
+          width: min(560px, 100%) !important;
+          padding: 30px 36px 26px !important;
+          border-radius: 34px !important;
+        }
+
+        .g12-progress-title-no-name {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 16px !important;
+          width: 100% !important;
+          margin: 0 0 20px !important;
+          padding: 0 !important;
+          text-align: center !important;
+          color: #14223b !important;
+          line-height: 1 !important;
+          white-space: nowrap !important;
+        }
+
+        .g12-progress-title-no-name .g12-progress-coin {
+          width: 54px !important;
+          height: 54px !important;
+          font-size: 30px !important;
+          flex: 0 0 auto !important;
+        }
+
+        .g12-progress-xp-no-name,
+        .g12-progress-level-no-name {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          color: #14223b !important;
+          font-size: 34px !important;
+          font-weight: 1000 !important;
+          line-height: 1 !important;
+          letter-spacing: -0.04em !important;
+          white-space: nowrap !important;
+          margin: 0 !important;
+        }
+
+        .g12-progress-level-no-name {
+          min-height: 38px !important;
+          padding: 6px 18px !important;
+          border-radius: 999px !important;
+          background: rgba(255, 246, 220, 0.94) !important;
+          color: #7c5b12 !important;
+          font-size: 24px !important;
+          letter-spacing: -0.025em !important;
+        }
+
+        .g12-progress-title-no-name .g12-progress-divider {
+          width: 10px !important;
+          height: 10px !important;
+          margin: 0 2px !important;
+          flex: 0 0 auto !important;
+        }
+
+        .g12-progress-track {
+          width: 100% !important;
+          height: 12px !important;
+          margin-top: 0 !important;
+        }
+
+        @media (max-width: 980px) {
+          .g12-progress-title-no-name {
+            gap: 10px !important;
+            flex-wrap: wrap !important;
+          }
+
+          .g12-progress-xp-no-name {
+            font-size: 30px !important;
+          }
+
+          .g12-progress-level-no-name {
+            font-size: 22px !important;
+          }
+        }
+        /* === End Grade 1-2 Progress Card No Level Title === */
+
 `}</style>
 
     <div className="g12-page">
@@ -3181,18 +4150,23 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
 
           <div className="g12-hero-content">
             <div className="g12-welcome-copy">
-              <h1>Kamusta, {s.name || 'Learner'}! 👋</h1>
+              <div className="g12-home-greeting-row">
+                  <div className="g12-home-avatar-badge" title="Napiling avatar mo">
+                    {s.avatar || selectedAvatar || '👤'}
+                  </div>
+                  <h1>Kamusta, {s.name || 'Learner'}! 👋</h1>
+                </div>
               <p>Ready ka na ba sa learning adventure today?</p>
             </div>
 
             <div className="g12-progress-card">
 
-<div className="g12-progress-title">
-  <span className="g12-progress-coin">🪙</span>
-  <span>{s.xp || 0} XP</span>
-  <span className="g12-progress-divider" />
-  <span>Level {level} • {shortLevelTitleForXp(s.xp)}</span>
-</div>
+<div className="g12-progress-title g12-progress-title-no-name">
+                <span className="g12-progress-coin">🪙</span>
+                <strong className="g12-progress-xp-no-name">{s.xp || 0} XP</strong>
+                <span className="g12-progress-divider" />
+                <strong className="g12-progress-level-no-name">Level {level}</strong>
+              </div>
               <div className="g12-progress-track">
                 <span className="g12-progress-fill" style={{ width: `${xpPct}%` }} />
               </div>
