@@ -3122,6 +3122,30 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         .g12-nav button { flex-direction: column; gap: 2px; font-size: 11px; }
         .g12-nav-icon { font-size: 26px; }
       }
+
+        /* === Grade 1-2 Logout Button Polish === */
+        .g12-logout-btn {
+          color: #b42318 !important;
+          border-color: rgba(244, 63, 94, 0.42) !important;
+          background: linear-gradient(135deg, #fff5f5, #fffafa) !important;
+          box-shadow: 0 10px 24px rgba(180, 35, 24, 0.10) !important;
+          transition:
+            color 0.22s ease,
+            background 0.22s ease,
+            border-color 0.22s ease,
+            box-shadow 0.22s ease,
+            transform 0.22s ease;
+        }
+
+        .g12-logout-btn:hover {
+          color: #ffffff !important;
+          border-color: #dc2626 !important;
+          background: linear-gradient(135deg, #ef4444, #b42318) !important;
+          transform: translateY(-1px);
+          box-shadow: 0 14px 30px rgba(180, 35, 24, 0.20) !important;
+        }
+        /* === End Grade 1-2 Logout Button Polish === */
+
 `}</style>
 
     <div className="g12-page">
@@ -3137,7 +3161,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
 
         <div className="g12-top-actions">
           <div className="g12-pill">🌸 Grade {s.gradeLevel || '—'} • {s.section || '—'}</div>
-          <button type="button" className="g12-action-btn" onClick={safeLogout}>🚪 Logout</button>
+          <button type="button" className="g12-action-btn g12-logout-btn" onClick={safeLogout}>🚪 Logout</button>
         </div>
       </header>
 
