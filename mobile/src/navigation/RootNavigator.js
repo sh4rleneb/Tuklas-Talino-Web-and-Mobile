@@ -1,55 +1,113 @@
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, Text } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import LandingScreen from '../screens/LandingScreen';
-import LoginScreen from '../screens/LoginScreen';
-import StudentHomeScreen from '../screens/StudentHomeScreen';
-import LessonsScreen from '../screens/LessonsScreen';
-import LessonDetailScreen from '../screens/LessonDetailScreen';
-import GroupsScreen from '../screens/GroupsScreen';
-import BadgesScreen from '../screens/BadgesScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import PlaceholderScreen from '../screens/PlaceholderScreen';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+import { NavigationContainer }
+from '@react-navigation/native';
 
-function StudentTabs() {
-  return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Home" component={StudentHomeScreen} options={{ tabBarIcon: () => <Text>🏠</Text> }} />
-      <Tab.Screen name="Lessons" component={LessonsScreen} options={{ tabBarIcon: () => <Text>📚</Text> }} />
-      <Tab.Screen name="Groups" component={GroupsScreen} options={{ tabBarIcon: () => <Text>🤝</Text> }} />
-      <Tab.Screen name="Badges" component={BadgesScreen} options={{ tabBarIcon: () => <Text>🏅</Text> }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarIcon: () => <Text>🙂</Text> }} />
-    </Tab.Navigator>
-  );
-}
+import { createNativeStackNavigator }
+from '@react-navigation/native-stack';
+
+/*
+AUTH
+*/
+
+import LandingScreen
+from '../screens/auth/LandingScreen';
+
+import StudentLogin
+from '../screens/auth/StudentLogin';
+
+import TeacherLogin
+from '../screens/auth/TeacherLogin';
+
+import AdminLogin
+from '../screens/auth/AdminLogin';
+
+/*
+STUDENT
+*/
+
+import StudentJuniorHome
+from '../screens/studentJunior/StudentJuniorHome';
+
+import StudentSeniorHome
+from '../screens/studentSenior/StudentSeniorHome';
+
+/*
+TEACHER
+*/
+
+import TeacherNavigator
+from './TeacherNavigator';
+
+/*
+ADMIN
+*/
+
+import AdminNavigator
+from './AdminNavigator';
+
+const Stack =
+  createNativeStackNavigator();
 
 export default function RootNavigator() {
-  const { user, booting } = useAuth();
-
-  if (booting) {
-    return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
-  }
-
   return (
-    <Stack.Navigator>
-      {!user ? (
-        <>
-          <Stack.Screen name="Landing" component={LandingScreen} options={{ title: 'Tuklas Talino' }} />
-          <Stack.Screen name="Login" component={LoginScreen} />
-        </>
-      ) : user.role === 'student' ? (
-        <>
-          <Stack.Screen name="StudentTabs" component={StudentTabs} options={{ headerShown: false }} />
-          <Stack.Screen name="LessonDetail" component={LessonDetailScreen} options={{ title: 'Lesson' }} />
-        </>
-      ) : (
-        <Stack.Screen name="RolePlaceholder" component={PlaceholderScreen} options={{ title: user.role === 'teacher' ? 'Teacher' : 'Admin' }} />
-      )}
-    </Stack.Navigator>
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName="Landing"
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        {/* LANDING */}
+
+        <Stack.Screen
+          name="Landing"
+          component={LandingScreen}
+        />
+
+        {/* AUTH */}
+
+        <Stack.Screen
+          name="StudentLogin"
+          component={StudentLogin}
+        />
+
+        <Stack.Screen
+          name="TeacherLogin"
+          component={TeacherLogin}
+        />
+
+        <Stack.Screen
+          name="AdminLogin"
+          component={AdminLogin}
+        />
+
+        {/* STUDENT */}
+
+        <Stack.Screen
+          name="StudentJuniorHome"
+          component={StudentJuniorHome}
+        />
+
+        <Stack.Screen
+          name="StudentSeniorHome"
+          component={StudentSeniorHome}
+        />
+
+        {/* TEACHER */}
+
+        <Stack.Screen
+          name="TeacherHome"
+          component={TeacherNavigator}
+        />
+
+        {/* ADMIN */}
+
+        <Stack.Screen
+          name="AdminHome"
+          component={AdminNavigator}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
