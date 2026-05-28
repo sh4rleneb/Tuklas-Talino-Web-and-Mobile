@@ -5,27 +5,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "extra": {
-      "apiUrl": "http://47.129.233.4:4000/api"
-    },
-    "plugins": [
-      "expo-secure-store",
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Allow Tuklas Talino to access your microphone for speech activities."
-        }
-      ]
-    ],
-    "android": {
-      "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ],
-      "package": "com.anonymous.tuklastalino"
+      "apiUrl": "http://localhost:4000/api"
     }
   }
 }

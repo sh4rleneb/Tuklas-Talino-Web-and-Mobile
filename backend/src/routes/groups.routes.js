@@ -18,7 +18,7 @@ import {
   Notification,
 } from '../models/index.js';
 
-import { awardXp, awardThresholdBadges } from '../services/progress.service.js';
+import { awardXp } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
@@ -608,8 +608,6 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
 
     let totalXpAwarded = 0;
     let approvedCount = 0;
-    let newBadges = [];
-    const newBadgesByStudent = {};
 
     for (const member of members) {
       const [completion] = await GroupTaskCompletion.findOrCreate({
@@ -632,11 +630,9 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
 
       const alreadyApproved = completion.verificationStatus === 'approved';
       let memberXpAwarded = 0;
-      let xpResult = null;
-      let memberNewBadges = [];
 
       if (!alreadyApproved && Number(completion.xpAwarded || 0) <= 0) {
-        xpResult = await awardXp(
+        await awardXp(
           member.studentId,
           task.xpReward,
           'group_task',
@@ -666,27 +662,6 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
       approvedCount += 1;
 
       const student = member.Student || await Student.findByPk(member.studentId);
-
-      if (!alreadyApproved && memberXpAwarded > 0 && student) {
-        const xpBadges = xpResult?.getDataValue?.('newBadges') || xpResult?.newBadges || [];
-        const metricBadges = await awardThresholdBadges(student);
-        const seenBadges = new Set();
-        const combinedBadges = [...xpBadges, ...metricBadges];
-
-        memberNewBadges = combinedBadges.filter(badge => {
-          const key = String(badge?.code || badge?.name || badge?.id || '').toLowerCase();
-          if (!key || seenBadges.has(key)) return false;
-          seenBadges.add(key);
-          return true;
-        });
-
-        if (memberNewBadges.length) {
-          newBadgesByStudent[member.studentId] = memberNewBadges;
-          if (Number(member.studentId) === Number(req.params.studentId)) {
-            newBadges = memberNewBadges;
-          }
-        }
-      }
 
       if (!alreadyApproved && memberXpAwarded > 0 && student?.userId) {
         const group = task.groupId ? await Group.findByPk(task.groupId) : null;
@@ -729,8 +704,6 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
       groupApproval: true,
       approvedCount,
       xpAwarded: totalXpAwarded,
-      newBadges,
-      newBadgesByStudent,
       message: totalXpAwarded
         ? `Group task approved for ${approvedCount} member(s).`
         : 'Group task was already approved.',

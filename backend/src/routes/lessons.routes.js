@@ -40,74 +40,6 @@ function plainBadgeResponse(badge) {
     xpThreshold: row.xpThreshold ?? null
   };
 }
-function canonicalBadgeCode(code = '') {
-  const raw = String(code || '').trim().toLowerCase();
-
-  if (raw === 'reader') return 'reader_3';
-  if (raw === 'writer') return 'writing_3';
-  if (raw === 'speaker') return 'speech_3';
-  if (raw === 'teamwork') return 'group_1';
-  if (raw === 'firstlesson') return 'first_lesson';
-
-  return raw;
-}
-
-function normalizeBadgeResponse(badge = {}) {
-  const plain = plainBadgeResponse ? plainBadgeResponse(badge) : (badge?.toJSON ? badge.toJSON() : badge);
-  const code = canonicalBadgeCode(plain?.code);
-
-  if (code === 'writing_3') {
-    return {
-      ...plain,
-      code: 'writing_3',
-      name: 'Sagot Star',
-      description: 'Complete 3 Punan ang Patlang or writing activities.',
-      icon: plain?.icon || '✍️'
-    };
-  }
-
-  if (code === 'reader_3') {
-    return {
-      ...plain,
-      code: 'reader_3',
-      name: 'Batang Mambabasa',
-      description: 'Makatapos ng 3 lessons.',
-      icon: plain?.icon || '📖'
-    };
-  }
-
-  return {
-    ...plain,
-    code: plain?.code || code
-  };
-}
-
-function uniqueBadgeResponses(badges = []) {
-  const grouped = new Map();
-
-  badges.filter(Boolean).forEach((badge, index) => {
-    const plain = badge?.toJSON ? badge.toJSON() : badge;
-    const rawCode = String(plain?.code || '').trim().toLowerCase();
-    const code = canonicalBadgeCode(rawCode);
-    const name = String(plain?.name || '').trim().toLowerCase();
-    const key = code || name || `badge-${index}`;
-    const normalized = normalizeBadgeResponse(plain);
-    const current = grouped.get(key);
-
-    if (!current) {
-      grouped.set(key, { badge: normalized, canonical: rawCode === code });
-      return;
-    }
-
-    if (!current.canonical && rawCode === code) {
-      grouped.set(key, { badge: normalized, canonical: true });
-    }
-  });
-
-  return Array.from(grouped.values()).map(entry => entry.badge);
-}
-
-
 
 async function getStudentBadgeIds(studentId) {
   const rows = await StudentBadge.findAll({
@@ -124,12 +56,10 @@ async function getNewBadgeResponses(studentId, beforeBadgeIds) {
     include: [Badge]
   });
 
-  return uniqueBadgeResponses(
-    rows
-      .filter(row => !beforeBadgeIds.has(Number(row.badgeId)))
-      .map(row => plainBadgeResponse(row.Badge))
-      .filter(Boolean)
-  );
+  return rows
+    .filter(row => !beforeBadgeIds.has(Number(row.badgeId)))
+    .map(row => plainBadgeResponse(row.Badge))
+    .filter(Boolean);
 }
 
 
@@ -745,12 +675,9 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
     });
 
     let xpAwarded = 0;
-    let newBadges = [];
-    let xpResult = null;
-    const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
 
     if (!existingQuizXp) {
-      xpResult = await awardXp(
+      await awardXp(
         req.student.id,
         xpPossible,
         'quiz',
@@ -813,9 +740,6 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       reviewJson: review,
     });
 
-    await awardThresholdBadges(xpResult || req.student);
-    newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
-
     const allAttempts = [...existingAttempts, attempt].map(formatQuizAttempt);
 
     await audit(req.user.id, 'quiz.result', 'lesson', lesson.id, {
@@ -842,7 +766,6 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
         savedAnswers,
       },
       quizAttempts: allAttempts,
-      newBadges,
     });
   } catch (err) {
     next(err);
@@ -854,8 +777,6 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
 router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
   try {
     const lessonId = Number(req.params.id);
-    const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
-    let newBadges = [];
     const taskId = Number(req.body.taskId || 0);
     const content = String(req.body.content || '').trim();
     assertSafeText(content, 'writing answer');
@@ -890,8 +811,7 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
         submission: existing,
         alreadySubmitted: true,
         locked: true,
-        newBadges,
-      xpAwarded: 0,
+        xpAwarded: 0,
         message: 'Nasagutan mo na ito 🌟',
       });
     }
@@ -973,7 +893,7 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
 
       const xpAwarded = 10;
 
-      const xpResult = await awardXp(
+      await awardXp(
         req.student.id,
         xpAwarded,
         'writing',
@@ -991,15 +911,11 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
         message: `${req.student.name} answered a writing activity correctly`,
       });
 
-      await awardThresholdBadges(xpResult || req.student);
-      newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
-
       return res.status(201).json({
         submission,
         correct: true,
         locked: true,
         xpAwarded,
-        newBadges,
         message: `Tama! +${xpAwarded} XP 🌟`,
       });
     }
@@ -1023,9 +939,6 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
       message: `${req.student.name} submitted a writing activity for teacher review`,
     });
 
-    await awardThresholdBadges(req.student);
-    newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
-
     res.status(201).json({
       submission,
       pendingReview: true,
@@ -1037,10 +950,10 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
   }
 });
 
+
 router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
   try {
     assertSafeText(req.body.transcript || '', 'speech transcript');
-    const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
     const attempt = await SpeechAttempt.create({
       studentId: req.student.id,
       lessonId: req.params.id,
@@ -1049,7 +962,7 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
       score: req.body.score || null,
     });
 
-    const xpResult = await awardXp(
+    await awardXp(
       req.student.id,
       6,
       'speech',
@@ -1067,15 +980,7 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
       message: `${req.student.name} submitted a speech activity`,
     });
 
-    await awardThresholdBadges(xpResult || req.student);
-    const newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
-
-    res.status(201).json({
-      attempt,
-      xpAwarded: 6,
-      newBadges,
-      message: 'Speech attempt saved. +6 XP'
-    });
+    res.status(201).json({ attempt });
   } catch (err) {
     next(err);
   }

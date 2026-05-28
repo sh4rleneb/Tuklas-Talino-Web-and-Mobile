@@ -56,8 +56,8 @@ export const CORE_BADGE_DEFINITIONS = [
   },
   {
     code: 'writing_3',
-    name: 'Sagot Star',
-    description: 'Complete 3 Punan ang Patlang or writing activities.',
+    name: 'Malikhaing Manunulat',
+    description: 'Magsumite ng 3 writing activities.',
     icon: '✍️',
     xpThreshold: null,
     metric: 'writingSubmissions',
@@ -222,74 +222,6 @@ export function nextLevelXp(xp = 0) {
   return LEVEL_THRESHOLDS[level];
 }
 
-function canonicalBadgeCode(code = '') {
-  const raw = String(code || '').trim().toLowerCase();
-
-  if (raw === 'reader') return 'reader_3';
-  if (raw === 'writer') return 'writing_3';
-  if (raw === 'speaker') return 'speech_3';
-  if (raw === 'teamwork') return 'group_1';
-  if (raw === 'firstlesson') return 'first_lesson';
-
-  return raw;
-}
-
-function normalizeBadgeResponse(badge = {}) {
-  const plain = badge?.toJSON ? badge.toJSON() : badge;
-  const code = canonicalBadgeCode(plain?.code);
-
-  if (code === 'writing_3') {
-    return {
-      ...plain,
-      code: 'writing_3',
-      name: 'Sagot Star',
-      description: 'Complete 3 Punan ang Patlang or writing activities.',
-      icon: plain?.icon || '✍️'
-    };
-  }
-
-  if (code === 'reader_3') {
-    return {
-      ...plain,
-      code: 'reader_3',
-      name: 'Batang Mambabasa',
-      description: 'Makatapos ng 3 lessons.',
-      icon: plain?.icon || '📖'
-    };
-  }
-
-  return {
-    ...plain,
-    code: plain?.code || code
-  };
-}
-
-function uniqueBadgeResponses(badges = []) {
-  const grouped = new Map();
-
-  badges.filter(Boolean).forEach((badge, index) => {
-    const plain = badge?.toJSON ? badge.toJSON() : badge;
-    const rawCode = String(plain?.code || '').trim().toLowerCase();
-    const code = canonicalBadgeCode(rawCode);
-    const name = String(plain?.name || '').trim().toLowerCase();
-    const key = code || name || `badge-${index}`;
-    const normalized = normalizeBadgeResponse(plain);
-    const current = grouped.get(key);
-
-    if (!current) {
-      grouped.set(key, { badge: normalized, canonical: rawCode === code });
-      return;
-    }
-
-    if (!current.canonical && rawCode === code) {
-      grouped.set(key, { badge: normalized, canonical: true });
-    }
-  });
-
-  return Array.from(grouped.values()).map(entry => entry.badge);
-}
-
-
 export async function awardXp(studentId, points, sourceType, sourceId = null, note = '') {
   const student = await Student.findByPk(studentId);
   if (!student) return null;
@@ -348,7 +280,7 @@ export async function awardThresholdBadges(student) {
     }
   }
 
-  return uniqueBadgeResponses(newBadges);
+  return newBadges;
 }
 
 export function levelTitleForLevel(level = 1) {

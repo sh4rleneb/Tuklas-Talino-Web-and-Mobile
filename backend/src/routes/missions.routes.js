@@ -58,7 +58,6 @@ router.post('/:missionId/complete', async (req, res, next) => {
     }
 
     const freshStudent = updatedStudent || await Student.findByPk(student.id);
-    const newBadges = updatedStudent?.getDataValue?.('newBadges') || updatedStudent?.newBadges || [];
 
     res.json({
       missionId,
@@ -69,7 +68,6 @@ router.post('/:missionId/complete', async (req, res, next) => {
       totalXp: freshStudent?.xp || 0,
       level: calculateLevel(freshStudent?.xp || 0),
       nextLevelXp: nextLevelXp(freshStudent?.xp || 0),
-      newBadges,
       message: created
         ? `Mission complete! +${xpAwarded} XP added.`
         : 'Mission already completed. XP was already awarded before.'

@@ -69,8 +69,8 @@ const CORE_BADGE_DEFINITIONS = [
   },
   {
     code: 'writing_3',
-    name: 'Sagot Star',
-    description: 'Complete 3 Punan ang Patlang or writing activities.',
+    name: 'Malikhaing Manunulat',
+    description: 'Magsumite ng 3 writing activities.',
     icon: '✍️',
     xpThreshold: null,
     target: 3,

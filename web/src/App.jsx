@@ -196,72 +196,18 @@ function ensureBadgeUnlockPopupStyles() {
   document.head.appendChild(style);
 }
 
-
-function playBadgeUnlockSound() {
-  if (typeof window === 'undefined') return;
-
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-
-    const ctx = new AudioContextClass();
-    const now = ctx.currentTime;
-    const master = ctx.createGain();
-
-    master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.12, now + 0.025);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
-    master.connect(ctx.destination);
-
-    [
-      { freq: 659.25, start: 0.00, end: 0.13 },
-      { freq: 783.99, start: 0.12, end: 0.27 },
-      { freq: 987.77, start: 0.25, end: 0.46 }
-    ].forEach(note => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(note.freq, now + note.start);
-
-      gain.gain.setValueAtTime(0.0001, now + note.start);
-      gain.gain.exponentialRampToValueAtTime(0.55, now + note.start + 0.018);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + note.end);
-
-      osc.connect(gain);
-      gain.connect(master);
-
-      osc.start(now + note.start);
-      osc.stop(now + note.end + 0.04);
-    });
-
-    window.setTimeout(() => {
-      try {
-        ctx.close();
-      } catch (_) {
-        // Ignore close errors.
-      }
-    }, 900);
-  } catch (_) {
-    // Badge sound is optional.
-  }
-}
-
 function showBadgeUnlockPopup(badges = []) {
   if (typeof document === 'undefined') return;
 
-  const earnedBadges = uniqueBadgesForDisplay(
-    Array.isArray(badges)
-      ? badges.filter(Boolean)
-      : badges
-        ? [badges]
-        : []
-  );
+  const earnedBadges = Array.isArray(badges)
+    ? badges.filter(Boolean)
+    : badges
+      ? [badges]
+      : [];
 
   if (!earnedBadges.length) return;
 
   ensureBadgeUnlockPopupStyles();
-  playBadgeUnlockSound();
 
   let stack = document.getElementById('badge-unlock-stack');
   if (!stack) {
@@ -277,8 +223,8 @@ function showBadgeUnlockPopup(badges = []) {
       card.className = 'badge-unlock-card';
 
       const icon = escapeBadgeText(badge.icon || '🏅');
-      const name = escapeBadgeText(badgeDisplayName(badge) || 'Bagong Badge');
-      const description = escapeBadgeText(badgeDisplayDescription(badge));
+      const name = escapeBadgeText(badge.name || 'Bagong Badge');
+      const description = escapeBadgeText(badge.description || 'May bago kang achievement!');
 
       card.innerHTML = `
         <div class="badge-unlock-icon">${icon}</div>
@@ -632,7 +578,6 @@ if (role === 'admin') {
       maxAttempts: 2,
       maxAttemptsReached: attempts.length >= 2,
     });
-    showBadgeUnlockPopup(finalResult?.newBadges);
     go('screen-stu-quiz-result');
   }
 
@@ -697,7 +642,6 @@ if (role === 'admin') {
           xpPossible: Number(saved.xpPossible || 0),
           xpAlreadyAwarded: Boolean(saved.xpAlreadyAwarded),
           backendSaved: true,
-          newBadges: data?.newBadges || [],
         };
 
         await loadStudentDashboard();
@@ -817,8 +761,6 @@ if (role === 'admin') {
         );
       }
 
-      showBadgeUnlockPopup(data?.newBadges);
-
       return data;
     }, 'Hindi ma-save ang sagot. Pakisubukan muli.');
   }
@@ -851,8 +793,6 @@ if (role === 'admin') {
       setLessonFeedback('');
     }
 
-    showBadgeUnlockPopup(data?.newBadges);
-
     await loadStudentDashboard();
 
     return data;
@@ -868,7 +808,7 @@ if (role === 'admin') {
   }
 
   await safeRun(async () => {
-    const data = await api(`/lessons/${selectedLesson.id}/speech`, {
+    await api(`/lessons/${selectedLesson.id}/speech`, {
       method: 'POST',
       body: {
         taskId,
@@ -878,8 +818,6 @@ if (role === 'admin') {
     });
 
     setLessonFeedback(`🎤 Na-save ang speech practice attempt. Score: ${score}% +6 XP`);
-    showBadgeUnlockPopup(data?.newBadges);
-    await loadStudentDashboard();
     await loadStudentDashboard();
   });
 }
@@ -2556,14 +2494,14 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         left: 50%;
         bottom: 22px;
         transform: translateX(-50%);
-        width: min(1280px, calc(100vw - 32px));
+        width: min(1120px, calc(100vw - 40px));
         z-index: 80;
-        min-height: 74px;
-        padding: 8px 14px;
+        min-height: 82px;
+        padding: 10px 20px;
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 6px;
-        border-radius: 30px;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 10px;
+        border-radius: 34px;
         background: rgba(255, 255, 255, 0.96);
         border: 1px solid rgba(39, 174, 96, 0.08);
         box-shadow: 0 14px 30px rgba(25, 78, 54, 0.09);
@@ -2573,17 +2511,15 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
       .g12-nav button {
         border: 0;
         background: transparent;
-        border-radius: 22px;
+        border-radius: 24px;
         color: #203451;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 950;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        min-width: 0;
-        white-space: nowrap;
+        gap: 10px;
       }
 
       .g12-nav button.active {
@@ -2592,7 +2528,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
       }
 
       .g12-nav-icon {
-        font-size: 28px;
+        font-size: 34px;
         line-height: 1;
       }
 
@@ -3331,526 +3267,6 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
           }
         }
         /* === End Grade 1-2 Progress Card No Level Title === */
-        /* === Grade 1-2 Seven Tab Nav Final Polish === */
-        .g12-nav {
-          width: min(1280px, calc(100vw - 32px)) !important;
-          min-height: 82px !important;
-          padding: 8px 14px !important;
-          display: grid !important;
-          grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
-          gap: 7px !important;
-          align-items: center !important;
-          overflow: hidden !important;
-        }
-
-        .g12-nav button {
-          min-width: 0 !important;
-          width: 100% !important;
-          min-height: 62px !important;
-          padding: 6px 4px !important;
-          display: flex !important;
-          flex-direction: column !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 3px !important;
-          border-radius: 20px !important;
-          font-size: 13px !important;
-          line-height: 1.05 !important;
-          white-space: nowrap !important;
-          text-align: center !important;
-        }
-
-        .g12-nav-icon {
-          font-size: 27px !important;
-          line-height: 1 !important;
-          display: block !important;
-        }
-
-        .g12-nav button.active {
-          background: #fff5cf !important;
-          color: #07924a !important;
-          border: 2px solid rgba(246, 196, 83, 0.45) !important;
-          box-shadow: inset 0 -2px 0 rgba(246, 196, 83, 0.18);
-        }
-
-        @media (max-width: 980px) {
-          .g12-nav {
-            width: min(100%, calc(100vw - 20px)) !important;
-            gap: 4px !important;
-            padding: 7px 8px !important;
-          }
-
-          .g12-nav button {
-            font-size: 11.5px !important;
-            min-height: 58px !important;
-            padding: 5px 2px !important;
-          }
-
-          .g12-nav-icon {
-            font-size: 24px !important;
-          }
-        }
-        /* === End Grade 1-2 Seven Tab Nav Final Polish === */
-
-
-
-        /* === Badges Page Reason and Animation Polish === */
-        .g12-badge-card-animated {
-          position: relative;
-          overflow: hidden;
-          animation: g12BadgePopIn 520ms ease both;
-          transition: transform 180ms ease, box-shadow 180ms ease;
-        }
-
-        .g12-badge-card-animated::before {
-          content: '';
-          position: absolute;
-          inset: -42px auto auto -34px;
-          width: 126px;
-          height: 126px;
-          border-radius: 999px;
-          background: rgba(255, 245, 207, 0.74);
-          animation: g12BadgeShine 2.8s ease-in-out infinite;
-        }
-
-        .g12-badge-card-animated:hover {
-          transform: translateY(-6px) scale(1.02);
-          box-shadow: 0 22px 48px rgba(21, 150, 90, 0.16);
-        }
-
-        .g12-badge-card-animated .g12-badge-big {
-          position: relative;
-          z-index: 2;
-          animation: g12BadgeBounce 2.4s ease-in-out infinite;
-        }
-
-        .g12-badge-card-animated strong,
-        .g12-badge-reason {
-          position: relative;
-          z-index: 2;
-        }
-
-        .g12-badge-reason {
-          margin: 8px auto 0;
-          max-width: 210px;
-          color: #315070;
-          font-size: 14px;
-          line-height: 1.25;
-          font-weight: 900;
-        }
-
-        .g46-ref-badge-animated {
-          animation: g46BadgeFadeUp 440ms ease both;
-          transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-        }
-
-        .g46-ref-badge-animated:hover {
-          transform: translateY(-5px);
-          border-color: rgba(21, 150, 90, 0.26);
-          box-shadow: 0 18px 42px rgba(15, 23, 42, 0.10);
-        }
-
-        .g46-ref-badge-animated span {
-          animation: g46BadgePulse 2.6s ease-in-out infinite;
-        }
-
-        .g46-ref-badge-animated strong {
-          display: block;
-          margin-top: 8px;
-        }
-
-        .g46-badge-reason {
-          margin: 8px 0 0;
-          color: #526177;
-          font-size: 14px;
-          line-height: 1.35;
-          font-weight: 800;
-        }
-
-        @keyframes g12BadgePopIn {
-          from { opacity: 0; transform: translateY(18px) scale(0.92); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        @keyframes g12BadgeBounce {
-          0%, 100% { transform: translateY(0) rotate(-2deg); }
-          50% { transform: translateY(-7px) rotate(2deg); }
-        }
-
-        @keyframes g12BadgeShine {
-          0%, 100% { transform: translate(-12px, -8px) scale(0.9); opacity: 0.46; }
-          50% { transform: translate(22px, 18px) scale(1.12); opacity: 0.75; }
-        }
-
-        @keyframes g46BadgeFadeUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes g46BadgePulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.08); }
-        }
-
-        /* === Grade 1-2 Locked Badges Polish === */
-        .g12-badge-subsection {
-          display: grid;
-          gap: 16px;
-        }
-
-        .g12-badge-subsection + .g12-badge-subsection {
-          margin-top: 26px;
-        }
-
-        .g12-badge-subsection-head {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          padding: 16px 18px;
-          border-radius: 26px;
-          background: linear-gradient(135deg, rgba(237, 248, 241, 0.92), rgba(255, 245, 207, 0.78));
-          border: 2px solid rgba(21, 150, 90, 0.10);
-        }
-
-        .g12-badge-subsection-head > span {
-          width: 54px;
-          height: 54px;
-          display: grid;
-          place-items: center;
-          border-radius: 20px;
-          background: #ffffff;
-          font-size: 30px;
-          box-shadow: 0 12px 26px rgba(20, 34, 59, 0.08);
-        }
-
-        .g12-badge-subsection-head strong {
-          display: block;
-          color: #14223b;
-          font-size: 22px;
-          font-weight: 1000;
-          line-height: 1.05;
-        }
-
-        .g12-badge-subsection-head p {
-          margin: 4px 0 0;
-          color: #4b647d;
-          font-size: 14px;
-          font-weight: 850;
-          line-height: 1.25;
-        }
-
-        .g12-badge-card-locked {
-          position: relative;
-          overflow: hidden;
-          opacity: 0.92;
-          filter: grayscale(0.12);
-          background: linear-gradient(135deg, rgba(244, 247, 251, 0.96), rgba(255, 255, 255, 0.9)) !important;
-          border: 2px dashed rgba(100, 116, 139, 0.24) !important;
-          animation: g12LockedBadgeIn 520ms ease both;
-          transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
-        }
-
-        .g12-badge-card-locked::after {
-          content: '🔒';
-          position: absolute;
-          top: 14px;
-          right: 16px;
-          width: 34px;
-          height: 34px;
-          display: grid;
-          place-items: center;
-          border-radius: 999px;
-          background: #ffffff;
-          box-shadow: 0 10px 22px rgba(20, 34, 59, 0.10);
-          animation: g12LockFloat 2.4s ease-in-out infinite;
-        }
-
-        .g12-badge-card-locked:hover {
-          transform: translateY(-5px);
-          filter: grayscale(0);
-          box-shadow: 0 18px 42px rgba(20, 34, 59, 0.12);
-        }
-
-        .g12-badge-big-locked {
-          opacity: 0.72;
-          animation: g12LockedIconGlow 2.8s ease-in-out infinite;
-        }
-
-        @keyframes g12LockedBadgeIn {
-          from { opacity: 0; transform: translateY(18px) scale(0.94); }
-          to { opacity: 0.92; transform: translateY(0) scale(1); }
-        }
-
-        @keyframes g12LockFloat {
-          0%, 100% { transform: translateY(0) rotate(-3deg); }
-          50% { transform: translateY(-5px) rotate(3deg); }
-        }
-
-        @keyframes g12LockedIconGlow {
-          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(246, 196, 83, 0)); }
-          50% { transform: scale(1.05); filter: drop-shadow(0 8px 16px rgba(246, 196, 83, 0.22)); }
-        }
-        /* === End Grade 1-2 Locked Badges Polish === */
-
-
-        /* === Grade 3-6 Locked Badges Polish === */
-        .g46-badge-subsection {
-          display: grid;
-          gap: 16px;
-        }
-
-        .g46-badge-subsection + .g46-badge-subsection {
-          margin-top: 24px;
-        }
-
-        .g46-badge-subsection-head {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          padding: 16px 18px;
-          border-radius: 24px;
-          background: linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(237, 248, 241, 0.88));
-          border: 1px solid rgba(21, 150, 90, 0.12);
-        }
-
-        .g46-badge-subsection-head > span {
-          width: 50px;
-          height: 50px;
-          display: grid;
-          place-items: center;
-          border-radius: 18px;
-          background: #ffffff;
-          font-size: 28px;
-          box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-        }
-
-        .g46-badge-subsection-head strong {
-          display: block;
-          color: #14223b;
-          font-size: 21px;
-          font-weight: 1000;
-          line-height: 1.08;
-        }
-
-        .g46-badge-subsection-head p {
-          margin-top: 4px;
-        }
-
-        .g46-ref-badge-locked {
-          position: relative;
-          overflow: hidden;
-          opacity: 0.9;
-          background: linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.94)) !important;
-          border: 1px dashed rgba(100, 116, 139, 0.30) !important;
-          animation: g46LockedBadgeIn 440ms ease both;
-          transition: transform 180ms ease, opacity 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-        }
-
-        .g46-ref-badge-locked::after {
-          content: 'Locked';
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          padding: 5px 10px;
-          border-radius: 999px;
-          background: rgba(100, 116, 139, 0.10);
-          color: #64748b;
-          font-size: 11px;
-          font-weight: 1000;
-          letter-spacing: 0.03em;
-          text-transform: uppercase;
-        }
-
-        .g46-ref-badge-locked:hover {
-          transform: translateY(-5px);
-          opacity: 1;
-          border-color: rgba(21, 150, 90, 0.24) !important;
-          box-shadow: 0 18px 42px rgba(15, 23, 42, 0.10);
-        }
-
-        .g46-ref-badge-locked span {
-          opacity: 0.72;
-          filter: grayscale(0.18);
-          animation: g46LockedIconPulse 2.7s ease-in-out infinite;
-        }
-
-        @keyframes g46LockedBadgeIn {
-          from { opacity: 0; transform: translateY(14px); }
-          to { opacity: 0.9; transform: translateY(0); }
-        }
-
-        @keyframes g46LockedIconPulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.06); }
-        }
-        /* === End Grade 3-6 Locked Badges Polish === */
-        /* === Grade 3-6 Badges UI Final Polish === */
-        .g46-badge-subsection {
-          padding: 18px;
-          border-radius: 28px;
-          background: rgba(248, 250, 252, 0.72);
-          border: 1px solid rgba(21, 150, 90, 0.08);
-        }
-
-        .g46-badge-subsection + .g46-badge-subsection {
-          margin-top: 26px;
-        }
-
-        .g46-badge-subsection-head {
-          margin-bottom: 18px;
-          background: linear-gradient(135deg, #ffffff, #f0fbf5) !important;
-          border: 1px solid rgba(21, 150, 90, 0.12) !important;
-          box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
-        }
-
-        .g46-badge-subsection-head > span {
-          background: linear-gradient(135deg, #fff5cf, #ffffff) !important;
-          box-shadow: 0 12px 26px rgba(246, 196, 83, 0.18) !important;
-        }
-
-        .g46-ref-badge-grid {
-          display: grid !important;
-          grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)) !important;
-          gap: 16px !important;
-          align-items: stretch !important;
-        }
-
-        .g46-ref-badge {
-          min-height: 158px !important;
-          padding: 22px 18px !important;
-          border-radius: 24px !important;
-          display: grid !important;
-          place-items: center !important;
-          text-align: center !important;
-        }
-
-        .g46-ref-badge > div {
-          width: 100%;
-          display: grid;
-          justify-items: center;
-          gap: 8px;
-        }
-
-        .g46-ref-badge-animated {
-          background:
-            radial-gradient(circle at 20% 12%, rgba(246, 196, 83, 0.20), transparent 28%),
-            linear-gradient(135deg, #ffffff, #edf8f1) !important;
-          border: 1px solid rgba(21, 150, 90, 0.16) !important;
-          box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
-        }
-
-        .g46-ref-badge-animated::after {
-          content: 'Earned';
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          padding: 5px 10px;
-          border-radius: 999px;
-          background: rgba(21, 150, 90, 0.10);
-          color: #07924a;
-          font-size: 11px;
-          font-weight: 1000;
-          letter-spacing: 0.03em;
-          text-transform: uppercase;
-        }
-
-        .g46-ref-badge-animated span,
-        .g46-ref-badge-locked span {
-          width: 54px;
-          height: 54px;
-          display: grid !important;
-          place-items: center;
-          border-radius: 18px;
-          background: #ffffff;
-          font-size: 34px !important;
-          box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
-        }
-
-        .g46-ref-badge-animated strong,
-        .g46-ref-badge-locked strong {
-          color: #14223b;
-          font-size: 17px;
-          font-weight: 1000;
-          line-height: 1.18;
-        }
-
-        .g46-badge-reason {
-          max-width: 250px;
-          margin: 0 auto !important;
-          color: #506176 !important;
-          font-size: 13.5px !important;
-          line-height: 1.32 !important;
-          font-weight: 850 !important;
-        }
-
-        .g46-locked-badge-section {
-          background:
-            radial-gradient(circle at 10% 10%, rgba(148, 163, 184, 0.12), transparent 24%),
-            rgba(248, 250, 252, 0.90);
-          border-color: rgba(100, 116, 139, 0.12);
-        }
-
-        .g46-ref-badge-locked {
-          min-height: 170px !important;
-          background:
-            linear-gradient(135deg, rgba(241, 245, 249, 0.98), rgba(255, 255, 255, 0.92)) !important;
-          border: 2px dashed rgba(100, 116, 139, 0.34) !important;
-          box-shadow: none !important;
-          opacity: 0.78 !important;
-          filter: grayscale(0.38);
-        }
-
-        .g46-ref-badge-locked::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: repeating-linear-gradient(
-            -45deg,
-            rgba(100, 116, 139, 0.025) 0,
-            rgba(100, 116, 139, 0.025) 8px,
-            transparent 8px,
-            transparent 16px
-          );
-          pointer-events: none;
-        }
-
-        .g46-ref-badge-locked::after {
-          content: '🔒 Locked' !important;
-          top: 12px !important;
-          right: 12px !important;
-          padding: 6px 11px !important;
-          background: rgba(15, 23, 42, 0.08) !important;
-          color: #475569 !important;
-          border: 1px solid rgba(100, 116, 139, 0.18);
-          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
-        }
-
-        .g46-ref-badge-locked:hover {
-          opacity: 1 !important;
-          filter: grayscale(0.08);
-          transform: translateY(-5px);
-          border-color: rgba(21, 150, 90, 0.32) !important;
-          box-shadow: 0 18px 42px rgba(15, 23, 42, 0.10) !important;
-        }
-
-        .g46-ref-badge-locked span {
-          opacity: 0.7;
-          background: #f8fafc;
-          box-shadow: inset 0 0 0 1px rgba(100, 116, 139, 0.12);
-        }
-
-        .g46-ref-badge-locked .g46-badge-reason {
-          padding: 8px 10px;
-          border-radius: 14px;
-          background: rgba(255, 255, 255, 0.72);
-          color: #64748b !important;
-        }
-        /* === End Grade 3-6 Badges UI Final Polish === */
-
-
-
-        /* === End Badges Page Reason and Animation Polish === */
-
 `}</style>
 
     <div className="g12-page">
@@ -3950,7 +3366,6 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
         <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
         <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-        <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
         <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
       </nav>
     </div>
@@ -3983,7 +3398,6 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
     { id: 'quizzes', icon: '🧠', label: 'Quizzes' },
     { id: 'missions', icon: '🎮', label: 'Missions' },
     { id: 'groups', icon: '👥', label: 'Groups' },
-    { id: 'badges', icon: '🏅', label: 'Badges' },
     { id: 'profile', icon: '👤', label: 'Profile' }
   ];
 
@@ -4081,7 +3495,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
   const studentAvatar = s.avatar || selectedAvatar || '👤';
   const stats = subjectStatsFor(data);
   const nextLesson = pickDailyLesson(data);
-  const badges = uniqueBadgesForDisplay(asArray(data?.badges));
+  const badges = asArray(data?.badges);
   const groups = asArray(data?.groups);
   const tasks = getGroupTasks(data);
   const completedLessons = asArray(data?.lessons).filter(lesson => lesson?.completed).length;
@@ -4196,7 +3610,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
                 <div className={`g46-ref-badge ${badge.locked ? 'locked' : 'unlocked'}`} key={badge.id || badge.name || index}>
                   <div>
                     <span>{badge.locked ? '🔒' : (badge.icon || '🏅')}</span>
-                    <strong>{badgeDisplayName(badge) || 'Badge'}</strong>
+                    <strong>{badge.name || 'Badge'}</strong>
                     <small className="g46-ref-badge-status">{badge.statusText || (badge.locked ? 'Locked' : 'Unlocked')}</small>
                   </div>
                 </div>
@@ -4317,7 +3731,6 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
           <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
           <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
           <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-          <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
           <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
         </nav>
       </div>
@@ -5465,7 +4878,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     setRewardClaimed(true);
     setMissionStep(missionSteps.length - 1);
     speechSynthesis.cancel();
-    setRewardModal({ xp: xpEarned, badges: uniqueBadgesForDisplay(result?.newBadges || []) });
+    setRewardModal({ xp: xpEarned, badges: result?.newBadges || [] });
   }
 
   function goHomeAfterReward() {
@@ -6467,8 +5880,8 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                       <div className="g12-reward-badge-chip" key={badge.id || badge.code || badge.name || badgeIndex}>
                         <span>{badge.icon || '🏅'}</span>
                         <div>
-                          <strong>{badgeDisplayName(badge) || 'Bagong Badge'}</strong>
-                          <small>{badgeDisplayDescription(badge)}</small>
+                          <strong>{badge.name || 'Bagong Badge'}</strong>
+                          <small>{badge.description || 'May bago kang achievement!'}</small>
                         </div>
                       </div>
                     ))}
@@ -8757,8 +8170,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
         }
       });
 
-      setMissionCompleteData({ ...result, newBadges: uniqueBadgesForDisplay(result?.newBadges || []) });
-      showBadgeUnlockPopup(result?.newBadges);
+      setMissionCompleteData(result);
 
       if (typeof refresh === 'function') {
         await refresh();
@@ -9564,220 +8976,9 @@ function StudentGroups({ data, go, completeGroupTask }) {
   );
 }
 
-
-
-function badgeDisplayName(badge = {}) {
-  const code = normalizedBadgeGoalCode(badge.code);
-  const name = String(badge.name || '').trim();
-
-  if (code === 'writing_3' || /manunulat|writer/i.test(name)) {
-    return 'Sagot Star';
-  }
-
-  return name;
-}
-
-
-function badgeDisplayDescription(badge = {}) {
-  const code = normalizedBadgeGoalCode(badge.code);
-  const name = String(badge.name || '').trim();
-
-  if (code === 'writing_3' || /manunulat|writer|sagot/i.test(name)) {
-    return 'Completed 3 Punan ang Patlang or writing activities.';
-  }
-
-  if (code === 'reader_3' || /mambabasa|reader/i.test(name)) {
-    return 'Completed 3 lessons.';
-  }
-
-  if (code === 'first_lesson') return 'Completed your first lesson.';
-  if (code === 'quiz_perfect') return 'Completed a quiz with a perfect score.';
-  if (code === 'speech_3') return 'Completed 3 speech attempts.';
-  if (code === 'group_1') return 'Completed 1 approved group task.';
-  if (code === 'xp_100') return 'Reached 100 XP.';
-  if (code === 'level_10') return 'Reached Level 10.';
-
-  return badge.description || 'May bago kang achievement!';
-}
-
-function badgeAchievementReason(badge = {}) {
-  const name = String(badge.name || '').trim();
-  const code = String(badge.code || '').trim();
-  const normalizedCode = normalizedBadgeGoalCode(code);
-  const description = String(badge.description || '').trim();
-  const value = `${code} ${name}`.toLowerCase();
-
-  if (normalizedCode === 'writing_3' || value.includes('manunulat') || value.includes('writer') || value.includes('sagot')) {
-    return 'Completed 3 Punan ang Patlang or writing activities.';
-  }
-
-  if (normalizedCode === 'reader_3' || value.includes('reader') || value.includes('mambabasa')) {
-    return 'Completed 3 lessons.';
-  }
-
-  if (normalizedCode === 'first_lesson' || value.includes('unang hakbang')) {
-    return 'Completed your first lesson.';
-  }
-
-  if (normalizedCode === 'quiz_perfect' || value.includes('quiz') || value.includes('perfect') || value.includes('bayani')) {
-    return 'Completed a quiz with a perfect score.';
-  }
-
-  if (normalizedCode === 'speech_3' || value.includes('speaker') || value.includes('speech') || value.includes('magsalita') || value.includes('boses')) {
-    return 'Completed 3 speech attempts.';
-  }
-
-  if (normalizedCode === 'group_1' || value.includes('teamwork') || value.includes('group') || value.includes('pangkat') || value.includes('kasama') || value.includes('kaagapay')) {
-    return 'Completed 1 approved group task.';
-  }
-
-  if (normalizedCode === 'xp_100' || value.includes('sipag')) {
-    return 'Reached 100 XP.';
-  }
-
-  if (normalizedCode === 'level_10' || value.includes('kampeon')) {
-    return 'Reached Level 10.';
-  }
-
-  if (description && !/achievement|badge|reward/i.test(description)) {
-    return description;
-  }
-
-  return 'You completed a learning goal to unlock this badge.';
-}
-
-
-
-const GRADE12_BADGE_GOALS = [
-  {
-    code: 'FIRST_LESSON',
-    icon: '🌱',
-    name: 'Unang Hakbang',
-    howToUnlock: 'Complete your first lesson.'
-  },
-  {
-    code: 'reader_3',
-    icon: '📖',
-    name: 'Batang Mambabasa',
-    howToUnlock: 'Complete 3 lessons.'
-  },
-  {
-    code: 'quiz_perfect',
-    icon: '🧠',
-    name: 'Quiz Bayani',
-    howToUnlock: 'Get a perfect score on a quiz.'
-  },
-  {
-    code: 'writing_3',
-    icon: '✍️',
-    name: 'Sagot Star',
-    howToUnlock: 'Complete 3 Punan ang Patlang or writing activities.'
-  },
-  {
-    code: 'speech_3',
-    icon: '🎤',
-    name: 'Boses Bituin',
-    howToUnlock: 'Submit 3 speech attempts.'
-  },
-  {
-    code: 'group_1',
-    icon: '🤝',
-    name: 'Kaagapay sa Gawain',
-    howToUnlock: 'Complete 1 approved group task.'
-  },
-  {
-    code: 'xp_100',
-    icon: '⭐',
-    name: 'Sipag Star',
-    howToUnlock: 'Reach 100 XP.'
-  },
-  {
-    code: 'level_10',
-    icon: '🏆',
-    name: 'Tuklas Kampeon',
-    howToUnlock: 'Reach Level 10.'
-  }
-];
-
-const BADGE_CODE_ALIASES = {
-  first_lesson: 'first_lesson',
-  firstlesson: 'first_lesson',
-  reader: 'reader_3',
-  reader_3: 'reader_3',
-  writer: 'writing_3',
-  writing_3: 'writing_3',
-  speaker: 'speech_3',
-  speech_3: 'speech_3',
-  teamwork: 'group_1',
-  group_1: 'group_1',
-  quiz_perfect: 'quiz_perfect',
-  xp_100: 'xp_100',
-  level_10: 'level_10'
-};
-
-function normalizedBadgeGoalCode(code = '') {
-  const raw = String(code || '').trim().toLowerCase();
-  return BADGE_CODE_ALIASES[raw] || raw;
-}
-
-
-function uniqueBadgesForDisplay(badges = []) {
-  const list = Array.isArray(badges) ? badges.filter(Boolean) : [];
-  const grouped = new Map();
-
-  list.forEach((badge, index) => {
-    const rawCode = String(badge.code || '').trim().toLowerCase();
-    const code = normalizedBadgeGoalCode(rawCode);
-    const name = String(badge.name || '').trim().toLowerCase();
-    const key = code || name || `badge-${index}`;
-    const current = grouped.get(key);
-
-    if (!current) {
-      grouped.set(key, badge);
-      return;
-    }
-
-    const currentRawCode = String(current.code || '').trim().toLowerCase();
-    const currentCode = normalizedBadgeGoalCode(currentRawCode);
-    const currentIsCanonical = currentRawCode && currentRawCode === currentCode;
-    const badgeIsCanonical = rawCode && rawCode === code;
-
-    if (!currentIsCanonical && badgeIsCanonical) {
-      grouped.set(key, badge);
-    }
-  });
-
-  return Array.from(grouped.values());
-}
-
-function badgeGoalIsUnlocked(goal, badges = []) {
-  const goalCode = normalizedBadgeGoalCode(goal.code);
-  const goalName = String(goal.name || '').trim().toLowerCase();
-
-  return badges.some(badge => {
-    const badgeCode = normalizedBadgeGoalCode(badge.code);
-    const badgeName = String(badge.name || '').trim().toLowerCase();
-
-    if (badgeCode && goalCode && badgeCode === goalCode) return true;
-    if (badgeName && goalName && badgeName === goalName) return true;
-
-    return false;
-  });
-}
-
-function grade12BadgeGoalsWithStatus(badges = []) {
-  return GRADE12_BADGE_GOALS.map(goal => ({
-    ...goal,
-    unlocked: badgeGoalIsUnlocked(goal, badges)
-  }));
-}
-
 function EarlyBadgesScreen({ data, go }) {
-  const rawBadges = data?.badges || [];
-  const badges = uniqueBadgesForDisplay(rawBadges);
+  const badges = data?.badges || [];
   const s = data?.student || {};
-  const badgeGoals = grade12BadgeGoalsWithStatus(badges);
-  const lockedBadgeGoals = badgeGoals.filter(goal => !goal.unlocked);
 
   return (
     <EarlyStudentChrome
@@ -9792,72 +8993,24 @@ function EarlyBadgesScreen({ data, go }) {
         <div className="g12-section-head">
           <div>
             <h2 className="g12-section-title">🌟 Achievements</h2>
-            <p className="g12-section-subtitle">
-              {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {lockedBadgeGoals.length} to unlock • {s.xp || 0} XP
-            </p>
+            <p className="g12-section-subtitle">{badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {s.xp || 0} XP</p>
           </div>
         </div>
 
-        <div className="g12-badge-subsection">
-          <div className="g12-badge-subsection-head">
-            <span>🏆</span>
-            <div>
-              <strong>Unlocked Badges</strong>
-              <p>These are the rewards you already earned.</p>
-            </div>
-          </div>
-
-          {badges.length ? (
-            <div className="g12-badge-grid">
-              {badges.map((badge, badgeIndex) => (
-                <div
-                  className="g12-badge-card g12-badge-card-animated"
-                  key={badge.id || badge.code || badge.name || badgeIndex}
-                  style={{ animationDelay: `${badgeIndex * 80}ms` }}
-                >
-                  <div>
-                    <div className="g12-badge-big">{badge.icon || '🏅'}</div>
-                    <strong>{badgeDisplayName(badge) || 'Badge'}</strong>
-                    <p className="g12-badge-reason">✨ {badgeAchievementReason(badge)}</p>
-                  </div>
+        {badges.length ? (
+          <div className="g12-badge-grid">
+            {badges.map(badge => (
+              <div className="g12-badge-card" key={badge.id || badge.name}>
+                <div>
+                  <div className="g12-badge-big">{badge.icon || '🏅'}</div>
+                  <strong>{badge.name || 'Badge'}</strong>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="g12-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
-          )}
-        </div>
-
-        <div className="g12-badge-subsection g12-locked-badge-section">
-          <div className="g12-badge-subsection-head">
-            <span>🔒</span>
-            <div>
-              <strong>Next Badges to Unlock</strong>
-              <p>Complete these goals to earn more rewards.</p>
-            </div>
+              </div>
+            ))}
           </div>
-
-          {lockedBadgeGoals.length ? (
-            <div className="g12-badge-grid g12-locked-badge-grid">
-              {lockedBadgeGoals.map((goal, goalIndex) => (
-                <div
-                  className="g12-badge-card g12-badge-card-locked"
-                  key={goal.code || goal.name}
-                  style={{ animationDelay: `${goalIndex * 70}ms` }}
-                >
-                  <div>
-                    <div className="g12-badge-big g12-badge-big-locked">{goal.icon || '🏅'}</div>
-                    <strong>{goal.name || 'Locked Badge'}</strong>
-                    <p className="g12-badge-reason">How to unlock: {goal.howToUnlock}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="g12-empty">Amazing! You unlocked all available badges.</div>
-          )}
-        </div>
-
+        ) : (
+          <div className="g12-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
+        )}
       </section>
     </EarlyStudentChrome>
   );
@@ -9871,13 +9024,11 @@ function StudentBadges({ data, go }) {
   }
 
   const badges = data?.badges || [];
-  const g46BadgeGoals = grade12BadgeGoalsWithStatus(badges);
-  const g46LockedBadgeGoals = g46BadgeGoals.filter(goal => !goal.unlocked);
 
   return (
     <Grade46StudentChrome
       data={data}
-      activeTab="badges"
+      activeTab="profile"
       go={go}
       icon="🏅"
       title="Badges"
@@ -9887,72 +9038,21 @@ function StudentBadges({ data, go }) {
         <div className="g46-ref-panel-head">
           <div>
             <h2>Achievements</h2>
-            <p className="g46-ref-muted">
-              {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {g46LockedBadgeGoals.length} to unlock • {data?.student?.xp || 0} XP
-            </p>
+            <p className="g46-ref-muted">{badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {data?.student?.xp || 0} XP</p>
           </div>
         </div>
 
-        <div className="g46-badge-subsection">
-          <div className="g46-badge-subsection-head">
-            <span>🏆</span>
-            <div>
-              <strong>Unlocked Badges</strong>
-              <p className="g46-ref-muted">Achievements you already earned from lessons, quizzes, missions, and activities.</p>
-            </div>
+        {badges.length ? (
+          <div className="g46-ref-badge-grid">
+            {badges.map(badge => (
+              <div className="g46-ref-badge" key={badge.id || badge.name}>
+                <div><span>{badge.icon || '🏅'}</span>{badge.name || 'Badge'}</div>
+              </div>
+            ))}
           </div>
-
-          {badges.length ? (
-            <div className="g46-ref-badge-grid">
-              {badges.map((badge, badgeIndex) => (
-                <div
-                  className="g46-ref-badge g46-ref-badge-animated"
-                  key={badge.id || badge.code || badge.name || badgeIndex}
-                  style={{ animationDelay: `${badgeIndex * 70}ms` }}
-                >
-                  <div>
-                    <span>{badge.icon || '🏅'}</span>
-                    <strong>{badgeDisplayName(badge) || 'Badge'}</strong>
-                    <p className="g46-badge-reason">{badgeAchievementReason(badge)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="g46-ref-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
-          )}
-        </div>
-
-        <div className="g46-badge-subsection g46-locked-badge-section">
-          <div className="g46-badge-subsection-head">
-            <span>🔒</span>
-            <div>
-              <strong>Next Badges to Unlock</strong>
-              <p className="g46-ref-muted">Use these goals as your next learning targets.</p>
-            </div>
-          </div>
-
-          {g46LockedBadgeGoals.length ? (
-            <div className="g46-ref-badge-grid g46-locked-badge-grid">
-              {g46LockedBadgeGoals.map((goal, goalIndex) => (
-                <div
-                  className="g46-ref-badge g46-ref-badge-locked"
-                  key={goal.code || goal.name}
-                  style={{ animationDelay: `${goalIndex * 70}ms` }}
-                >
-                  <div>
-                    <span>{goal.icon || '🏅'}</span>
-                    <strong>{goal.name || 'Locked Badge'}</strong>
-                    <p className="g46-badge-reason g46-locked-goal-text"><span>Goal</span>{goal.howToUnlock}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="g46-ref-empty">Excellent work! You unlocked all available badges.</div>
-          )}
-        </div>
-
+        ) : (
+          <div className="g46-ref-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
+        )}
       </section>
     </Grade46StudentChrome>
   );

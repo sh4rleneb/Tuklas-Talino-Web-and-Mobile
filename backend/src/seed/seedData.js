@@ -115,7 +115,7 @@ export async function seedData() {
   await Badge.bulkCreate([
     { code: 'FIRST_LESSON', name: 'Unang Hakbang', icon: '🌱', description: 'Nakumpleto ang unang aralin.', xpThreshold: 20 },
     { code: 'READER', name: 'Batang Mambabasa', icon: '📖', description: 'Masipag sa pagbabasa.', xpThreshold: 75 },
-    { code: 'WRITER', name: 'Sagot Star', icon: '✍️', description: 'Complete 3 Punan ang Patlang or writing activities.', xpThreshold: 120 },
+    { code: 'WRITER', name: 'Manunulat', icon: '✍️', description: 'Nakapagsumite ng gawaing pagsulat.', xpThreshold: 120 },
     { code: 'SPEAKER', name: 'Mahusay Magsalita', icon: '🎙️', description: 'Nagsanay sa oral communication.', xpThreshold: 160 },
     { code: 'TEAMWORK', name: 'Kasama sa Pangkat', icon: '🤝', description: 'Nakilahok sa pangkatang gawain.', xpThreshold: 200 }
   ], { ignoreDuplicates: true });
