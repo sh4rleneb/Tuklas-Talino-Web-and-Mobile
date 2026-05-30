@@ -1,0 +1,1151 @@
+import React, { useState } from 'react';
+
+
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+
+import { SafeAreaView }
+from 'react-native-safe-area-context';
+
+export default function StudentSeniorHome({
+  navigation,
+}) {
+
+  const [showMore, setShowMore] =
+    useState(false);
+
+  return (
+
+    <SafeAreaView style={styles.safe}>
+
+      <View style={styles.wrapper}>
+
+        <ScrollView
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: 120,
+          }}
+        >
+
+          <View style={styles.contentWrapper}>
+
+            {/* HEADER */}
+
+            <View style={styles.header}>
+
+            <View style={styles.headerTop}>
+
+              <Text style={styles.logo}>
+                🏡 Tuklas Talino
+              </Text>
+
+              <TouchableOpacity
+                style={styles.logoutBtn}
+                onPress={() =>
+                  navigation.replace(
+                    'Landing'
+                  )
+                }
+              >
+                <Text style={styles.logoutText}>
+                  Logout
+                </Text>
+              </TouchableOpacity>
+
+            </View>
+
+            <TouchableOpacity
+              style={styles.profileChip}
+            >
+
+              <Text style={styles.profileEmoji}>
+                🦄
+              </Text>
+
+              <Text style={styles.profileText}>
+                Maya • Grade 4 • Matalino
+              </Text>
+
+            </TouchableOpacity>
+
+          </View>
+
+            {/* HERO */}
+
+            <View style={styles.heroCard}>
+
+              <View style={styles.heroTop}>
+
+                <View style={styles.avatarCircle}>
+
+                  <Text style={styles.avatar}>
+                    🦄
+                  </Text>
+
+                </View>
+
+                <View style={{ flex: 1 }}>
+
+                  <Text style={styles.heroTitle}>
+                    Hi Maya!
+                  </Text>
+
+                  <Text style={styles.heroSubtitle}>
+                    Ready ka na ba sa
+                    learning adventure
+                    today?
+                  </Text>
+
+                </View>
+
+              </View>
+
+              {/* XP */}
+
+              <View style={styles.xpCard}>
+
+                <View style={styles.xpHeader}>
+
+                  <View>
+
+                    <Text style={styles.xpLabel}>
+                      XP Points
+                    </Text>
+
+                    <Text style={styles.xpValue}>
+                      38 XP
+                    </Text>
+
+                  </View>
+
+                  <View style={styles.levelBadge}>
+
+                    <Text style={styles.levelText}>
+                      Level 4
+                    </Text>
+
+                  </View>
+
+                </View>
+
+                <View style={styles.progressBg}>
+
+                  <View
+                    style={
+                      styles.progressFill
+                    }
+                  />
+
+                </View>
+
+                <Text style={styles.xpSub}>
+                  62 XP pa bago ang
+                  next level.
+                </Text>
+
+              </View>
+
+            </View>
+
+            {/* QUICK STATS */}
+
+            <View style={styles.quickStats}>
+
+              <View style={styles.quickCard}>
+
+                <Text
+                  style={styles.quickValue}
+                >
+                  12
+                </Text>
+
+                <Text
+                  style={styles.quickLabel}
+                >
+                  Lessons
+                </Text>
+
+              </View>
+
+              <View style={styles.quickCard}>
+
+                <Text
+                  style={styles.quickValue}
+                >
+                  38
+                </Text>
+
+                <Text
+                  style={styles.quickLabel}
+                >
+                  XP
+                </Text>
+
+              </View>
+
+              <View style={styles.quickCard}>
+
+                <Text
+                  style={styles.quickValue}
+                >
+                  4
+                </Text>
+
+                <Text
+                  style={styles.quickLabel}
+                >
+                  Badges
+                </Text>
+
+              </View>
+
+            </View>
+
+            {/* LESSONS */}
+
+            <View style={styles.section}>
+
+              <View
+                style={styles.sectionHeader}
+              >
+
+                <Text
+                  style={
+                    styles.sectionTitle
+                  }
+                >
+                  Your Lessons
+                </Text>
+
+                <Text
+                  style={
+                    styles.allLessons
+                  }
+                >
+                  All Lessons →
+                </Text>
+
+              </View>
+
+              <View
+                style={styles.lessonGrid}
+              >
+
+                <TouchableOpacity
+                  style={[
+                    styles.lessonCard,
+                    {
+                      backgroundColor:
+                        '#EEF4FF',
+                    },
+                  ]}
+                >
+
+                  <Text
+                    style={
+                      styles.lessonEmoji
+                    }
+                  >
+                    🎧
+                  </Text>
+
+                  <Text
+                    style={styles.lessonTag}
+                  >
+                    Bokabularyo
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.lessonTitle
+                    }
+                  >
+                    Bahagi ng
+                    Pananalita
+                  </Text>
+
+                  <TouchableOpacity
+                    style={styles.startBtn}
+                  >
+
+                    <Text
+                      style={
+                        styles.startText
+                      }
+                    >
+                      Start
+                    </Text>
+
+                  </TouchableOpacity>
+
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.lessonCard,
+                    {
+                      backgroundColor:
+                        '#FFF0F7',
+                    },
+                  ]}
+                >
+
+                  <Text
+                    style={
+                      styles.lessonEmoji
+                    }
+                  >
+                    📖
+                  </Text>
+
+                  <Text
+                    style={styles.lessonTag}
+                  >
+                    Reading
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.lessonTitle
+                    }
+                  >
+                    Reading
+                    Comprehension
+                  </Text>
+
+                  <TouchableOpacity
+                    style={styles.startBtn}
+                  >
+
+                    <Text
+                      style={
+                        styles.startText
+                      }
+                    >
+                      Start
+                    </Text>
+
+                  </TouchableOpacity>
+
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.lessonCard,
+                    {
+                      backgroundColor:
+                        '#F3F0FF',
+                    },
+                  ]}
+                >
+
+                  <Text
+                    style={
+                      styles.lessonEmoji
+                    }
+                  >
+                    🔤
+                  </Text>
+
+                  <Text
+                    style={styles.lessonTag}
+                  >
+                    Vocabulary
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.lessonTitle
+                    }
+                  >
+                    Learn Words
+                  </Text>
+
+                  <TouchableOpacity
+                    style={styles.startBtn}
+                  >
+
+                    <Text
+                      style={
+                        styles.startText
+                      }
+                    >
+                      Start
+                    </Text>
+
+                  </TouchableOpacity>
+
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.lessonCard,
+                    {
+                      backgroundColor:
+                        '#FEF3C7',
+                    },
+                  ]}
+                >
+
+                  <Text
+                    style={
+                      styles.lessonEmoji
+                    }
+                  >
+                    📜
+                  </Text>
+
+                  <Text
+                    style={styles.lessonTag}
+                  >
+                    Panitikan
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.lessonTitle
+                    }
+                  >
+                    Story Quest
+                  </Text>
+
+                  <TouchableOpacity
+                    style={styles.startBtn}
+                  >
+
+                    <Text
+                      style={
+                        styles.startText
+                      }
+                    >
+                      Start
+                    </Text>
+
+                  </TouchableOpacity>
+
+                </TouchableOpacity>
+
+              </View>
+
+            </View>
+
+            {/* BADGES */}
+
+            <View style={styles.section}>
+
+              <Text style={styles.sectionTitle}>
+                Badges
+              </Text>
+
+              <View style={styles.badgeRow}>
+
+                <View
+                  style={
+                    styles.badgeUnlocked
+                  }
+                >
+
+                  <Text
+                    style={
+                      styles.badgeEmoji
+                    }
+                  >
+                    🌱
+                  </Text>
+
+                  <Text
+                    style={styles.badgeText}
+                  >
+                    Unang Hakbang
+                  </Text>
+
+                </View>
+
+                <View
+                  style={styles.badgeLocked}
+                >
+
+                  <Text
+                    style={
+                      styles.badgeEmoji
+                    }
+                  >
+                    🔒
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.badgeLockedText
+                    }
+                  >
+                    Reader
+                  </Text>
+
+                </View>
+
+                <View
+                  style={styles.badgeLocked}
+                >
+
+                  <Text
+                    style={
+                      styles.badgeEmoji
+                    }
+                  >
+                    🔒
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.badgeLockedText
+                    }
+                  >
+                    Words
+                  </Text>
+
+                </View>
+
+                <View
+                  style={styles.badgeLocked}
+                >
+
+                  <Text
+                    style={
+                      styles.badgeEmoji
+                    }
+                  >
+                    🔒
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.badgeLockedText
+                    }
+                  >
+                    Speaker
+                  </Text>
+
+                </View>
+
+              </View>
+
+            </View>
+
+          </View>
+
+        </ScrollView>
+
+        {/* BOTTOM NAV */}
+
+        <View style={styles.bottomNav}>
+
+          <TouchableOpacity
+            style={[
+              styles.navButton,
+              styles.activeNavButton,
+            ]}
+          >
+
+            <Text style={styles.navIcon}>
+              🏠
+            </Text>
+
+            <Text
+              style={styles.activeNavText}
+            >
+              Home
+            </Text>
+
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navButton}
+          >
+
+            <Text style={styles.navIcon}>
+              📚
+            </Text>
+
+            <Text style={styles.navText}>
+              Lessons
+            </Text>
+
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navButton}
+          >
+
+            <Text style={styles.navIcon}>
+              🧠
+            </Text>
+
+            <Text style={styles.navText}>
+              Quizzes
+            </Text>
+
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navButton}
+          >
+
+            <Text style={styles.navIcon}>
+              🎮
+            </Text>
+
+            <Text style={styles.navText}>
+              Missions
+            </Text>
+
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navButton}
+            onPress={() =>
+              setShowMore(!showMore)
+            }
+          >
+            <Text style={styles.navIcon}>
+              ⋯
+            </Text>
+
+            <Text style={styles.navText}>
+              More
+            </Text>
+          </TouchableOpacity>
+
+        </View>
+
+          {showMore && (
+
+            <View style={styles.moreMenu}>
+
+              <TouchableOpacity
+                style={styles.moreItem}
+              >
+                <Text style={styles.moreText}>
+                  👥 Groups
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.moreItem}
+              >
+                <Text style={styles.moreText}>
+                  🏅 Badges
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.moreItem}
+              >
+                <Text style={styles.moreText}>
+                  👤 Profile
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.moreItem}
+                onPress={() =>
+                  navigation.replace(
+                    'Landing'
+                  )
+                }
+              >
+                <Text style={styles.moreText}>
+                  🚪 Logout
+                </Text>
+              </TouchableOpacity>
+
+            </View>
+
+          )}
+
+      </View>
+
+    </SafeAreaView>
+
+  );
+}
+
+const styles = StyleSheet.create({
+
+  safe: {
+    flex: 1,
+    backgroundColor: '#F6FFF5',
+  },
+
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#F6FFF5',
+  },
+
+  container: {
+    flex: 1,
+    backgroundColor: '#F6FFF5',
+  },
+
+  contentWrapper: {
+    backgroundColor: '#F6FFF5',
+
+    borderTopLeftRadius: 34,
+    borderTopRightRadius: 34,
+
+    paddingTop: 14,
+
+    paddingHorizontal: 16,
+
+    paddingBottom: 30,
+
+    minHeight: '100%',
+  },
+
+    header: {
+    backgroundColor: '#FFFFFF',
+
+    borderRadius: 30,
+
+    padding: 18,
+
+    marginBottom: 20,
+
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+
+    elevation: 4,
+  },
+
+  headerTop: {
+    flexDirection: 'row',
+
+    justifyContent: 'space-between',
+
+    alignItems: 'center',
+  },
+
+    profileChip: {
+    marginTop: 10,
+
+    alignSelf: 'flex-start',
+
+    flexDirection: 'row',
+    alignItems: 'center',
+
+    backgroundColor: '#ECFDF5',
+
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+
+    borderRadius: 999,
+  },
+
+  profileEmoji: {
+    fontSize: 18,
+    marginRight: 6,
+  },
+
+  profileText: {
+    fontSize: 13,
+    color: '#475569',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+
+  logo: {
+    fontSize: 24,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#22C55E',
+  },
+
+  studentInfo: {
+    marginTop: 4,
+    fontSize: 14,
+    color: '#64748B',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+
+  logoutBtn: {
+    backgroundColor: '#FFE4E6',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 18,
+  },
+
+  logoutText: {
+    color: '#DC2626',
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 14,
+  },
+
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 18,
+    borderRadius: 26,
+    padding: 18,
+
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+
+    elevation: 3,
+  },
+
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  avatarCircle: {
+    width: 72,
+    height: 72,
+
+    borderRadius: 100,
+
+    backgroundColor: '#ECFDF5',
+
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    marginRight: 14,
+  },
+
+  avatar: {
+    fontSize: 38,
+  },
+
+  heroTitle: {
+    fontSize: 28,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#22C55E',
+  },
+
+  heroSubtitle: {
+    fontSize: 15,
+    color: '#334155',
+    marginTop: 6,
+    lineHeight: 24,
+    fontFamily: 'Poppins_500Medium',
+  },
+
+  xpCard: {
+    backgroundColor: '#F8FAFC',
+    marginTop: 22,
+    borderRadius: 22,
+    padding: 18,
+  },
+
+  xpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  xpLabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins_700Bold',
+    color: '#64748B',
+  },
+
+  xpValue: {
+    fontSize: 32,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#22C55E',
+    marginTop: 4,
+  },
+
+  levelBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+
+  levelText: {
+    color: '#166534',
+    fontSize: 14,
+    fontFamily: 'Poppins_700Bold',
+  },
+
+  progressBg: {
+    height: 12,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 30,
+    marginTop: 18,
+    overflow: 'hidden',
+  },
+
+  progressFill: {
+    width: '42%',
+    height: '100%',
+    backgroundColor: '#22C55E',
+  },
+
+  xpSub: {
+    marginTop: 12,
+    fontSize: 13,
+    color: '#64748B',
+    fontFamily: 'Poppins_500Medium',
+  },
+
+  quickStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 18,
+  },
+
+  quickCard: {
+    backgroundColor: '#FFFFFF',
+    width: '31%',
+    borderRadius: 20,
+    paddingVertical: 18,
+    alignItems: 'center',
+
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+
+    elevation: 2,
+  },
+
+  quickValue: {
+    fontSize: 26,
+    color: '#22C55E',
+    fontFamily: 'Poppins_800ExtraBold',
+  },
+
+  quickLabel: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+
+  section: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 20,
+    borderRadius: 26,
+    padding: 18,
+
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+
+    elevation: 3,
+  },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  sectionTitle: {
+    fontSize: 24,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#0F172A',
+  },
+
+  allLessons: {
+    color: '#22C55E',
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 14,
+  },
+
+  lessonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+
+  lessonCard: {
+    marginTop: 16,
+    borderRadius: 22,
+    padding: 18,
+    width: '48%',
+  },
+
+  lessonEmoji: {
+    fontSize: 38,
+  },
+
+  lessonTag: {
+    color: '#22C55E',
+    fontFamily: 'Poppins_700Bold',
+    marginTop: 10,
+    fontSize: 12,
+  },
+
+  lessonTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#0F172A',
+    marginTop: 8,
+    lineHeight: 26,
+  },
+
+  startBtn: {
+    marginTop: 16,
+    backgroundColor: '#16A34A',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    borderRadius: 16,
+  },
+
+  startText: {
+    color: '#FFFFFF',
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 13,
+  },
+
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 18,
+  },
+
+  badgeUnlocked: {
+    width: '48%',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 20,
+    paddingVertical: 20,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  badgeLocked: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingVertical: 20,
+    alignItems: 'center',
+    marginBottom: 12,
+
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+
+  badgeEmoji: {
+    fontSize: 32,
+  },
+
+  badgeText: {
+    marginTop: 10,
+    fontFamily: 'Poppins_700Bold',
+    color: '#166534',
+    textAlign: 'center',
+    fontSize: 14,
+  },
+
+  badgeLockedText: {
+    marginTop: 10,
+    color: '#94A3B8',
+    textAlign: 'center',
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 14,
+  },
+
+  bottomNav: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+
+    backgroundColor: '#FFFFFF',
+
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+
+    alignItems: 'center',
+
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+
+    elevation: 10,
+  },
+
+  navButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    minWidth: 52,
+
+    paddingVertical: 8,
+
+    borderRadius: 18,
+  },
+
+  activeNavButton: {
+    backgroundColor: '#FEF3C7',
+
+    borderWidth: 2,
+    borderColor: '#FCD34D',
+
+    paddingHorizontal: 12,
+  },
+
+  navIcon: {
+    fontSize: 20,
+  },
+
+  navText: {
+    marginTop: 2,
+    color: '#334155',
+    fontSize: 9,
+    fontFamily: 'Poppins_600SemiBold',
+  },
+
+  activeNavText: {
+    marginTop: 2,
+    color: '#16A34A',
+    fontSize: 9,
+    fontFamily: 'Poppins_700Bold',
+  },
+
+    moreMenu: {
+    position: 'absolute',
+
+    right: 20,
+    bottom: 95,
+
+    backgroundColor: '#FFFFFF',
+
+    borderRadius: 20,
+
+    width: 180,
+
+    paddingVertical: 10,
+
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+
+    elevation: 8,
+  },
+
+  moreItem: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+
+  moreText: {
+    fontSize: 15,
+
+    color: '#0F172A',
+
+    fontFamily:
+      'Poppins_600SemiBold',
+  },
+
+});
