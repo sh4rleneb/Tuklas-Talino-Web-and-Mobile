@@ -8,10 +8,10 @@ import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
+import { setRealtime } from './realtime.js';
 
 import { connectDatabase } from './config/database.js';
 import apiRoutes from './routes/index.js';
-import { setRealtime } from './realtime.js';
 
 dotenv.config();
 
@@ -52,24 +52,9 @@ const io = new Server(server, {
     credentials: true
   }
 });
-
 setRealtime(io);
 
-io.on('connection', (socket) => {
-  console.log('Realtime connected:', socket.id);
 
-  socket.on('join:teacher', () => {
-    socket.join('teachers');
-  });
-
-  socket.on('join:leaderboard', () => {
-    socket.join('leaderboard');
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Realtime disconnected:', socket.id);
-  });
-});
 
 app.use('/api', apiRoutes);
 

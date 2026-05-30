@@ -412,13 +412,6 @@ router.delete('/:id', requireRole('admin', 'teacher'), async (req, res, next) =>
 
     await audit(req.user.id, 'lesson.archive', 'lesson', lesson.id);
 
-    emitRealtime('teachers', 'lesson:archived', {
-      lessonId: lesson.id,
-      title: lesson.title,
-      gradeLevel: lesson.gradeLevel,
-      subject: lesson.subject,
-      message: `Lesson archived: ${lesson.title}`,
-    });
 
     res.json({ lesson });
   } catch (err) {
@@ -461,14 +454,6 @@ router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
 
     const full = await Lesson.findByPk(lesson.id, {
       include: lessonIncludes,
-    });
-
-    emitRealtime('teachers', 'lesson:created', {
-      lessonId: lesson.id,
-      title: lesson.title,
-      gradeLevel: lesson.gradeLevel,
-      subject: lesson.subject,
-      message: `New lesson created: ${lesson.title}`,
     });
 
     res.status(201).json({ lesson: full });
@@ -516,14 +501,6 @@ router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => 
 
     await lesson.save();
     await audit(req.user.id, 'lesson.update', 'lesson', lesson.id, req.body);
-
-    emitRealtime('teachers', 'lesson:updated', {
-      lessonId: lesson.id,
-      title: lesson.title,
-      gradeLevel: lesson.gradeLevel,
-      subject: lesson.subject,
-      message: `Lesson updated: ${lesson.title}`,
-    });
 
     res.json({ lesson });
   } catch (err) {
@@ -772,31 +749,48 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
     }
 
     const review = Array.isArray(req.body.review) ? req.body.review : [];
-    let savedAnswers = 0;
+    const normalizedReview = review
+      .map((item) => ({
+        questionId: Number(item.questionId || 0),
+        selectedOptionId: Number(item.selectedOptionId || 0),
+      }))
+      .filter((item) => item.questionId && item.selectedOptionId);
 
-    for (const item of review) {
-      const questionId = Number(item.questionId || 0);
-      const selectedOptionId = Number(item.selectedOptionId || 0);
+    const questionIds = [...new Set(normalizedReview.map((item) => item.questionId))];
+    const optionIds = [...new Set(normalizedReview.map((item) => item.selectedOptionId))];
 
-      if (!questionId || !selectedOptionId) continue;
+    const [questions, options] = await Promise.all([
+      questionIds.length ? MCQQuestion.findAll({ where: { id: questionIds } }) : [],
+      optionIds.length ? MCQOption.findAll({ where: { id: optionIds } }) : [],
+    ]);
 
-      const question = await MCQQuestion.findByPk(questionId);
-      const option = await MCQOption.findByPk(selectedOptionId);
+    const questionById = new Map(questions.map((question) => [Number(question.id), question]));
+    const optionById = new Map(options.map((option) => [Number(option.id), option]));
+
+    const historyRows = [];
+
+    for (const item of normalizedReview) {
+      const question = questionById.get(item.questionId);
+      const option = optionById.get(item.selectedOptionId);
 
       if (!question || !option || Number(option.questionId) !== Number(question.id)) {
         continue;
       }
 
-      await QuizHistory.create({
+      historyRows.push({
         studentId: req.student.id,
         lessonId: lesson.id,
         questionId: question.id,
         selectedOptionId: option.id,
-        isCorrect: option.isCorrect,
+        isCorrect: Boolean(option.isCorrect),
       });
-
-      savedAnswers += 1;
     }
+
+    if (historyRows.length) {
+      await QuizHistory.bulkCreate(historyRows);
+    }
+
+    const savedAnswers = historyRows.length;
 
     const attempt = await QuizAttempt.create({
       studentId: req.student.id,
@@ -1082,3 +1076,4 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
 });
 
 export default router;
+

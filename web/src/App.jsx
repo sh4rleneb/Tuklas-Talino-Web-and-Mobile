@@ -25,7 +25,23 @@ function read(id) {
 
 function Notification({ notice }) {
   if (!notice) return <div className="notif-wrap" id="notif-wrap" />;
-  return <div className="notif-wrap" id="notif-wrap"><div className={`notif ${notice.type || ''}`}>{notice.text}</div></div>;
+
+  const isRewardsNotice = notice.type === 'rewards';
+
+  return (
+    <div className="notif-wrap" id="notif-wrap">
+      <div className={`notif ${notice.type || ''}`}>
+        <span>{notice.text}</span>
+        {isRewardsNotice && (
+          <span className="notif-reward-dots" aria-hidden="true">
+            <span>.</span>
+            <span>.</span>
+            <span>.</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 
@@ -617,8 +633,15 @@ if (role === 'admin') {
   function openQuizResult(quiz) {
     if (!quiz) return;
 
-    const attempts = quizAttempts?.[quiz.id] || [];
-    const latestAttempt = attempts[attempts.length - 1];
+    const attempts = asArray(quizAttempts?.[quiz.id]);
+    const highestAttemptNo = Math.max(
+      0,
+      ...attempts.map((attempt) => Number(attempt?.attemptNo || 0))
+    );
+    const latestAttempt =
+      attempts.find((attempt) => Number(attempt?.attemptNo || 0) === highestAttemptNo) ||
+      attempts[attempts.length - 1] ||
+      attempts[0];
 
     if (!latestAttempt) {
       openQuiz(quiz);
@@ -632,7 +655,6 @@ if (role === 'admin') {
       maxAttempts: 2,
       maxAttemptsReached: attempts.length >= 2,
     });
-    showBadgeUnlockPopup(finalResult?.newBadges);
     go('screen-stu-quiz-result');
   }
 
@@ -660,37 +682,63 @@ if (role === 'admin') {
     }
 
     const result = gradeQuizAttempt(quiz, answers, existingAttempts.length + 1);
+    const lessonId = quiz.lessonId || selectedLesson?.id;
 
     let finalResult = {
       ...result,
       maxAttempts: maxQuizAttempts,
       maxAttemptsReached: result.attemptNo >= maxQuizAttempts,
+      backendSaved: false,
+      newBadges: [],
     };
 
-    let backendAttemptsForQuiz = null;
-    let backendWarning = '';
+    const localUpdatedAttempts = appendQuizAttempt(studentId, quizAttempts, quiz.id, finalResult);
+    const localAttemptHistory = localUpdatedAttempts?.[quiz.id] || [];
 
-    const lessonId = quiz.lessonId || selectedLesson?.id;
+    finalResult = {
+      ...finalResult,
+      attemptHistory: localAttemptHistory,
+      maxAttemptsReached: localAttemptHistory.length >= maxQuizAttempts,
+    };
+
+    setQuizAttempts(localUpdatedAttempts);
+    setQuizResult(finalResult);
+    go('screen-stu-quiz-result');
 
     if (lessonId) {
-      try {
-        const data = await api(`/lessons/${lessonId}/quiz-result`, {
-          method: 'POST',
-          body: {
-            quizId: quiz.id,
-            quizTitle: quiz.title,
-            score: result.score,
-            total: result.total,
-            percent: result.percent,
-            attemptNo: result.attemptNo,
-            review: result.review,
-          },
-        });
+      window.setTimeout(() => {
+        notify('Rewards coming in!', 'rewards');
+      }, 250);
+    }
 
+    if (!lessonId) {
+      notify(`Quiz submitted: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%).`);
+      return finalResult;
+    }
+
+    api(`/lessons/${lessonId}/quiz-result`, {
+      method: 'POST',
+      body: {
+        quizId: quiz.id,
+        quizTitle: quiz.title,
+        score: result.score,
+        total: result.total,
+        percent: result.percent,
+        attemptNo: result.attemptNo,
+        review: result.review,
+      },
+    })
+      .then((data) => {
         const saved = data?.quizResult || {};
-        backendAttemptsForQuiz = Array.isArray(data?.quizAttempts) ? data.quizAttempts : null;
+        const backendAttemptsForQuiz = Array.isArray(data?.quizAttempts) ? data.quizAttempts : null;
 
-        finalResult = {
+        const syncedAttempts = backendAttemptsForQuiz
+          ? { ...localUpdatedAttempts, [quiz.id]: backendAttemptsForQuiz }
+          : localUpdatedAttempts;
+
+        const syncedHistory = syncedAttempts?.[quiz.id] || [];
+
+        const syncedResult = {
           ...finalResult,
           attemptNo: Number(saved.attemptNo || finalResult.attemptNo),
           xpAwarded: Number(saved.xpAwarded || 0),
@@ -698,44 +746,33 @@ if (role === 'admin') {
           xpAlreadyAwarded: Boolean(saved.xpAlreadyAwarded),
           backendSaved: true,
           newBadges: data?.newBadges || [],
+          attemptHistory: syncedHistory,
+          maxAttemptsReached: syncedHistory.length >= maxQuizAttempts,
         };
 
-        await loadStudentDashboard();
-      } catch (err) {
-        backendWarning = err.message || 'Quiz saved locally, but backend saving failed.';
-        finalResult = {
-          ...finalResult,
-          xpAwarded: 0,
-          backendSaved: false,
-        };
-      }
-    }
+        setQuizAttempts(syncedAttempts);
+        setQuizResult(syncedResult);
 
-    const updatedAttempts = backendAttemptsForQuiz
-      ? { ...quizAttempts, [quiz.id]: backendAttemptsForQuiz }
-      : appendQuizAttempt(studentId, quizAttempts, quiz.id, finalResult);
-    const attemptHistory = updatedAttempts?.[quiz.id] || [];
+        if (syncedResult.xpAwarded) {
+          notify(`Quiz submitted: ${syncedResult.score}/${syncedResult.total} (${syncedResult.percent}%). +${syncedResult.xpAwarded} XP`);
+        } else if (syncedResult.xpAlreadyAwarded) {
+          notify(`Quiz submitted: ${syncedResult.score}/${syncedResult.total} (${syncedResult.percent}%). Retake saved, no extra XP.`);
+        } else {
+          notify(`Quiz submitted: ${syncedResult.score}/${syncedResult.total} (${syncedResult.percent}%).`);
+        }
 
-    finalResult = {
-      ...finalResult,
-      attemptHistory,
-      maxAttemptsReached: attemptHistory.length >= maxQuizAttempts,
-    };
+        showBadgeUnlockPopup(syncedResult?.newBadges);
 
-    setQuizAttempts(updatedAttempts);
-    setQuizResult(finalResult);
+        loadStudentDashboard().catch((error) => {
+          console.warn('[TuklasTalino] Dashboard refresh after quiz failed:', error);
+        });
+      })
+      .catch((err) => {
+        const message = err?.message || 'Quiz saved locally, but backend saving failed.';
+        console.warn('[TuklasTalino] Quiz backend save failed:', err);
+        notify(`${message} Score: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%).`, 'bad');
+      });
 
-    if (backendWarning) {
-      notify(`${backendWarning} Local score: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%)`, 'bad');
-    } else if (finalResult.xpAwarded) {
-      notify(`Quiz submitted: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%). +${finalResult.xpAwarded} XP`);
-    } else if (finalResult.xpAlreadyAwarded) {
-      notify(`Quiz submitted: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%). Retake saved, no extra XP.`);
-    } else {
-      notify(`Quiz submitted: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%).`);
-    }
-
-    go('screen-stu-quiz-result');
     return finalResult;
   }
 
@@ -1401,7 +1438,51 @@ async function archiveTeacher(id) {
           background: #fffbeb !important;
         }
 
-        @keyframes centerNotifPop {
+        .notif.rewards {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 2px !important;
+          width: fit-content !important;
+          min-width: unset !important;
+          max-width: calc(100vw - 48px) !important;
+          padding: 18px 28px !important;
+          margin: 0 auto !important;
+          white-space: nowrap !important;
+        }
+
+      .notif-reward-dots {
+        display: inline-flex;
+        align-items: flex-end;
+        margin-left: 2px;
+        height: 1em;
+      }
+
+      .notif-reward-dots span {
+        display: inline-block;
+        animation: notifRewardDotBounce 0.9s ease-in-out infinite;
+      }
+
+      .notif-reward-dots span:nth-child(2) {
+        animation-delay: 0.14s;
+      }
+
+      .notif-reward-dots span:nth-child(3) {
+        animation-delay: 0.28s;
+      }
+
+      @keyframes notifRewardDotBounce {
+        0%, 80%, 100% {
+          transform: translateY(0);
+          opacity: 0.45;
+        }
+        40% {
+          transform: translateY(-4px);
+          opacity: 1;
+        }
+      }
+
+      @keyframes centerNotifPop {
           from { opacity: 0; transform: scale(0.92) translateY(12px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
