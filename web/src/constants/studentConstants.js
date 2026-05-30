@@ -87,21 +87,7 @@ export const MISSION_GAMES = [
     tone: 'rose',
     future: true
   },
-  {
-    id: 'badge-challenge',
-    title: 'Badge Challenge',
-    icon: '🏅',
-    module: 'Rewards',
-    xp: 25,
-    baseStatus: 'Locked',
-    short: 'Kumpletuhin ang mini-game streak para maka-unlock ng badge.',
-    instruction: 'Tapusin ang 3 vocabulary or reading games para ma-unlock ang special badge.',
-    sample: '3 games = Bokabularyo Star',
-    reward: 'Bokabularyo Star badge',
-    tone: 'orange',
-    minCompleted: 3
-  }
-];
+  ];
 
 export const EARLY_GROUP_ROLES = [
   { id: 'reader', icon: '📖', label: 'Reader', helper: 'Basahin ang salita o kuwento.' },

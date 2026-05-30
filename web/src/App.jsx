@@ -1576,6 +1576,489 @@ async function archiveTeacher(id) {
         }
       }
 
+      .sound-say-game {
+        display: grid;
+        gap: 18px;
+        margin-top: 10px;
+      }
+
+      .sound-say-hero,
+      .sound-say-target-card,
+      .sound-say-result-card,
+      .sound-say-success,
+      .sound-say-error {
+        border-radius: 30px;
+        border: 3px solid rgba(198, 224, 255, .95);
+        background:
+          radial-gradient(circle at 10% 12%, rgba(255, 231, 150, .52), transparent 28%),
+          linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(239, 247, 255, .96));
+        box-shadow: 0 10px 0 rgba(210, 226, 247, .72), 0 22px 50px rgba(67, 91, 130, .10);
+      }
+
+      .sound-say-hero {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 22px;
+        align-items: center;
+        padding: 24px;
+        overflow: hidden;
+      }
+
+      .sound-say-mic-wrap {
+        position: relative;
+        width: clamp(120px, 14vw, 180px);
+        height: clamp(120px, 14vw, 180px);
+        display: grid;
+        place-items: center;
+      }
+
+      .sound-say-mic {
+        position: relative;
+        z-index: 2;
+        width: 96px;
+        height: 96px;
+        display: grid;
+        place-items: center;
+        border-radius: 32px;
+        background: #FFF7D6;
+        border: 3px solid #FFE28A;
+        font-size: 52px;
+        box-shadow: 0 16px 35px rgba(60, 103, 135, .14);
+        animation: soundSayMicFloat 2.4s ease-in-out infinite;
+      }
+
+      .sound-say-wave {
+        position: absolute;
+        inset: 22px;
+        border-radius: 999px;
+        border: 3px solid rgba(34, 197, 94, .34);
+        opacity: 0;
+      }
+
+      .sound-say-game.speaking .sound-say-wave,
+      .sound-say-game.listening .sound-say-wave {
+        animation: soundSayWave 1.4s ease-out infinite;
+      }
+
+      .sound-say-game .wave-2 {
+        animation-delay: .28s;
+      }
+
+      .sound-say-game .wave-3 {
+        animation-delay: .56s;
+      }
+
+      .sound-say-copy {
+        display: grid;
+        gap: 8px;
+      }
+
+      .sound-say-label {
+        width: fit-content;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: #fff7d6;
+        border: 2px solid #ffe28a;
+        color: #7c5300;
+        font-size: 15px;
+        font-weight: 1000;
+      }
+
+      .sound-say-copy h3 {
+        margin: 0;
+        color: #11894F;
+        font-size: clamp(34px, 5vw, 64px);
+        line-height: 1;
+        font-weight: 1000;
+      }
+
+      .sound-say-copy p {
+        margin: 0;
+        color: #405674;
+        font-size: clamp(17px, 2vw, 23px);
+        font-weight: 900;
+      }
+
+      .sound-say-target-card {
+        display: grid;
+        gap: 8px;
+        padding: 22px;
+        text-align: center;
+      }
+
+      .sound-say-target-card span,
+      .sound-say-result-card span {
+        color: #405674;
+        font-weight: 1000;
+      }
+
+      .sound-say-target-card strong {
+        color: #16233d;
+        font-size: clamp(32px, 5vw, 64px);
+        line-height: 1.1;
+        font-weight: 1000;
+      }
+
+      .sound-say-target-card p {
+        margin: 0;
+        color: #526988;
+        font-size: 18px;
+        font-weight: 850;
+      }
+
+      .sound-say-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(150px, 1fr));
+        gap: 14px;
+      }
+
+      .sound-say-btn {
+        min-height: 72px;
+        border: 0;
+        border-radius: 22px;
+        color: #FFFFFF;
+        font-size: clamp(17px, 2vw, 24px);
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 11px 0 rgba(40, 70, 110, .18), 0 22px 38px rgba(40, 70, 110, .13);
+        transition: transform .18s ease, opacity .18s ease;
+      }
+
+      .sound-say-btn:hover {
+        transform: translateY(-4px);
+      }
+
+      .sound-say-btn:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .sound-say-btn.listen {
+        background: linear-gradient(135deg, #7C3AED, #5B21B6);
+      }
+
+      .sound-say-btn.speak {
+        background: linear-gradient(135deg, #22C55E, #16A34A);
+      }
+
+      .sound-say-btn.reset {
+        background: linear-gradient(135deg, #64748B, #475569);
+      }
+
+      .sound-say-result-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+
+      .sound-say-result-card {
+        display: grid;
+        gap: 8px;
+        padding: 18px;
+      }
+
+      .sound-say-result-card strong {
+        color: #16233d;
+        font-size: clamp(21px, 3vw, 36px);
+        font-weight: 1000;
+      }
+
+      .sound-say-meter {
+        height: 15px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #E8F1FF;
+      }
+
+      .sound-say-meter i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22C55E, #F8DE7E);
+        transition: width .25s ease;
+      }
+
+      .sound-say-result-card small {
+        color: #64748B;
+        font-weight: 850;
+      }
+
+      .sound-say-success {
+        padding: 18px;
+        text-align: center;
+        color: #0B743D;
+        background: #EFFFF5;
+        border-color: #18B865;
+        font-size: clamp(20px, 2.5vw, 30px);
+        font-weight: 1000;
+        animation: soundSaySuccessPop .45s ease-out both;
+      }
+
+      .sound-say-error {
+        padding: 15px 18px;
+        color: #8A3B00;
+        background: #FFF4E5;
+        border-color: #FDBA74;
+        font-weight: 900;
+      }
+
+      .sound-say-toast {
+        position: fixed;
+        left: 50%;
+        top: 46%;
+        z-index: 1200;
+        width: fit-content;
+        max-width: calc(100vw - 48px);
+        padding: 18px 24px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, .98);
+        border: 3px solid #F8DE7E;
+        color: #16233d;
+        font-size: clamp(22px, 3vw, 34px);
+        font-weight: 1000;
+        text-align: center;
+        box-shadow: 0 22px 60px rgba(20, 40, 70, .22);
+        transform: translate(-50%, -50%);
+        animation: letterPopToastCelebrate 1.2s ease-in-out both;
+        pointer-events: none;
+      }
+
+      .sound-say-toast.warn {
+        background: linear-gradient(135deg, #fff8f8, #fff1c9);
+        border-color: #ffb2b2;
+        animation: letterPopToastPop .2s ease-out;
+      }
+
+      @keyframes soundSayMicFloat {
+        0%, 100% { transform: translateY(0) rotate(-1deg); }
+        50% { transform: translateY(-8px) rotate(1deg); }
+      }
+
+      @keyframes soundSayWave {
+        0% {
+          opacity: .65;
+          transform: scale(.82);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(1.55);
+        }
+      }
+
+      @keyframes soundSaySuccessPop {
+        0% { opacity: 0; transform: scale(.96); }
+        100% { opacity: 1; transform: scale(1); }
+      }
+
+      @media (max-width: 760px) {
+        .sound-say-hero,
+        .sound-say-result-grid,
+        .sound-say-actions {
+          grid-template-columns: 1fr;
+        }
+
+        .sound-say-mic-wrap {
+          justify-self: center;
+        }
+      }
+
+
+      .sound-say-game .sound-say-target-card {
+        animation: soundSayTargetFloat 3.2s ease-in-out infinite;
+      }
+
+      .sound-say-game .sound-say-target-card strong {
+        display: inline-block;
+        animation: soundSayTargetTextGlow 2.8s ease-in-out infinite;
+      }
+
+      .sound-say-game .sound-say-result-card {
+        animation: soundSayCardReveal .45s ease-out both;
+      }
+
+      .sound-say-game .sound-say-result-card:nth-child(2) {
+        animation-delay: .08s;
+      }
+
+      .sound-say-game.speaking .sound-say-btn.listen,
+      .sound-say-game.listening .sound-say-btn.speak {
+        animation: soundSayButtonPulse 1s ease-in-out infinite;
+      }
+
+      .sound-say-game.listening .sound-say-mic {
+        animation: soundSayMicListen 1s ease-in-out infinite;
+      }
+
+      .sound-say-game.correct .sound-say-target-card {
+        border-color: #18B865;
+        background: linear-gradient(135deg, #ffffff, #effff5);
+        animation: soundSayCorrectGlow 1.2s ease-in-out infinite;
+      }
+
+      .sound-say-game.correct .sound-say-meter i {
+        animation: soundSayMeterShine 1.15s ease-in-out infinite;
+      }
+
+      @keyframes soundSayTargetFloat {
+        0%, 100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-5px);
+        }
+      }
+
+      @keyframes soundSayTargetTextGlow {
+        0%, 100% {
+          transform: scale(1);
+          text-shadow: 0 0 0 rgba(34, 197, 94, 0);
+        }
+        50% {
+          transform: scale(1.015);
+          text-shadow: 0 8px 24px rgba(34, 197, 94, .14);
+        }
+      }
+
+      @keyframes soundSayCardReveal {
+        from {
+          opacity: 0;
+          transform: translateY(14px) scale(.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes soundSayButtonPulse {
+        0%, 100% {
+          transform: translateY(0) scale(1);
+          filter: brightness(1);
+        }
+        50% {
+          transform: translateY(-4px) scale(1.025);
+          filter: brightness(1.08);
+        }
+      }
+
+      @keyframes soundSayMicListen {
+        0%, 100% {
+          transform: translateY(0) scale(1) rotate(-1deg);
+        }
+        50% {
+          transform: translateY(-9px) scale(1.08) rotate(1deg);
+        }
+      }
+
+      @keyframes soundSayCorrectGlow {
+        0%, 100% {
+          box-shadow: 0 10px 0 rgba(210, 226, 247, .72), 0 22px 50px rgba(67, 91, 130, .10);
+        }
+        50% {
+          box-shadow: 0 10px 0 rgba(24, 184, 101, .22), 0 0 0 8px rgba(24, 184, 101, .12), 0 22px 50px rgba(67, 91, 130, .10);
+        }
+      }
+
+      @keyframes soundSayMeterShine {
+        0%, 100% {
+          filter: brightness(1);
+        }
+        50% {
+          filter: brightness(1.18);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .sound-say-game .sound-say-target-card,
+        .sound-say-game .sound-say-target-card strong,
+        .sound-say-game .sound-say-result-card,
+        .sound-say-game.speaking .sound-say-btn.listen,
+        .sound-say-game.listening .sound-say-btn.speak,
+        .sound-say-game.listening .sound-say-mic,
+        .sound-say-game.correct .sound-say-meter i {
+          animation: none;
+        }
+      }
+
+
+      /* soundSayPastelPolish */
+      .sound-say-game .sound-say-hero {
+        background:
+          radial-gradient(circle at 12% 18%, rgba(255, 229, 153, .55), transparent 28%),
+          radial-gradient(circle at 88% 20%, rgba(186, 230, 253, .72), transparent 34%),
+          linear-gradient(135deg, #FFFDF2, #EFF8FF 52%, #F5F0FF);
+        border-color: rgba(186, 230, 253, .95);
+      }
+
+      .sound-say-game .sound-say-mic {
+        background: linear-gradient(135deg, #FFF4C7, #EDE9FE);
+        border-color: #F8DE7E;
+        box-shadow: 0 16px 35px rgba(124, 58, 237, .13);
+      }
+
+      .sound-say-game .sound-say-label {
+        background: linear-gradient(135deg, #FFF7D6, #E0F2FE);
+        border-color: #F8DE7E;
+        color: #765100;
+      }
+
+      .sound-say-game .sound-say-target-card {
+        background:
+          radial-gradient(circle at 9% 18%, rgba(254, 240, 138, .42), transparent 28%),
+          radial-gradient(circle at 90% 18%, rgba(167, 243, 208, .44), transparent 30%),
+          linear-gradient(135deg, #FFFFFF, #F0F9FF);
+        border-color: rgba(191, 219, 254, .98);
+      }
+
+      .sound-say-game .sound-say-target-card strong {
+        color: #172554;
+      }
+
+      .sound-say-game .sound-say-btn.listen {
+        background: linear-gradient(135deg, #A78BFA, #7C3AED);
+        box-shadow: 0 11px 0 rgba(91, 33, 182, .22), 0 22px 38px rgba(124, 58, 237, .13);
+      }
+
+      .sound-say-game .sound-say-btn.speak {
+        background: linear-gradient(135deg, #6EE7B7, #10B981);
+        box-shadow: 0 11px 0 rgba(5, 150, 105, .22), 0 22px 38px rgba(16, 185, 129, .13);
+      }
+
+      .sound-say-game .sound-say-btn.reset {
+        background: linear-gradient(135deg, #CBD5E1, #64748B);
+        box-shadow: 0 11px 0 rgba(71, 85, 105, .20), 0 22px 38px rgba(100, 116, 139, .12);
+      }
+
+      .sound-say-game .sound-say-result-card:first-child {
+        background:
+          radial-gradient(circle at 10% 12%, rgba(254, 202, 202, .38), transparent 30%),
+          linear-gradient(135deg, #FFFFFF, #FFF7ED);
+        border-color: rgba(253, 186, 116, .72);
+      }
+
+      .sound-say-game .sound-say-result-card:nth-child(2) {
+        background:
+          radial-gradient(circle at 10% 12%, rgba(167, 243, 208, .42), transparent 30%),
+          linear-gradient(135deg, #FFFFFF, #ECFDF5);
+        border-color: rgba(110, 231, 183, .78);
+      }
+
+      .sound-say-game .sound-say-meter {
+        background: #E0F2FE;
+      }
+
+      .sound-say-game .sound-say-meter i {
+        background: linear-gradient(90deg, #38BDF8, #34D399, #F8DE7E);
+      }
+
+      .sound-say-game .sound-say-success {
+        background:
+          radial-gradient(circle at 12% 18%, rgba(187, 247, 208, .55), transparent 34%),
+          linear-gradient(135deg, #FFFFFF, #ECFDF5);
+        border-color: #34D399;
+      }
+
       .story-quest-game {
         display: grid;
         gap: 18px;
@@ -9426,6 +9909,86 @@ function getWordMatchItemsForGrade(gradeLevel = 4) {
   return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
 }
 
+function getSoundAndSayItemsForGrade(gradeLevel = 4) {
+  const earlyItems = [
+    {
+      id: 'g1-bahay',
+      target: 'bahay',
+      hint: 'Pakinggan at ulitin.',
+      level: 'Salita'
+    },
+    {
+      id: 'g1-pusa',
+      target: 'pusa',
+      hint: 'Bigkasin nang malinaw.',
+      level: 'Salita'
+    },
+    {
+      id: 'g1-magandang-umaga',
+      target: 'magandang umaga',
+      hint: 'Sabihin nang magalang.',
+      level: 'Dalawang Salita'
+    },
+    {
+      id: 'g2-salamat-po',
+      target: 'salamat po',
+      hint: 'Ulitin nang malinaw.',
+      level: 'Magalang na Salita'
+    },
+    {
+      id: 'g2-maliit-na-aso',
+      target: 'maliit na aso',
+      hint: 'Pakinggan muna.',
+      level: 'Maikling Parirala'
+    }
+  ];
+
+  const upperItems = [
+    {
+      id: 'g3-paaralan',
+      target: 'paaralan',
+      hint: 'Bigkasin ang buong salita.',
+      level: 'Bokabularyo'
+    },
+    {
+      id: 'g3-masayang-mag-aaral',
+      target: 'masayang mag-aaral',
+      hint: 'Ulitin ang parirala.',
+      level: 'Parirala'
+    },
+    {
+      id: 'g4-nagbabasa-sa-aklatan',
+      target: 'nagbabasa sa aklatan',
+      hint: 'Bigkasin nang tuloy-tuloy.',
+      level: 'Oral Practice'
+    },
+    {
+      id: 'g5-kalikasan-pangalagaan',
+      target: 'ang kalikasan ay pangalagaan',
+      hint: 'Linawin ang bawat salita.',
+      level: 'Pangungusap'
+    },
+    {
+      id: 'g6-bayanihan',
+      target: 'bayanihan ang diwa ng pagtutulungan',
+      hint: 'Bigkasin nang may diin.',
+      level: 'Oral Communication'
+    },
+    {
+      id: 'g6-responsableng-mamamayan',
+      target: 'responsableng mamamayan',
+      hint: 'Dahan-dahan at malinaw.',
+      level: 'Mahirap na Salita'
+    }
+  ];
+
+  return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
+}
+
+function getSoundAndSayAttemptItems(gradeLevel = 4) {
+  return shuffleWordMatchItems(getSoundAndSayItemsForGrade(gradeLevel));
+}
+
 function getStoryQuestItemsForGrade(gradeLevel = 4) {
   const earlyItems = [
     {
@@ -10586,15 +11149,6 @@ function StudentMissions({ data, go, onPlayMission }) {
           </div>
         </section>
 
-        <section className="missions-badge-card">
-          <h3>🏅 Badge Preview</h3>
-          <p>Keep playing learning games to unlock more rewards and stay motivated.</p>
-          <div className="missions-badge-preview-row">
-            <div className="missions-badge-preview"><div><span>🔤</span>Bokabularyo Star</div></div>
-            <div className="missions-badge-preview"><div><span>📖</span>Pagbasa Hero</div></div>
-            <div className="missions-badge-preview"><div><span>🎙️</span>Oral Champ</div></div>
-          </div>
-        </section>
       </div>
     </>
   );
@@ -10658,6 +11212,15 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const [storyQuestToast, setStoryQuestToast] = useState(null);
   const [storyQuestComplete, setStoryQuestComplete] = useState(false);
   const [storyQuestCompleteModal, setStoryQuestCompleteModal] = useState(false);
+  const [soundAndSayItems, setSoundAndSayItems] = useState([]);
+  const [soundAndSayItem, setSoundAndSayItem] = useState(null);
+  const [soundAndSayTranscript, setSoundAndSayTranscript] = useState('');
+  const [soundAndSayScore, setSoundAndSayScore] = useState(null);
+  const [soundAndSayListening, setSoundAndSayListening] = useState(false);
+  const [soundAndSaySpeaking, setSoundAndSaySpeaking] = useState(false);
+  const [soundAndSayCorrect, setSoundAndSayCorrect] = useState(false);
+  const [soundAndSayError, setSoundAndSayError] = useState('');
+  const [soundAndSayToast, setSoundAndSayToast] = useState(null);
   const [selectedWordId, setSelectedWordId] = useState('');
   const [matchedPairs, setMatchedPairs] = useState({});
   const [wordMatchWrongWordId, setWordMatchWrongWordId] = useState('');
@@ -10694,6 +11257,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const isPictureGuess = selectedGame?.id === 'picture-guess';
   const isSentenceBuilder = selectedGame?.id === 'sentence-builder';
   const isStoryQuest = selectedGame?.id === 'story-quest';
+  const isSoundAndSay = selectedGame?.id === 'sound-and-say';
   const fallbackLetterPopItems = getLetterPopAttemptItems(gradeLevel);
   const activeLetterPopItems = letterPopItems.length ? letterPopItems : fallbackLetterPopItems;
   const fallbackPictureGuessItems = getPictureGuessAttemptItems(gradeLevel);
@@ -10702,6 +11266,8 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const activeSentenceBuilderItems = sentenceBuilderItems.length ? sentenceBuilderItems : fallbackSentenceBuilderItems;
   const fallbackStoryQuestItems = getStoryQuestAttemptItems(gradeLevel);
   const activeStoryQuestItems = storyQuestItems.length ? storyQuestItems : fallbackStoryQuestItems;
+  const fallbackSoundAndSayItems = getSoundAndSayAttemptItems(gradeLevel);
+  const activeSoundAndSayItems = soundAndSayItems.length ? soundAndSayItems : fallbackSoundAndSayItems;
   const demo = isLetterPop
     ? (letterPopItem || activeLetterPopItems[0] || baseDemo)
     : isPictureGuess
@@ -10710,7 +11276,9 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
         ? (sentenceBuilderItem || activeSentenceBuilderItems[0] || baseDemo)
         : isStoryQuest
           ? (storyQuestItem || activeStoryQuestItems[0] || baseDemo)
-          : baseDemo;
+          : isSoundAndSay
+            ? (soundAndSayItem || activeSoundAndSayItems[0] || baseDemo)
+            : baseDemo;
   const fallbackWordMatchItems = getWordMatchAttemptItems(gradeLevel);
   const activeWordMatchItems = wordMatchItems.length ? wordMatchItems : fallbackWordMatchItems;
   const visibleWordMatchPictures = wordMatchPictures.length ? wordMatchPictures : activeWordMatchItems;
@@ -10732,6 +11300,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const storyQuestSafePageIndex = Math.min(storyQuestPageIndex, storyQuestPageTotal - 1);
   const storyQuestPageText = storyQuestStoryLines[storyQuestSafePageIndex] || '';
   const storyQuestCanStartQuestions = early || storyQuestSafePageIndex >= storyQuestPageTotal - 1;
+  const soundAndSayTarget = String(demo?.target || demo?.prompt || 'Magandang umaga po').replace(/^Bigkasin:\s*/i, '').replace(/[“”"]/g, '').trim();
+  const soundAndSayThreshold = early ? 70 : 78;
+  const soundAndSayScoreValue = Number(soundAndSayScore || 0);
+  const soundAndSayPassed = soundAndSayScore !== null && soundAndSayScoreValue >= soundAndSayThreshold;
   const letterPopReady = isLetterPop && missionChoice === demo?.correct && letterPopStage === 'correct';
 
   useEffect(() => {
@@ -10740,6 +11312,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     const nextPictureGuessItems = getPictureGuessAttemptItems(gradeLevel);
     const nextSentenceBuilderItems = getSentenceBuilderAttemptItems(gradeLevel);
     const nextStoryQuestItems = getStoryQuestAttemptItems(gradeLevel);
+    const nextSoundAndSayItems = getSoundAndSayAttemptItems(gradeLevel);
 
     setMissionChoice('');
     setMissionResult('');
@@ -10778,6 +11351,15 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setStoryQuestCompleteModal(false);
     storyQuestAutoCompleteRef.current = false;
     storyQuestToastStartedAtRef.current = 0;
+    setSoundAndSayItems(nextSoundAndSayItems);
+    setSoundAndSayItem(nextSoundAndSayItems[0] || null);
+    setSoundAndSayTranscript('');
+    setSoundAndSayScore(null);
+    setSoundAndSayListening(false);
+    setSoundAndSaySpeaking(false);
+    setSoundAndSayCorrect(false);
+    setSoundAndSayError('');
+    setSoundAndSayToast(null);
     setSelectedWordId('');
     setMatchedPairs({});
     setWordMatchWrongWordId('');
@@ -10840,6 +11422,16 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
     return () => clearTimeout(timer);
   }, [storyQuestToast]);
+
+  useEffect(() => {
+    if (!soundAndSayToast) return undefined;
+
+    const timer = setTimeout(() => {
+      setSoundAndSayToast(null);
+    }, soundAndSayToast.type === 'good' ? 1300 : 1600);
+
+    return () => clearTimeout(timer);
+  }, [soundAndSayToast]);
 
   const openTab = (tab) => {
     if (tab === 'home') return go('screen-student');
@@ -11002,6 +11594,12 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       nextStoryQuestItems.find(item => item.id !== currentStoryQuestId) ||
       nextStoryQuestItems[0] ||
       null;
+    const nextSoundAndSayItems = getSoundAndSayAttemptItems(gradeLevel);
+    const currentSoundAndSayId = soundAndSayItem?.id || '';
+    const nextSoundAndSayItem =
+      nextSoundAndSayItems.find(item => item.id !== currentSoundAndSayId) ||
+      nextSoundAndSayItems[0] ||
+      null;
 
     setMissionChoice('');
     setMissionResult('');
@@ -11035,6 +11633,15 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setStoryQuestCompleteModal(false);
     storyQuestAutoCompleteRef.current = false;
     storyQuestToastStartedAtRef.current = 0;
+    setSoundAndSayItems(nextSoundAndSayItems);
+    setSoundAndSayItem(nextSoundAndSayItem);
+    setSoundAndSayTranscript('');
+    setSoundAndSayScore(null);
+    setSoundAndSayListening(false);
+    setSoundAndSaySpeaking(false);
+    setSoundAndSayCorrect(false);
+    setSoundAndSayError('');
+    setSoundAndSayToast(null);
     setSelectedWordId('');
     setMatchedPairs({});
     setWordMatchWrongWordId('');
@@ -11047,6 +11654,108 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setMissionCompleteData(null);
     setWordMatchPictures(shuffleWordMatchItems(nextItems));
   };
+
+  function speakSoundAndSayTarget() {
+    try {
+      if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+        setSoundAndSayError('Hindi supported ng browser ang text-to-speech.');
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      const utterance = new window.SpeechSynthesisUtterance(soundAndSayTarget);
+      utterance.lang = 'fil-PH';
+      utterance.rate = early ? 0.82 : 0.9;
+      utterance.pitch = 1.05;
+
+      utterance.onstart = () => {
+        setSoundAndSaySpeaking(true);
+        setSoundAndSayError('');
+        setSoundAndSayToast({ type: 'info', message: 'Pakinggan muna ang salita.' });
+      };
+
+      utterance.onend = () => {
+        setSoundAndSaySpeaking(false);
+      };
+
+      utterance.onerror = () => {
+        setSoundAndSaySpeaking(false);
+        setSoundAndSayError('Hindi ma-play ang boses. Subukan muli.');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch (_) {
+      setSoundAndSaySpeaking(false);
+      setSoundAndSayError('Hindi ma-play ang boses. Subukan muli.');
+    }
+  }
+
+  function startSoundAndSayRecognition() {
+    const Recognition = getSpeechRecognition();
+
+    if (!Recognition) {
+      setSoundAndSayError('Hindi supported ng browser ang speech recognition. Subukan sa Chrome o Edge.');
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = 'fil-PH';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setSoundAndSayError('');
+    setSoundAndSayTranscript('');
+    setSoundAndSayScore(null);
+    setSoundAndSayCorrect(false);
+    setSoundAndSayListening(true);
+    setSoundAndSayToast({ type: 'info', message: 'Nakikinig ako. Bigkasin mo ngayon!' });
+
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || '';
+      const score = speechSimilarityScore(soundAndSayTarget, transcript);
+      const passed = score >= soundAndSayThreshold;
+
+      setSoundAndSayTranscript(transcript);
+      setSoundAndSayScore(score);
+      setSoundAndSayCorrect(passed);
+      setSoundAndSayListening(false);
+
+      if (passed) {
+        setSoundAndSayToast({ type: 'good', message: 'Tama ang bigkas!' });
+        playLetterPopSound('good');
+      } else {
+        setSoundAndSayToast({ type: 'warn', message: 'Subukan muli. Pakinggan ulit ang salita.' });
+        playLetterPopSound('wrong');
+      }
+    };
+
+    recognition.onerror = (event) => {
+      setSoundAndSayError(`Speech recognition error: ${event.error}`);
+      setSoundAndSayListening(false);
+      setSoundAndSayToast({ type: 'warn', message: 'Hindi malinaw ang narinig. Subukan muli.' });
+    };
+
+    recognition.onend = () => {
+      setSoundAndSayListening(false);
+    };
+
+    recognition.start();
+  }
+
+  function resetSoundAndSayPractice() {
+    setSoundAndSayTranscript('');
+    setSoundAndSayScore(null);
+    setSoundAndSayListening(false);
+    setSoundAndSaySpeaking(false);
+    setSoundAndSayCorrect(false);
+    setSoundAndSayError('');
+    setSoundAndSayToast(null);
+
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }
 
   const completeStoryQuestMission = async ({ force = false, challenge = demo } = {}) => {
     const activeChallenge = challenge || demo;
@@ -11489,7 +12198,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       <div className={`missions-wrap ${early ? 'early' : 'standard'}`}>
         <section className="mission-play-shell">
           <div className="mission-play-card">
-            {!isSentenceBuilder && (
+            {!(isSentenceBuilder || isSoundAndSay) && (
             <div className="mission-play-head">
               <div className="mission-play-icon">{selectedGame?.icon || '🎮'}</div>
               <div>
@@ -11689,6 +12398,77 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                             </button>
                           </div>
                         </div>
+                      </div>
+                    )}
+                  </div>
+                ) : isSoundAndSay ? (
+                  <div className={`sound-say-game ${early ? 'early' : 'standard'} ${soundAndSayListening ? 'listening' : ''} ${soundAndSaySpeaking ? 'speaking' : ''} ${soundAndSayCorrect ? 'correct' : ''}`}>
+                    <div className="sound-say-hero">
+                      <div className="sound-say-mic-wrap">
+                        <div className="sound-say-mic">🎙️</div>
+                        <div className="sound-say-wave wave-1" />
+                        <div className="sound-say-wave wave-2" />
+                        <div className="sound-say-wave wave-3" />
+                      </div>
+
+                      <div className="sound-say-copy">
+                        <span className="sound-say-label">{demo?.level || 'Oral Practice'}</span>
+                        <h3>Pakinggan at Bigkasin</h3>
+                        <p>🔊 Pakinggan, tapos bigkasin.</p>
+                      </div>
+                    </div>
+
+                    {soundAndSayToast && (
+                      <div className={`sound-say-toast ${soundAndSayToast.type || 'info'}`} role="status">
+                        {soundAndSayToast.message}
+                      </div>
+                    )}
+
+                    <div className="sound-say-target-card">
+                      <span>{early ? 'Bibigkasin:' : 'Target phrase:'}</span>
+                      <strong>{soundAndSayTarget}</strong>
+                      <p>{demo?.hint || 'Basahin nang malinaw at malakas.'}</p>
+                    </div>
+
+                    <div className="sound-say-actions">
+                      <button type="button" className="sound-say-btn listen" onClick={speakSoundAndSayTarget} disabled={soundAndSaySpeaking || soundAndSayListening}>
+                        {soundAndSaySpeaking ? '🔊 Pinapatugtog...' : '🔊 Pakinggan'}
+                      </button>
+
+                      <button type="button" className="sound-say-btn speak" onClick={startSoundAndSayRecognition} disabled={soundAndSayListening || soundAndSaySpeaking}>
+                        {soundAndSayListening ? '🎙️ Nakikinig...' : '🎙️ Magsalita'}
+                      </button>
+
+                      <button type="button" className="sound-say-btn reset" onClick={resetSoundAndSayPractice}>
+                        ↺ Ulitin
+                      </button>
+                    </div>
+
+                    <div className="sound-say-result-grid">
+                      <div className="sound-say-result-card">
+                        <span>Narinig ko:</span>
+                        <strong>{soundAndSayTranscript || '____'}</strong>
+                      </div>
+
+                      <div className="sound-say-result-card">
+                        <span>Bigkas Score</span>
+                        <strong>{soundAndSayScore === null ? '--' : `${soundAndSayScore}%`}</strong>
+                        <div className="sound-say-meter">
+                          <i style={{ width: `${Math.max(0, Math.min(100, soundAndSayScoreValue))}%` }} />
+                        </div>
+                        <small>Goal: {soundAndSayThreshold}% pataas</small>
+                      </div>
+                    </div>
+
+                    {soundAndSayError && (
+                      <div className="sound-say-error">
+                        {soundAndSayError}
+                      </div>
+                    )}
+
+                    {soundAndSayCorrect && (
+                      <div className="sound-say-success">
+                        🌟 Mahusay! Malinaw ang iyong bigkas.
                       </div>
                     )}
                   </div>
@@ -12062,7 +12842,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                     <button type="button" className="mission-play-action purple" onClick={completeWordMatchMission} disabled={!wordMatchComplete || missionSaving}>
                       {missionSaving ? 'Saving...' : '✅ Complete Mission'}
                     </button>
-                  ) : (isLetterPop || isPictureGuess || isSentenceBuilder || isStoryQuest) ? null : (
+                  ) : (isLetterPop || isPictureGuess || isSentenceBuilder || isStoryQuest || isSoundAndSay) ? null : (
                     <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
                       📖 Go to Lessons
                     </button>
