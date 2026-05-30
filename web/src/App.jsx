@@ -4988,6 +4988,593 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         /* === End Grade 1-2 Bottom Nav Smooth Hover === */
 
 
+
+
+        /* g12LessonsCardPolish */
+        .g12-card-grid {
+          gap: 24px;
+        }
+
+        .g12-card-grid .g12-tile {
+          position: relative;
+          display: grid;
+          grid-template-columns: 116px minmax(0, 1fr) 66px;
+          align-items: center;
+          gap: 22px;
+          min-height: 188px;
+          padding: 28px;
+          overflow: hidden;
+          isolation: isolate;
+          transform-origin: center;
+          animation: g12LessonCardFloat 5s ease-in-out infinite;
+        }
+
+        .g12-card-grid .g12-tile:nth-child(2n) {
+          animation-delay: .42s;
+        }
+
+        .g12-card-grid .g12-tile:nth-child(3n) {
+          animation-delay: .84s;
+        }
+
+        .g12-card-grid .g12-tile::before {
+          content: '';
+          position: absolute;
+          width: 180px;
+          height: 180px;
+          right: -64px;
+          top: -72px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, .35);
+          z-index: -1;
+        }
+
+        .g12-card-grid .g12-tile::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          transform: translateX(-120%) skewX(-18deg);
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .34), transparent);
+          pointer-events: none;
+        }
+
+        .g12-card-grid .g12-tile:hover {
+          transform: translateY(-7px) scale(1.01);
+          box-shadow: 0 20px 46px rgba(52, 76, 112, .16);
+        }
+
+        .g12-card-grid .g12-tile:hover::after {
+          animation: g12LessonCardShine .85s ease-out;
+        }
+
+        .g12-card-grid .g12-tile:hover .g12-tile-icon {
+          animation: g12LessonIconWiggle .72s ease-in-out;
+        }
+
+        .g12-card-grid .g12-tile-icon {
+          width: 96px;
+          height: 96px;
+          display: grid;
+          place-items: center;
+          border-radius: 30px;
+          background: rgba(255, 255, 255, .72);
+          border: 3px solid rgba(255, 255, 255, .86);
+          font-size: 48px;
+          box-shadow: 0 16px 34px rgba(55, 75, 105, .12);
+        }
+
+        .g12-lesson-tile-body {
+          display: grid;
+          gap: 9px;
+          min-width: 0;
+          text-align: left;
+        }
+
+        .g12-lesson-tile-body h3 {
+          margin: 0;
+          font-size: clamp(28px, 2.6vw, 38px);
+          line-height: 1.02;
+          letter-spacing: -0.025em;
+        }
+
+        .g12-lesson-tile-body p {
+          width: fit-content;
+          margin: 0;
+          padding: 7px 12px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, .72);
+          border: 2px solid rgba(255, 255, 255, .9);
+          color: #38526B;
+          font-size: 15px;
+          font-weight: 1000;
+        }
+
+        .g12-card-grid .g12-tile .g12-arrow {
+          animation: g12LessonArrowBounce 1.8s ease-in-out infinite;
+        }
+
+        @keyframes g12LessonCardFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+
+        @keyframes g12LessonCardShine {
+          from { transform: translateX(-120%) skewX(-18deg); }
+          to { transform: translateX(135%) skewX(-18deg); }
+        }
+
+        @keyframes g12LessonIconWiggle {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          25% { transform: rotate(-5deg) scale(1.05); }
+          50% { transform: rotate(5deg) scale(1.07); }
+          75% { transform: rotate(-3deg) scale(1.04); }
+        }
+
+        @keyframes g12LessonArrowBounce {
+          0%, 100% { transform: translateX(-24px); }
+          50% { transform: translateX(-18px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .g12-card-grid .g12-tile,
+          .g12-card-grid .g12-tile .g12-arrow {
+            animation: none;
+          }
+        }
+
+        /* g12LessonTitleForceSize */
+        .g12-card-grid .g12-tile .g12-lesson-tile-body > h3 {
+          font-size: clamp(28px, 2.6vw, 38px) !important;
+          line-height: 1.02 !important;
+          letter-spacing: -0.025em !important;
+          font-weight: 1000 !important;
+        }
+
+        .g12-card-grid .g12-tile .g12-lesson-tile-body {
+          gap: 9px !important;
+        }
+
+        /* === End Grade 1-2 Lessons Card Polish === */
+
+
+
+
+        /* g12TopXpAnimationPolish */
+        .g12-top-xp-pill {
+          position: relative;
+          overflow: hidden;
+          isolation: isolate;
+          animation: g12TopXpPulse 2.3s ease-in-out infinite;
+          box-shadow:
+            0 8px 0 rgba(246, 196, 83, .28),
+            0 16px 28px rgba(245, 158, 11, .10);
+        }
+
+        .g12-top-xp-pill::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          transform: translateX(-120%) skewX(-18deg);
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .72), transparent);
+          animation: g12TopXpShine 2.8s ease-in-out infinite;
+          z-index: -1;
+        }
+
+        .g12-top-xp-bolt {
+          display: inline-block;
+          transform-origin: center;
+          animation: g12TopXpBoltBounce 1.15s ease-in-out infinite;
+          filter: drop-shadow(0 4px 8px rgba(245, 158, 11, .22));
+        }
+
+        .g12-top-xp-pill:hover {
+          transform: translateY(-3px) scale(1.03);
+          filter: saturate(1.08);
+        }
+
+        @keyframes g12TopXpPulse {
+          0%, 100% {
+            box-shadow:
+              0 8px 0 rgba(246, 196, 83, .28),
+              0 16px 28px rgba(245, 158, 11, .10);
+          }
+          50% {
+            box-shadow:
+              0 8px 0 rgba(246, 196, 83, .34),
+              0 0 0 7px rgba(248, 222, 126, .16),
+              0 16px 28px rgba(245, 158, 11, .12);
+          }
+        }
+
+        @keyframes g12TopXpShine {
+          0%, 55% {
+            transform: translateX(-120%) skewX(-18deg);
+          }
+          100% {
+            transform: translateX(130%) skewX(-18deg);
+          }
+        }
+
+        @keyframes g12TopXpBoltBounce {
+          0%, 100% {
+            transform: translateY(0) rotate(0deg) scale(1);
+          }
+          45% {
+            transform: translateY(-3px) rotate(-8deg) scale(1.14);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .g12-top-xp-pill,
+          .g12-top-xp-pill::after,
+          .g12-top-xp-bolt {
+            animation: none;
+          }
+        }
+
+        /* g12TopXpSizeBalance */
+        .g12-top-xp-pill {
+          min-height: 54px !important;
+          padding: 0 20px !important;
+          border-radius: 22px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          gap: 7px !important;
+          font-size: clamp(17px, 1.35vw, 21px) !important;
+          font-weight: 1000 !important;
+          letter-spacing: -0.01em !important;
+        }
+
+        .g12-top-xp-bolt {
+          font-size: clamp(19px, 1.45vw, 23px) !important;
+          line-height: 1 !important;
+        }
+
+        @media (max-width: 760px) {
+          .g12-top-xp-pill {
+            min-height: 50px !important;
+            padding: 0 16px !important;
+            font-size: 17px !important;
+          }
+
+          .g12-top-xp-bolt {
+            font-size: 19px !important;
+          }
+        }
+        /* === End Grade 1-2 Top XP Size Balance === */
+
+        /* === End Grade 1-2 Top XP Animation Polish === */
+
+
+        /* g12HomeHeroAnimationPolish */
+        .g12-hero {
+          background-size: 130% 130%, 120% 120%, 100% 100%;
+          animation: g12HeroSoftGlow 8s ease-in-out infinite;
+        }
+
+        .g12-hero-img {
+          animation: g12HeroKidsFloat 4.8s ease-in-out infinite;
+          transform-origin: center bottom;
+        }
+
+        .g12-star {
+          animation: g12HeroStarTwinkle 2.6s ease-in-out infinite;
+        }
+
+        .g12-star.two {
+          animation-delay: .45s;
+        }
+
+        .g12-star.three {
+          animation-delay: .9s;
+        }
+
+        .g12-home-avatar-badge {
+          animation: g12HeroAvatarBounce 3.8s ease-in-out infinite;
+        }
+
+        .g12-home-greeting-row h1 {
+          animation: g12HeroGreetingLift 4.5s ease-in-out infinite;
+          transform-origin: left center;
+        }
+
+        .g12-progress-coin {
+          animation: g12HeroCoinBounce 1.9s ease-in-out infinite;
+        }
+
+        .g12-progress-fill {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .g12-progress-fill::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          transform: translateX(-120%);
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .7), transparent);
+          animation: g12HeroProgressShine 2.8s ease-in-out infinite;
+        }
+
+        .g12-progress-card {
+          animation: g12HeroProgressFloat 5.2s ease-in-out infinite;
+        }
+
+        @keyframes g12HeroSoftGlow {
+          0%, 100% {
+            background-position: 0% 50%, 100% 50%, center;
+          }
+          50% {
+            background-position: 18% 42%, 82% 58%, center;
+          }
+        }
+
+        @keyframes g12HeroKidsFloat {
+          0%, 100% {
+            transform: translateY(22px) scale(1);
+            filter: drop-shadow(0 18px 24px rgba(50, 80, 70, 0.12));
+          }
+          50% {
+            transform: translateY(12px) scale(1.015);
+            filter: drop-shadow(0 24px 30px rgba(50, 80, 70, 0.16));
+          }
+        }
+
+        @keyframes g12HeroStarTwinkle {
+          0%, 100% {
+            transform: translateY(0) rotate(0deg) scale(1);
+            opacity: .82;
+          }
+          50% {
+            transform: translateY(-6px) rotate(8deg) scale(1.12);
+            opacity: 1;
+          }
+        }
+
+        @keyframes g12HeroAvatarBounce {
+          0%, 100% {
+            transform: translateY(0) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-4px) rotate(-2deg);
+          }
+        }
+
+        @keyframes g12HeroGreetingLift {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-3px);
+          }
+        }
+
+        @keyframes g12HeroCoinBounce {
+          0%, 100% {
+            transform: translateY(0) rotate(0deg) scale(1);
+          }
+          50% {
+            transform: translateY(-5px) rotate(-8deg) scale(1.08);
+          }
+        }
+
+        @keyframes g12HeroProgressShine {
+          0%, 55% {
+            transform: translateX(-120%);
+          }
+          100% {
+            transform: translateX(120%);
+          }
+        }
+
+        @keyframes g12HeroProgressFloat {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-4px);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .g12-hero,
+          .g12-hero-img,
+          .g12-star,
+          .g12-home-avatar-badge,
+          .g12-home-greeting-row h1,
+          .g12-progress-coin,
+          .g12-progress-fill::after,
+          .g12-progress-card {
+            animation: none;
+          }
+        }
+        /* === End Grade 1-2 Home Hero Animation Polish === */
+
+
+        /* g12LearningWorldCardsPolish */
+        .g12-subject-grid {
+          gap: 22px;
+        }
+
+        .g12-subject-card {
+          position: relative;
+          display: grid;
+          grid-template-columns: 122px minmax(0, 1fr) 64px;
+          align-items: center;
+          gap: 22px;
+          min-height: 188px;
+          padding: 28px;
+          overflow: hidden;
+          isolation: isolate;
+          transform-origin: center;
+          animation: g12WorldCardFloat 5.2s ease-in-out infinite;
+        }
+
+        .g12-subject-card:nth-child(2n) {
+          animation-delay: .45s;
+        }
+
+        .g12-subject-card:nth-child(3n) {
+          animation-delay: .9s;
+        }
+
+        .g12-subject-card::before {
+          content: '';
+          position: absolute;
+          width: 190px;
+          height: 190px;
+          right: -70px;
+          top: -78px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, .38);
+          z-index: -1;
+        }
+
+        .g12-subject-card::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          transform: translateX(-120%) skewX(-18deg);
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .34), transparent);
+          pointer-events: none;
+        }
+
+        .g12-subject-card:hover {
+          transform: translateY(-7px) scale(1.01);
+          box-shadow: 0 20px 46px rgba(52, 76, 112, .16);
+        }
+
+        .g12-subject-card:hover::after {
+          animation: g12WorldCardShine .85s ease-out;
+        }
+
+        .g12-subject-card:hover .g12-subject-illustration {
+          animation: g12WorldIconWiggle .72s ease-in-out;
+        }
+
+        .g12-subject-illustration {
+          width: 98px;
+          height: 98px;
+          display: grid;
+          place-items: center;
+          border-radius: 30px;
+          background: rgba(255, 255, 255, .72);
+          border: 3px solid rgba(255, 255, 255, .85);
+          font-size: 48px;
+          box-shadow: 0 16px 34px rgba(55, 75, 105, .12);
+        }
+
+        .g12-subject-body {
+          display: grid;
+          gap: 8px;
+          min-width: 0;
+          text-align: left;
+        }
+
+        .g12-subject-chip {
+          width: fit-content;
+          padding: 7px 12px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, .72);
+          border: 2px solid rgba(255, 255, 255, .9);
+          color: #38526B;
+          font-size: 13px;
+          font-weight: 1000;
+        }
+
+        .g12-subject-body h3 {
+          margin: 0;
+          font-size: clamp(28px, 3vw, 42px);
+          line-height: 1;
+        }
+
+        .g12-subject-body p {
+          margin: 0;
+          color: #526988;
+          font-size: 16px;
+          font-weight: 900;
+        }
+
+        .g12-module-progress {
+          height: 15px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, .68);
+          border: 2px solid rgba(255, 255, 255, .9);
+          overflow: hidden;
+          box-shadow: inset 0 1px 4px rgba(60, 80, 110, .08);
+        }
+
+        .g12-module-progress span {
+          position: relative;
+          display: block;
+          height: 100%;
+          min-width: 6px;
+          border-radius: inherit;
+          overflow: hidden;
+          background: linear-gradient(90deg, #34D399, #A7F3D0, #F8DE7E);
+        }
+
+        .g12-module-progress span::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          transform: translateX(-100%);
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .65), transparent);
+          animation: g12ProgressShine 2.8s ease-in-out infinite;
+        }
+
+        .g12-card-arrow {
+          width: 56px;
+          height: 56px;
+          display: grid;
+          place-items: center;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, .76);
+          color: #0B934C;
+          font-size: 42px;
+          font-weight: 1000;
+          box-shadow: 0 12px 26px rgba(55, 75, 105, .12);
+          animation: g12ArrowBounce 1.8s ease-in-out infinite;
+        }
+
+        @keyframes g12WorldCardFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+
+        @keyframes g12WorldCardShine {
+          from { transform: translateX(-120%) skewX(-18deg); }
+          to { transform: translateX(135%) skewX(-18deg); }
+        }
+
+        @keyframes g12WorldIconWiggle {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          25% { transform: rotate(-5deg) scale(1.05); }
+          50% { transform: rotate(5deg) scale(1.07); }
+          75% { transform: rotate(-3deg) scale(1.04); }
+        }
+
+        @keyframes g12ArrowBounce {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(5px); }
+        }
+
+        @keyframes g12ProgressShine {
+          0%, 55% { transform: translateX(-100%); }
+          100% { transform: translateX(120%); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .g12-subject-card,
+          .g12-card-arrow,
+          .g12-module-progress span::after {
+            animation: none;
+          }
+        }
+        /* === End Grade 1-2 Learning Worlds Card Polish === */
+
+
         /* === Grade 1-2 Home Avatar Badge === */
         .g12-home-greeting-row {
           display: flex;
@@ -5716,12 +6303,20 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
                   onClick={() => openFirstSubjectLesson(item.subj)}
                 >
                   <div className="g12-subject-illustration">{icon}</div>
-                  <div>
+                  <div className="g12-subject-body">
+                    {pct > 0 && (
+                      <span className="g12-subject-chip">{`${pct}% progress`}</span>
+                    )}
                     <h3>{item.subj}</h3>
-                    <p>{item.done || 0}/{item.total || 0} tapos • {desc}</p>
-                    <div className="g12-module-progress"><span style={{ width: `${pct}%` }} /></div>
+                    <p>
+                      <b>{item.done || 0}/{item.total || 0} tapos</b>
+                      {desc ? ` • ${desc}` : ''}
+                    </p>
+                    <div className="g12-module-progress" aria-label={`${item.subj} progress`}>
+                      <span style={{ width: `${pct}%` }} />
+                    </div>
                   </div>
-                  <div className="g12-card-arrow">›</div>
+                  <div className="g12-card-arrow" aria-hidden="true">›</div>
                 </button>
               );
             })}
@@ -6070,7 +6665,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
 
           <div className="g12-top-actions">
             <div className="g12-pill">🌸 Grade {s.gradeLevel || '—'} • {s.section || '—'}</div>
-            <div className="g12-pill">⚡ {s.xp || 0} XP</div>
+            <div className="g12-pill g12-top-xp-pill"><span className="g12-top-xp-bolt">⚡</span> {s.xp || 0} XP</div>
             <button type="button" className="g12-action-btn" onClick={() => goStudentTab('home')}>🏠 Home</button>
           </div>
         </header>
@@ -6152,14 +6747,14 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
             return (
               <button type="button" className={`g12-tile ${tone}`} key={lesson.id} onClick={() => openLesson(lesson)}>
                 <div className="g12-tile-icon">{meta.icon}</div>
-                <div>
+                <div className="g12-lesson-tile-body">
                   <h3>{shortEarlyLessonTitle(lesson)}</h3>
                   <p>⭐ {lesson.xpReward || 0} XP</p>
                   {lesson.completed && (
                     <span className="g12-status-pill">✅ Summary</span>
                   )}
                 </div>
-                <div className="g12-arrow">›</div>
+                <div className="g12-arrow" aria-hidden="true">›</div>
               </button>
             );
           })}
