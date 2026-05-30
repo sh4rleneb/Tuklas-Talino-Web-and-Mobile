@@ -1487,6 +1487,783 @@ async function archiveTeacher(id) {
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
   
+
+      .mission-complete-modal {
+        animation: missionCompleteModalBounce .58s cubic-bezier(.18, .9, .26, 1.28) both;
+      }
+
+      .mission-complete-icon {
+        animation: missionCompleteIconWiggle 1.45s ease-in-out infinite;
+      }
+
+      .mission-complete-modal h3 {
+        animation: missionCompleteTitlePop .72s ease-out both;
+      }
+
+      .mission-complete-xp {
+        animation: missionCompleteXpPulse 1.35s ease-in-out infinite;
+      }
+
+      .mission-complete-btn {
+        transition: transform .18s ease, box-shadow .18s ease;
+      }
+
+      .mission-complete-btn:hover {
+        transform: translateY(-3px) scale(1.03);
+      }
+
+      @keyframes missionCompleteModalBounce {
+        0% {
+          opacity: 0;
+          transform: translateY(28px) scale(.86);
+        }
+        62% {
+          opacity: 1;
+          transform: translateY(-8px) scale(1.04);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes missionCompleteIconWiggle {
+        0%, 100% {
+          transform: rotate(0deg) scale(1);
+        }
+        20% {
+          transform: rotate(-7deg) scale(1.06);
+        }
+        40% {
+          transform: rotate(7deg) scale(1.08);
+        }
+        60% {
+          transform: rotate(-4deg) scale(1.04);
+        }
+        80% {
+          transform: rotate(4deg) scale(1.05);
+        }
+      }
+
+      @keyframes missionCompleteTitlePop {
+        0% {
+          opacity: 0;
+          transform: translateY(10px) scale(.95);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes missionCompleteXpPulse {
+        0%, 100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 rgba(248, 222, 126, 0);
+        }
+        50% {
+          transform: scale(1.035);
+          box-shadow: 0 0 0 8px rgba(248, 222, 126, .18);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .mission-complete-modal,
+        .mission-complete-icon,
+        .mission-complete-modal h3,
+        .mission-complete-xp {
+          animation: none;
+        }
+      }
+
+      .story-quest-game {
+        display: grid;
+        gap: 18px;
+        margin-top: 10px;
+      }
+
+      .story-quest-book-card,
+      .story-quest-question-card,
+      .story-quest-complete-card {
+        border-radius: 30px;
+        border: 3px solid rgba(198, 224, 255, .95);
+        background:
+          radial-gradient(circle at 10% 12%, rgba(255, 231, 150, .52), transparent 28%),
+          linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(239, 247, 255, .96));
+        box-shadow: 0 10px 0 rgba(210, 226, 247, .72), 0 22px 50px rgba(67, 91, 130, .10);
+      }
+
+      .story-quest-book-card {
+        padding: 24px;
+        animation: storyQuestBookFloat 3.4s ease-in-out infinite;
+      }
+
+      .story-quest-book-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .story-quest-badge,
+      .story-quest-pages,
+      .story-quest-question-label {
+        width: fit-content;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: #fff7d6;
+        border: 2px solid #ffe28a;
+        color: #7c5300;
+        font-size: 15px;
+        font-weight: 1000;
+      }
+
+      .story-quest-book-card h3 {
+        margin: 0 0 12px;
+        color: #11894F;
+        font-size: clamp(30px, 4vw, 52px);
+        line-height: 1;
+        font-weight: 1000;
+      }
+
+      .story-quest-story {
+        display: grid;
+        gap: 8px;
+        padding: 18px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, .68);
+        border: 2px dashed rgba(152, 196, 255, .95);
+      }
+
+      .story-quest-story p {
+        margin: 0;
+        color: #16233d;
+        font-size: clamp(20px, 2.5vw, 32px);
+        line-height: 1.35;
+        font-weight: 900;
+      }
+
+
+      .story-quest-book-layout {
+        overflow: hidden;
+        padding: 18px;
+      }
+
+      .story-quest-open-book {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(280px, .95fr) minmax(320px, 1.05fr);
+        gap: 0;
+        overflow: hidden;
+        border-radius: 30px;
+        border: 3px solid rgba(238, 226, 200, .95);
+        background: linear-gradient(90deg, #f3e4c7 0%, #fffaf0 49%, #d6c7ac 50%, #fffaf0 51%, #ffffff 100%);
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5), 0 18px 44px rgba(70, 50, 20, .12);
+      }
+
+      .story-quest-illustration-page,
+      .story-quest-reading-page {
+        min-height: 390px;
+      }
+
+      .story-quest-illustration-page {
+        position: relative;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at 18% 12%, rgba(255, 255, 255, .32), transparent 18%),
+          linear-gradient(135deg, #d8ecff, #f5e3c7);
+        border-right: 2px solid rgba(80, 60, 35, .16);
+      }
+
+      .story-quest-room {
+        position: relative;
+        width: min(360px, 100%);
+        aspect-ratio: 1 / .92;
+        border-radius: 28px;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, .42), transparent 28%),
+          linear-gradient(135deg, #91b8cf, #e9c69f);
+        border: 3px solid rgba(255, 255, 255, .72);
+        box-shadow: 0 20px 48px rgba(30, 50, 75, .18);
+      }
+
+      .story-quest-window {
+        position: absolute;
+        left: 20px;
+        top: 20px;
+        width: 78px;
+        height: 94px;
+        border-radius: 18px;
+        background:
+          linear-gradient(90deg, transparent 47%, rgba(255, 255, 255, .8) 48% 52%, transparent 53%),
+          linear-gradient(180deg, #bde8ff, #f9fbff);
+        border: 5px solid rgba(255, 255, 255, .88);
+        box-shadow: 0 10px 20px rgba(40, 70, 100, .12);
+      }
+
+      .story-quest-shelf {
+        position: absolute;
+        right: 22px;
+        top: 26px;
+        width: 136px;
+        height: 102px;
+        border-radius: 18px;
+        background:
+          linear-gradient(90deg, #806044 0 14%, #eab308 14% 25%, #ef4444 25% 36%, #2563eb 36% 48%, #22c55e 48% 60%, #8b5cf6 60% 72%, #a16207 72% 100%);
+        border: 8px solid #7b5538;
+        box-shadow: inset 0 -10px 0 rgba(70, 40, 20, .18);
+      }
+
+      .story-quest-scene-art {
+        position: absolute;
+        left: 50%;
+        bottom: 28px;
+        transform: translateX(-50%);
+        width: 78%;
+        min-height: 130px;
+        display: grid;
+        place-items: center;
+        border-radius: 34px;
+        background: rgba(255, 255, 255, .48);
+        border: 3px solid rgba(255, 255, 255, .7);
+        font-size: clamp(52px, 7vw, 92px);
+        letter-spacing: 8px;
+        text-align: center;
+        filter: drop-shadow(0 14px 18px rgba(45, 60, 80, .16));
+        animation: storyQuestSceneFloat 3.6s ease-in-out infinite;
+      }
+
+      .story-quest-reading-page {
+        display: grid;
+        align-content: center;
+        gap: 16px;
+        padding: clamp(28px, 4vw, 56px);
+        background:
+          repeating-linear-gradient(0deg, rgba(40, 56, 82, .035) 0 2px, transparent 2px 42px),
+          radial-gradient(circle at 80% 10%, rgba(255, 246, 214, .9), transparent 34%),
+          #fffdf7;
+      }
+
+      .story-quest-reading-page h3 {
+        margin: 0;
+        color: #14223b;
+        font-size: clamp(30px, 4vw, 56px);
+        line-height: 1.05;
+        font-weight: 1000;
+      }
+
+      .story-quest-reading-page .story-quest-story {
+        display: grid;
+        gap: 14px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .story-quest-reading-page .story-quest-story p {
+        margin: 0;
+        color: #16233d;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: clamp(22px, 2.5vw, 34px);
+        line-height: 1.55;
+        font-weight: 700;
+      }
+
+      .story-quest-page-label {
+        width: fit-content;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: #fff7d6;
+        border: 2px solid #ffe28a;
+        color: #7c5300;
+        font-size: 14px;
+        font-weight: 1000;
+      }
+
+      .story-quest-start-btn {
+        justify-self: start;
+        margin-top: 6px;
+        border: 0;
+        border-radius: 22px;
+        padding: 17px 28px;
+        background: linear-gradient(135deg, #7C3AED, #5B21B6);
+        color: #FFFFFF;
+        font-size: 19px;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 10px 0 rgba(58, 29, 122, .32), 0 20px 38px rgba(91, 33, 182, .18);
+        animation: storyQuestStartPulse 1.8s ease-in-out infinite;
+      }
+
+      .story-quest-start-btn:hover {
+        transform: translateY(-3px);
+      }
+
+      @keyframes storyQuestSceneFloat {
+        0%, 100% { transform: translateX(-50%) translateY(0); }
+        50% { transform: translateX(-50%) translateY(-8px); }
+      }
+
+      @keyframes storyQuestStartPulse {
+        0%, 100% {
+          box-shadow: 0 10px 0 rgba(58, 29, 122, .32), 0 20px 38px rgba(91, 33, 182, .18);
+        }
+        50% {
+          box-shadow: 0 10px 0 rgba(58, 29, 122, .32), 0 0 0 8px rgba(124, 58, 237, .12), 0 20px 38px rgba(91, 33, 182, .18);
+        }
+      }
+
+      @media (max-width: 860px) {
+        .story-quest-open-book {
+          grid-template-columns: 1fr;
+        }
+
+        .story-quest-illustration-page,
+        .story-quest-reading-page {
+          min-height: auto;
+        }
+
+        .story-quest-room {
+          max-width: 320px;
+        }
+      }
+
+
+      .story-quest-game.standard .story-quest-reading-page .story-quest-story p {
+        font-size: clamp(18px, 1.75vw, 25px);
+        line-height: 1.58;
+        font-weight: 700;
+      }
+
+      .story-quest-flip-page {
+        animation: storyQuestPageFlip .36s ease-out both;
+        transform-origin: left center;
+      }
+
+      .story-quest-page-controls {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 4px;
+      }
+
+      .story-quest-page-btn {
+        border: 0;
+        border-radius: 18px;
+        padding: 13px 18px;
+        background: linear-gradient(135deg, #64748B, #475569);
+        color: #FFFFFF;
+        font-size: 15px;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 8px 0 rgba(51, 65, 85, .22);
+      }
+
+      .story-quest-page-btn.purple {
+        background: linear-gradient(135deg, #7C3AED, #5B21B6);
+        box-shadow: 0 8px 0 rgba(58, 29, 122, .26);
+      }
+
+      .story-quest-page-btn:disabled {
+        opacity: .48;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .story-quest-page-count {
+        min-width: 58px;
+        text-align: center;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: #fff7d6;
+        border: 2px solid #ffe28a;
+        color: #7c5300;
+        font-weight: 1000;
+      }
+
+      .story-quest-read-hint {
+        margin: 2px 0 0;
+        color: #64748B;
+        font-size: 15px;
+        font-weight: 900;
+      }
+
+      @keyframes storyQuestPageFlip {
+        0% {
+          opacity: 0;
+          transform: perspective(900px) rotateY(-12deg) translateX(12px);
+        }
+        100% {
+          opacity: 1;
+          transform: perspective(900px) rotateY(0deg) translateX(0);
+        }
+      }
+
+      .story-quest-progress-card {
+        display: grid;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, .76);
+        border: 2px solid #DDEBFF;
+      }
+
+      .story-quest-progress-card > div:first-child {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: #38526B;
+        font-weight: 1000;
+      }
+
+      .story-quest-progress-card strong {
+        color: #0B934C;
+      }
+
+      .story-quest-progress-track {
+        height: 14px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #E8F1FF;
+      }
+
+      .story-quest-progress-track i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22C55E, #F8DE7E);
+        transition: width .25s ease;
+      }
+
+      .story-quest-question-card {
+        padding: 22px;
+      }
+
+      .story-quest-question-card h4 {
+        margin: 12px 0 16px;
+        color: #16233d;
+        font-size: clamp(24px, 3vw, 40px);
+        line-height: 1.16;
+        font-weight: 1000;
+      }
+
+      .story-quest-options {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(130px, 1fr));
+        gap: 14px;
+      }
+
+      .story-quest-choice {
+        min-height: 92px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px 18px;
+        border: 3px solid #DDEBFF;
+        border-radius: 24px;
+        background: #FFFFFF;
+        color: #16233d;
+        font-size: clamp(19px, 2.5vw, 30px);
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 12px 0 rgba(50, 74, 112, .12), 0 22px 40px rgba(51, 76, 115, .12);
+        transition: transform .18s ease, border-color .18s ease, background .18s ease;
+      }
+
+      .story-quest-choice:hover {
+        transform: translateY(-4px);
+        border-color: #9BDDB6;
+      }
+
+      .story-quest-choice.wrong {
+        border-color: #FF8A8A;
+        background: #FFF4F4;
+        animation: storyQuestWrongShake .42s ease-in-out;
+      }
+
+      .story-quest-choice-icon {
+        font-size: 1.35em;
+      }
+
+      .story-quest-complete-card {
+        display: grid;
+        justify-items: center;
+        gap: 8px;
+        padding: 26px;
+        text-align: center;
+        background: linear-gradient(135deg, #fffdf2, #eafff2);
+        border-color: #9BE7B7;
+      }
+
+      .story-quest-complete-icon {
+        width: 76px;
+        height: 76px;
+        display: grid;
+        place-items: center;
+        border-radius: 24px;
+        background: #fff7d6;
+        border: 2px solid #ffe28a;
+        font-size: 38px;
+      }
+
+      .story-quest-complete-card h4 {
+        margin: 0;
+        color: #11894F;
+        font-size: clamp(26px, 3vw, 42px);
+        font-weight: 1000;
+      }
+
+      .story-quest-complete-card p {
+        margin: 0;
+        color: #405674;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .story-quest-toast {
+        position: fixed;
+        left: 50%;
+        top: 46%;
+        z-index: 1200;
+        width: fit-content;
+        max-width: calc(100vw - 48px);
+        padding: 18px 24px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, .98);
+        border: 3px solid #F8DE7E;
+        color: #16233d;
+        font-size: clamp(22px, 3vw, 34px);
+        font-weight: 1000;
+        text-align: center;
+        box-shadow: 0 22px 60px rgba(20, 40, 70, .22);
+        transform: translate(-50%, -50%);
+        animation: letterPopToastCelebrate 1.1s ease-in-out both;
+        pointer-events: none;
+      }
+
+      .story-quest-toast.warn {
+        background: linear-gradient(135deg, #fff8f8, #fff1c9);
+        border-color: #ffb2b2;
+        animation: letterPopToastPop .2s ease-out;
+      }
+
+      @keyframes storyQuestBookFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+      }
+
+      @keyframes storyQuestWrongShake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-8px) rotate(-1deg); }
+        40% { transform: translateX(8px) rotate(1deg); }
+        60% { transform: translateX(-5px) rotate(-.5deg); }
+        80% { transform: translateX(5px) rotate(.5deg); }
+      }
+
+      @media (max-width: 760px) {
+        .story-quest-options {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .sentence-builder-game {
+        display: grid;
+        gap: 18px;
+        margin-top: 10px;
+      }
+
+      .sentence-builder-prompt {
+        padding: 22px;
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 10% 12%, rgba(255, 231, 150, .52), transparent 28%),
+          linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(239, 247, 255, .96));
+        border: 3px solid rgba(198, 224, 255, .95);
+        box-shadow: 0 10px 0 rgba(210, 226, 247, .72), 0 22px 50px rgba(67, 91, 130, .10);
+      }
+
+      .sentence-builder-mini-label {
+        width: fit-content;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: #fff7d6;
+        border: 2px solid #ffe28a;
+        color: #7c5300;
+        font-size: 15px;
+        font-weight: 1000;
+      }
+
+      .sentence-builder-prompt h3 {
+        margin: 12px 0 6px;
+        color: #16233d;
+        font-size: clamp(28px, 4vw, 48px);
+        line-height: 1;
+        font-weight: 1000;
+      }
+
+      .sentence-builder-prompt p {
+        margin: 0;
+        color: #405674;
+        font-size: clamp(17px, 2vw, 22px);
+        font-weight: 900;
+      }
+
+      .sentence-builder-tray {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        min-height: 104px;
+        padding: 18px;
+        border-radius: 26px;
+        background: rgba(255, 255, 255, .74);
+        border: 3px dashed rgba(152, 196, 255, .95);
+        box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .35);
+      }
+
+      .sentence-builder-game.wrong .sentence-builder-tray {
+        border-color: #ff9b9b;
+        background: #fff7f7;
+        animation: sentenceBuilderShake .42s ease-in-out;
+      }
+
+      .sentence-builder-game.correct .sentence-builder-tray {
+        border-color: #18B865;
+        background: #EFFFF5;
+        animation: sentenceBuilderCorrectGlow .4s ease-out;
+      }
+
+      .sentence-builder-empty-slot,
+      .sentence-builder-selected-word,
+      .sentence-builder-word-tile {
+        min-height: 64px;
+        border-radius: 20px;
+        padding: 14px 20px;
+        font-size: clamp(20px, 2.8vw, 32px);
+        font-weight: 1000;
+      }
+
+      .sentence-builder-empty-slot {
+        display: inline-grid;
+        place-items: center;
+        min-width: 110px;
+        background: #F8FBFF;
+        border: 2px solid #DDEBFF;
+        color: #8A9BB3;
+      }
+
+      .sentence-builder-selected-word {
+        border: 3px solid #18B865;
+        background: #EFFFF5;
+        color: #0B743D;
+        cursor: pointer;
+        box-shadow: 0 10px 18px rgba(24, 184, 101, .14);
+      }
+
+      .sentence-builder-word-bank {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+
+      .sentence-builder-word-tile {
+        border: 3px solid #DDEBFF;
+        background: #FFFFFF;
+        color: #16233d;
+        cursor: pointer;
+        box-shadow: 0 10px 0 rgba(50, 74, 112, .12), 0 20px 36px rgba(51, 76, 115, .10);
+        transition: transform .18s ease, opacity .18s ease;
+      }
+
+      .sentence-builder-word-tile:hover {
+        transform: translateY(-4px);
+      }
+
+      .sentence-builder-word-tile.used {
+        opacity: .38;
+        transform: scale(.96);
+        cursor: not-allowed;
+      }
+
+      .sentence-builder-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .sentence-builder-clear,
+      .sentence-builder-check {
+        border: 0;
+        border-radius: 18px;
+        padding: 15px 22px;
+        color: #FFFFFF;
+        font-size: 17px;
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 10px 0 rgba(34, 70, 120, .18);
+      }
+
+      .sentence-builder-clear {
+        background: linear-gradient(135deg, #9CA3AF, #64748B);
+      }
+
+      .sentence-builder-check {
+        background: linear-gradient(135deg, #22C55E, #16A34A);
+      }
+
+      .sentence-builder-clear:disabled,
+      .sentence-builder-check:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+      }
+
+      .sentence-builder-toast {
+        position: fixed;
+        left: 50%;
+        top: 46%;
+        z-index: 1200;
+        width: fit-content;
+        max-width: calc(100vw - 48px);
+        padding: 18px 24px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, .98);
+        border: 3px solid #F8DE7E;
+        color: #16233d;
+        font-size: clamp(22px, 3vw, 34px);
+        font-weight: 1000;
+        text-align: center;
+        box-shadow: 0 22px 60px rgba(20, 40, 70, .22);
+        transform: translate(-50%, -50%);
+        animation: letterPopToastCelebrate 1.2s ease-in-out both;
+        pointer-events: none;
+      }
+
+      .sentence-builder-toast.warn {
+        background: linear-gradient(135deg, #fff8f8, #fff1c9);
+        border-color: #ffb2b2;
+        animation: letterPopToastPop .2s ease-out;
+      }
+
+      @keyframes sentenceBuilderShake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-8px) rotate(-1deg); }
+        40% { transform: translateX(8px) rotate(1deg); }
+        60% { transform: translateX(-5px) rotate(-.5deg); }
+        80% { transform: translateX(5px) rotate(.5deg); }
+      }
+
+      @keyframes sentenceBuilderCorrectGlow {
+        0% { transform: scale(.98); box-shadow: 0 0 0 rgba(24, 184, 101, 0); }
+        55% { transform: scale(1.01); box-shadow: 0 0 0 8px rgba(24, 184, 101, .12); }
+        100% { transform: scale(1); }
+      }
+
       .picture-guess-game {
         display: grid;
         gap: 18px;
@@ -8649,6 +9426,343 @@ function getWordMatchItemsForGrade(gradeLevel = 4) {
   return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
 }
 
+function getStoryQuestItemsForGrade(gradeLevel = 4) {
+  const earlyItems = [
+    {
+      id: 'g1-ana-payong',
+      title: 'Ang Pulang Payong',
+      story: [
+        'Si Ana ay may pulang payong.',
+        'Ginamit niya ito nang umulan.'
+      ],
+      questions: [
+        {
+          question: 'Ano ang ginamit ni Ana?',
+          options: [
+            { icon: '☂️', label: 'payong' },
+            { icon: '📘', label: 'aklat' },
+            { icon: '✏️', label: 'lapis' }
+          ],
+          correct: 'payong'
+        },
+        {
+          question: 'Kailan ginamit ni Ana ang payong?',
+          options: [
+            { icon: '🌧️', label: 'umulan' },
+            { icon: '🌙', label: 'natulog' },
+            { icon: '🍽️', label: 'kumain' }
+          ],
+          correct: 'umulan'
+        }
+      ]
+    },
+    {
+      id: 'g1-milo-pusa',
+      title: 'Ang Pusa ni Milo',
+      story: [
+        'May pusa si Milo.',
+        'Mahilig itong matulog sa banig.'
+      ],
+      questions: [
+        {
+          question: 'Ano ang alaga ni Milo?',
+          options: [
+            { icon: '🐱', label: 'pusa' },
+            { icon: '🐶', label: 'aso' },
+            { icon: '🐟', label: 'isda' }
+          ],
+          correct: 'pusa'
+        },
+        {
+          question: 'Saan natutulog ang pusa?',
+          options: [
+            { icon: '🧺', label: 'banig' },
+            { icon: '📦', label: 'kahon' },
+            { icon: '🌳', label: 'puno' }
+          ],
+          correct: 'banig'
+        }
+      ]
+    },
+    {
+      id: 'g2-lapis-ni-lena',
+      title: 'Ang Lapis ni Lena',
+      story: [
+        'May bagong lapis si Lena.',
+        'Ginamit niya ito sa pagguhit ng bahay.'
+      ],
+      questions: [
+        {
+          question: 'Ano ang gamit ni Lena sa pagguhit?',
+          options: [
+            { icon: '✏️', label: 'lapis' },
+            { icon: '📚', label: 'aklat' },
+            { icon: '☂️', label: 'payong' }
+          ],
+          correct: 'lapis'
+        },
+        {
+          question: 'Ano ang iginuhit ni Lena?',
+          options: [
+            { icon: '🏠', label: 'bahay' },
+            { icon: '🐱', label: 'pusa' },
+            { icon: '🌞', label: 'araw' }
+          ],
+          correct: 'bahay'
+        }
+      ]
+    }
+  ];
+
+  const upperItems = [
+    {
+      id: 'g3-malinis-na-bakuran',
+      title: 'Malinis na Bakuran',
+      story: [
+        'Maagang dumating sa paaralan sina Lito, Bea, at Omar. Napansin nilang maraming kalat sa bakuran.',
+        'Pinulot nila ang mga kalat at itinapon sa tamang basurahan.',
+        'Natuwa ang guro sa kanilang pagtutulungan. Natutuhan nila na mahalaga ang malinis na paligid.'
+      ],
+      questions: [
+        {
+          question: 'Ano ang ginawa ng mga bata?',
+          options: [
+            { icon: '🧹', label: 'naglinis' },
+            { icon: '🎮', label: 'naglalaro' },
+            { icon: '😴', label: 'natulog' }
+          ],
+          correct: 'naglinis'
+        },
+        {
+          question: 'Saan nila itinapon ang kalat?',
+          options: [
+            { icon: '🗑️', label: 'basurahan' },
+            { icon: '🏫', label: 'paaralan' },
+            { icon: '🌳', label: 'puno' }
+          ],
+          correct: 'basurahan'
+        },
+        {
+          question: 'Ano ang aral ng kuwento?',
+          options: [
+            { icon: '🌿', label: 'alagaan ang kalikasan' },
+            { icon: '🍬', label: 'kumain ng kendi' },
+            { icon: '📺', label: 'manood buong araw' }
+          ],
+          correct: 'alagaan ang kalikasan'
+        }
+      ]
+    },
+    {
+      id: 'g4-aklatan-ni-mara',
+      title: 'Sa Aklatan',
+      story: [
+        'Pumunta si Mara sa aklatan upang magbasa ng bagong kuwento.',
+        'Pinili niya ang aklat tungkol sa mga alamat at isinulat ang mahahalagang detalye.',
+        'Umuwi siyang masaya dahil may bagong aral siyang natutuhan.'
+      ],
+      questions: [
+        {
+          question: 'Saan pumunta si Mara?',
+          options: [
+            { icon: '📚', label: 'aklatan' },
+            { icon: '🏀', label: 'palakasan' },
+            { icon: '🏪', label: 'tindahan' }
+          ],
+          correct: 'aklatan'
+        },
+        {
+          question: 'Tungkol saan ang aklat na pinili niya?',
+          options: [
+            { icon: '📜', label: 'alamat' },
+            { icon: '🌧️', label: 'ulan' },
+            { icon: '🐶', label: 'aso' }
+          ],
+          correct: 'alamat'
+        },
+        {
+          question: 'Ano ang naramdaman ni Mara?',
+          options: [
+            { icon: '😊', label: 'masaya' },
+            { icon: '😡', label: 'galit' },
+            { icon: '😴', label: 'inaantok' }
+          ],
+          correct: 'masaya'
+        }
+      ]
+    },
+    {
+      id: 'g5-puno-sa-paaralan',
+      title: 'Ang Puno sa Paaralan',
+      story: [
+        'Nagtanim ng puno ang mga mag-aaral sa gilid ng palaruan.',
+        'Araw-araw nila itong diniligan upang lumago.',
+        'Pagkalipas ng ilang buwan, naging malilim ang paligid at natuwa ang lahat.'
+      ],
+      questions: [
+        {
+          question: 'Ano ang itinanim ng mga mag-aaral?',
+          options: [
+            { icon: '🌳', label: 'puno' },
+            { icon: '📘', label: 'aklat' },
+            { icon: '🧸', label: 'laruan' }
+          ],
+          correct: 'puno'
+        },
+        {
+          question: 'Bakit nila diniligan ang puno?',
+          options: [
+            { icon: '🌱', label: 'upang lumago' },
+            { icon: '🔥', label: 'upang matuyo' },
+            { icon: '🧊', label: 'upang lumamig' }
+          ],
+          correct: 'upang lumago'
+        },
+        {
+          question: 'Ano ang naging epekto ng puno?',
+          options: [
+            { icon: '🌤️', label: 'naging malilim' },
+            { icon: '🌪️', label: 'naging maalikabok' },
+            { icon: '🔇', label: 'naging tahimik' }
+          ],
+          correct: 'naging malilim'
+        }
+      ]
+    },
+    {
+      id: 'g6-bayanihan-sa-barangay',
+      title: 'Bayanihan sa Barangay',
+      story: [
+        'Matapos ang malakas na ulan, nagtulungan ang mga tao sa barangay.',
+        'Nagbahagi sila ng pagkain at tumulong sa pag-aayos ng paligid.',
+        'Ipinakita nila ang tunay na diwa ng bayanihan.'
+      ],
+      questions: [
+        {
+          question: 'Ano ang ginawa ng mga tao sa barangay?',
+          options: [
+            { icon: '🤝', label: 'nagtulungan' },
+            { icon: '🏃', label: 'tumakbo' },
+            { icon: '🎤', label: 'kumanta' }
+          ],
+          correct: 'nagtulungan'
+        },
+        {
+          question: 'Ano ang ibinahagi nila?',
+          options: [
+            { icon: '🍚', label: 'pagkain' },
+            { icon: '🎈', label: 'laruan' },
+            { icon: '📺', label: 'telebisyon' }
+          ],
+          correct: 'pagkain'
+        },
+        {
+          question: 'Anong diwa ang ipinakita sa kuwento?',
+          options: [
+            { icon: '💚', label: 'bayanihan' },
+            { icon: '💤', label: 'katamaran' },
+            { icon: '📣', label: 'ingay' }
+          ],
+          correct: 'bayanihan'
+        }
+      ]
+    }
+  ];
+
+  return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
+}
+
+function getStoryQuestAttemptItems(gradeLevel = 4) {
+  return shuffleWordMatchItems(getStoryQuestItemsForGrade(gradeLevel));
+}
+
+function storyQuestChoiceLabel(choice) {
+  if (typeof choice === 'string') return choice;
+  return String(choice?.label || '').trim();
+}
+
+function storyQuestChoiceIcon(choice) {
+  if (typeof choice === 'string') return '';
+  return String(choice?.icon || '').trim();
+}
+
+function getSentenceBuilderItemsForGrade(gradeLevel = 4) {
+  const earlyItems = [
+    {
+      id: 'g1-ako-ay-bata',
+      clue: 'Buuin ang simpleng pangungusap.',
+      words: ['bata', 'Ako', 'ay'],
+      answer: ['Ako', 'ay', 'bata'],
+      success: 'Tama! Ako ay bata.'
+    },
+    {
+      id: 'g1-ang-pusa-ay-maliit',
+      clue: 'Ayusin ang salita tungkol sa pusa.',
+      words: ['maliit', 'Ang', 'pusa', 'ay'],
+      answer: ['Ang', 'pusa', 'ay', 'maliit'],
+      success: 'Tama! Ang pusa ay maliit.'
+    },
+    {
+      id: 'g2-si-ana-ay-masaya',
+      clue: 'Buuin ang pangungusap tungkol kay Ana.',
+      words: ['masaya', 'Si', 'ay', 'Ana'],
+      answer: ['Si', 'Ana', 'ay', 'masaya'],
+      success: 'Tama! Si Ana ay masaya.'
+    },
+    {
+      id: 'g2-ako-ay-nagbabasa',
+      clue: 'Ayusin ang salita tungkol sa ginagawa mo.',
+      words: ['nagbabasa', 'Ako', 'ay'],
+      answer: ['Ako', 'ay', 'nagbabasa'],
+      success: 'Tama! Ako ay nagbabasa.'
+    }
+  ];
+
+  const upperItems = [
+    {
+      id: 'g3-mga-bata-ay-nagbabasa',
+      clue: 'Buuin ang malinaw na pangungusap.',
+      words: ['nagbabasa', 'Ang', 'bata', 'mga', 'ay'],
+      answer: ['Ang', 'mga', 'bata', 'ay', 'nagbabasa'],
+      success: 'Tama! Ang mga bata ay nagbabasa.'
+    },
+    {
+      id: 'g4-kami-ay-nag-aaral-sa-paaralan',
+      clue: 'Ayusin ang pangungusap tungkol sa paaralan.',
+      words: ['paaralan', 'Kami', 'nag-aaral', 'sa', 'ay'],
+      answer: ['Kami', 'ay', 'nag-aaral', 'sa', 'paaralan'],
+      success: 'Tama! Kami ay nag-aaral sa paaralan.'
+    },
+    {
+      id: 'g5-kalikasan-ay-dapat-pangalagaan',
+      clue: 'Buuin ang pangungusap tungkol sa kalikasan.',
+      words: ['pangalagaan', 'Ang', 'dapat', 'kalikasan', 'ay'],
+      answer: ['Ang', 'kalikasan', 'ay', 'dapat', 'pangalagaan'],
+      success: 'Tama! Ang kalikasan ay dapat pangalagaan.'
+    },
+    {
+      id: 'g6-mag-aaral-ay-mahusay-sumulat',
+      clue: 'Ayusin ang mas mahabang pangungusap.',
+      words: ['mahusay', 'mag-aaral', 'sumulat', 'Ang', 'ay'],
+      answer: ['Ang', 'mag-aaral', 'ay', 'mahusay', 'sumulat'],
+      success: 'Tama! Ang mag-aaral ay mahusay sumulat.'
+    }
+  ];
+
+  return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
+}
+
+function getSentenceBuilderAttemptItems(gradeLevel = 4) {
+  return shuffleWordMatchItems(getSentenceBuilderItemsForGrade(gradeLevel));
+}
+
+function normalizeSentenceBuilderWords(words = []) {
+  return asArray(words)
+    .map(word => String(word || '').trim().toLowerCase())
+    .filter(Boolean)
+    .join(' ');
+}
+
 function getPictureGuessItemsForGrade(gradeLevel = 4) {
   const earlyItems = [
     {
@@ -9527,6 +10641,23 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const [pictureGuessWrongChoice, setPictureGuessWrongChoice] = useState('');
   const [pictureGuessToast, setPictureGuessToast] = useState(null);
   const [pictureGuessCompleteModal, setPictureGuessCompleteModal] = useState(false);
+  const [sentenceBuilderItems, setSentenceBuilderItems] = useState([]);
+  const [sentenceBuilderItem, setSentenceBuilderItem] = useState(null);
+  const [sentenceBuilderSelected, setSentenceBuilderSelected] = useState([]);
+  const [sentenceBuilderWrong, setSentenceBuilderWrong] = useState(false);
+  const [sentenceBuilderCorrect, setSentenceBuilderCorrect] = useState(false);
+  const [sentenceBuilderToast, setSentenceBuilderToast] = useState(null);
+  const [sentenceBuilderCompleteModal, setSentenceBuilderCompleteModal] = useState(false);
+  const [storyQuestItems, setStoryQuestItems] = useState([]);
+  const [storyQuestItem, setStoryQuestItem] = useState(null);
+  const [storyQuestMode, setStoryQuestMode] = useState('story');
+  const [storyQuestPageIndex, setStoryQuestPageIndex] = useState(0);
+  const [storyQuestQuestionIndex, setStoryQuestQuestionIndex] = useState(0);
+  const [storyQuestAnswered, setStoryQuestAnswered] = useState({});
+  const [storyQuestWrongChoice, setStoryQuestWrongChoice] = useState('');
+  const [storyQuestToast, setStoryQuestToast] = useState(null);
+  const [storyQuestComplete, setStoryQuestComplete] = useState(false);
+  const [storyQuestCompleteModal, setStoryQuestCompleteModal] = useState(false);
   const [selectedWordId, setSelectedWordId] = useState('');
   const [matchedPairs, setMatchedPairs] = useState({});
   const [wordMatchWrongWordId, setWordMatchWrongWordId] = useState('');
@@ -9542,8 +10673,14 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const letterPopToastStartedAtRef = useRef(0);
   const pictureGuessAutoCompleteRef = useRef(false);
   const pictureGuessToastStartedAtRef = useRef(0);
+  const sentenceBuilderAutoCompleteRef = useRef(false);
+  const sentenceBuilderToastStartedAtRef = useRef(0);
+  const storyQuestAutoCompleteRef = useRef(false);
+  const storyQuestToastStartedAtRef = useRef(0);
   const LETTER_POP_SUCCESS_TOAST_MS = 1500;
   const PICTURE_GUESS_SUCCESS_TOAST_MS = 1200;
+  const SENTENCE_BUILDER_SUCCESS_TOAST_MS = 1200;
+  const STORY_QUEST_SUCCESS_TOAST_MS = 1200;
   const student = data?.student || {};
   const gradeLevel = Number(student?.gradeLevel || 4);
   const early = gradeLevel <= 2;
@@ -9555,26 +10692,54 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const isWordMatch = selectedGame?.id === 'word-match';
   const isLetterPop = selectedGame?.id === 'letter-pop';
   const isPictureGuess = selectedGame?.id === 'picture-guess';
+  const isSentenceBuilder = selectedGame?.id === 'sentence-builder';
+  const isStoryQuest = selectedGame?.id === 'story-quest';
   const fallbackLetterPopItems = getLetterPopAttemptItems(gradeLevel);
   const activeLetterPopItems = letterPopItems.length ? letterPopItems : fallbackLetterPopItems;
   const fallbackPictureGuessItems = getPictureGuessAttemptItems(gradeLevel);
   const activePictureGuessItems = pictureGuessItems.length ? pictureGuessItems : fallbackPictureGuessItems;
+  const fallbackSentenceBuilderItems = getSentenceBuilderAttemptItems(gradeLevel);
+  const activeSentenceBuilderItems = sentenceBuilderItems.length ? sentenceBuilderItems : fallbackSentenceBuilderItems;
+  const fallbackStoryQuestItems = getStoryQuestAttemptItems(gradeLevel);
+  const activeStoryQuestItems = storyQuestItems.length ? storyQuestItems : fallbackStoryQuestItems;
   const demo = isLetterPop
     ? (letterPopItem || activeLetterPopItems[0] || baseDemo)
     : isPictureGuess
       ? (pictureGuessItem || activePictureGuessItems[0] || baseDemo)
-      : baseDemo;
+      : isSentenceBuilder
+        ? (sentenceBuilderItem || activeSentenceBuilderItems[0] || baseDemo)
+        : isStoryQuest
+          ? (storyQuestItem || activeStoryQuestItems[0] || baseDemo)
+          : baseDemo;
   const fallbackWordMatchItems = getWordMatchAttemptItems(gradeLevel);
   const activeWordMatchItems = wordMatchItems.length ? wordMatchItems : fallbackWordMatchItems;
   const visibleWordMatchPictures = wordMatchPictures.length ? wordMatchPictures : activeWordMatchItems;
   const wordMatchDoneCount = Object.keys(matchedPairs).length;
   const wordMatchComplete = isWordMatch && wordMatchDoneCount === activeWordMatchItems.length;
+  const sentenceBuilderWords = asArray(demo?.words);
+  const sentenceBuilderSelectedWords = sentenceBuilderSelected
+    .map(index => sentenceBuilderWords[index])
+    .filter(Boolean);
+  const sentenceBuilderIsFull = sentenceBuilderWords.length > 0 && sentenceBuilderSelected.length === sentenceBuilderWords.length;
+  const storyQuestQuestions = asArray(demo?.questions);
+  const storyQuestTotal = Math.max(1, storyQuestQuestions.length);
+  const storyQuestSafeIndex = Math.min(storyQuestQuestionIndex, storyQuestTotal - 1);
+  const storyQuestQuestion = storyQuestQuestions[storyQuestSafeIndex] || null;
+  const storyQuestDoneCount = Object.keys(storyQuestAnswered || {}).length;
+  const storyQuestProgressPct = Math.round((Math.min(storyQuestDoneCount, storyQuestTotal) / storyQuestTotal) * 100);
+  const storyQuestStoryLines = asArray(demo?.story);
+  const storyQuestPageTotal = Math.max(1, storyQuestStoryLines.length);
+  const storyQuestSafePageIndex = Math.min(storyQuestPageIndex, storyQuestPageTotal - 1);
+  const storyQuestPageText = storyQuestStoryLines[storyQuestSafePageIndex] || '';
+  const storyQuestCanStartQuestions = early || storyQuestSafePageIndex >= storyQuestPageTotal - 1;
   const letterPopReady = isLetterPop && missionChoice === demo?.correct && letterPopStage === 'correct';
 
   useEffect(() => {
     const nextItems = getWordMatchAttemptItems(gradeLevel);
     const nextLetterPopItems = getLetterPopAttemptItems(gradeLevel);
     const nextPictureGuessItems = getPictureGuessAttemptItems(gradeLevel);
+    const nextSentenceBuilderItems = getSentenceBuilderAttemptItems(gradeLevel);
+    const nextStoryQuestItems = getStoryQuestAttemptItems(gradeLevel);
 
     setMissionChoice('');
     setMissionResult('');
@@ -9592,6 +10757,27 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setPictureGuessCompleteModal(false);
     pictureGuessAutoCompleteRef.current = false;
     pictureGuessToastStartedAtRef.current = 0;
+    setSentenceBuilderItems(nextSentenceBuilderItems);
+    setSentenceBuilderItem(nextSentenceBuilderItems[0] || null);
+    setSentenceBuilderSelected([]);
+    setSentenceBuilderWrong(false);
+    setSentenceBuilderCorrect(false);
+    setSentenceBuilderToast(null);
+    setSentenceBuilderCompleteModal(false);
+    sentenceBuilderAutoCompleteRef.current = false;
+    sentenceBuilderToastStartedAtRef.current = 0;
+    setStoryQuestItems(nextStoryQuestItems);
+    setStoryQuestItem(nextStoryQuestItems[0] || null);
+    setStoryQuestMode('story');
+    setStoryQuestPageIndex(0);
+    setStoryQuestQuestionIndex(0);
+    setStoryQuestAnswered({});
+    setStoryQuestWrongChoice('');
+    setStoryQuestToast(null);
+    setStoryQuestComplete(false);
+    setStoryQuestCompleteModal(false);
+    storyQuestAutoCompleteRef.current = false;
+    storyQuestToastStartedAtRef.current = 0;
     setSelectedWordId('');
     setMatchedPairs({});
     setWordMatchWrongWordId('');
@@ -9634,6 +10820,26 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
     return () => clearTimeout(timer);
   }, [pictureGuessToast]);
+
+  useEffect(() => {
+    if (!sentenceBuilderToast) return undefined;
+
+    const timer = setTimeout(() => {
+      setSentenceBuilderToast(null);
+    }, sentenceBuilderToast.type === 'good' ? SENTENCE_BUILDER_SUCCESS_TOAST_MS : 1500);
+
+    return () => clearTimeout(timer);
+  }, [sentenceBuilderToast]);
+
+  useEffect(() => {
+    if (!storyQuestToast) return undefined;
+
+    const timer = setTimeout(() => {
+      setStoryQuestToast(null);
+    }, storyQuestToast.type === 'good' ? STORY_QUEST_SUCCESS_TOAST_MS : 1500);
+
+    return () => clearTimeout(timer);
+  }, [storyQuestToast]);
 
   const openTab = (tab) => {
     if (tab === 'home') return go('screen-student');
@@ -9698,6 +10904,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     if (!demo || locked) return;
     if (isLetterPop && (missionSaving || letterPopCompleteModal || letterPopAutoCompleteRef.current)) return;
     if (isPictureGuess && (missionSaving || pictureGuessCompleteModal || pictureGuessAutoCompleteRef.current)) return;
+    if (isSentenceBuilder && (missionSaving || sentenceBuilderCompleteModal || sentenceBuilderAutoCompleteRef.current)) return;
 
     setMissionChoice(choice);
 
@@ -9783,6 +10990,18 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       nextPictureGuessItems.find(item => item.id !== currentPictureGuessId) ||
       nextPictureGuessItems[0] ||
       null;
+    const nextSentenceBuilderItems = getSentenceBuilderAttemptItems(gradeLevel);
+    const currentSentenceBuilderId = sentenceBuilderItem?.id || '';
+    const nextSentenceBuilderItem =
+      nextSentenceBuilderItems.find(item => item.id !== currentSentenceBuilderId) ||
+      nextSentenceBuilderItems[0] ||
+      null;
+    const nextStoryQuestItems = getStoryQuestAttemptItems(gradeLevel);
+    const currentStoryQuestId = storyQuestItem?.id || '';
+    const nextStoryQuestItem =
+      nextStoryQuestItems.find(item => item.id !== currentStoryQuestId) ||
+      nextStoryQuestItems[0] ||
+      null;
 
     setMissionChoice('');
     setMissionResult('');
@@ -9795,6 +11014,27 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setPictureGuessItem(nextPictureGuessItem);
     setPictureGuessWrongChoice('');
     setPictureGuessToast(null);
+    setSentenceBuilderItems(nextSentenceBuilderItems);
+    setSentenceBuilderItem(nextSentenceBuilderItem);
+    setSentenceBuilderSelected([]);
+    setSentenceBuilderWrong(false);
+    setSentenceBuilderCorrect(false);
+    setSentenceBuilderToast(null);
+    setSentenceBuilderCompleteModal(false);
+    sentenceBuilderAutoCompleteRef.current = false;
+    sentenceBuilderToastStartedAtRef.current = 0;
+    setStoryQuestItems(nextStoryQuestItems);
+    setStoryQuestItem(nextStoryQuestItem);
+    setStoryQuestMode('story');
+    setStoryQuestPageIndex(0);
+    setStoryQuestQuestionIndex(0);
+    setStoryQuestAnswered({});
+    setStoryQuestWrongChoice('');
+    setStoryQuestToast(null);
+    setStoryQuestComplete(false);
+    setStoryQuestCompleteModal(false);
+    storyQuestAutoCompleteRef.current = false;
+    storyQuestToastStartedAtRef.current = 0;
     setSelectedWordId('');
     setMatchedPairs({});
     setWordMatchWrongWordId('');
@@ -9806,6 +11046,239 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setMissionSaving(false);
     setMissionCompleteData(null);
     setWordMatchPictures(shuffleWordMatchItems(nextItems));
+  };
+
+  const completeStoryQuestMission = async ({ force = false, challenge = demo } = {}) => {
+    const activeChallenge = challenge || demo;
+    const totalQuestions = asArray(activeChallenge?.questions).length || storyQuestTotal;
+    const answeredCount = Object.keys(storyQuestAnswered || {}).length;
+    const readyToComplete =
+      force ||
+      (isStoryQuest && storyQuestComplete && answeredCount >= totalQuestions);
+
+    if (!readyToComplete) {
+      setStoryQuestToast({ type: 'warn', message: 'Sagutin muna ang lahat ng tanong.' });
+      return;
+    }
+
+    setMissionSaving(true);
+
+    try {
+      const result = await api('/missions/story-quest/complete', {
+        method: 'POST',
+        body: {
+          challengeId: activeChallenge?.id || 'story-quest-default',
+          challengeTitle: activeChallenge?.id || activeChallenge?.title || 'Story Quest',
+          gradeLevel,
+          answer: {
+            storyId: activeChallenge?.id || 'story-quest-default',
+            answered: totalQuestions,
+          },
+        },
+      });
+
+      setMissionCompleteData({ ...result, newBadges: uniqueBadgesForDisplay(result?.newBadges || []) });
+      showBadgeUnlockPopup(result?.newBadges);
+
+      const elapsedToastTime = Date.now() - Number(storyQuestToastStartedAtRef.current || 0);
+      const remainingToastTime = Math.max(0, STORY_QUEST_SUCCESS_TOAST_MS - elapsedToastTime);
+
+      if (remainingToastTime > 0) {
+        await new Promise(resolve => window.setTimeout(resolve, remainingToastTime));
+      }
+
+      setStoryQuestToast(null);
+      setStoryQuestCompleteModal(true);
+      playMissionSuccessSound();
+
+      if (typeof refresh === 'function') {
+        refresh().catch((error) => {
+          console.warn('[TuklasTalino] Story Quest dashboard refresh failed:', error);
+        });
+      }
+    } catch (err) {
+      setStoryQuestToast({
+        type: 'warn',
+        message: err?.message || 'Hindi na-save ang Story Quest mission. Subukan muli.',
+      });
+    } finally {
+      setMissionSaving(false);
+      storyQuestAutoCompleteRef.current = false;
+    }
+  };
+
+  const answerStoryQuest = (choice) => {
+    if (locked || missionSaving || storyQuestComplete || storyQuestCompleteModal || storyQuestAutoCompleteRef.current || storyQuestMode !== 'quiz') return;
+
+    const choiceLabel = storyQuestChoiceLabel(choice);
+    const correctLabel = String(storyQuestQuestion?.correct || '').trim();
+
+    if (!storyQuestQuestion || !choiceLabel) return;
+
+    if (choiceLabel.toLowerCase() === correctLabel.toLowerCase()) {
+      const currentIndex = storyQuestSafeIndex;
+      const nextAnswered = { ...storyQuestAnswered, [currentIndex]: true };
+      const nextDoneCount = Object.keys(nextAnswered).length;
+      const isLastQuestion = currentIndex >= storyQuestTotal - 1;
+
+      setStoryQuestWrongChoice('');
+      setStoryQuestAnswered(nextAnswered);
+      setStoryQuestToast({
+        type: 'good',
+        message: isLastQuestion ? 'Quest complete!' : 'Tama! Susunod na tanong.'
+      });
+      playLetterPopSound('good');
+
+      if (isLastQuestion || nextDoneCount >= storyQuestTotal) {
+        storyQuestToastStartedAtRef.current = Date.now();
+        storyQuestAutoCompleteRef.current = true;
+
+        window.setTimeout(() => {
+          setStoryQuestComplete(true);
+          completeStoryQuestMission({
+            force: true,
+            challenge: demo,
+          });
+        }, 650);
+      } else {
+        window.setTimeout(() => {
+          setStoryQuestQuestionIndex(index => Math.min(index + 1, storyQuestTotal - 1));
+        }, 650);
+      }
+
+      return;
+    }
+
+    setStoryQuestWrongChoice(choiceLabel);
+    setStoryQuestToast({ type: 'warn', message: 'Balikan ang kuwento. Try ulit!' });
+    playLetterPopSound('wrong');
+
+    window.setTimeout(() => {
+      setStoryQuestWrongChoice('');
+    }, 650);
+  };
+
+  const completeSentenceBuilderMission = async ({ force = false, challenge = demo, selectedWords = sentenceBuilderSelectedWords } = {}) => {
+    const activeChallenge = challenge || demo;
+    const submittedWords = asArray(selectedWords);
+    const selectedSentence = normalizeSentenceBuilderWords(submittedWords);
+    const correctSentence = normalizeSentenceBuilderWords(activeChallenge?.answer || []);
+    const readyToComplete = force || (isSentenceBuilder && selectedSentence === correctSentence && correctSentence);
+
+    if (!readyToComplete) {
+      setSentenceBuilderToast({ type: 'warn', message: 'Ayusin muna nang tama ang pangungusap.' });
+      return;
+    }
+
+    setMissionSaving(true);
+
+    try {
+      const result = await api('/missions/sentence-builder/complete', {
+        method: 'POST',
+        body: {
+          challengeId: activeChallenge?.id || 'sentence-builder-default',
+          challengeTitle: activeChallenge?.id || correctSentence || 'Sentence Builder',
+          gradeLevel,
+          answer: submittedWords,
+        },
+      });
+
+      setMissionCompleteData({ ...result, newBadges: uniqueBadgesForDisplay(result?.newBadges || []) });
+      showBadgeUnlockPopup(result?.newBadges);
+
+      const elapsedToastTime = Date.now() - Number(sentenceBuilderToastStartedAtRef.current || 0);
+      const remainingToastTime = Math.max(0, SENTENCE_BUILDER_SUCCESS_TOAST_MS - elapsedToastTime);
+
+      if (remainingToastTime > 0) {
+        await new Promise(resolve => window.setTimeout(resolve, remainingToastTime));
+      }
+
+      setSentenceBuilderToast(null);
+      setSentenceBuilderCompleteModal(true);
+      playMissionSuccessSound();
+
+      if (typeof refresh === 'function') {
+        refresh().catch((error) => {
+          console.warn('[TuklasTalino] Sentence Builder dashboard refresh failed:', error);
+        });
+      }
+    } catch (err) {
+      setSentenceBuilderToast({
+        type: 'warn',
+        message: err?.message || 'Hindi na-save ang Sentence Builder mission. Subukan muli.',
+      });
+    } finally {
+      setMissionSaving(false);
+      sentenceBuilderAutoCompleteRef.current = false;
+    }
+  };
+
+  const selectSentenceBuilderWord = (wordIndex) => {
+    if (locked || missionSaving || sentenceBuilderCorrect || sentenceBuilderCompleteModal || sentenceBuilderAutoCompleteRef.current) return;
+    if (sentenceBuilderSelected.includes(wordIndex)) return;
+
+    setSentenceBuilderWrong(false);
+    setSentenceBuilderToast(null);
+    setSentenceBuilderSelected(current => [...current, wordIndex]);
+  };
+
+  const removeSentenceBuilderWord = (slotIndex) => {
+    if (locked || missionSaving || sentenceBuilderCorrect || sentenceBuilderCompleteModal || sentenceBuilderAutoCompleteRef.current) return;
+
+    setSentenceBuilderWrong(false);
+    setSentenceBuilderToast(null);
+    setSentenceBuilderSelected(current => current.filter((_, index) => index !== slotIndex));
+  };
+
+  const clearSentenceBuilder = () => {
+    if (locked || missionSaving || sentenceBuilderCorrect || sentenceBuilderCompleteModal || sentenceBuilderAutoCompleteRef.current) return;
+
+    setSentenceBuilderSelected([]);
+    setSentenceBuilderWrong(false);
+    setSentenceBuilderToast(null);
+    setMissionResult('');
+  };
+
+  const checkSentenceBuilderAnswer = () => {
+    if (locked || missionSaving || sentenceBuilderCorrect || sentenceBuilderCompleteModal || sentenceBuilderAutoCompleteRef.current) return;
+
+    if (!sentenceBuilderIsFull) {
+      setSentenceBuilderToast({ type: 'warn', message: 'Buuin muna ang buong pangungusap.' });
+      playLetterPopSound('wrong');
+      return;
+    }
+
+    const selectedSentence = normalizeSentenceBuilderWords(sentenceBuilderSelectedWords);
+    const correctSentence = normalizeSentenceBuilderWords(demo?.answer || []);
+
+    if (selectedSentence === correctSentence) {
+      const submittedWords = [...sentenceBuilderSelectedWords];
+
+      setSentenceBuilderWrong(false);
+      setSentenceBuilderCorrect(true);
+      setSentenceBuilderToast({ type: 'good', message: 'Tama ang pangungusap!' });
+      sentenceBuilderToastStartedAtRef.current = Date.now();
+      setMissionResult('');
+      playLetterPopSound('good');
+
+      sentenceBuilderAutoCompleteRef.current = true;
+      window.setTimeout(() => {
+        completeSentenceBuilderMission({
+          force: true,
+          challenge: demo,
+          selectedWords: submittedWords,
+        });
+      }, 350);
+      return;
+    }
+
+    setSentenceBuilderWrong(true);
+    setSentenceBuilderToast({ type: 'warn', message: 'Hindi pa tama. Ayusin ulit ang mga salita!' });
+    playLetterPopSound('wrong');
+
+    window.setTimeout(() => {
+      setSentenceBuilderWrong(false);
+    }, 650);
   };
 
   const selectWordMatchWord = (itemId) => {
@@ -10016,6 +11489,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       <div className={`missions-wrap ${early ? 'early' : 'standard'}`}>
         <section className="mission-play-shell">
           <div className="mission-play-card">
+            {!isSentenceBuilder && (
             <div className="mission-play-head">
               <div className="mission-play-icon">{selectedGame?.icon || '🎮'}</div>
               <div>
@@ -10027,6 +11501,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                 </p>
               </div>
             </div>
+            )}
 
             {locked ? (
               <>
@@ -10217,6 +11692,272 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       </div>
                     )}
                   </div>
+                ) : isStoryQuest ? (
+                  <div className={`story-quest-game ${early ? 'early' : 'standard'} ${storyQuestMode === 'story' ? 'reading' : 'quiz'} ${storyQuestWrongChoice ? 'wrong' : ''} ${storyQuestComplete ? 'complete' : ''}`}>
+                    <div className="story-quest-book-card story-quest-book-layout">
+                      <div className="story-quest-book-top">
+                        <span className="story-quest-badge">Story Quest</span>
+                        <span className="story-quest-pages">
+                          {storyQuestMode === 'story' ? '📖 Basahin muna' : `📖 ${storyQuestSafeIndex + 1}/${storyQuestTotal}`}
+                        </span>
+                      </div>
+
+                      <div className="story-quest-open-book">
+                        <div className="story-quest-illustration-page" aria-label="Story illustration">
+                          <div className="story-quest-room">
+                            <div className="story-quest-window" />
+                            <div className="story-quest-shelf" />
+                            <div className="story-quest-scene-art" aria-hidden="true">
+                              {(() => {
+                                const id = String(demo?.id || '');
+                                if (id.includes('payong')) return '🌧️ ☂️ 👧';
+                                if (id.includes('pusa')) return '🐱 🧺 👦';
+                                if (id.includes('lapis')) return '✏️ 🏠 👧';
+                                if (id.includes('bakuran')) return '🧹 🗑️ 🌿';
+                                if (id.includes('aklatan')) return '📚 📖 👧';
+                                if (id.includes('puno')) return '🌳 💧 🏫';
+                                if (id.includes('bayanihan')) return '🤝 🍚 🏘️';
+                                return '📖 ✨';
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="story-quest-reading-page">
+                          <span className="story-quest-page-label">
+                            {!early && storyQuestMode === 'story' ? `Pahina ${storyQuestSafePageIndex + 1} ng ${storyQuestPageTotal}` : 'Pahina ng Kuwento'}
+                          </span>
+                          <h3>{demo?.title || 'Maikling Kuwento'}</h3>
+
+                          {storyQuestMode === 'story' && !early ? (
+                            <div className="story-quest-story story-quest-flip-page" key={`story-page-${storyQuestSafePageIndex}`}>
+                              <p>{storyQuestPageText}</p>
+                            </div>
+                          ) : (
+                            <div className="story-quest-story">
+                              {storyQuestStoryLines.map((line, index) => (
+                                <p key={`story-line-${index}`}>{line}</p>
+                              ))}
+                            </div>
+                          )}
+
+                          {storyQuestMode === 'story' && !early && storyQuestPageTotal > 1 && (
+                            <div className="story-quest-page-controls">
+                              <button
+                                type="button"
+                                className="story-quest-page-btn"
+                                onClick={() => setStoryQuestPageIndex(index => Math.max(0, index - 1))}
+                                disabled={storyQuestSafePageIndex <= 0}
+                              >
+                                ← Previous
+                              </button>
+
+                              <span className="story-quest-page-count">
+                                {storyQuestSafePageIndex + 1}/{storyQuestPageTotal}
+                              </span>
+
+                              <button
+                                type="button"
+                                className="story-quest-page-btn purple"
+                                onClick={() => setStoryQuestPageIndex(index => Math.min(storyQuestPageTotal - 1, index + 1))}
+                                disabled={storyQuestSafePageIndex >= storyQuestPageTotal - 1}
+                              >
+                                Next Page →
+                              </button>
+                            </div>
+                          )}
+
+                          {storyQuestMode === 'story' && storyQuestCanStartQuestions && (
+                            <button
+                              type="button"
+                              className="story-quest-start-btn"
+                              onClick={() => {
+                                setStoryQuestMode('quiz');
+                                setStoryQuestQuestionIndex(0);
+                                setStoryQuestToast(null);
+                              }}
+                            >
+                              📖 Start Questions
+                            </button>
+                          )}
+
+                          {storyQuestMode === 'story' && !storyQuestCanStartQuestions && (
+                            <p className="story-quest-read-hint">Basahin muna lahat ng pahina bago sagutin ang tanong.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {storyQuestMode === 'quiz' && (
+                      <>
+                        <div className="story-quest-progress-card">
+                          <div>
+                            <span>Quest Progress</span>
+                            <strong>{Math.min(storyQuestDoneCount, storyQuestTotal)}/{storyQuestTotal}</strong>
+                          </div>
+                          <div className="story-quest-progress-track">
+                            <i style={{ width: `${storyQuestProgressPct}%` }} />
+                          </div>
+                        </div>
+
+                        {storyQuestToast && (
+                          <div className={`story-quest-toast ${storyQuestToast.type || 'info'}`} role="status">
+                            {storyQuestToast.message}
+                          </div>
+                        )}
+
+                        {!storyQuestComplete ? (
+                          <div className="story-quest-question-card">
+                            <div className="story-quest-question-label">Tanong {storyQuestSafeIndex + 1}</div>
+                            <h4>{storyQuestQuestion?.question || 'Ano ang sagot sa kuwento?'}</h4>
+
+                            <div className="story-quest-options" aria-label="Story Quest choices">
+                              {asArray(storyQuestQuestion?.options).map((choice, index) => {
+                                const label = storyQuestChoiceLabel(choice);
+                                const icon = storyQuestChoiceIcon(choice);
+                                const wrong = storyQuestWrongChoice.toLowerCase() === label.toLowerCase();
+
+                                return (
+                                  <button
+                                    type="button"
+                                    className={`story-quest-choice tone-${index % 4} ${wrong ? 'wrong' : ''}`}
+                                    key={`${demo?.id || 'story-quest'}-${storyQuestSafeIndex}-${label}`}
+                                    onClick={() => answerStoryQuest(choice)}
+                                  >
+                                    {icon && <span className="story-quest-choice-icon">{icon}</span>}
+                                    <span>{label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="story-quest-complete-card">
+                              <div className="story-quest-complete-icon">🌟</div>
+                              <h4>Natapos mo ang kuwento!</h4>
+                              <p>Mahusay! Nasagutan mo ang lahat ng tanong.</p>
+                            </div>
+
+                            {storyQuestCompleteModal && (
+                              <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Story Quest mission complete">
+                                <div className="mission-complete-modal">
+                                  <div className="mission-complete-icon">📖</div>
+                                  <h3>Story Quest Complete!</h3>
+                                  <p>
+                                    {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Story Quest.'}
+                                  </p>
+                                  <div className="mission-complete-xp">
+                                    ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Added` : 'XP already awarded'}
+                                  </div>
+
+                                  <div className="mission-complete-actions">
+                                    <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
+                                      🔄 Play Again
+                                    </button>
+                                    <button type="button" className="mission-complete-btn" onClick={backToMissions}>
+                                      🎮 Missions
+                                    </button>
+                                    <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
+                                      🏠 Home
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : isSentenceBuilder ? (
+                  <div className={`sentence-builder-game ${early ? 'early' : 'standard'} ${sentenceBuilderWrong ? 'wrong' : ''} ${sentenceBuilderCorrect ? 'correct' : ''}`}>
+                    <div className="sentence-builder-prompt">
+                      <div className="sentence-builder-mini-label">Sentence Mission</div>
+                      <h3>Buuin ang pangungusap</h3>
+                      <p>💡 {demo?.clue || 'Tapikin ang mga salita sa tamang ayos.'}</p>
+                    </div>
+
+                    {sentenceBuilderToast && (
+                      <div className={`sentence-builder-toast ${sentenceBuilderToast.type || 'info'}`} role="status">
+                        {sentenceBuilderToast.message}
+                      </div>
+                    )}
+
+                    <div className="sentence-builder-tray" aria-label="Built sentence">
+                      {sentenceBuilderWords.map((_, index) => {
+                        const selectedIndex = sentenceBuilderSelected[index];
+                        const selectedWord = selectedIndex !== undefined ? sentenceBuilderWords[selectedIndex] : '';
+
+                        return selectedWord ? (
+                          <button
+                            type="button"
+                            className="sentence-builder-selected-word"
+                            key={`selected-${index}-${selectedIndex}`}
+                            onClick={() => removeSentenceBuilderWord(index)}
+                          >
+                            {selectedWord}
+                          </button>
+                        ) : (
+                          <span className="sentence-builder-empty-slot" key={`slot-${index}`}>____</span>
+                        );
+                      })}
+                    </div>
+
+                    <div className="sentence-builder-word-bank" aria-label="Sentence Builder word choices">
+                      {sentenceBuilderWords.map((word, index) => {
+                        const used = sentenceBuilderSelected.includes(index);
+
+                        return (
+                          <button
+                            type="button"
+                            className={`sentence-builder-word-tile tone-${index % 5} ${used ? 'used' : ''}`}
+                            key={`${demo?.id || 'sentence-builder'}-${word}-${index}`}
+                            onClick={() => selectSentenceBuilderWord(index)}
+                            disabled={used || sentenceBuilderCorrect}
+                          >
+                            {word}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="sentence-builder-actions">
+                      <button type="button" className="sentence-builder-clear" onClick={clearSentenceBuilder} disabled={!sentenceBuilderSelected.length || sentenceBuilderCorrect}>
+                        ↺ Clear
+                      </button>
+                      <button type="button" className="sentence-builder-check" onClick={checkSentenceBuilderAnswer} disabled={!sentenceBuilderSelected.length || sentenceBuilderCorrect}>
+                        ✅ Check Sentence
+                      </button>
+                    </div>
+
+                    {sentenceBuilderCompleteModal && (
+                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Sentence Builder mission complete">
+                        <div className="mission-complete-modal">
+                          <div className="mission-complete-icon">🧩</div>
+                          <h3>Sentence Builder Complete!</h3>
+                          <p>
+                            {missionCompleteData?.message || 'Ang galing mo! Nabuo mo ang tamang pangungusap.'}
+                          </p>
+                          <div className="mission-complete-xp">
+                            ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Added` : 'XP already awarded'}
+                          </div>
+
+                          <div className="mission-complete-actions">
+                            <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
+                              🔄 Play Again
+                            </button>
+                            <button type="button" className="mission-complete-btn" onClick={backToMissions}>
+                              🎮 Missions
+                            </button>
+                            <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
+                              🏠 Home
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : isPictureGuess ? (
                   <div className={`picture-guess-game ${early ? 'early' : 'standard'}`}>
                     <div className="picture-guess-card">
@@ -10312,14 +12053,16 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                   <button type="button" className="mission-play-action secondary" onClick={backToMissions}>
                     ← Back to Missions
                   </button>
-                  <button type="button" className="mission-play-action" onClick={restartDemo}>
+                  {!isSentenceBuilder && (
+<button type="button" className="mission-play-action" onClick={restartDemo}>
                     🔄 Restart
                   </button>
+                  )}
                   {isWordMatch ? (
                     <button type="button" className="mission-play-action purple" onClick={completeWordMatchMission} disabled={!wordMatchComplete || missionSaving}>
                       {missionSaving ? 'Saving...' : '✅ Complete Mission'}
                     </button>
-                  ) : (isLetterPop || isPictureGuess) ? null : (
+                  ) : (isLetterPop || isPictureGuess || isSentenceBuilder || isStoryQuest) ? null : (
                     <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
                       📖 Go to Lessons
                     </button>

@@ -23,6 +23,16 @@ const MISSION_CATALOG = {
     title: 'Picture Guess',
     xp: 12,
     perChallenge: true
+  },
+  'sentence-builder': {
+    title: 'Sentence Builder',
+    xp: 18,
+    perChallenge: true
+  },
+  'story-quest': {
+    title: 'Story Quest',
+    xp: 20,
+    perChallenge: true
   }
 };
 
