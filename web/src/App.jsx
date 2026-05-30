@@ -1487,6 +1487,156 @@ async function archiveTeacher(id) {
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
   
+      .picture-guess-game {
+        display: grid;
+        gap: 18px;
+        margin-top: 10px;
+      }
+
+      .picture-guess-card {
+        position: relative;
+        overflow: hidden;
+        display: grid;
+        justify-items: center;
+        gap: 12px;
+        padding: 24px;
+        border-radius: 30px;
+        background:
+          radial-gradient(circle at 14% 18%, rgba(255, 235, 161, .55), transparent 28%),
+          linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(239, 247, 255, .96));
+        border: 3px solid rgba(198, 224, 255, .95);
+        box-shadow: 0 10px 0 rgba(210, 226, 247, .75), 0 22px 50px rgba(67, 91, 130, .10);
+        text-align: center;
+      }
+
+      .picture-guess-label {
+        width: fit-content;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: #fff7d6;
+        border: 2px solid #ffe28a;
+        color: #7c5300;
+        font-size: 15px;
+        font-weight: 1000;
+      }
+
+      .picture-guess-image {
+        width: clamp(120px, 16vw, 190px);
+        height: clamp(120px, 16vw, 190px);
+        display: grid;
+        place-items: center;
+        border-radius: 34px;
+        background: #FFFFFF;
+        border: 3px solid rgba(255, 226, 138, .9);
+        box-shadow: 0 16px 34px rgba(60, 103, 135, .13);
+        font-size: clamp(68px, 9vw, 120px);
+        animation: pictureGuessFloat 2.8s ease-in-out infinite;
+      }
+
+      .picture-guess-card h3 {
+        margin: 4px 0 0;
+        color: #16233d;
+        font-size: clamp(24px, 3vw, 38px);
+        line-height: 1.1;
+        font-weight: 1000;
+      }
+
+      .picture-guess-card p {
+        margin: 0;
+        color: #405674;
+        font-size: clamp(17px, 2vw, 22px);
+        font-weight: 900;
+      }
+
+      .picture-guess-options {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(130px, 1fr));
+        gap: 16px;
+      }
+
+      .picture-guess-choice {
+        min-height: 86px;
+        border: 3px solid #DDEBFF;
+        border-radius: 24px;
+        background: #FFFFFF;
+        color: #16233d;
+        font-size: clamp(22px, 3vw, 34px);
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: 0 12px 0 rgba(50, 74, 112, .12), 0 22px 40px rgba(51, 76, 115, .12);
+        transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+      }
+
+      .picture-guess-choice:hover {
+        transform: translateY(-4px);
+        border-color: #9BDDB6;
+      }
+
+      .picture-guess-choice.correct {
+        border-color: #18B865;
+        background: #EFFFF5;
+        color: #0B743D;
+        animation: pictureGuessCorrect .35s ease-out;
+      }
+
+      .picture-guess-choice.wrong {
+        border-color: #FF8A8A;
+        background: #FFF4F4;
+        animation: pictureGuessWrong .42s ease-in-out;
+      }
+
+      .picture-guess-toast {
+        position: fixed;
+        left: 50%;
+        top: 46%;
+        z-index: 1200;
+        width: fit-content;
+        max-width: calc(100vw - 48px);
+        padding: 18px 24px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, .98);
+        border: 3px solid #F8DE7E;
+        color: #16233d;
+        font-size: clamp(22px, 3vw, 34px);
+        font-weight: 1000;
+        text-align: center;
+        box-shadow: 0 22px 60px rgba(20, 40, 70, .22);
+        transform: translate(-50%, -50%);
+        animation: letterPopToastCelebrate 1.2s ease-in-out both;
+        pointer-events: none;
+      }
+
+      .picture-guess-toast.warn {
+        background: linear-gradient(135deg, #fff8f8, #fff1c9);
+        border-color: #ffb2b2;
+        animation: letterPopToastPop .2s ease-out;
+      }
+
+      @keyframes pictureGuessFloat {
+        0%, 100% { transform: translateY(0) rotate(-1deg); }
+        50% { transform: translateY(-8px) rotate(1deg); }
+      }
+
+      @keyframes pictureGuessWrong {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-8px) rotate(-1deg); }
+        40% { transform: translateX(8px) rotate(1deg); }
+        60% { transform: translateX(-5px) rotate(-.5deg); }
+        80% { transform: translateX(5px) rotate(.5deg); }
+      }
+
+      @keyframes pictureGuessCorrect {
+        0% { transform: scale(.98); }
+        55% { transform: scale(1.04); box-shadow: 0 0 0 8px rgba(24, 184, 101, .12); }
+        100% { transform: scale(1); }
+      }
+
+      @media (max-width: 760px) {
+        .picture-guess-options {
+          grid-template-columns: 1fr;
+        }
+      }
+
       .letter-pop-game {
         position: relative;
         display: grid;
@@ -8499,6 +8649,92 @@ function getWordMatchItemsForGrade(gradeLevel = 4) {
   return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
 }
 
+function getPictureGuessItemsForGrade(gradeLevel = 4) {
+  const earlyItems = [
+    {
+      id: 'g1-pusa',
+      picture: '🐱',
+      prompt: 'Picture clue: 🐱',
+      sample: 'Tingnan ang larawan at piliin ang tamang salita.',
+      options: ['pusa', 'aso', 'ibon'],
+      correct: 'pusa',
+      success: 'Tama! Ang larawan ay pusa.'
+    },
+    {
+      id: 'g1-aso',
+      picture: '🐶',
+      prompt: 'Picture clue: 🐶',
+      sample: 'Tingnan ang larawan at piliin ang tamang salita.',
+      options: ['aso', 'pusa', 'isda'],
+      correct: 'aso',
+      success: 'Tama! Ang larawan ay aso.'
+    },
+    {
+      id: 'g1-lapis',
+      picture: '✏️',
+      prompt: 'Picture clue: ✏️',
+      sample: 'Ginagamit ito sa pagsulat o pagguhit.',
+      options: ['lapis', 'aklat', 'payong'],
+      correct: 'lapis',
+      success: 'Tama! Ang larawan ay lapis.'
+    },
+    {
+      id: 'g2-payong',
+      picture: '☂️',
+      prompt: 'Picture clue: ☂️',
+      sample: 'Ginagamit ito kapag umuulan o mainit.',
+      options: ['payong', 'puno', 'araw'],
+      correct: 'payong',
+      success: 'Tama! Ang larawan ay payong.'
+    }
+  ];
+
+  const upperItems = [
+    {
+      id: 'g3-paaralan',
+      picture: '🏫',
+      prompt: 'Picture clue: 🏫',
+      sample: 'Lugar kung saan natututo ang mga mag-aaral.',
+      options: ['paaralan', 'pamayanan', 'aklatan'],
+      correct: 'paaralan',
+      success: 'Tama! Ang larawan ay paaralan.'
+    },
+    {
+      id: 'g4-pamayanan',
+      picture: '🏘️',
+      prompt: 'Picture clue: 🏘️',
+      sample: 'Lugar kung saan magkakasamang naninirahan ang mga tao.',
+      options: ['pamayanan', 'kalikasan', 'paaralan'],
+      correct: 'pamayanan',
+      success: 'Tama! Ang larawan ay pamayanan.'
+    },
+    {
+      id: 'g5-kalikasan',
+      picture: '🌳',
+      prompt: 'Picture clue: 🌳',
+      sample: 'Ito ay tumutukoy sa halaman, hayop, lupa, hangin, at tubig.',
+      options: ['kalikasan', 'panitikan', 'kaalaman'],
+      correct: 'kalikasan',
+      success: 'Tama! Ang larawan ay kalikasan.'
+    },
+    {
+      id: 'g6-panitikan',
+      picture: '📜',
+      prompt: 'Picture clue: 📜',
+      sample: 'Mga akdang binabasa tulad ng tula, kuwento, at alamat.',
+      options: ['panitikan', 'talasalitaan', 'pamayanan'],
+      correct: 'panitikan',
+      success: 'Tama! Ang larawan ay panitikan.'
+    }
+  ];
+
+  return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
+}
+
+function getPictureGuessAttemptItems(gradeLevel = 4) {
+  return shuffleWordMatchItems(getPictureGuessItemsForGrade(gradeLevel));
+}
+
 function getLetterPopItemsForGrade(gradeLevel = 4) {
   const earlyItems = [
     {
@@ -9092,6 +9328,80 @@ function StudentMissions({ data, go, onPlayMission }) {
     <>
       <MissionStyles />
 
+      <style>{`
+        .missions-wrap .missions-game-card {
+          position: relative;
+          overflow: hidden;
+          transform-origin: center;
+          animation: missionCardSoftFloat 4.8s ease-in-out infinite;
+        }
+
+        .missions-wrap .missions-game-card:nth-child(2n) {
+          animation-delay: .55s;
+        }
+
+        .missions-wrap .missions-game-card:nth-child(3n) {
+          animation-delay: 1.05s;
+        }
+
+        .missions-wrap .missions-game-card::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          transform: translateX(-120%) skewX(-18deg);
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .38), transparent);
+          pointer-events: none;
+        }
+
+        .missions-wrap .missions-game-card:hover {
+          transform: translateY(-6px) scale(1.01);
+          box-shadow: 0 18px 44px rgba(51, 76, 115, .18);
+        }
+
+        .missions-wrap .missions-game-card:hover::after {
+          animation: missionCardShine .85s ease-out;
+        }
+
+        .missions-wrap .missions-play-btn {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .missions-wrap .missions-play-btn::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          width: 46px;
+          left: -70px;
+          transform: skewX(-20deg);
+          background: rgba(255, 255, 255, .45);
+          animation: missionPlayShine 2.8s ease-in-out infinite;
+        }
+
+        @keyframes missionCardSoftFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+
+        @keyframes missionCardShine {
+          from { transform: translateX(-120%) skewX(-18deg); }
+          to { transform: translateX(135%) skewX(-18deg); }
+        }
+
+        @keyframes missionPlayShine {
+          0%, 62% { left: -70px; }
+          100% { left: calc(100% + 70px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .missions-wrap .missions-game-card,
+          .missions-wrap .missions-play-btn::after {
+            animation: none;
+          }
+        }
+      `}</style>
+
       <div className={`missions-wrap ${early ? 'early' : 'standard'}`}>
         <section className="missions-hero">
           <div className="missions-hero-copy">
@@ -9099,8 +9409,8 @@ function StudentMissions({ data, go, onPlayMission }) {
             <h2>{early ? 'Tuklas Missions' : 'Learning Games'}</h2>
             <p>
               {early
-                ? 'Pumili ng game at pindutin ang Play. Sagutin ang challenge para sa XP preview!'
-                : 'A separate game-based Filipino learning area where each card opens its own mission screen for vocabulary, reading, writing, comprehension, and oral communication practice.'}
+                ? 'Maglaro, kumita ng XP, at mag-unlock ng badges!'
+                : 'Play games, earn XP, and unlock badges!'}
             </p>
           </div>
 
@@ -9113,13 +9423,6 @@ function StudentMissions({ data, go, onPlayMission }) {
               {100 - xpPct} XP pa bago ang susunod na level.
             </p>
           </div>
-        </section>
-
-        <section className="missions-stat-grid" aria-label="Mission progress summary">
-          <div className="missions-stat-card"><b>{availableCount}</b><span>Available games</span></div>
-          <div className="missions-stat-card"><b>{completedCount}</b><span>Completed missions</span></div>
-          <div className="missions-stat-card"><b>{badgeCount}</b><span>Unlocked badges</span></div>
-          <div className="missions-stat-card"><b>{nextBadgeProgress}/3</b><span>Badge challenge</span></div>
         </section>
 
         <section className="missions-section">
@@ -9219,6 +9522,11 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const [letterPopCompleteModal, setLetterPopCompleteModal] = useState(false);
   const [letterPopItems, setLetterPopItems] = useState([]);
   const [letterPopItem, setLetterPopItem] = useState(null);
+  const [pictureGuessItems, setPictureGuessItems] = useState([]);
+  const [pictureGuessItem, setPictureGuessItem] = useState(null);
+  const [pictureGuessWrongChoice, setPictureGuessWrongChoice] = useState('');
+  const [pictureGuessToast, setPictureGuessToast] = useState(null);
+  const [pictureGuessCompleteModal, setPictureGuessCompleteModal] = useState(false);
   const [selectedWordId, setSelectedWordId] = useState('');
   const [matchedPairs, setMatchedPairs] = useState({});
   const [wordMatchWrongWordId, setWordMatchWrongWordId] = useState('');
@@ -9232,7 +9540,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const [missionCompleteData, setMissionCompleteData] = useState(null);
   const letterPopAutoCompleteRef = useRef(false);
   const letterPopToastStartedAtRef = useRef(0);
+  const pictureGuessAutoCompleteRef = useRef(false);
+  const pictureGuessToastStartedAtRef = useRef(0);
   const LETTER_POP_SUCCESS_TOAST_MS = 1500;
+  const PICTURE_GUESS_SUCCESS_TOAST_MS = 1200;
   const student = data?.student || {};
   const gradeLevel = Number(student?.gradeLevel || 4);
   const early = gradeLevel <= 2;
@@ -9243,9 +9554,16 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const locked = selectedGame?.status === 'Locked';
   const isWordMatch = selectedGame?.id === 'word-match';
   const isLetterPop = selectedGame?.id === 'letter-pop';
+  const isPictureGuess = selectedGame?.id === 'picture-guess';
   const fallbackLetterPopItems = getLetterPopAttemptItems(gradeLevel);
   const activeLetterPopItems = letterPopItems.length ? letterPopItems : fallbackLetterPopItems;
-  const demo = isLetterPop ? (letterPopItem || activeLetterPopItems[0] || baseDemo) : baseDemo;
+  const fallbackPictureGuessItems = getPictureGuessAttemptItems(gradeLevel);
+  const activePictureGuessItems = pictureGuessItems.length ? pictureGuessItems : fallbackPictureGuessItems;
+  const demo = isLetterPop
+    ? (letterPopItem || activeLetterPopItems[0] || baseDemo)
+    : isPictureGuess
+      ? (pictureGuessItem || activePictureGuessItems[0] || baseDemo)
+      : baseDemo;
   const fallbackWordMatchItems = getWordMatchAttemptItems(gradeLevel);
   const activeWordMatchItems = wordMatchItems.length ? wordMatchItems : fallbackWordMatchItems;
   const visibleWordMatchPictures = wordMatchPictures.length ? wordMatchPictures : activeWordMatchItems;
@@ -9256,6 +9574,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   useEffect(() => {
     const nextItems = getWordMatchAttemptItems(gradeLevel);
     const nextLetterPopItems = getLetterPopAttemptItems(gradeLevel);
+    const nextPictureGuessItems = getPictureGuessAttemptItems(gradeLevel);
 
     setMissionChoice('');
     setMissionResult('');
@@ -9266,6 +9585,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     letterPopToastStartedAtRef.current = 0;
     setLetterPopItems(nextLetterPopItems);
     setLetterPopItem(nextLetterPopItems[0] || null);
+    setPictureGuessItems(nextPictureGuessItems);
+    setPictureGuessItem(nextPictureGuessItems[0] || null);
+    setPictureGuessWrongChoice('');
+    setPictureGuessToast(null);
+    setPictureGuessCompleteModal(false);
+    pictureGuessAutoCompleteRef.current = false;
+    pictureGuessToastStartedAtRef.current = 0;
     setSelectedWordId('');
     setMatchedPairs({});
     setWordMatchWrongWordId('');
@@ -9298,6 +9624,16 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
     return () => clearTimeout(timer);
   }, [letterPopToast]);
+
+  useEffect(() => {
+    if (!pictureGuessToast) return undefined;
+
+    const timer = setTimeout(() => {
+      setPictureGuessToast(null);
+    }, pictureGuessToast.type === 'good' ? PICTURE_GUESS_SUCCESS_TOAST_MS : 1400);
+
+    return () => clearTimeout(timer);
+  }, [pictureGuessToast]);
 
   const openTab = (tab) => {
     if (tab === 'home') return go('screen-student');
@@ -9361,8 +9697,39 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const checkMissionAnswer = (choice) => {
     if (!demo || locked) return;
     if (isLetterPop && (missionSaving || letterPopCompleteModal || letterPopAutoCompleteRef.current)) return;
+    if (isPictureGuess && (missionSaving || pictureGuessCompleteModal || pictureGuessAutoCompleteRef.current)) return;
 
     setMissionChoice(choice);
+
+    if (isPictureGuess) {
+      if (choice === demo.correct) {
+        setPictureGuessWrongChoice('');
+        setPictureGuessToast({ type: 'good', message: 'Tama ang iyong sagot!' });
+        pictureGuessToastStartedAtRef.current = Date.now();
+        setMissionResult('');
+        playLetterPopSound('good');
+
+        pictureGuessAutoCompleteRef.current = true;
+        window.setTimeout(() => {
+          completePictureGuessMission({
+            force: true,
+            challenge: demo,
+            answer: choice,
+          });
+        }, 350);
+        return;
+      }
+
+      setPictureGuessWrongChoice(choice);
+      setPictureGuessToast({ type: 'warn', message: 'Hindi pa tama. Tingnan ulit ang larawan!' });
+      setMissionResult('');
+      playLetterPopSound('wrong');
+
+      window.setTimeout(() => {
+        setPictureGuessWrongChoice('');
+      }, 650);
+      return;
+    }
 
     if (choice === demo.correct) {
       if (isLetterPop) {
@@ -9410,6 +9777,12 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       nextLetterPopItems.find(item => item.id !== currentLetterPopId) ||
       nextLetterPopItems[0] ||
       null;
+    const nextPictureGuessItems = getPictureGuessAttemptItems(gradeLevel);
+    const currentPictureGuessId = pictureGuessItem?.id || '';
+    const nextPictureGuessItem =
+      nextPictureGuessItems.find(item => item.id !== currentPictureGuessId) ||
+      nextPictureGuessItems[0] ||
+      null;
 
     setMissionChoice('');
     setMissionResult('');
@@ -9418,6 +9791,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setLetterPopCompleteModal(false);
     setLetterPopItems(nextLetterPopItems);
     setLetterPopItem(nextLetterPopItem);
+    setPictureGuessItems(nextPictureGuessItems);
+    setPictureGuessItem(nextPictureGuessItem);
+    setPictureGuessWrongChoice('');
+    setPictureGuessToast(null);
     setSelectedWordId('');
     setMatchedPairs({});
     setWordMatchWrongWordId('');
@@ -9481,6 +9858,61 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       setWordMatchWrongWordId('');
       setWordMatchWrongPictureId('');
     }, 650);
+  };
+
+  const completePictureGuessMission = async ({ force = false, challenge = demo, answer = missionChoice } = {}) => {
+    const activeChallenge = challenge || demo;
+    const selectedAnswer = answer || missionChoice;
+    const readyToComplete =
+      force ||
+      (isPictureGuess && selectedAnswer === activeChallenge?.correct);
+
+    if (!readyToComplete) {
+      setPictureGuessToast({ type: 'warn', message: 'Piliin muna ang tamang sagot bago matapos ang mission.' });
+      return;
+    }
+
+    setMissionSaving(true);
+
+    try {
+      const result = await api('/missions/picture-guess/complete', {
+        method: 'POST',
+        body: {
+          challengeId: activeChallenge?.id || 'picture-guess-default',
+          challengeTitle: activeChallenge?.id || activeChallenge?.prompt || 'Picture Guess',
+          gradeLevel,
+          answer: selectedAnswer,
+        },
+      });
+
+      setMissionCompleteData({ ...result, newBadges: uniqueBadgesForDisplay(result?.newBadges || []) });
+      showBadgeUnlockPopup(result?.newBadges);
+
+      const elapsedToastTime = Date.now() - Number(pictureGuessToastStartedAtRef.current || 0);
+      const remainingToastTime = Math.max(0, PICTURE_GUESS_SUCCESS_TOAST_MS - elapsedToastTime);
+
+      if (remainingToastTime > 0) {
+        await new Promise(resolve => window.setTimeout(resolve, remainingToastTime));
+      }
+
+      setPictureGuessToast(null);
+      setPictureGuessCompleteModal(true);
+      playMissionSuccessSound();
+
+      if (typeof refresh === 'function') {
+        refresh().catch((error) => {
+          console.warn('[TuklasTalino] Picture Guess dashboard refresh failed:', error);
+        });
+      }
+    } catch (err) {
+      setPictureGuessToast({
+        type: 'warn',
+        message: err?.message || 'Hindi na-save ang Picture Guess mission. Subukan muli.',
+      });
+    } finally {
+      setMissionSaving(false);
+      pictureGuessAutoCompleteRef.current = false;
+    }
   };
 
   const completeLetterPopMission = async ({ force = false, challenge = demo, answer = missionChoice } = {}) => {
@@ -9785,6 +10217,68 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       </div>
                     )}
                   </div>
+                ) : isPictureGuess ? (
+                  <div className={`picture-guess-game ${early ? 'early' : 'standard'}`}>
+                    <div className="picture-guess-card">
+                      <div className="picture-guess-label">Picture Challenge</div>
+                      <div className="picture-guess-image" aria-label="Picture clue">
+                        {demo?.picture || '🖼️'}
+                      </div>
+                      <p>💡 {demo?.sample || 'Tingnan ang larawan at piliin ang tamang sagot.'}</p>
+                    </div>
+
+                    {pictureGuessToast && (
+                      <div className={`picture-guess-toast ${pictureGuessToast.type || 'info'}`} role="status">
+                        {pictureGuessToast.message}
+                      </div>
+                    )}
+
+                    <div className="picture-guess-options" aria-label="Picture Guess choices">
+                      {(demo?.options || []).map((choice, index) => {
+                        const selected = missionChoice === choice;
+                        const correct = choice === demo?.correct;
+                        const wrong = pictureGuessWrongChoice === choice;
+
+                        return (
+                          <button
+                            type="button"
+                            className={`picture-guess-choice tone-${index % 4} ${selected && correct ? 'correct' : ''} ${wrong ? 'wrong' : ''}`}
+                            key={`${demo?.id || 'picture-guess'}-${choice}`}
+                            onClick={() => checkMissionAnswer(choice)}
+                          >
+                            {choice}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {pictureGuessCompleteModal && (
+                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Picture Guess mission complete">
+                        <div className="mission-complete-modal">
+                          <div className="mission-complete-icon">🖼️</div>
+                          <h3>Picture Guess Complete!</h3>
+                          <p>
+                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Picture Guess.'}
+                          </p>
+                          <div className="mission-complete-xp">
+                            ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Added` : 'XP already awarded'}
+                          </div>
+
+                          <div className="mission-complete-actions">
+                            <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
+                              🔄 Play Again
+                            </button>
+                            <button type="button" className="mission-complete-btn" onClick={backToMissions}>
+                              🎮 Missions
+                            </button>
+                            <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
+                              🏠 Home
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <>
                     <div className="mission-prompt-box">
@@ -9808,7 +10302,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                   </>
                 )}
 
-                {missionResult && !isLetterPop && (
+                {missionResult && !isLetterPop && !isPictureGuess && (
                   <div className={`mission-result ${missionResult.includes('✅') ? 'good' : ''}`}>
                     {missionResult}
                   </div>
@@ -9825,7 +10319,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                     <button type="button" className="mission-play-action purple" onClick={completeWordMatchMission} disabled={!wordMatchComplete || missionSaving}>
                       {missionSaving ? 'Saving...' : '✅ Complete Mission'}
                     </button>
-                  ) : isLetterPop ? null : (
+                  ) : (isLetterPop || isPictureGuess) ? null : (
                     <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
                       📖 Go to Lessons
                     </button>

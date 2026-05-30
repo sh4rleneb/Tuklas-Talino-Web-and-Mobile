@@ -18,6 +18,11 @@ const MISSION_CATALOG = {
     title: 'Letter Pop',
     xp: 12,
     perChallenge: true
+  },
+  'picture-guess': {
+    title: 'Picture Guess',
+    xp: 12,
+    perChallenge: true
   }
 };
 
