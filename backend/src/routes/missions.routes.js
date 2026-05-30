@@ -13,6 +13,11 @@ const MISSION_CATALOG = {
   'word-match': {
     title: 'Word Match',
     xp: 15
+  },
+  'letter-pop': {
+    title: 'Letter Pop',
+    xp: 12,
+    perChallenge: true
   }
 };
 
@@ -30,13 +35,31 @@ router.post('/:missionId/complete', async (req, res, next) => {
       return res.status(404).json({ message: 'Mission not found.' });
     }
 
+    const challengeKey = mission.perChallenge
+      ? String(req.body?.challengeId || 'default')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60) || 'default'
+      : '';
+
+    const completionMissionId = mission.perChallenge ? `${missionId}:${challengeKey}` : missionId;
+    const rawChallengeTitle = String(req.body?.challengeTitle || challengeKey || mission.title)
+      .trim()
+      .slice(0, 80);
+    const completionTitle = mission.perChallenge
+      ? `${mission.title}: ${rawChallengeTitle || challengeKey}`
+      : mission.title;
+
     const [completion, created] = await MissionCompletion.findOrCreate({
       where: {
         studentId: student.id,
-        missionId
+        missionId: completionMissionId
       },
       defaults: {
-        title: mission.title,
+        title: completionTitle,
         xpAwarded: mission.xp,
         completedAt: new Date()
       }
@@ -51,7 +74,7 @@ router.post('/:missionId/complete', async (req, res, next) => {
         mission.xp,
         'mission_completion',
         completion.id,
-        `${mission.title} mission completed`
+        `${completionTitle} mission completed`
       );
 
       xpAwarded = mission.xp;
@@ -62,7 +85,9 @@ router.post('/:missionId/complete', async (req, res, next) => {
 
     res.json({
       missionId,
-      title: mission.title,
+      completionMissionId,
+      challengeId: challengeKey || null,
+      title: completionTitle,
       completed: true,
       alreadyCompleted: !created,
       xpAwarded,

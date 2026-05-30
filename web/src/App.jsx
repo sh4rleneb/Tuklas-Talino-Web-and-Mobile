@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api, downloadFile, uploadForm } from './api/client';
 import { useAuth } from './contexts/AuthContext';
 import QuizzesPage from './pages/Student/QuizzesPage';
@@ -1487,6 +1487,300 @@ async function archiveTeacher(id) {
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
   
+      .letter-pop-game {
+        position: relative;
+        display: grid;
+        gap: 22px;
+        margin-top: 8px;
+      }
+
+      .letter-pop-prompt-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        padding: 26px 28px;
+        background:
+          radial-gradient(circle at 12% 18%, rgba(255, 235, 161, .65), transparent 30%),
+          linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(239, 247, 255, .96));
+        border: 3px solid rgba(198, 224, 255, .95);
+        box-shadow: 0 10px 0 rgba(210, 226, 247, .75), 0 22px 50px rgba(67, 91, 130, .10);
+      }
+
+      .letter-pop-mini-label {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        margin-bottom: 12px;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: #fff7d6;
+        border: 2px solid #ffe28a;
+        color: #7c5300;
+        font-size: 15px;
+        font-weight: 1000;
+      }
+
+      .letter-pop-equation {
+        color: #16233d;
+        font-size: clamp(30px, 4vw, 54px);
+        line-height: 1.12;
+        font-weight: 1000;
+        letter-spacing: .01em;
+      }
+
+      .letter-pop-clue {
+        margin-top: 12px;
+        color: #405674;
+        font-size: clamp(18px, 2vw, 24px);
+        font-weight: 900;
+      }
+
+      .letter-pop-toast {
+        position: fixed;
+        left: 50%;
+        top: 45%;
+        z-index: 1200;
+        width: fit-content;
+        max-width: calc(100vw - 48px);
+        padding: 18px 24px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, .98);
+        border: 3px solid #F8DE7E;
+        color: #16233d;
+        font-size: clamp(22px, 3vw, 34px);
+        font-weight: 1000;
+        text-align: center;
+        box-shadow: 0 22px 60px rgba(20, 40, 70, .22);
+        transform: translate(-50%, -50%);
+        animation: letterPopToastPop .2s ease-out;
+        pointer-events: none;
+      }
+
+      .letter-pop-toast.good {
+        background: linear-gradient(135deg, #fffdf2, #fff7c7);
+        border-color: #F8DE7E;
+        animation: letterPopToastCelebrate 1.5s ease-in-out both;
+      }
+
+      .letter-pop-toast.good::before,
+      .letter-pop-toast.good::after {
+        content: '✨';
+        display: inline-block;
+        margin: 0 8px;
+        animation: letterPopToastSparkle .75s ease-in-out infinite alternate;
+      }
+
+      .letter-pop-toast.good::after {
+        animation-delay: .18s;
+      }
+
+      .letter-pop-toast.warn {
+        background: linear-gradient(135deg, #fff8f8, #fff1c9);
+        border-color: #ffb2b2;
+      }
+
+      @keyframes letterPopToastPop {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -45%) scale(.88);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+
+      @keyframes letterPopToastCelebrate {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -45%) scale(.88) rotate(-1deg);
+        }
+        15% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1.06) rotate(1deg);
+        }
+        35%, 75% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1) rotate(0deg);
+          box-shadow: 0 22px 60px rgba(20, 40, 70, .22), 0 0 0 8px rgba(248, 222, 126, .16);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -54%) scale(.96) rotate(0deg);
+        }
+      }
+
+      @keyframes letterPopToastSparkle {
+        from {
+          transform: translateY(0) scale(.9) rotate(-8deg);
+          opacity: .65;
+        }
+        to {
+          transform: translateY(-4px) scale(1.15) rotate(8deg);
+          opacity: 1;
+        }
+      }
+
+      .letter-pop-balloon-field {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(130px, 1fr));
+        gap: 22px;
+        align-items: end;
+        padding: 16px 4px 28px;
+      }
+
+      .letter-pop-balloon {
+        position: relative;
+        min-height: 148px;
+        border: 0;
+        border-radius: 52% 52% 48% 48% / 58% 58% 42% 42%;
+        color: #16233d;
+        font-size: clamp(28px, 4vw, 44px);
+        font-weight: 1000;
+        cursor: pointer;
+        box-shadow: inset -12px -18px 30px rgba(0, 0, 0, .08), 0 14px 0 rgba(50, 74, 112, .16), 0 24px 42px rgba(51, 76, 115, .18);
+        transform-origin: center bottom;
+        animation: letterPopFloat 2.8s ease-in-out infinite;
+        transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+      }
+
+      .letter-pop-balloon:hover {
+        transform: translateY(-7px) scale(1.03);
+        filter: saturate(1.08);
+      }
+
+      .letter-pop-balloon.tone-0 {
+        background: linear-gradient(145deg, #fff7b9, #ffc857);
+      }
+
+      .letter-pop-balloon.tone-1 {
+        background: linear-gradient(145deg, #c9f7ff, #62c8ff);
+        animation-delay: .16s;
+      }
+
+      .letter-pop-balloon.tone-2 {
+        background: linear-gradient(145deg, #ffd6f1, #ff79c8);
+        animation-delay: .32s;
+      }
+
+      .letter-pop-balloon.tone-3 {
+        background: linear-gradient(145deg, #d8ffdc, #60d96e);
+        animation-delay: .48s;
+      }
+
+      .letter-pop-shine {
+        position: absolute;
+        top: 20%;
+        left: 24%;
+        width: 30px;
+        height: 42px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .62);
+        transform: rotate(28deg);
+        pointer-events: none;
+      }
+
+      .letter-pop-string {
+        position: absolute;
+        left: 50%;
+        bottom: -34px;
+        width: 3px;
+        height: 42px;
+        background: rgba(54, 69, 99, .28);
+        transform: translateX(-50%);
+        pointer-events: none;
+      }
+
+      .letter-pop-text {
+        position: relative;
+        z-index: 1;
+      }
+
+      .letter-pop-balloon.wrong {
+        animation: letterPopShake .42s ease-in-out;
+        box-shadow: inset -12px -18px 30px rgba(0, 0, 0, .08), 0 0 0 5px rgba(255, 98, 98, .25), 0 14px 0 rgba(50, 74, 112, .16);
+      }
+
+      .letter-pop-balloon.popped {
+        animation: letterPopPop .5s ease-out forwards;
+      }
+
+      .letter-pop-burst {
+        position: absolute;
+        inset: -12px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 86px;
+        text-shadow: 0 5px 18px rgba(255, 168, 0, .55);
+        animation: letterPopBurst .55s ease-out forwards;
+        pointer-events: none;
+      }
+
+      .letter-pop-helper {
+        justify-self: center;
+        width: fit-content;
+        max-width: 100%;
+        padding: 12px 18px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .86);
+        border: 2px solid rgba(186, 230, 253, .85);
+        color: #2d4c70;
+        font-weight: 900;
+        text-align: center;
+      }
+
+      .letter-pop-game.standard .letter-pop-balloon.popped {
+        animation: letterPopPop .5s ease-out forwards;
+      }
+
+      .letter-pop-game.standard .letter-pop-balloon {
+        border-radius: 32px;
+        min-height: 116px;
+        animation-name: letterPopCardFloat;
+      }
+
+      @keyframes letterPopFloat {
+        0%, 100% { transform: translateY(0) rotate(-1deg); }
+        50% { transform: translateY(-10px) rotate(1deg); }
+      }
+
+      @keyframes letterPopCardFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
+      }
+
+      @keyframes letterPopShake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-8px) rotate(-2deg); }
+        40% { transform: translateX(8px) rotate(2deg); }
+        60% { transform: translateX(-5px) rotate(-1deg); }
+        80% { transform: translateX(5px) rotate(1deg); }
+      }
+
+      @keyframes letterPopPop {
+        0% { transform: scale(1); opacity: 1; }
+        55% { transform: scale(1.18); opacity: .95; }
+        100% { transform: scale(.25); opacity: 0; }
+      }
+
+      @keyframes letterPopBurst {
+        0% { transform: scale(.35) rotate(0deg); opacity: 0; }
+        45% { transform: scale(1.2) rotate(12deg); opacity: 1; }
+        100% { transform: scale(1.65) rotate(24deg); opacity: 0; }
+      }
+
+      @media (max-width: 760px) {
+        .letter-pop-balloon-field {
+          grid-template-columns: 1fr;
+        }
+
+        .letter-pop-balloon {
+          min-height: 112px;
+        }
+      }
+
       .word-match-toast {
         padding: 14px 16px;
         border-radius: 18px;
@@ -4038,7 +4332,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
   </>;
 }
 
-function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logout, title, subtitle, icon = '☀️', children, titleAction, beforeNavigate }) {
+function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logout, title, subtitle, icon = '☀️', children, titleAction, beforeNavigate, hideTitleCard = false }) {
   const s = data?.student || {};
   const xp = Number(s.xp || 0);
   const level = levelForXp(xp);
@@ -4126,26 +4420,28 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
               </div>
             </header>
 
-            <section className="g46-ref-title-card">
-              <div className="g46-ref-title-left">
-                <span className="g46-ref-title-icon">{icon}</span>
-                <div>
-                  <h1>{title || `Hi ${s.name || 'Learner'}!`}</h1>
-                  <p>{subtitle || 'Ready ka na ba sa learning adventure today?'}</p>
+            {!hideTitleCard && (
+              <section className="g46-ref-title-card">
+                <div className="g46-ref-title-left">
+                  <span className="g46-ref-title-icon">{icon}</span>
+                  <div>
+                    <h1>{title || `Hi ${s.name || 'Learner'}!`}</h1>
+                    <p>{subtitle || 'Ready ka na ba sa learning adventure today?'}</p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="g46-ref-title-side">
-                <div className="g46-ref-level-line">
-                  <span>XP Points</span>
-                  <strong>{xp} XP</strong>
-                  <i><span style={{ width: `${Math.max(6, pct)}%` }} /></i>
+                <div className="g46-ref-title-side">
+                  <div className="g46-ref-level-line">
+                    <span>XP Points</span>
+                    <strong>{xp} XP</strong>
+                    <i><span style={{ width: `${Math.max(6, pct)}%` }} /></i>
+                  </div>
+                  {activeTab !== 'quizzes' && (
+                    <p className="g46-ref-muted" style={{ margin: '10px 0 0' }}>Mayroon kang <b>{xp} XP</b>. {100 - pct} XP pa bago ang next level.</p>
+                  )}
                 </div>
-                {activeTab !== 'quizzes' && (
-<p className="g46-ref-muted" style={{ margin: '10px 0 0' }}>Mayroon kang <b>{xp} XP</b>. {100 - pct} XP pa bago ang next level.</p>
-)}
-              </div>
-            </section>
+              </section>
+            )}
 
             <div className="g46-ref-content">
               {children}
@@ -8120,8 +8416,8 @@ function getMissionDemo(gameId) {
     },
     'letter-pop': {
       instruction: 'Piliin ang nawawalang pantig para mabuo ang salita.',
-      prompt: 'ba + ___ = bata',
-      sample: 'Tapikin ang tamang pantig.',
+      prompt: 'ba + ___ = 🧒',
+      sample: 'Tingnan ang clue at piliin ang pantig na bubuo sa salita.',
       options: ['ta', 'sa', 'la'],
       correct: 'ta',
       success: 'Tama! ba + ta = bata.'
@@ -8203,6 +8499,117 @@ function getWordMatchItemsForGrade(gradeLevel = 4) {
   return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
 }
 
+function getLetterPopItemsForGrade(gradeLevel = 4) {
+  const earlyItems = [
+    {
+      id: 'g1-bata',
+      prompt: 'ba + ___ = 🧒',
+      sample: 'Clue: Isang batang tao.',
+      options: ['ta', 'sa', 'la'],
+      correct: 'ta',
+      success: 'Tama! ba + ta = bata.'
+    },
+    {
+      id: 'g1-pusa',
+      prompt: 'pu + ___ = 🐱',
+      sample: 'Clue: Hayop na mahilig umakyat at umingiyaw.',
+      options: ['sa', 'ta', 'pa'],
+      correct: 'sa',
+      success: 'Tama! pu + sa = pusa.'
+    },
+    {
+      id: 'g1-isda',
+      prompt: 'is + ___ = 🐟',
+      sample: 'Clue: Hayop na lumalangoy sa tubig.',
+      options: ['da', 'ba', 'ma'],
+      correct: 'da',
+      success: 'Tama! is + da = isda.'
+    },
+    {
+      id: 'g2-puno',
+      prompt: 'pu + ___ = 🌳',
+      sample: 'Clue: Halamang may katawan, sanga, at dahon.',
+      options: ['no', 'ta', 'sa'],
+      correct: 'no',
+      success: 'Tama! pu + no = puno.'
+    },
+    {
+      id: 'g2-araw',
+      prompt: 'a + ___ = ☀️',
+      sample: 'Clue: Nagbibigay ng liwanag sa umaga.',
+      options: ['raw', 'so', 'la'],
+      correct: 'raw',
+      success: 'Tama! a + raw = araw.'
+    },
+    {
+      id: 'g2-lapis',
+      prompt: 'la + ___ = ✏️',
+      sample: 'Clue: Gamit sa pagsulat o pagguhit.',
+      options: ['pis', 'tas', 'pan'],
+      correct: 'pis',
+      success: 'Tama! la + pis = lapis.'
+    }
+  ];
+
+  const upperItems = [
+    {
+      id: 'g3-paaralan',
+      prompt: 'pa + ___ + lan = 🏫',
+      sample: 'Clue: Lugar kung saan natututo ang mga mag-aaral.',
+      options: ['ara', 'ala', 'usa'],
+      correct: 'ara',
+      success: 'Tama! pa + ara + lan = paaralan.'
+    },
+    {
+      id: 'g3-kaalaman',
+      prompt: 'ka + ___ + man = 💡',
+      sample: 'Clue: Impormasyong natutuhan mula sa aralin o karanasan.',
+      options: ['ala', 'aba', 'isa'],
+      correct: 'ala',
+      success: 'Tama! ka + ala + man = kaalaman.'
+    },
+    {
+      id: 'g4-kalikasan',
+      prompt: 'ka + li + ___ + san = 🌳',
+      sample: 'Clue: Mundo ng halaman, hayop, hangin, lupa, at tubig.',
+      options: ['ka', 'pa', 'ta'],
+      correct: 'ka',
+      success: 'Tama! ka + li + ka + san = kalikasan.'
+    },
+    {
+      id: 'g4-pamayanan',
+      prompt: 'pa + ma + ya + ___ = 🏘️',
+      sample: 'Clue: Lugar kung saan magkakasamang naninirahan ang mga tao.',
+      options: ['nan', 'lan', 'ran'],
+      correct: 'nan',
+      success: 'Tama! pa + ma + ya + nan = pamayanan.'
+    },
+    {
+      id: 'g5-panitikan',
+      prompt: 'pa + ni + ti + ___ = 📜',
+      sample: 'Clue: Mga akdang binabasa tulad ng tula, kuwento, at alamat.',
+      options: ['kan', 'tan', 'san'],
+      correct: 'kan',
+      success: 'Tama! pa + ni + ti + kan = panitikan.'
+    },
+    {
+      id: 'g6-talasalitaan',
+      prompt: 'ta + la + sa + li + ___ = 🔤',
+      sample: 'Clue: Kalipunan ng mga salitang ginagamit at pinag-aaralan.',
+      options: ['taan', 'tuan', 'tikan'],
+      correct: 'taan',
+      success: 'Tama! ta + la + sa + li + taan = talasalitaan.'
+    }
+  ];
+
+  return Number(gradeLevel || 4) <= 2 ? earlyItems : upperItems;
+}
+
+function getLetterPopAttemptItems(gradeLevel = 4) {
+  const pool = getLetterPopItemsForGrade(gradeLevel);
+  return shuffleWordMatchItems(pool);
+}
+
 function getWordMatchAttemptItems(gradeLevel = 4) {
   const pool = getWordMatchItemsForGrade(gradeLevel);
   const itemCount = Number(gradeLevel || 4) <= 2 ? 5 : 6;
@@ -8249,29 +8656,82 @@ function WordMatchStyles() {
     <style>{`
       .word-match-game {
         display: grid;
-        gap: 18px;
-        margin-top: 18px;
+        gap: 14px;
+        margin-top: 10px;
+      }
+
+      .word-match-top-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 14px;
+        padding: 14px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, .58);
+        border: 1px solid rgba(221, 235, 255, .9);
       }
 
       .word-match-guide {
-        padding: 16px 18px;
-        border-radius: 20px;
+        padding: 14px 16px;
+        border-radius: 18px;
         background: #F8FBFF;
         border: 1px solid #DDEBFF;
         color: #38526B;
         font-weight: 900;
-        line-height: 1.55;
+        line-height: 1.45;
+      }
+
+      .word-match-progress-card {
+        display: grid;
+        grid-template-columns: auto auto minmax(120px, 1fr);
+        align-items: center;
+        gap: 12px;
+        width: fit-content;
+        max-width: 100%;
+        padding: 12px 16px;
+        border-radius: 999px;
+        background: #FFFFFF;
+        border: 2px solid #DDEBFF;
+        box-shadow: 0 10px 22px rgba(60, 103, 135, .08);
+        color: #38526B;
+        font-weight: 1000;
+      }
+
+      .word-match-progress-card strong {
+        color: #0B934C;
+      }
+
+      .word-match-progress-track {
+        width: min(220px, 32vw);
+        height: 12px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: #E8F1FF;
+      }
+
+      .word-match-progress-track i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #22C55E, #F8DE7E);
+        transition: width .24s ease;
       }
 
       .word-match-board {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
         gap: 18px;
+        align-items: start;
       }
 
       .word-match-column {
         display: grid;
         gap: 12px;
+        align-content: start;
+      }
+
+      .word-match-column > button {
+        min-height: 112px;
       }
 
       .word-match-column h3 {
@@ -8337,14 +8797,70 @@ function WordMatchStyles() {
 
       .word-match-word.matched,
       .word-match-picture.matched {
+        position: relative;
         border-color: #18B865;
         background: #EFFFF5;
         color: #0B743D;
+        animation: wordMatchMatchedGlow .35s ease-out;
       }
 
       .word-match-word.matched::after,
       .word-match-picture.matched::after {
-        content: " ✓";
+        content: "✓";
+        position: absolute;
+        top: 10px;
+        right: 14px;
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: #18B865;
+        color: #FFFFFF;
+        font-size: 16px;
+        box-shadow: 0 8px 16px rgba(24, 184, 101, .25);
+      }
+
+      .word-match-word.wrong,
+      .word-match-picture.wrong {
+        border-color: #FF8A8A;
+        background: #FFF4F4;
+        animation: wordMatchWrongShake .42s ease-in-out;
+      }
+
+      .missions-wrap.early .word-match-word,
+      .missions-wrap.early .word-match-picture {
+        min-height: 118px;
+      }
+
+      .missions-wrap.early .word-match-picture-icon {
+        width: 82px;
+        height: 82px;
+        border-radius: 26px;
+        font-size: 46px;
+      }
+
+      @keyframes wordMatchWrongShake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-8px) rotate(-1deg); }
+        40% { transform: translateX(8px) rotate(1deg); }
+        60% { transform: translateX(-5px) rotate(-.5deg); }
+        80% { transform: translateX(5px) rotate(.5deg); }
+      }
+
+      @keyframes wordMatchMatchedGlow {
+        0% {
+          transform: scale(.98);
+          box-shadow: 0 0 0 rgba(24, 184, 101, 0);
+        }
+        55% {
+          transform: scale(1.02);
+          box-shadow: 0 0 0 8px rgba(24, 184, 101, .12);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 10px 22px rgba(60, 103, 135, .08);
+        }
       }
 
       .word-match-feedback {
@@ -8373,6 +8889,15 @@ function WordMatchStyles() {
       }
 
       @media (max-width: 820px) {
+        .word-match-top-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .word-match-progress-card {
+          width: 100%;
+          justify-content: stretch;
+        }
+
         .word-match-board {
           grid-template-columns: 1fr;
         }
@@ -8689,8 +9214,15 @@ function StudentMissions({ data, go, onPlayMission }) {
 function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, refresh }) {
   const [missionChoice, setMissionChoice] = useState('');
   const [missionResult, setMissionResult] = useState('');
+  const [letterPopStage, setLetterPopStage] = useState('');
+  const [letterPopToast, setLetterPopToast] = useState(null);
+  const [letterPopCompleteModal, setLetterPopCompleteModal] = useState(false);
+  const [letterPopItems, setLetterPopItems] = useState([]);
+  const [letterPopItem, setLetterPopItem] = useState(null);
   const [selectedWordId, setSelectedWordId] = useState('');
   const [matchedPairs, setMatchedPairs] = useState({});
+  const [wordMatchWrongWordId, setWordMatchWrongWordId] = useState('');
+  const [wordMatchWrongPictureId, setWordMatchWrongPictureId] = useState('');
   const [wordMatchMessage, setWordMatchMessage] = useState('');
   const [wordMatchItems, setWordMatchItems] = useState([]);
   const [wordMatchPictures, setWordMatchPictures] = useState([]);
@@ -8698,28 +9230,46 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   const [wordMatchCompleteModal, setWordMatchCompleteModal] = useState(false);
   const [missionSaving, setMissionSaving] = useState(false);
   const [missionCompleteData, setMissionCompleteData] = useState(null);
+  const letterPopAutoCompleteRef = useRef(false);
+  const letterPopToastStartedAtRef = useRef(0);
+  const LETTER_POP_SUCCESS_TOAST_MS = 1500;
   const student = data?.student || {};
   const gradeLevel = Number(student?.gradeLevel || 4);
   const early = gradeLevel <= 2;
   const xp = Number(student?.xp || 0);
   const games = missionGamesForStudent(data);
   const selectedGame = games.find(game => game.id === selectedGameId) || games[0];
-  const demo = getMissionDemo(selectedGame?.id);
+  const baseDemo = getMissionDemo(selectedGame?.id);
   const locked = selectedGame?.status === 'Locked';
   const isWordMatch = selectedGame?.id === 'word-match';
+  const isLetterPop = selectedGame?.id === 'letter-pop';
+  const fallbackLetterPopItems = getLetterPopAttemptItems(gradeLevel);
+  const activeLetterPopItems = letterPopItems.length ? letterPopItems : fallbackLetterPopItems;
+  const demo = isLetterPop ? (letterPopItem || activeLetterPopItems[0] || baseDemo) : baseDemo;
   const fallbackWordMatchItems = getWordMatchAttemptItems(gradeLevel);
   const activeWordMatchItems = wordMatchItems.length ? wordMatchItems : fallbackWordMatchItems;
   const visibleWordMatchPictures = wordMatchPictures.length ? wordMatchPictures : activeWordMatchItems;
   const wordMatchDoneCount = Object.keys(matchedPairs).length;
   const wordMatchComplete = isWordMatch && wordMatchDoneCount === activeWordMatchItems.length;
+  const letterPopReady = isLetterPop && missionChoice === demo?.correct && letterPopStage === 'correct';
 
   useEffect(() => {
     const nextItems = getWordMatchAttemptItems(gradeLevel);
+    const nextLetterPopItems = getLetterPopAttemptItems(gradeLevel);
 
     setMissionChoice('');
     setMissionResult('');
+    setLetterPopStage('');
+    setLetterPopToast(null);
+    setLetterPopCompleteModal(false);
+    letterPopAutoCompleteRef.current = false;
+    letterPopToastStartedAtRef.current = 0;
+    setLetterPopItems(nextLetterPopItems);
+    setLetterPopItem(nextLetterPopItems[0] || null);
     setSelectedWordId('');
     setMatchedPairs({});
+    setWordMatchWrongWordId('');
+    setWordMatchWrongPictureId('');
     setWordMatchMessage('');
     setWordMatchItems(nextItems);
     setWordMatchToast(null);
@@ -8739,6 +9289,16 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     return () => clearTimeout(timer);
   }, [wordMatchToast]);
 
+  useEffect(() => {
+    if (!letterPopToast) return undefined;
+
+    const timer = setTimeout(() => {
+      setLetterPopToast(null);
+    }, letterPopToast.type === 'good' ? LETTER_POP_SUCCESS_TOAST_MS : 1300);
+
+    return () => clearTimeout(timer);
+  }, [letterPopToast]);
+
   const openTab = (tab) => {
     if (tab === 'home') return go('screen-student');
     if (tab === 'lessons') return go('screen-lessons');
@@ -8756,24 +9316,112 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     go('screen-stu-missions');
   };
 
+  function playLetterPopSound(type = 'good') {
+    try {
+      if (typeof window === 'undefined') return;
+
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+
+      osc.type = type === 'good' ? 'triangle' : 'sawtooth';
+      osc.frequency.setValueAtTime(type === 'good' ? 620 : 180, now);
+      if (type === 'good') {
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(1040, now + 0.16);
+      } else {
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.12);
+      }
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(type === 'good' ? 0.28 : 0.16, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + (type === 'good' ? 0.24 : 0.16));
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + (type === 'good' ? 0.28 : 0.2));
+
+      window.setTimeout(() => {
+        try {
+          ctx.close();
+        } catch (_) {
+          // Sound cleanup is optional.
+        }
+      }, 420);
+    } catch (_) {
+      // Letter Pop sound is optional.
+    }
+  }
+
   const checkMissionAnswer = (choice) => {
     if (!demo || locked) return;
+    if (isLetterPop && (missionSaving || letterPopCompleteModal || letterPopAutoCompleteRef.current)) return;
 
     setMissionChoice(choice);
+
     if (choice === demo.correct) {
+      if (isLetterPop) {
+        setLetterPopStage('correct');
+        setLetterPopToast({ type: 'good', message: 'Tama ang iyong sagot!' });
+        letterPopToastStartedAtRef.current = Date.now();
+        setMissionResult('');
+        playLetterPopSound('good');
+
+        letterPopAutoCompleteRef.current = true;
+        window.setTimeout(() => {
+          completeLetterPopMission({
+            force: true,
+            challenge: demo,
+            answer: choice,
+          });
+        }, 350);
+        return;
+      }
+
       setMissionResult(`✅ ${demo.success} Demo reward: +${selectedGame?.xp || 0} XP preview.`);
-    } else {
-      setMissionResult('⭐ Hindi pa tama. Subukan muli!');
+      return;
     }
+
+    if (isLetterPop) {
+      setLetterPopStage('wrong');
+      setLetterPopToast({ type: 'warn', message: 'Hindi pa tama. Pop ulit ng tamang pantig!' });
+      setMissionResult('');
+      playLetterPopSound('wrong');
+
+      window.setTimeout(() => {
+        setLetterPopStage(current => current === 'wrong' ? '' : current);
+      }, 650);
+      return;
+    }
+
+    setMissionResult('⭐ Hindi pa tama. Subukan muli!');
   };
 
   const restartDemo = () => {
     const nextItems = getWordMatchAttemptItems(gradeLevel);
+    const nextLetterPopItems = getLetterPopAttemptItems(gradeLevel);
+    const currentLetterPopId = letterPopItem?.id || '';
+    const nextLetterPopItem =
+      nextLetterPopItems.find(item => item.id !== currentLetterPopId) ||
+      nextLetterPopItems[0] ||
+      null;
 
     setMissionChoice('');
     setMissionResult('');
+    setLetterPopStage('');
+    setLetterPopToast(null);
+    setLetterPopCompleteModal(false);
+    setLetterPopItems(nextLetterPopItems);
+    setLetterPopItem(nextLetterPopItem);
     setSelectedWordId('');
     setMatchedPairs({});
+    setWordMatchWrongWordId('');
+    setWordMatchWrongPictureId('');
     setWordMatchMessage('');
     setWordMatchItems(nextItems);
     setWordMatchToast(null);
@@ -8784,39 +9432,110 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
   };
 
   const selectWordMatchWord = (itemId) => {
-    if (locked || matchedPairs[itemId]) return;
+    if (locked || matchedPairs[itemId] || missionSaving || wordMatchCompleteModal) return;
     setSelectedWordId(itemId);
+    setWordMatchWrongWordId('');
+    setWordMatchWrongPictureId('');
     setWordMatchMessage('');
-    setWordMatchToast({ type: 'info', message: 'Piliin ang larawan.' });
+    setWordMatchToast(null);
   };
 
   const selectWordMatchPicture = (itemId) => {
-    if (locked || matchedPairs[itemId]) return;
+    if (locked || matchedPairs[itemId] || missionSaving || wordMatchCompleteModal) return;
 
     if (!selectedWordId) {
       setWordMatchMessage('');
       setWordMatchToast({ type: 'warn', message: 'Pumili muna ng salita.' });
+      playLetterPopSound('wrong');
       return;
     }
 
     if (selectedWordId === itemId) {
-      const matchedItem = activeWordMatchItems.find(item => item.id === itemId);
       const nextPairs = { ...matchedPairs, [itemId]: true };
+      const nextDoneCount = Object.keys(nextPairs).length;
+
       setMatchedPairs(nextPairs);
       setSelectedWordId('');
+      setWordMatchWrongWordId('');
+      setWordMatchWrongPictureId('');
       setWordMatchMessage('');
-      setWordMatchToast({ type: 'good', message: 'Tama!' });
+      playLetterPopSound('good');
 
-      if (Object.keys(nextPairs).length === activeWordMatchItems.length) {
+      if (nextDoneCount === activeWordMatchItems.length) {
         setMissionResult('');
-        setWordMatchToast({ type: 'good', message: 'Mahusay! Lahat ng pares ay tama.' });
+        setWordMatchToast(null);
+      } else {
+        setWordMatchToast(null);
       }
 
       return;
     }
 
+    setWordMatchWrongWordId(selectedWordId);
+    setWordMatchWrongPictureId(itemId);
     setWordMatchMessage('');
-    setWordMatchToast({ type: 'warn', message: 'Hindi pa tugma. Subukan muli!' });
+    setWordMatchToast({ type: 'warn', message: 'Hindi pa tugma. Try ulit!' });
+    playLetterPopSound('wrong');
+
+    window.setTimeout(() => {
+      setWordMatchWrongWordId('');
+      setWordMatchWrongPictureId('');
+    }, 650);
+  };
+
+  const completeLetterPopMission = async ({ force = false, challenge = demo, answer = missionChoice } = {}) => {
+    const activeChallenge = challenge || demo;
+    const selectedAnswer = answer || missionChoice;
+    const readyToComplete =
+      force ||
+      (isLetterPop && selectedAnswer === activeChallenge?.correct && letterPopStage === 'correct');
+
+    if (!readyToComplete) {
+      setLetterPopToast({ type: 'warn', message: 'Pop muna ang tamang sagot bago tapusin ang mission.' });
+      return;
+    }
+
+    setMissionSaving(true);
+
+    try {
+      const result = await api('/missions/letter-pop/complete', {
+        method: 'POST',
+        body: {
+          challengeId: activeChallenge?.id || 'letter-pop-default',
+          challengeTitle: activeChallenge?.id || activeChallenge?.prompt || 'Letter Pop',
+          gradeLevel,
+          answer: selectedAnswer,
+        },
+      });
+
+      setMissionCompleteData({ ...result, newBadges: uniqueBadgesForDisplay(result?.newBadges || []) });
+      showBadgeUnlockPopup(result?.newBadges);
+
+      const elapsedToastTime = Date.now() - Number(letterPopToastStartedAtRef.current || 0);
+      const remainingToastTime = Math.max(0, LETTER_POP_SUCCESS_TOAST_MS - elapsedToastTime);
+
+      if (remainingToastTime > 0) {
+        await new Promise(resolve => window.setTimeout(resolve, remainingToastTime));
+      }
+
+      setLetterPopToast(null);
+      setLetterPopCompleteModal(true);
+      playMissionSuccessSound();
+
+      if (typeof refresh === 'function') {
+        refresh().catch((error) => {
+          console.warn('[TuklasTalino] Letter Pop dashboard refresh failed:', error);
+        });
+      }
+    } catch (err) {
+      setLetterPopToast({
+        type: 'warn',
+        message: err?.message || 'Hindi na-save ang Letter Pop mission. Subukan muli.',
+      });
+    } finally {
+      setMissionSaving(false);
+      letterPopAutoCompleteRef.current = false;
+    }
   };
 
   const completeWordMatchMission = async () => {
@@ -8893,8 +9612,18 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
               <>
                 {isWordMatch ? (
                   <div className="word-match-game" aria-label="Word Match game">
-                    <div className="word-match-guide">
-                      Piliin ang salitang Filipino sa kaliwa, pagkatapos piliin ang tamang larawan sa kanan.
+                    <div className="word-match-top-panel">
+                      <div className="word-match-guide">
+                        Piliin ang salitang Filipino sa kaliwa, pagkatapos piliin ang tamang larawan sa kanan.
+                      </div>
+
+                      <div className="word-match-progress-card" aria-label="Word Match progress">
+                        <span>Matched pairs</span>
+                        <strong>{wordMatchDoneCount}/{activeWordMatchItems.length}</strong>
+                        <div className="word-match-progress-track">
+                          <i style={{ width: `${Math.round((wordMatchDoneCount / Math.max(1, activeWordMatchItems.length)) * 100)}%` }} />
+                        </div>
+                      </div>
                     </div>
 
                     {wordMatchToast && (
@@ -8908,16 +9637,17 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                         <h3>Mga Salita</h3>
                         {activeWordMatchItems.map((item, index) => {
                           const matched = Boolean(matchedPairs[item.id]);
+                          const wrong = wordMatchWrongWordId === item.id;
                           const toneClass = matched ? `tone-${index % 6}` : '';
                           return (
                             <button
                               type="button"
                               key={item.id}
-                              className={`word-match-word ${selectedWordId === item.id ? 'selected' : ''} ${matched ? 'matched' : ''} ${toneClass}`}
+                              className={`word-match-word ${selectedWordId === item.id ? 'selected' : ''} ${matched ? 'matched' : ''} ${wrong ? 'wrong' : ''} ${toneClass}`}
                               onClick={() => selectWordMatchWord(item.id)}
                               disabled={matched}
                             >
-                              {item.word}
+                              <span>{item.word}</span>
                             </button>
                           );
                         })}
@@ -8927,13 +9657,14 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                         <h3>Mga Larawan</h3>
                         {visibleWordMatchPictures.map(item => {
                           const matched = Boolean(matchedPairs[item.id]);
+                          const wrong = wordMatchWrongPictureId === item.id;
                           const originalIndex = Math.max(0, activeWordMatchItems.findIndex(row => row.id === item.id));
                           const toneClass = matched ? `tone-${originalIndex % 6}` : '';
                           return (
                             <button
                               type="button"
                               key={item.id}
-                              className={`word-match-picture ${matched ? 'matched' : ''} ${toneClass}`}
+                              className={`word-match-picture ${matched ? 'matched' : ''} ${wrong ? 'wrong' : ''} ${toneClass}`}
                               onClick={() => selectWordMatchPicture(item.id)}
                               disabled={matched}
                               aria-label={item.label}
@@ -8985,6 +9716,75 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       </div>
                     )}
                   </div>
+                ) : isLetterPop ? (
+                  <div className={`letter-pop-game ${early ? 'early' : 'standard'} ${letterPopStage || ''}`}>
+                    <div className="letter-pop-prompt-card">
+                      <div className="letter-pop-mini-label">Pantig Mission</div>
+                      <div className="letter-pop-equation">{demo?.prompt}</div>
+                      <div className="letter-pop-clue">💡 {demo?.sample}</div>
+                    </div>
+
+                    {letterPopToast && (
+                      <div className={`letter-pop-toast ${letterPopToast.type || 'info'}`} role="status">
+                        {letterPopToast.message}
+                      </div>
+                    )}
+
+                    <div className="letter-pop-balloon-field" aria-label="Letter Pop choices">
+                      {(demo?.options || []).map((choice, index) => {
+                        const selected = missionChoice === choice;
+                        const correct = choice === demo?.correct;
+                        const popped = selected && correct && letterPopStage === 'correct';
+                        const wrong = selected && !correct && letterPopStage === 'wrong';
+
+                        return (
+                          <button
+                            type="button"
+                            className={`letter-pop-balloon tone-${index % 4} ${popped ? 'popped' : ''} ${wrong ? 'wrong' : ''}`}
+                            key={`${demo?.id || 'letter-pop'}-${choice}`}
+                            onClick={() => checkMissionAnswer(choice)}
+                            aria-label={`Piliin ang pantig ${choice}`}
+                          >
+                            <span className="letter-pop-string" aria-hidden="true" />
+                            <span className="letter-pop-shine" aria-hidden="true" />
+                            <span className="letter-pop-text">{choice}</span>
+                            {popped && <span className="letter-pop-burst" aria-hidden="true">✦</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="letter-pop-helper">
+                      Tap the balloon na bubuo sa salita. Kapag tama, pop!
+                    </div>
+
+                    {letterPopCompleteModal && (
+                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Letter Pop mission complete">
+                        <div className="mission-complete-modal">
+                          <div className="mission-complete-icon">🎈</div>
+                          <h3>Letter Pop Complete!</h3>
+                          <p>
+                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Letter Pop.'}
+                          </p>
+                          <div className="mission-complete-xp">
+                            ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Added` : 'XP already awarded'}
+                          </div>
+
+                          <div className="mission-complete-actions">
+                            <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
+                              🔄 Play Again
+                            </button>
+                            <button type="button" className="mission-complete-btn" onClick={backToMissions}>
+                              🎮 Missions
+                            </button>
+                            <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
+                              🏠 Home
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <>
                     <div className="mission-prompt-box">
@@ -9008,7 +9808,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                   </>
                 )}
 
-                {missionResult && (
+                {missionResult && !isLetterPop && (
                   <div className={`mission-result ${missionResult.includes('✅') ? 'good' : ''}`}>
                     {missionResult}
                   </div>
@@ -9025,7 +9825,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                     <button type="button" className="mission-play-action purple" onClick={completeWordMatchMission} disabled={!wordMatchComplete || missionSaving}>
                       {missionSaving ? 'Saving...' : '✅ Complete Mission'}
                     </button>
-                  ) : (
+                  ) : isLetterPop ? null : (
                     <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
                       📖 Go to Lessons
                     </button>
@@ -9065,8 +9865,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
           <nav className="g12-nav g12-mission-play-nav" aria-label="Student navigation">
             <button type="button" onClick={() => openTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
             <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
             <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
             <button type="button" onClick={() => openTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
+            <button type="button" onClick={() => openTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
             <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
           </nav>
         </div>
@@ -9083,6 +9885,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       title={selectedGame?.title || 'Mission'}
       subtitle={`${selectedGame?.module || 'Filipino'} mission • +${selectedGame?.xp || 0} XP preview`}
       titleAction={<button type="button" className="g46-ref-soft-btn" onClick={backToMissions}>← Missions</button>}
+      hideTitleCard={isLetterPop}
     >
       {content}
     </Grade46StudentChrome>
