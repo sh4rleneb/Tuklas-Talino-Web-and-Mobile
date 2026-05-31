@@ -4,34 +4,56 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+
+function subjectIconSrc(subject = "") {
+  const key = String(subject || "").toLowerCase();
+  if (key.includes("pagbasa")) return "/category-pagbasa.png";
+  if (key.includes("bokabularyo")) return "/category-bokabularyo.png";
+  if (key.includes("panitikan")) return "/category-panitikan.png";
+  if (key.includes("oral")) return "/category-oralcomm.png";
+  if (key.includes("pagsulat")) return "/category-pagsulat.png";
+  return "";
+}
+
+function SubjectImageIcon({ subject = "", className = "subject-img-icon", fallback = "📚" }) {
+  const src = subjectIconSrc(subject);
+  if (!src) return <>{fallback}</>;
+  return <img src={src} alt="" className={className} aria-hidden="true" />;
+}
+
 function subjectTheme(subject) {
   const map = {
     Pagbasa: {
       icon: "📖",
+      iconSrc: "/category-pagbasa.png",
       bg: "#DFF7E8",
       accent: "#2ECC71",
       tag: "Kwento",
     },
     Bokabularyo: {
       icon: "🔤",
+      iconSrc: "/category-bokabularyo.png",
       bg: "#DFF2FF",
       accent: "#3498DB",
       tag: "Salita",
     },
     Panitikan: {
       icon: "📜",
+      iconSrc: "/category-panitikan.png",
       bg: "#FFF0DD",
       accent: "#F39C12",
       tag: "Tula",
     },
     "Oral Comm": {
       icon: "🎙️",
+      iconSrc: "/category-oralcomm.png",
       bg: "#FFE2EA",
       accent: "#E67EA2",
       tag: "Bigkas",
     },
     Pagsulat: {
       icon: "✍️",
+      iconSrc: "/category-pagsulat.png",
       bg: "#FFF8CF",
       accent: "#F1C40F",
       tag: "Sulatin",
@@ -1141,7 +1163,7 @@ function QuizGameHeader({ quiz, best, go, onBack }) {
     <header className="quiz-game-header">
       <div className="quiz-game-title-line">
         <span className="quiz-game-title-icon">
-          {subjectTheme(quiz?.subject).icon || "🧠"}
+          <SubjectImageIcon subject={quiz?.subject} fallback={subjectTheme(quiz?.subject).icon || "🧠"} />
         </span>
 
         <div>

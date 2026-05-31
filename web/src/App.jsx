@@ -14,6 +14,24 @@ import TeacherDashboard from './pages/Teacher/TeacherDashboard';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import StartupLoader from './components/common/StartupLoader';
 
+
+function subjectIconSrc(subject = "") {
+  const key = String(subject || "").toLowerCase();
+  if (key.includes("pagbasa")) return "/category-pagbasa.png";
+  if (key.includes("bokabularyo")) return "/category-bokabularyo.png";
+  if (key.includes("panitikan")) return "/category-panitikan.png";
+  if (key.includes("oral")) return "/category-oralcomm.png";
+  if (key.includes("pagsulat")) return "/category-pagsulat.png";
+  return "";
+}
+
+function SubjectImageIcon({ subject = "", src = "", className = "subject-img-icon", fallback = "📚" }) {
+  const resolvedSrc = src || subjectIconSrc(subject);
+  if (!resolvedSrc) return <>{fallback}</>;
+  return <img src={resolvedSrc} alt="" className={className} aria-hidden="true" />;
+}
+
+
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';
 }
@@ -4990,6 +5008,9 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
 
 
 
+
+
+
         /* g12LessonsCardPolish */
         .g12-card-grid {
           gap: 24px;
@@ -5122,6 +5143,63 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
           }
         }
 
+
+
+        /* learningWorldSubjectImageSizing */
+        .g12-subject-illustration .subject-img-icon.world {
+          width: 58% !important;
+          height: 58% !important;
+          max-width: 58px !important;
+          max-height: 58px !important;
+          object-fit: contain !important;
+          margin: 0 !important;
+        }
+
+        .g12-card-grid .g12-tile-icon .subject-img-icon.lesson,
+        .quiz-card-icon .subject-img-icon {
+          width: 58% !important;
+          height: 58% !important;
+          object-fit: contain !important;
+        }
+
+        /* subjectImageMinimalSizing */
+        .subject-img-icon {
+          width: 1.2em;
+          height: 1.2em;
+          object-fit: contain;
+          display: inline-block;
+          vertical-align: -0.2em;
+        }
+
+        .subject-img-icon.chip {
+          width: 22px !important;
+          height: 22px !important;
+          margin-right: 5px;
+          object-fit: contain;
+        }
+
+        .g12-card-grid .g12-tile-icon .subject-img-icon,
+        .g46-ref-card-icon .subject-img-icon,
+        .g12-world-icon .subject-img-icon,
+        .g12-filter-icon .subject-img-icon {
+          width: 62% !important;
+          height: 62% !important;
+          max-width: 62px !important;
+          max-height: 62px !important;
+          object-fit: contain !important;
+          margin: 0 !important;
+        }
+
+        .g12-card-grid .g12-tile-icon .subject-img-icon.lesson {
+          width: 60% !important;
+          height: 60% !important;
+        }
+
+        .g46-ref-card-icon .subject-img-icon.lesson {
+          width: 64% !important;
+          height: 64% !important;
+        }
+
         /* g12LessonTitleForceSize */
         .g12-card-grid .g12-tile .g12-lesson-tile-body > h3 {
           font-size: clamp(28px, 2.6vw, 38px) !important;
@@ -5175,14 +5253,14 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         @keyframes g12TopXpPulse {
           0%, 100% {
             box-shadow:
-              0 8px 0 rgba(246, 196, 83, .28),
-              0 16px 28px rgba(245, 158, 11, .10);
+              0 6px 0 rgba(246, 196, 83, .26),
+              0 12px 22px rgba(245, 158, 11, .10);
           }
           50% {
             box-shadow:
-              0 8px 0 rgba(246, 196, 83, .34),
-              0 0 0 7px rgba(248, 222, 126, .16),
-              0 16px 28px rgba(245, 158, 11, .12);
+              0 6px 0 rgba(246, 196, 83, .34),
+              0 0 0 8px rgba(248, 222, 126, .22),
+              0 14px 26px rgba(245, 158, 11, .16);
           }
         }
 
@@ -5214,32 +5292,32 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
 
         /* g12TopXpSizeBalance */
         .g12-top-xp-pill {
-          min-height: 54px !important;
-          padding: 0 20px !important;
-          border-radius: 22px !important;
+          min-height: 50px !important;
+          padding: 0 16px !important;
+          border-radius: 20px !important;
           display: inline-flex !important;
           align-items: center !important;
           justify-content: center !important;
-          gap: 7px !important;
-          font-size: clamp(17px, 1.35vw, 21px) !important;
+          gap: 6px !important;
+          font-size: 16px !important;
           font-weight: 1000 !important;
-          letter-spacing: -0.01em !important;
+          letter-spacing: 0 !important;
         }
 
         .g12-top-xp-bolt {
-          font-size: clamp(19px, 1.45vw, 23px) !important;
+          font-size: 18px !important;
           line-height: 1 !important;
         }
 
         @media (max-width: 760px) {
           .g12-top-xp-pill {
-            min-height: 50px !important;
-            padding: 0 16px !important;
-            font-size: 17px !important;
+            min-height: 48px !important;
+            padding: 0 14px !important;
+            font-size: 16px !important;
           }
 
           .g12-top-xp-bolt {
-            font-size: 19px !important;
+            font-size: 18px !important;
           }
         }
         /* === End Grade 1-2 Top XP Size Balance === */
@@ -6292,6 +6370,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
               const subjectInfo = SUBJECTS.find((subj) => subj.name === item.subj) || {};
               const tone = item.tone || subjectInfo.tone || 'green';
               const icon = item.icon || subjectInfo.icon || '📚';
+              const iconSrc = item.iconSrc || subjectInfo.iconSrc || subjectIconSrc(item.subj || item.meta || item.title);
               const desc = subjectInfo.desc || '';
               const pct = Math.max(0, Math.min(100, item.pct || 0));
 
@@ -6302,7 +6381,14 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
                   className={`g12-subject-card ${tone}`}
                   onClick={() => openFirstSubjectLesson(item.subj)}
                 >
-                  <div className="g12-subject-illustration">{icon}</div>
+                  <div className="g12-subject-illustration">
+                    <SubjectImageIcon
+                      subject={item.subj}
+                      src={iconSrc}
+                      fallback={icon}
+                      className="subject-img-icon world"
+                    />
+                  </div>
                   <div className="g12-subject-body">
                     {pct > 0 && (
                       <span className="g12-subject-chip">{`${pct}% progress`}</span>
@@ -6498,9 +6584,9 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
       tone: 'blue',
       action: () => nextLesson ? openLesson(nextLesson) : openFirstSubjectLesson('Pagbasa')
     },
-    { icon: '📖', title: 'Reading', meta: 'Pagbasa', tone: 'pink', action: () => openFirstSubjectLesson('Pagbasa') },
-    { icon: '🔤', title: 'Learn Words', meta: 'Bokabularyo', tone: 'purple', action: () => openFirstSubjectLesson('Bokabularyo') },
-    { icon: '📜', title: 'Story Quest', meta: 'Panitikan', tone: 'yellow', action: () => openFirstSubjectLesson('Panitikan') }
+    { icon: '📖', iconSrc: '/category-pagbasa.png', title: 'Reading', meta: 'Pagbasa', tone: 'pink', action: () => openFirstSubjectLesson('Pagbasa') },
+    { icon: '🔤', iconSrc: '/category-bokabularyo.png', title: 'Learn Words', meta: 'Bokabularyo', tone: 'purple', action: () => openFirstSubjectLesson('Bokabularyo') },
+    { icon: '📜', iconSrc: '/category-panitikan.png', title: 'Story Quest', meta: 'Panitikan', tone: 'yellow', action: () => openFirstSubjectLesson('Panitikan') }
   ];
 
   return (
@@ -6733,7 +6819,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
               className={`g12-chip ${subjectFilter === subject.name ? 'active' : ''}`}
               onClick={() => setSubjectFilter(subject.name)}
             >
-              {subject.icon} {subject.name}
+              <SubjectImageIcon subject={subject.name} src={subject.iconSrc} fallback={subject.icon} className="subject-img-icon chip" /> {subject.name}
             </button>
           ))}
         </div>
@@ -6746,7 +6832,14 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
 
             return (
               <button type="button" className={`g12-tile ${tone}`} key={lesson.id} onClick={() => openLesson(lesson)}>
-                <div className="g12-tile-icon">{meta.icon}</div>
+                <div className="g12-tile-icon">
+                  <SubjectImageIcon
+                    subject={lesson.subject}
+                    src={subjectInfo.iconSrc || meta.iconSrc}
+                    fallback={meta.icon}
+                    className="subject-img-icon lesson"
+                  />
+                </div>
                 <div className="g12-lesson-tile-body">
                   <h3>{shortEarlyLessonTitle(lesson)}</h3>
                   <p>⭐ {lesson.xpReward || 0} XP</p>
@@ -6809,7 +6902,7 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
               className={subjectFilter === subject.name ? 'active' : ''}
               onClick={() => setSubjectFilter(subject.name)}
             >
-              {subject.icon} {subject.name}
+              <SubjectImageIcon subject={subject.name} src={subject.iconSrc} fallback={subject.icon} className="subject-img-icon chip" /> {subject.name}
             </button>
           ))}
         </div>
@@ -6824,7 +6917,14 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
               <button type="button" className={`g46-ref-card ${tone}`} key={lesson.id} onClick={() => openLesson(lesson)}>
                 <div>
                   <div className="g46-ref-card-top">
-                    <span className="g46-ref-card-icon">{meta.icon}</span>
+                    <span className="g46-ref-card-icon">
+                      <SubjectImageIcon
+                        subject={lesson.subject}
+                        src={subjectInfo.iconSrc || meta.iconSrc}
+                        fallback={meta.icon}
+                        className="subject-img-icon lesson"
+                      />
+                    </span>
                     <span className="g46-ref-tag">{lesson.completed ? '✅ Done' : '▶ Start'}</span>
                   </div>
                   <h4>{lesson.title}</h4>

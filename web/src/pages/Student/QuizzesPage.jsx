@@ -6,6 +6,24 @@ import {
   subjectTheme,
   masteryFromPercent,
 } from "../../components/student/quizzes/QuizUI";
+import "./QuizzesPagePolish.css";
+
+
+function subjectIconSrc(subject = "") {
+  const key = String(subject || "").toLowerCase();
+  if (key.includes("pagbasa")) return "/category-pagbasa.png";
+  if (key.includes("bokabularyo")) return "/category-bokabularyo.png";
+  if (key.includes("panitikan")) return "/category-panitikan.png";
+  if (key.includes("oral")) return "/category-oralcomm.png";
+  if (key.includes("pagsulat")) return "/category-pagsulat.png";
+  return "";
+}
+
+function SubjectImageIcon({ subject = "", src = "", className = "subject-img-icon", fallback = "📚" }) {
+  const resolvedSrc = src || subjectIconSrc(subject);
+  if (!resolvedSrc) return <>{fallback}</>;
+  return <img src={resolvedSrc} alt="" className={className} aria-hidden="true" />;
+}
 
 export default function QuizzesPage({
   data,
@@ -64,41 +82,103 @@ export default function QuizzesPage({
     };
   }
 
-  function shortEarlyQuizTitle(quiz = {}) {
-    const subject = String(quiz.subject || "").trim();
-    const title = String(quiz.title || "").trim();
+  function titleCaseQuizText(value = "") {
+    const smallWords = new Set(["ang", "ng", "sa", "si", "ni", "kay", "at", "ay", "mga", "na", "po"]);
+    const words = String(value || "")
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
 
-    const withoutQuiz = title.replace(/\s*quiz\s*$/i, "").trim();
+    return words
+      .map((word, index) => {
+        if (index > 0 && smallWords.has(word)) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(" ");
+  }
 
-    if (/^gawa$/i.test(withoutQuiz)) return "Gawa";
-    if (/^gawa\b/i.test(withoutQuiz)) return "Gawa";
+  function isGenericQuizName(value = "") {
+    const text = String(value || "")
+      .replace(/\s*quiz\s*$/i, "")
+      .trim();
 
-    const prefix = withoutQuiz
-      .replace(/^([^:]+)\s*:\s*.+$/, "$1")
+    return /^(bokabularyo|pagbasa|panitikan|bigkas|gawa|patlang|oral comm|pagsulat|quiz)(\s+\d+)?$/i.test(text);
+  }
+
+  function cleanQuizTitleSeed(value = "", earlyMode = false) {
+    let text = String(value || "")
+      .replace(/[“”"]/g, "")
       .replace(/\s+/g, " ")
       .trim();
 
-    if (prefix && prefix.length <= 22) {
-      if (/oral|bigkas|speech|komunikasyon/i.test(prefix)) {
-        const number = prefix.match(/\d+/)?.[0];
-        return number ? `Bigkas ${number}` : "Bigkas";
-      }
+    text = text
+      .replace(/^mission\s*:\s*/i, "")
+      .replace(/^tanong\s*\d+\s*[:.-]?\s*/i, "")
+      .replace(/^question\s*\d+\s*[:.-]?\s*/i, "")
+      .replace(/\s*quiz\s*$/i, "")
+      .trim();
 
-      if (/pagsulat|sulatin|patlang|writing/i.test(prefix)) {
-        const number = prefix.match(/\d+/)?.[0];
-        return number ? `Patlang ${number}` : "Patlang";
-      }
+    // Remove common question/task starters so the title becomes content-based.
+    const starters = [
+      /^ano ang\s+/i,
+      /^alin ang\s+/i,
+      /^sino ang\s+/i,
+      /^saan\s+/i,
+      /^kailan\s+/i,
+      /^bakit\s+/i,
+      /^paano\s+/i,
+      /^piliin ang\s+/i,
+      /^hanapin ang\s+/i,
+      /^tukuyin ang\s+/i,
+      /^isulat ang\s+/i,
+      /^bigkasin\s*:?\s*/i,
+      /^basahin\s*:?\s*/i,
+      /^ayusin ang\s+/i,
+      /^buuin ang\s+/i,
+      /^kumpletuhin ang\s+/i,
+      /^sagutin ang\s+/i,
+    ];
 
-      return prefix;
-    }
+    starters.forEach((pattern) => {
+      text = text.replace(pattern, "");
+    });
 
-    if (/bokabularyo/i.test(subject) || /bokabularyo/i.test(title)) return "Bokabularyo";
-    if (/pagbasa/i.test(subject) || /pagbasa/i.test(title)) return "Pagbasa";
-    if (/panitikan/i.test(subject) || /panitikan/i.test(title)) return "Panitikan";
-    if (/oral|bigkas|speech|komunikasyon/i.test(subject) || /oral|bigkas|speech|komunikasyon/i.test(title)) return "Bigkas";
-    if (/pagsulat|sulatin|patlang|writing/i.test(subject) || /pagsulat|sulatin|patlang|writing/i.test(title)) return "Patlang";
+    text = text
+      .replace(/[?.!]+$/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
 
-    return prefix || subject || "Quiz";
+    const maxWords = earlyMode ? 4 : 6;
+    const words = text.split(/\s+/).filter(Boolean);
+
+    return titleCaseQuizText(words.slice(0, maxWords).join(" "));
+  }
+
+  function specificQuizCardTitle(quiz = {}, earlyMode = false) {
+    const firstQuestion = asArray(quiz.questions)[0] || {};
+    const sources = [
+      firstQuestion.prompt,
+      firstQuestion.question,
+      quiz.lessonTitle,
+      quiz.title,
+      quiz.subject,
+    ];
+
+    const fallback = cleanQuizTitleSeed(quiz.title || quiz.subject || "Quiz", earlyMode) || "Quiz";
+
+    const chosen =
+      sources
+        .map((source) => cleanQuizTitleSeed(source, earlyMode))
+        .find((candidate) => candidate && candidate.length >= 3 && !isGenericQuizName(candidate)) ||
+      fallback;
+
+    const finalTitle = chosen.replace(/\s*quiz\s*$/i, "").trim() || "Quiz";
+    return `${finalTitle} Quiz`;
+  }
+
+  // Keep this function name for existing Grade 1-2 card rendering.
+  function shortEarlyQuizTitle(quiz = {}) {
+    return specificQuizCardTitle(quiz, true);
   }
 
   const visibleQuizzes =
@@ -131,6 +211,7 @@ export default function QuizzesPage({
       subjects[0] || {
         tone: "green",
         icon: "📚",
+        iconSrc: subjectIconSrc(quiz.subject),
       };
     const subjectLook = subjectTheme(quiz.subject) || {};
     const statusLabel = attemptsDone
@@ -150,6 +231,7 @@ export default function QuizzesPage({
       mastery,
       tone: best ? (mastery?.tone || "green") : (subjectLook.tone || subjectMeta.tone || "green"),
       icon: subjectLook.icon || subjectMeta.icon || "📚",
+      iconSrc: subjectLook.iconSrc || subjectMeta.iconSrc || subjectIconSrc(quiz.subject),
       attemptsUsed,
       attemptsDone,
       statusLabel,
@@ -163,7 +245,7 @@ export default function QuizzesPage({
 
       <div className="quiz-shell">
         <section
-          className={early ? "g12-section-card" : "g46-ref-panel"}
+          className={early ? "g12-section-card quiz-time-panel early" : "g46-ref-panel quiz-time-panel grade46"}
           style={!early ? { minHeight: 620 } : undefined}
         >
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
@@ -205,7 +287,7 @@ export default function QuizzesPage({
                   key={subject.name}
                   onClick={() => setQuizSubjectFilter(subject.name)}
                 >
-                  {subject.icon} {subject.name}{!early && `: ${subject.count}`}
+                  <SubjectImageIcon subject={subject.name} src={subject.iconSrc} fallback={subject.icon} className="subject-img-icon chip" /> {subject.name}{!early && `: ${subject.count}`}
                 </button>
               ))}
             </div>
@@ -215,7 +297,7 @@ export default function QuizzesPage({
             className="quiz-card-grid"
             style={!early ? { minHeight: 360, alignContent: "start" } : undefined}
           >
-            {cards.map(({ quiz, best, mastery, tone, icon, attemptsUsed, attemptsDone, statusLabel, actionLabel }) => (
+            {cards.map(({ quiz, best, mastery, tone, icon, iconSrc, attemptsUsed, attemptsDone, statusLabel, actionLabel }) => (
               <button
                 type="button"
                 className={`quiz-card ${tone} ${early ? "early-quiz-card" : ""}`}
@@ -224,22 +306,15 @@ export default function QuizzesPage({
               >
                 <div>
                   <div className="quiz-card-head">
-                    <span className="quiz-card-icon">{icon}</span>
+                    <span className="quiz-card-icon"><SubjectImageIcon subject={quiz.subject} src={iconSrc} fallback={icon} /></span>
 
-                    {!early && (
-                      <span className="quiz-pill">
-                        {best ? `${best.percent}% ${mastery?.label || "Mastery"}` : statusLabel}
-                      </span>
-                    )}
                   </div>
 
-                  <h3>{early ? shortEarlyQuizTitle(quiz) : quiz.title}</h3>
+                  <h3>{specificQuizCardTitle(quiz, early)}</h3>
 
-                  {early && (
-                    <p>
-                      {quiz.questions.length} tanong • ⭐ {quiz.xpReward} XP
-                    </p>
-                  )}
+                  <p>
+                    {quiz.questions.length} tanong • ⭐ {quiz.xpReward} XP
+                  </p>
                 </div>
 
                 <span className="quiz-action" role="button" tabIndex={-1}>

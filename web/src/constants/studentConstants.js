@@ -1,10 +1,10 @@
 export const AVATARS = ['🦊', '🐼', '🐯', '🐸', '🐵', '🦄', '🐰', '🧒'];
 export const SUBJECTS = [
-  { name: 'Pagbasa', icon: '📖', tone: 'green' },
-  { name: 'Bokabularyo', icon: '🔤', tone: 'blue'},
-  { name: 'Panitikan', icon: '📜', tone: 'purple' },
-  { name: 'Oral Comm', icon: '🎙️', tone: 'yellow' },
-  { name: 'Pagsulat', icon: '✍️', tone: 'pink'}
+  { name: 'Pagbasa', icon: '📖', iconSrc: '/category-pagbasa.png', tone: 'green' },
+  { name: 'Bokabularyo', icon: '🔤', iconSrc: '/category-bokabularyo.png', tone: 'blue' },
+  { name: 'Panitikan', icon: '📜', iconSrc: '/category-panitikan.png', tone: 'purple' },
+  { name: 'Oral Comm', icon: '🎙️', iconSrc: '/category-oralcomm.png', tone: 'yellow' },
+  { name: 'Pagsulat', icon: '✍️', iconSrc: '/category-pagsulat.png', tone: 'pink' }
 ];
 
 export const MISSION_GAMES = [
