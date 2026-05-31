@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SUBJECTS } from '../../constants/studentConstants';
+import './HomeScreensAnimations.css';
 
 function read(id) {
   return document.getElementById(id)?.value?.trim() || '';
@@ -7,6 +8,14 @@ function read(id) {
 
 export function LandingScreen({ go }) {
   const [publicPage, setPublicPage] = useState('home');
+  const heroSlides = [
+    { src: '/home-hero-student.png', label: 'Student learning with laptop' },
+    { src: '/home-hero-boy-tablet.png', label: 'Student practicing with tablet' },
+    { src: '/home-hero-girl-laptop.png', label: 'Student learning with laptop' },
+  ];
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const activeHeroSlide = heroSlides[heroSlideIndex % heroSlides.length];
+
 
   const publicNav = [
     { id: 'home', icon: '🏠', label: 'Home' },
@@ -23,6 +32,16 @@ export function LandingScreen({ go }) {
       });
     }
   };
+
+  useEffect(() => {
+    if (publicPage !== 'home') return undefined;
+
+    const timer = window.setInterval(() => {
+      setHeroSlideIndex(index => (index + 1) % heroSlides.length);
+    }, 4200);
+
+    return () => window.clearInterval(timer);
+  }, [publicPage, heroSlides.length]);
 
   const roleCards = [
     {
@@ -130,13 +149,24 @@ export function LandingScreen({ go }) {
         <div className="tt-hero-art tt-hero-art-image" aria-hidden="true">
           <div className="tt-hero-illustration-wrap">
             <img
-              src="/home-hero-student.png"
+              key={activeHeroSlide.src}
+              src={activeHeroSlide.src}
               alt=""
               className="tt-hero-illustration"
             />
           </div>
         </div>
-        <div className="tt-slider-dots" aria-hidden="true"><span /><span /><span /></div>
+        <div className="tt-slider-dots" aria-label="Hero image selector">
+          {heroSlides.map((slide, index) => (
+            <button
+              type="button"
+              key={slide.src}
+              className={index === heroSlideIndex ? 'active' : ''}
+              onClick={() => setHeroSlideIndex(index)}
+              aria-label={`Show hero image ${index + 1}`}
+            />
+          ))}
+        </div>
       </section>
 
       {renderRoleCards()}
