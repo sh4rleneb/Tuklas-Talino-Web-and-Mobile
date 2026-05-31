@@ -6456,6 +6456,573 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
   return (
     <>
       <Grade46ReferenceStyles />
+      <style>{`
+        /* maximizeG46RefLayout */
+        @media (min-width: 900px) {
+          body:has(.g46-ref-page) {
+            background: #ffffff !important;
+            overflow-x: hidden !important;
+          }
+
+          .g46-ref-page {
+            width: 100vw !important;
+            max-width: none !important;
+            min-height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            overflow-x: hidden !important;
+            box-sizing: border-box !important;
+          }
+
+          .g46-ref-frame {
+            width: 100vw !important;
+            max-width: none !important;
+            min-height: 100vh !important;
+            margin: 0 !important;
+            border: 0 !important;
+            outline: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+            grid-template-columns: 252px minmax(0, 1fr) !important;
+          }
+
+          .g46-ref-sidebar {
+            width: 252px !important;
+            margin: 0 !important;
+            padding-left: 26px !important;
+            padding-right: 22px !important;
+            border: 0 !important;
+            outline: 0 !important;
+            border-radius: 0 30px 30px 0 !important;
+            box-shadow: none !important;
+          }
+
+          .g46-ref-brand {
+            margin-top: 10px !important;
+          }
+
+          .g46-ref-menu {
+            gap: 11px !important;
+          }
+
+          .g46-ref-menu button {
+            min-height: 52px !important;
+            padding: 0 18px !important;
+          }
+
+          .g46-ref-main {
+            width: 100% !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            padding: 34px clamp(28px, 2.6vw, 48px) 34px 34px !important;
+            background: #ffffff !important;
+            box-sizing: border-box !important;
+          }
+
+          .g46-ref-topbar,
+          .g46-ref-title-card,
+          .g46-ref-content,
+          .g46-ref-panel {
+            max-width: none !important;
+          }
+        }
+
+          /* slimG46SidebarPatch */
+          .g46-ref-frame {
+            grid-template-columns: 218px minmax(0, 1fr) !important;
+          }
+
+          .g46-ref-sidebar {
+            width: 218px !important;
+            padding-left: 18px !important;
+            padding-right: 16px !important;
+            border-radius: 0 26px 26px 0 !important;
+          }
+
+          .g46-ref-brand {
+            gap: 8px !important;
+            margin-top: 6px !important;
+            margin-bottom: 30px !important;
+          }
+
+          .g46-ref-brand img {
+            width: 34px !important;
+            height: 34px !important;
+          }
+
+          .g46-ref-brand strong {
+            font-size: 16px !important;
+          }
+
+          .g46-ref-menu {
+            gap: 8px !important;
+          }
+
+          .g46-ref-menu button {
+            min-height: 48px !important;
+            padding: 0 15px !important;
+            border-radius: 22px !important;
+            font-size: 15px !important;
+          }
+
+          .g46-ref-menu button span {
+            width: 22px !important;
+            min-width: 22px !important;
+            text-align: center !important;
+          }
+
+          .g46-ref-progress-mini {
+            padding: 16px 14px !important;
+            border-radius: 22px !important;
+          }
+
+          /* g46XpAnimationPolish */
+          .g46-ref-xp-animate {
+            position: relative !important;
+            overflow: hidden !important;
+            isolation: isolate !important;
+          }
+
+          .g46-ref-xp-animate strong {
+            display: inline-block !important;
+            animation: g46XpSoftPop 1.65s ease-in-out infinite !important;
+            transform-origin: center !important;
+          }
+
+          .g46-ref-xp-animate i span {
+            position: relative !important;
+            overflow: hidden !important;
+            animation: g46XpBarPulse 2.2s ease-in-out infinite !important;
+          }
+
+          .g46-ref-xp-animate i span::after {
+            content: '' !important;
+            position: absolute !important;
+            inset: 0 !important;
+            transform: translateX(-110%) skewX(-18deg) !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .72), transparent) !important;
+            animation: g46XpBarShine 2.4s ease-in-out infinite !important;
+          }
+
+          @keyframes g46XpSoftPop {
+            0%, 100% {
+              transform: translateY(0) scale(1);
+              filter: saturate(1);
+            }
+            50% {
+              transform: translateY(-1px) scale(1.045);
+              filter: saturate(1.12);
+            }
+          }
+
+          @keyframes g46XpBarPulse {
+            0%, 100% {
+              filter: saturate(1);
+            }
+            50% {
+              filter: saturate(1.22);
+            }
+          }
+
+          @keyframes g46XpBarShine {
+            0%, 55% {
+              transform: translateX(-110%) skewX(-18deg);
+            }
+            100% {
+              transform: translateX(125%) skewX(-18deg);
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .g46-ref-xp-animate strong,
+            .g46-ref-xp-animate i span,
+            .g46-ref-xp-animate i span::after {
+              animation: none !important;
+            }
+          }
+
+
+          /* g46HomeSoftAnimations */
+          .g46-ref-student-pill {
+            position: relative !important;
+            overflow: hidden !important;
+            animation: g46StudentPillFloat 3.4s ease-in-out infinite !important;
+          }
+
+          .g46-ref-student-pill::after {
+            content: '' !important;
+            position: absolute !important;
+            inset: 0 !important;
+            transform: translateX(-115%) skewX(-18deg) !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent) !important;
+            animation: g46SoftShine 4.8s ease-in-out infinite !important;
+            pointer-events: none !important;
+          }
+
+          .g46-ref-avatar-small {
+            display: inline-grid !important;
+            place-items: center !important;
+            animation: g46AvatarSoftBounce 2.8s ease-in-out infinite !important;
+            transform-origin: center bottom !important;
+          }
+
+          .g46-ref-top-actions .g46-ref-pill {
+            position: relative !important;
+            overflow: hidden !important;
+            isolation: isolate !important;
+            animation: g46TopPillBreath 2.9s ease-in-out infinite !important;
+          }
+
+          .g46-ref-top-actions .g46-ref-pill:nth-child(2) {
+            animation-delay: .35s !important;
+          }
+
+          .g46-ref-top-actions .g46-ref-pill::after {
+            content: '' !important;
+            position: absolute !important;
+            inset: 0 !important;
+            z-index: -1 !important;
+            transform: translateX(-120%) skewX(-18deg) !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .68), transparent) !important;
+            animation: g46SoftShine 4.2s ease-in-out infinite !important;
+          }
+
+          .g46-ref-title-card {
+            position: relative !important;
+            overflow: hidden !important;
+            animation: g46WelcomeCardBreath 4.2s ease-in-out infinite !important;
+          }
+
+          .g46-ref-title-card::after {
+            content: '' !important;
+            position: absolute !important;
+            inset: 0 !important;
+            transform: translateX(-130%) skewX(-18deg) !important;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .32), transparent) !important;
+            animation: g46WelcomeCardShine 5.5s ease-in-out infinite !important;
+            pointer-events: none !important;
+          }
+
+          .g46-ref-title-icon {
+            animation: g46GreetingIconWave 2.6s ease-in-out infinite !important;
+            transform-origin: center bottom !important;
+          }
+
+          .g46-ref-title-left h1 {
+            animation: g46GreetingTextLift 3.6s ease-in-out infinite !important;
+          }
+
+          @keyframes g46StudentPillFloat {
+            0%, 100% {
+              transform: translateY(0);
+            }
+            50% {
+              transform: translateY(-2px);
+            }
+          }
+
+          @keyframes g46AvatarSoftBounce {
+            0%, 100% {
+              transform: translateY(0) scale(1);
+            }
+            45% {
+              transform: translateY(-2px) scale(1.035);
+            }
+          }
+
+          @keyframes g46TopPillBreath {
+            0%, 100% {
+              transform: translateY(0);
+              filter: saturate(1);
+            }
+            50% {
+              transform: translateY(-2px);
+              filter: saturate(1.12);
+            }
+          }
+
+          @keyframes g46WelcomeCardBreath {
+            0%, 100% {
+              transform: translateY(0);
+              box-shadow: 0 16px 38px rgba(31, 73, 61, .07);
+            }
+            50% {
+              transform: translateY(-2px);
+              box-shadow: 0 20px 44px rgba(31, 73, 61, .095);
+            }
+          }
+
+          @keyframes g46GreetingIconWave {
+            0%, 100% {
+              transform: rotate(0deg) scale(1);
+            }
+            25% {
+              transform: rotate(-3deg) scale(1.03);
+            }
+            50% {
+              transform: rotate(3deg) scale(1.045);
+            }
+            75% {
+              transform: rotate(-1.5deg) scale(1.02);
+            }
+          }
+
+          @keyframes g46GreetingTextLift {
+            0%, 100% {
+              transform: translateY(0);
+              filter: saturate(1);
+            }
+            50% {
+              transform: translateY(-1px);
+              filter: saturate(1.08);
+            }
+          }
+
+          @keyframes g46SoftShine {
+            0%, 62% {
+              transform: translateX(-125%) skewX(-18deg);
+            }
+            100% {
+              transform: translateX(125%) skewX(-18deg);
+            }
+          }
+
+          @keyframes g46WelcomeCardShine {
+            0%, 68% {
+              transform: translateX(-130%) skewX(-18deg);
+            }
+            100% {
+              transform: translateX(130%) skewX(-18deg);
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .g46-ref-student-pill,
+            .g46-ref-student-pill::after,
+            .g46-ref-avatar-small,
+            .g46-ref-top-actions .g46-ref-pill,
+            .g46-ref-top-actions .g46-ref-pill::after,
+            .g46-ref-title-card,
+            .g46-ref-title-card::after,
+            .g46-ref-title-icon,
+            .g46-ref-title-left h1 {
+              animation: none !important;
+            }
+          }
+
+
+          /* g46HomeBadgeAchievementPolish */
+          .g46-ref-badge {
+            position: relative !important;
+            overflow: hidden !important;
+            isolation: isolate !important;
+          }
+
+          .g46-ref-badge.unlocked {
+            background:
+              linear-gradient(135deg, rgba(236, 255, 246, .96), rgba(230, 247, 238, .96)) !important;
+            box-shadow:
+              0 14px 28px rgba(15, 125, 73, .08),
+              inset 0 0 0 1px rgba(21, 150, 90, .06) !important;
+            animation: g46BadgeCardLift 4.2s ease-in-out infinite !important;
+          }
+
+          .g46-ref-badge.unlocked::before {
+            content: '' !important;
+            position: absolute !important;
+            inset: 12px !important;
+            z-index: -1 !important;
+            opacity: .42 !important;
+            background:
+              radial-gradient(circle at 16% 24%, rgba(249, 202, 36, .9) 0 3px, transparent 4px),
+              radial-gradient(circle at 78% 20%, rgba(46, 204, 113, .65) 0 3px, transparent 4px),
+              radial-gradient(circle at 72% 78%, rgba(52, 152, 219, .52) 0 2px, transparent 3px),
+              radial-gradient(circle at 28% 76%, rgba(255, 137, 160, .58) 0 2px, transparent 3px);
+            animation: g46BadgeConfettiDrift 5s ease-in-out infinite !important;
+          }
+
+          .g46-ref-badge.unlocked::after {
+            content: '✨' !important;
+            position: absolute !important;
+            top: 14px !important;
+            right: 18px !important;
+            font-size: 18px !important;
+            opacity: .72 !important;
+            animation: g46BadgeSparkle 2.8s ease-in-out infinite !important;
+          }
+
+          .g46-ref-badge.unlocked span {
+            display: inline-block !important;
+            animation: g46BadgeIconCelebrate 2.6s ease-in-out infinite !important;
+            transform-origin: center bottom !important;
+          }
+
+          .g46-ref-badge.unlocked strong {
+            color: #14223b !important;
+          }
+
+          .g46-ref-badge.unlocked .g46-ref-badge-status {
+            color: #0f7d49 !important;
+            font-weight: 1000 !important;
+            line-height: 1.25 !important;
+            max-width: 240px !important;
+            margin-inline: auto !important;
+          }
+
+          .g46-ref-badge.locked {
+            background: #fbfbfb !important;
+          }
+
+          @keyframes g46BadgeCardLift {
+            0%, 100% {
+              transform: translateY(0);
+            }
+            50% {
+              transform: translateY(-2px);
+            }
+          }
+
+          @keyframes g46BadgeConfettiDrift {
+            0%, 100% {
+              transform: translateY(0) rotate(0deg);
+              opacity: .36;
+            }
+            50% {
+              transform: translateY(-5px) rotate(2deg);
+              opacity: .54;
+            }
+          }
+
+          @keyframes g46BadgeSparkle {
+            0%, 100% {
+              transform: scale(.88) rotate(0deg);
+              opacity: .45;
+            }
+            50% {
+              transform: scale(1.12) rotate(8deg);
+              opacity: .9;
+            }
+          }
+
+          @keyframes g46BadgeIconCelebrate {
+            0%, 100% {
+              transform: translateY(0) scale(1);
+            }
+            35% {
+              transform: translateY(-3px) scale(1.08) rotate(-2deg);
+            }
+            65% {
+              transform: translateY(-1px) scale(1.04) rotate(2deg);
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .g46-ref-badge.unlocked,
+            .g46-ref-badge.unlocked::before,
+            .g46-ref-badge.unlocked::after,
+            .g46-ref-badge.unlocked span {
+              animation: none !important;
+            }
+          }
+
+
+          /* g46LatestBadgesHomePreview */
+          .g46-ref-panel:has(.g46-ref-badge-empty) {
+            min-height: 250px !important;
+          }
+
+          .g46-ref-badge-empty {
+            min-height: 220px !important;
+            border-radius: 24px !important;
+            display: grid !important;
+            place-items: center !important;
+            gap: 8px !important;
+            text-align: center !important;
+            padding: 26px 20px !important;
+            background:
+              radial-gradient(circle at 18% 18%, rgba(249, 202, 36, .16), transparent 30%),
+              linear-gradient(135deg, #f4fff8, #ffffff) !important;
+            box-shadow: inset 0 0 0 1px rgba(21, 150, 90, .10);
+            color: #14223b !important;
+          }
+
+          .g46-ref-badge-empty span {
+            width: 58px !important;
+            height: 58px !important;
+            border-radius: 20px !important;
+            display: grid !important;
+            place-items: center !important;
+            background: #ffffff !important;
+            font-size: 34px !important;
+            box-shadow: 0 12px 26px rgba(15, 23, 42, .08);
+            animation: g46BadgeIconCelebrate 2.8s ease-in-out infinite !important;
+          }
+
+          .g46-ref-badge-empty strong {
+            font-size: 20px !important;
+            font-weight: 1000 !important;
+          }
+
+          .g46-ref-badge-empty small {
+            max-width: 260px !important;
+            color: #526988 !important;
+            font-weight: 900 !important;
+            line-height: 1.35 !important;
+          }
+
+          .g46-ref-column .g46-ref-panel .g46-ref-badge-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+
+          /* g46LatestLessonsHomePreview */
+          .g46-ref-lessons-empty {
+            min-height: 250px !important;
+            border-radius: 28px !important;
+            display: grid !important;
+            place-items: center !important;
+            gap: 8px !important;
+            text-align: center !important;
+            padding: 30px 20px !important;
+            background:
+              radial-gradient(circle at 18% 18%, rgba(52, 152, 219, .14), transparent 32%),
+              linear-gradient(135deg, #eef8ff, #ffffff) !important;
+            box-shadow: inset 0 0 0 1px rgba(21, 150, 90, .10);
+            color: #14223b !important;
+          }
+
+          .g46-ref-lessons-empty span {
+            width: 62px !important;
+            height: 62px !important;
+            border-radius: 22px !important;
+            display: grid !important;
+            place-items: center !important;
+            background: #ffffff !important;
+            font-size: 36px !important;
+            box-shadow: 0 12px 26px rgba(15, 23, 42, .08);
+          }
+
+          .g46-ref-lessons-empty strong {
+            font-size: 21px !important;
+            font-weight: 1000 !important;
+          }
+
+          .g46-ref-lessons-empty small {
+            max-width: 280px !important;
+            color: #526988 !important;
+            font-weight: 900 !important;
+            line-height: 1.35 !important;
+          }
+
+          .g46-ref-card-icon .subject-img-icon.lesson {
+            width: 62% !important;
+            height: 62% !important;
+            object-fit: contain !important;
+          }
+
+      `}</style>
       <div className="g46-ref-page">
         <div className="g46-ref-frame">
           <aside className="g46-ref-sidebar" aria-label="Grade 3 to 6 student navigation">
@@ -6522,14 +7089,11 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
                 </div>
 
                 <div className="g46-ref-title-side">
-                  <div className="g46-ref-level-line">
+                  <div className="g46-ref-level-line g46-ref-xp-animate">
                     <span>XP Points</span>
                     <strong>{xp} XP</strong>
                     <i><span style={{ width: `${Math.max(6, pct)}%` }} /></i>
                   </div>
-                  {activeTab !== 'quizzes' && (
-                    <p className="g46-ref-muted" style={{ margin: '10px 0 0' }}>Mayroon kang <b>{xp} XP</b>. {100 - pct} XP pa bago ang next level.</p>
-                  )}
                 </div>
               </section>
             )}
@@ -6566,28 +7130,78 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
   ];
   const normalizeBadgeName = (value = '') => String(value || '').trim().toLowerCase();
   const unlockedBadgeNames = new Set(badges.map(badge => normalizeBadgeName(badge.name)));
+  function g46BadgeAchievementText(badge = {}) {
+    const reason = String(badgeAchievementReason(badge) || "").trim();
+    const cleanReason = reason.replace(/[.!]+$/g, "");
+
+    if (!cleanReason) return "You completed a learning goal!";
+
+    if (/^completed/i.test(cleanReason)) {
+      return `You ${cleanReason.charAt(0).toLowerCase()}${cleanReason.slice(1)}!`;
+    }
+
+    if (/^reached/i.test(cleanReason)) {
+      return `You ${cleanReason.charAt(0).toLowerCase()}${cleanReason.slice(1)}!`;
+    }
+
+    return cleanReason;
+  }
+
   const unlockedBadges = badges.map(badge => ({
     ...badge,
     locked: false,
-    statusText: 'Unlocked'
+    statusText: g46BadgeAchievementText(badge)
   }));
   const lockedBadges = badgeCatalog
     .filter(badge => !unlockedBadgeNames.has(normalizeBadgeName(badge.name)))
     .map(badge => ({ ...badge, locked: true, statusText: badge.requirement }));
-  const badgePreview = [...unlockedBadges, ...lockedBadges].slice(0, 6);
+  const badgePreview = unlockedBadges.slice(-2).reverse();
 
-  const planCards = [
-    {
-      icon: '🎧',
-      title: nextLesson?.title || 'Listening Practice',
-      meta: nextLesson?.subject || 'Pagbasa',
-      tone: 'blue',
-      action: () => nextLesson ? openLesson(nextLesson) : openFirstSubjectLesson('Pagbasa')
-    },
-    { icon: '📖', iconSrc: '/category-pagbasa.png', title: 'Reading', meta: 'Pagbasa', tone: 'pink', action: () => openFirstSubjectLesson('Pagbasa') },
-    { icon: '🔤', iconSrc: '/category-bokabularyo.png', title: 'Learn Words', meta: 'Bokabularyo', tone: 'purple', action: () => openFirstSubjectLesson('Bokabularyo') },
-    { icon: '📜', iconSrc: '/category-panitikan.png', title: 'Story Quest', meta: 'Panitikan', tone: 'yellow', action: () => openFirstSubjectLesson('Panitikan') }
-  ];
+  function g46LessonDateValue(lesson = {}) {
+    const value =
+      lesson.updatedAt ||
+      lesson.updated_at ||
+      lesson.createdAt ||
+      lesson.created_at ||
+      lesson.publishedAt ||
+      lesson.published_at ||
+      lesson.id ||
+      0;
+
+    const time = new Date(value).getTime();
+    if (Number.isFinite(time)) return time;
+
+    const numericId = Number(lesson.id || 0);
+    return Number.isFinite(numericId) ? numericId : 0;
+  }
+
+  function g46LessonTone(subject = '', index = 0) {
+    const key = String(subject || '').toLowerCase();
+    if (key.includes('pagbasa')) return 'blue';
+    if (key.includes('bokabularyo')) return 'purple';
+    if (key.includes('panitikan')) return 'yellow';
+    if (key.includes('oral')) return 'pink';
+    if (key.includes('pagsulat')) return 'yellow';
+    return ['blue', 'pink', 'purple', 'yellow'][index % 4];
+  }
+
+  const planCards = asArray(data?.lessons)
+    .filter(Boolean)
+    .slice()
+    .sort((a, b) => g46LessonDateValue(b) - g46LessonDateValue(a))
+    .slice(0, 4)
+    .map((lesson, index) => {
+      const subject = lesson.subject || 'Aralin';
+      return {
+        lesson,
+        icon: SUBJECTS.find(item => item.subj === subject)?.icon || '📚',
+        iconSrc: subjectIconSrc(subject),
+        title: lesson.title || 'Untitled Lesson',
+        meta: subject,
+        tone: g46LessonTone(subject, index),
+        action: () => openLesson(lesson)
+      };
+    });
 
   return (
     <Grade46StudentChrome
@@ -6605,32 +7219,45 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
             <div className="g46-ref-panel-head">
               <div>
                 <h2>Your lessons</h2>
-                <p className="g46-ref-muted">Pumili ng lesson para magpatuloy sa iyong Filipino learning journey.</p>
               </div>
               <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('lessons')}>All lessons →</button>
             </div>
 
-            <div className="g46-ref-plan-grid">
-              {planCards.map(card => (
-                <button type="button" className={`g46-ref-plan-card g46-ref-card ${card.tone}`} key={card.title} onClick={card.action}>
-                  <div>
-                    <div className="g46-ref-card-top">
-                      <span className="g46-ref-card-icon">{card.icon}</span>
-                      <span className="g46-ref-tag">{card.meta}</span>
+            {planCards.length ? (
+              <div className="g46-ref-plan-grid">
+                {planCards.map(card => (
+                  <button type="button" className={`g46-ref-plan-card g46-ref-card ${card.tone}`} key={card.lesson?.id || card.title} onClick={card.action}>
+                    <div>
+                      <div className="g46-ref-card-top">
+                        <span className="g46-ref-card-icon">
+                          <SubjectImageIcon
+                            subject={card.meta}
+                            src={card.iconSrc}
+                            fallback={card.icon}
+                            className="subject-img-icon lesson"
+                          />
+                        </span>
+                        <span className="g46-ref-tag">{card.meta}</span>
+                      </div>
+                      <h4>{card.title}</h4>
                     </div>
-                    <h4>{card.title}</h4>
-                    </div>
-                  <span className="g46-ref-primary-btn g46-ref-start-pill">Start</span>
-                </button>
-              ))}
-            </div>
+                    <span className="g46-ref-primary-btn g46-ref-start-pill">Start</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="g46-ref-lessons-empty">
+                <span>📚</span>
+                <strong>No lessons yet</strong>
+                <small>Check back later for new activities!</small>
+              </div>
+            )}
           </section>
 
           <section className="g46-ref-panel">
             <div className="g46-ref-panel-head">
               <div>
                 <h2>Your group tasks</h2>
-                <p className="g46-ref-muted">Tingnan ang assigned group work at collaborative Filipino activities.</p>
               </div>
               <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('groups')}>Open groups →</button>
             </div>
@@ -6655,59 +7282,32 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
             <div className="g46-ref-panel-head">
               <div>
                 <h2>Badges</h2>
-                <p className="g46-ref-muted">{unlockedBadges.length}/{badgeCatalog.length} badges unlocked. Tingnan ang locked badges para alam mo ang next goal.</p>
               </div>
+              <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('badges')}>See all badges →</button>
             </div>
 
-            <div className="g46-ref-badge-grid">
-              {badgePreview.map((badge, index) => (
-                <div className={`g46-ref-badge ${badge.locked ? 'locked' : 'unlocked'}`} key={badge.id || badge.name || index}>
-                  <div>
-                    <span>{badge.locked ? '🔒' : (badge.icon || '🏅')}</span>
-                    <strong>{badgeDisplayName(badge) || 'Badge'}</strong>
-                    <small className="g46-ref-badge-status">{badge.statusText || (badge.locked ? 'Locked' : 'Unlocked')}</small>
+            {badgePreview.length ? (
+              <div className="g46-ref-badge-grid">
+                {badgePreview.map((badge, index) => (
+                  <div className="g46-ref-badge unlocked" key={badge.id || badge.name || index}>
+                    <div>
+                      <span>{badge.icon || '🏅'}</span>
+                      <strong>{badgeDisplayName(badge) || 'Badge'}</strong>
+                      <small className="g46-ref-badge-status">{badge.statusText || 'You completed a learning goal!'}</small>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="g46-ref-panel">
-            <div className="g46-ref-panel-head">
-              <div>
-                <h2>Statistics</h2>
-                <p className="g46-ref-muted">XP, badges, and subject progress.</p>
+                ))}
               </div>
-            </div>
-
-            <div className="g46-ref-stat-row">
-              <div className="g46-ref-stat-item"><span>Total XP</span><div className="g46-ref-stat-track"><span style={{ width: `${Math.max(8, xpPercent(s.xp))}%` }} /></div><b>{s.xp || 0}</b></div>
-              <div className="g46-ref-stat-item"><span>Badges</span><div className="g46-ref-stat-track"><span style={{ width: `${Math.min(100, (unlockedBadges.length / Math.max(1, badgeCatalog.length)) * 100)}%` }} /></div><b>{unlockedBadges.length}</b></div>
-              <div className="g46-ref-stat-item"><span>Lessons</span><div className="g46-ref-stat-track"><span style={{ width: `${completionPct}%` }} /></div><b>{completionPct}%</b></div>
-            </div>
-          </section>
-
-          <section className="g46-ref-panel">
-            <div className="g46-ref-panel-head">
-              <div>
-                <h2>Subjects</h2>
-                <p className="g46-ref-muted">Quick view of module completion.</p>
+            ) : (
+              <div className="g46-ref-badge-empty">
+                <span>🌱</span>
+                <strong>No badges yet</strong>
+                <small>Complete a lesson or quiz to earn your first badge!</small>
               </div>
-            </div>
-            <div className="g46-ref-stat-row">
-              {stats.map(item => (
-                <button type="button" className="g46-ref-list-row" key={item.subj} onClick={() => openFirstSubjectLesson(item.subj)} style={{ width: '100%', border: 0, cursor: 'pointer' }}>
-                  <span className="g46-ref-card-icon">{item.theme.icon}</span>
-                  <div>
-                    <h3 style={{ fontSize: 26, margin: 0 }}>{item.subj}</h3>
-                    <p className="g46-ref-muted" style={{ margin: 0 }}>{item.done}/{item.total || 0} lessons</p>
-                  </div>
-                  <b>{item.pct}%</b>
-                </button>
-              ))}
-            </div>
+            )}
           </section>
-        </div>
+
+       </div>
       </div>
     </Grade46StudentChrome>
   );
