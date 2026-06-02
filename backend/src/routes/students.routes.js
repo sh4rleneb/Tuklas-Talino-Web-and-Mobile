@@ -607,4 +607,5 @@ router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) 
   } catch (err) { next(err); }
 });
 
+export { dashboardPayload, ensureCoreBadges, buildBadgeProgress, calculateLevel, levelTitleForXp, nextLevelXp };
 export default router;

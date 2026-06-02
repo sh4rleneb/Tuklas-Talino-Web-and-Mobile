@@ -22,12 +22,21 @@ from '../screens/auth/TeacherLogin';
 import AdminLogin
 from '../screens/auth/AdminLogin';
 
+import ChangePassword
+from '../screens/auth/ChangePassword';
+
 /*
 STUDENT
 */
 
 import StudentJuniorHome
 from '../screens/studentJunior/StudentJuniorHome';
+
+import StudentJuniorLessons
+from '../screens/studentJunior/StudentJuniorLessons';
+
+import StudentJuniorLessonDetail
+from '../screens/studentJunior/StudentJuniorLessonDetail';
 
 import ModulesScreen
 from '../screens/studentJunior/ModulesScreen';
@@ -44,23 +53,30 @@ from '../screens/BadgesScreen';
 import ProfileScreen
 from '../screens/ProfileScreen';
 
+import MissionScreen
+from '../screens/MissionScreen';
 
 import StudentSeniorHome
 from '../screens/studentSenior/StudentSeniorHome';
+
+import StudentSeniorLessons
+from '../screens/studentSenior/StudentSeniorLessons';
+
 
 /*
 TEACHER
 */
 
-import TeacherNavigator
-from './TeacherNavigator';
+import TeacherHome
+from '../screens/teacher/TeacherHome';
 
 /*
 ADMIN
 */
 
-import AdminNavigator
-from './AdminNavigator';
+import AdminHome
+from '../screens/admin/AdminHome';
+
 
 const Stack =
   createNativeStackNavigator();
@@ -98,11 +114,30 @@ export default function RootNavigator() {
           component={AdminLogin}
         />
 
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePassword}
+        />
+
         {/* STUDENT */}
 
         <Stack.Screen
           name="StudentJuniorHome"
           component={StudentJuniorHome}
+        />
+
+        <Stack.Screen
+          name="StudentJuniorLessons"
+          component={
+            StudentJuniorLessons
+          }
+        />
+
+        <Stack.Screen
+          name="StudentJuniorLessonDetail"
+          component={
+            StudentJuniorLessonDetail
+          }
         />
 
         <Stack.Screen
@@ -126,29 +161,38 @@ export default function RootNavigator() {
         />
 
         <Stack.Screen
+          name="MissionScreen"
+          component={MissionScreen}
+        />
+
+        <Stack.Screen
           name="ProfileScreen"
           component={ProfileScreen}
         />
         
 
         <Stack.Screen
+          name="TeacherHome"
+          component={TeacherHome}
+        />
+
+        <Stack.Screen
+          name="AdminHome"
+          component={AdminHome}
+        />
+
+        <Stack.Screen
           name="StudentSeniorHome"
           component={StudentSeniorHome}
         />
 
-        {/* TEACHER */}
-
         <Stack.Screen
-          name="TeacherHome"
-          component={TeacherNavigator}
+          name="StudentSeniorLessons"
+          component={
+            StudentSeniorLessons
+          }
         />
 
-        {/* ADMIN */}
-
-        <Stack.Screen
-          name="AdminHome"
-          component={AdminNavigator}
-        />
       </Stack.Navigator>
     </NavigationContainer>
   );

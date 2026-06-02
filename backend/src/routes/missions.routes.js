@@ -36,7 +36,7 @@ const MISSION_CATALOG = {
   }
 };
 
-router.post('/:missionId/complete', async (req, res, next) => {
+async function completeMission(req, res, next) {
   try {
     const student = req.student;
     const missionId = String(req.params.missionId || '').trim();
@@ -117,7 +117,10 @@ router.post('/:missionId/complete', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+}
+
+router.post('/:missionId/complete', completeMission);
+router.post('/:missionId/claim', completeMission);
 
 router.get('/completions/me', async (req, res, next) => {
   try {
@@ -138,4 +141,5 @@ router.get('/completions/me', async (req, res, next) => {
   }
 });
 
+export { MISSION_CATALOG, completeMission };
 export default router;

@@ -36,7 +36,7 @@ export default function StudentLogin({
   const [selectedAvatar, setSelectedAvatar] =
     useState('🦊');
 
-  const avatars = [
+    const avatars = [
     '🦊',
     '🐼',
     '🐯',
@@ -45,6 +45,7 @@ export default function StudentLogin({
     '🦄',
     '🐰',
     '🧒',
+    '👧',
   ];
 
   function handleStudentIdChange(
@@ -54,18 +55,21 @@ export default function StudentLogin({
   const upper =
     value.toUpperCase();
 
-  setStudentId(upper);
+    setStudentId(upper);
 
-  const regex =
-    /^STU-\d{4}-\d{3}$/;
+    const regex =
+      /^STU-\d{4}-\d{3}$/;
 
-  setStudentValid(
-    regex.test(upper)
-  );
+    setStudentValid(
+      regex.test(upper.trim())
+    );
 
 }
 
   async function handleLogin() {
+
+    if (loading) return;
+
     try {
 
       if (!studentId || !password) {
@@ -79,15 +83,18 @@ export default function StudentLogin({
 
       setLoading(true);
 
+      const cleanedStudentId = studentId.trim();
+      const cleanedPassword = password.trim();
+
       const data = await api(
         '/auth/login',
         {
           method: 'POST',
-
           body: {
             role: 'student',
-            identifier: studentId,
-            password,
+            identifier: cleanedStudentId,
+            password: cleanedPassword,
+            avatar: selectedAvatar,
           },
         }
       );
@@ -124,7 +131,16 @@ export default function StudentLogin({
         Grade 3-6 = Senior
       */
 
-      if (gradeLevel <= 2) {
+      const homeRoute = gradeLevel <= 2
+        ? 'StudentJuniorHome'
+        : 'StudentSeniorHome';
+
+      if (user.mustChangePassword) {
+        navigation.replace(
+          'ChangePassword',
+          { homeRoute }
+        );
+      } else if (gradeLevel <= 2) {
 
         navigation.replace(
           'StudentJuniorHome'
@@ -169,7 +185,7 @@ export default function StudentLogin({
       <ScrollView
         style={styles.container}
         contentContainerStyle={{
-          paddingBottom: 100,
+          paddingBottom: 150,
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -281,12 +297,20 @@ export default function StudentLogin({
           <View style={styles.divider} />
 
           {/* STUDENT ID */}
-
           <Text style={styles.label}>
             🪪 Student ID
           </Text>
 
-          <View style={styles.inputBox}>
+          <View
+            style={[
+              styles.inputBox,
+
+              studentId.length > 0 &&
+              !studentValid &&
+
+              styles.invalidInput,
+            ]}
+          >
 
             <Text style={styles.inputIcon}>
               👤
@@ -296,14 +320,30 @@ export default function StudentLogin({
               style={styles.input}
               value={studentId}
               onChangeText={
-              handleStudentIdChange
-            }
-              placeholder="Halimbawa: STU-2025-001"
+                handleStudentIdChange
+              }
+              placeholder="Ex: STU-2025-001"
               placeholderTextColor="#64748B"
               autoCapitalize="characters"
+              autoCorrect={false}
             />
 
+            {studentValid && (
+              <View style={styles.validCircle}>
+                <Text style={styles.validIcon}>
+                  ✔
+                </Text>
+              </View>
+            )}
+
           </View>
+
+            {studentId.length > 0 &&
+              !studentValid && (
+                <Text style={styles.errorText}>
+                  Example: STU-2025-001
+                </Text>
+              )}
 
           {/* PASSWORD */}
 
@@ -323,23 +363,17 @@ export default function StudentLogin({
               onChangeText={setPassword}
               placeholder="Default: student123"
               placeholderTextColor="#64748B"
-              secureTextEntry={
-                !showPassword
-              }
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
             />
-
 
             <TouchableOpacity
               onPress={() =>
-                setShowPassword(
-                  !showPassword
-                )
+                setShowPassword(!showPassword)
               }
             >
               <Text style={styles.eye}>
-                {showPassword
-                  ? '🙈'
-                  : '👁️'}
+                {showPassword ? '🙈' : '👁️'}
               </Text>
             </TouchableOpacity>
 
@@ -348,14 +382,29 @@ export default function StudentLogin({
           {/* LOGIN */}
 
           <TouchableOpacity
-            style={styles.loginButton}
+           style={[
+              styles.loginButton,
+
+              (
+                !studentValid ||
+                !password.trim()
+              ) &&
+              styles.disabledButton,
+            ]}
+
+            activeOpacity={0.8}
             onPress={handleLogin}
-            disabled={loading}
+
+            disabled={
+              loading ||
+              !studentValid ||
+              !password.trim()
+            }
           >
 
             <Text style={styles.loginText}>
               {loading
-                ? 'Loading...'
+                ? '⏳ Logging In...'
                 : '✨ Login'}
             </Text>
 
@@ -501,6 +550,11 @@ const styles = StyleSheet.create({
   selectedAvatar: {
     borderColor: '#22C55E',
     backgroundColor: '#ECFDF5',
+    shadowColor: '#22C55E',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+
+    elevation: 6,
 
     transform: [
       {
@@ -561,9 +615,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_500Medium',
   },
 
+  invalidInput: {
+    borderColor: '#DC2626',
+  },
+
   eye: {
     fontSize: 20,
-    color: '#16A34A',
   },
 
   loginButton: {
@@ -585,25 +642,38 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_800ExtraBold',
   },
 
-  validBox: {
+    errorText: {
+    color: '#DC2626',
+    marginTop: -16,
+    marginBottom: 16,
+    fontFamily:
+      'Poppins_500Medium',
+  },
 
-  backgroundColor:
-    '#ECFDF5',
+  disabledButton: {
+    opacity: 0.5,
+  },
 
-  alignSelf: 'stretch',
+  validCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
 
-  justifyContent:
-    'center',
+    borderWidth: 2,
+    borderColor: '#22C55E',
 
-  paddingHorizontal: 14,
+    backgroundColor: '#FFFFFF',
 
-  marginRight: -16,
-},
+    justifyContent: 'center',
+    alignItems: 'center',
 
-validIcon: {
-  color: '#22C55E',
-  fontSize: 24,
-  fontWeight: 'bold',
-},
+    marginRight: 8,
+  },
+
+  validIcon: {
+    color: '#22C55E',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
 
 });

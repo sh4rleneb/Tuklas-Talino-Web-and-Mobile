@@ -1,830 +1,639 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { api } from '../../api/client';
+import { logout } from '../../api/auth';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+const quickNavItems = [
+  { icon: '📘', label: 'Lessons', screen: 'StudentJuniorLessons' },
+  { icon: '🧠', label: 'Quizzes', screen: 'QuizScreen' },
+  { icon: '🎮', label: 'Missions', screen: 'MissionScreen' },
+  { icon: '👥', label: 'Groups', screen: 'GroupsScreen' },
+  { icon: '🏅', label: 'Badges', screen: 'BadgesScreen' },
+];
 
-export default function StudentJuniorHome({
-  navigation,
-}) {
-  
-  const [showMore, setShowMore] =
-    useState(false);
+export default function StudentJuniorHome({ navigation }) {
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api('/dashboard');
+      setDashboard(data);
+    } catch (error) {
+      console.warn('Dashboard load failed', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const student = dashboard?.student || {};
+  const lessons = dashboard?.lessons || [];
+  const groups = dashboard?.groups || [];
+  const badges = dashboard?.badges || [];
+  const completedLessons = lessons.filter((lesson) => lesson?.completed).length;
+  const totalLessons = lessons.length;
+  const completionPct = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
+  const nextLesson = lessons.find((lesson) => !lesson?.completed) || lessons[0];
+  const badgePreview = badges.slice(-2).reverse();
+  const activeGroupTask = groups[0]?.tasks?.find((task) => !task.completed) || groups[0]?.tasks?.[0];
+
+  const xp = student?.xp || 0;
+  const level = Math.max(1, Math.floor(xp / 100) + 1);
+  const avatar = student?.avatar || '🧒';
+  const name = student?.name || 'Student';
+  const grade = student?.gradeLevel || 1;
+
+  const showProgress = completionPct > 0;
+
+  async function handleLogout() {
+    await logout();
+    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
+  }
+
+  if (loading && !dashboard) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.loaderWrapper}>
+          <ActivityIndicator size="large" color="#16A34A" />
+          <Text style={styles.loaderText}>Loading your dashboard…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-
-    <View style={styles.wrapper}>
-
-      <ScrollView
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: 130,
-        }}
-      >
-
-        {/* HEADER */}
-
+    <SafeAreaView style={styles.safe}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-
-          <View style={styles.headerTop}>
-
-            <Text style={styles.logo}>
-              🏡 Tuklas Talino
-            </Text>
-
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={() =>
-                navigation.replace(
-                  'Landing'
-                )
-              }
-            >
-              <Text style={styles.logoutText}>
-                Logout
-              </Text>
-            </TouchableOpacity>
-
+          <View>
+            <Text style={styles.logo}>Tuklas Talino</Text>
+            <Text style={styles.profileText}>{name} • Grade {grade}</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.profileChip}
-          >
-            <Text style={styles.profileEmoji}>
-              🐰
-            </Text>
-
-            <Text style={styles.profileText}>
-              Lia • Grade 1
-            </Text>
-          </TouchableOpacity>
-
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.profileChip} onPress={() => navigation.navigate('ProfileScreen')}>
+              <Text style={styles.profileEmoji}>{avatar}</Text>
+              <Text style={styles.profileChipText}>Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* HERO */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroHeader}>
+            <View>
+              <Text style={styles.greeting}>Hi {name}! 👋</Text>
+              <Text style={styles.subtitle}>Ready ka na ba sa learning adventure today?</Text>
+            </View>
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatar}>{avatar}</Text>
+            </View>
+          </View>
 
-        <View style={styles.hero}>
-
-          <Image
-            source={require('../../../assets/characters/student.png')}
-            style={styles.heroImage}
-            resizeMode="contain"
-          />
-
-          <View style={styles.heroCard}>
-
-          <Text style={styles.greeting}>
-            Kamusta, Lia! 👋
-          </Text>
-
-            <Text style={styles.subtitle}>
-              Ready ka na ba sa
-              learning adventure?
-            </Text>
-
-            <View style={styles.xpContainer}>
-
+          <View style={styles.xpCard}>
+            <View style={styles.xpRow}>
               <View>
-
-                <Text style={styles.xpLabel}>
-                  Current XP
-                </Text>
-
-                <Text style={styles.xpText}>
-                  ⭐ 15 XP
-                </Text>
-
+                <Text style={styles.xpLabel}>XP points</Text>
+                <Text style={styles.xpValue}>{xp} XP</Text>
               </View>
-
               <View style={styles.levelBadge}>
-
-                <Text style={styles.levelText}>
-                  Level 1
-                </Text>
-
+                <Text style={styles.levelText}>Level {level}</Text>
               </View>
-
             </View>
-
             <View style={styles.progressBar}>
-
-              <View
-                style={styles.progressFill}
-              />
-
+              <View style={[styles.progressFill, { width: `${Math.min((xp % 100), 100)}%` }]} />
             </View>
-
-            <Text style={styles.progressText}>
-              85 XP more until next
-              level!
-            </Text>
-
+            <Text style={styles.progressInfo}>{100 - (xp % 100)} XP until next level</Text>
           </View>
 
+          <View style={styles.quickStatsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{totalLessons}</Text>
+              <Text style={styles.statLabel}>Lessons</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{completedLessons}</Text>
+              <Text style={styles.statLabel}>Done</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{completionPct}%</Text>
+              <Text style={styles.statLabel}>Progress</Text>
+            </View>
+          </View>
         </View>
 
-        {/* NAVIGATION */}
-
-        <View style={styles.navCard}>
-
-          {[
-            '📘 Lessons',
-            '🧠 Quizzes',
-            '🎮 Missions',
-            '👥 Groups',
-          ].map((item) => (
-
+        <View style={styles.navigationCard}>
+          {quickNavItems.map((item) => (
             <TouchableOpacity
-              key={item}
-              style={styles.navGridButton}
-              onPress={() => {
-
-                if (
-                  item === '📘 Lessons'
-                ) {
-                  navigation.navigate(
-                    'ModulesScreen'
-                  );
-                }
-
-              }}
+              key={item.label}
+              style={styles.navTile}
+              onPress={() => navigation.navigate(item.screen)}
             >
-
-              <Text style={styles.navGridText}>
-                {item}
-              </Text>
-
+              <Text style={styles.navTileIcon}>{item.icon}</Text>
+              <Text style={styles.navTileText}>{item.label}</Text>
             </TouchableOpacity>
-
           ))}
-
         </View>
 
-        {/* LESSONS */}
-
-        <Text style={styles.sectionTitle}>
-          Mga Aralin
-        </Text>
-
-        <TouchableOpacity
-          style={styles.lessonCard}
-          onPress={() =>
-            navigation.navigate(
-              'ModulesScreen'
-            )
-          }
-        >
-
-          <View style={styles.lessonLeft}>
-
-            <Text style={styles.lessonEmoji}>
-              📖
-            </Text>
-
-            <View>
-
-              <Text
-                style={styles.lessonTitle}
-              >
-                Pagbasa
-              </Text>
-
-              <Text
-                style={styles.lessonSub}
-              >
-                Learn reading basics
-              </Text>
-
-            </View>
-
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Continue learning</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('StudentJuniorLessons')}>
+              <Text style={styles.sectionLink}>All lessons →</Text>
+            </TouchableOpacity>
           </View>
 
-          <Text style={styles.lessonArrow}>
-            →
-          </Text>
-
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.lessonCard}
-          onPress={() =>
-            navigation.navigate(
-              'ModulesScreen'
-            )
-          }
-        >
-
-          <View style={styles.lessonLeft}>
-
-            <Text style={styles.lessonEmoji}>
-              🔤
-            </Text>
-
-            <View>
-
-              <Text
-                style={styles.lessonTitle}
-              >
-                Bokabularyo
-              </Text>
-
-              <Text
-                style={styles.lessonSub}
-              >
-                Learn new words
-              </Text>
-
+          {nextLesson ? (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => navigation.navigate('StudentJuniorLessonDetail', { lessonId: nextLesson.id })}
+            >
+              <View>
+                <Text style={styles.cardTag}>{nextLesson.subject || 'Lesson'}</Text>
+                <Text style={styles.cardTitle}>{nextLesson.title}</Text>
+                <Text style={styles.cardMeta}>Grade {nextLesson.gradeLevel || '—'} • +{nextLesson.xpReward || 0} XP</Text>
+              </View>
+              <Text style={styles.cardAction}>▶ Continue</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>📚</Text>
+              <Text style={styles.emptyTitle}>No active lessons</Text>
+              <Text style={styles.emptyText}>Explore the lesson library to start your next activity.</Text>
             </View>
+          )}
+        </View>
 
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Badges</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('BadgesScreen')}>
+              <Text style={styles.sectionLink}>View all →</Text>
+            </TouchableOpacity>
           </View>
 
-          <Text style={styles.lessonArrow}>
-            →
-          </Text>
+          <View style={styles.badgeRow}>
+            {badgePreview.length ? (
+              badgePreview.map((badge) => (
+                <View key={badge.id || badge.name} style={styles.badgeCard}>
+                  <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
+                  <Text style={styles.badgeName}>{badge.name}</Text>
+                  <Text style={styles.badgeMeta}>{badge.description || 'Earned from a completed activity'}</Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyStateSmall}>
+                <Text style={styles.emptyEmoji}>🌱</Text>
+                <Text style={styles.emptyTitle}>No badges yet</Text>
+                <Text style={styles.emptyText}>Complete lessons or missions to earn badges.</Text>
+              </View>
+            )}
+          </View>
+        </View>
 
-        </TouchableOpacity>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Group task</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('GroupsScreen')}>
+              <Text style={styles.sectionLink}>Open groups →</Text>
+            </TouchableOpacity>
+          </View>
 
+          {activeGroupTask ? (
+            <View style={styles.taskCard}>
+              <Text style={styles.taskTitle}>{activeGroupTask.title}</Text>
+              <Text style={styles.taskMeta}>{activeGroupTask.description || 'Group activity available'}</Text>
+              <Text style={styles.taskXp}>+{activeGroupTask.xpReward || 0} XP</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyStateSmall}>
+              <Text style={styles.emptyEmoji}>🎉</Text>
+              <Text style={styles.emptyTitle}>No group task yet</Text>
+              <Text style={styles.emptyText}>Great job! Check back later for group activities.</Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
-      {/* BOTTOM NAV */}
-
       <View style={styles.bottomNav}>
-
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            styles.activeNavButton,
-          ]}
-        >
-
-          <Text style={styles.navIcon}>
-            🏠
-          </Text>
-
-          <Text
-            style={styles.activeNavText}
-          >
-            Home
-          </Text>
-
+        <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
+          <Text style={styles.navIcon}>🏠</Text>
+          <Text style={styles.navLabelActive}>Home</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() =>
-            navigation.navigate(
-              'ModulesScreen'
-            )
-          }
-        >
-
-          <Text style={styles.navIcon}>
-            📚
-          </Text>
-
-          <Text style={styles.navText}>
-            Lessons
-          </Text>
-
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('StudentJuniorLessons')}>
+          <Text style={styles.navIcon}>📚</Text>
+          <Text style={styles.navLabel}>Lessons</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() =>
-            navigation.navigate(
-              'QuizScreen'
-            )
-          }
-        >
-
-          <Text style={styles.navIcon}>
-            🧠
-          </Text>
-
-          <Text style={styles.navText}>
-            Quizzes
-          </Text>
-
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('MissionScreen')}>
+          <Text style={styles.navIcon}>🎮</Text>
+          <Text style={styles.navLabel}>Missions</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navButton}
-        >
-
-          <Text style={styles.navIcon}>
-            🎮
-          </Text>
-
-          <Text style={styles.navText}>
-            Missions
-          </Text>
-
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('GroupsScreen')}>
+          <Text style={styles.navIcon}>👥</Text>
+          <Text style={styles.navLabel}>Groups</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-        style={styles.navButton}
-        onPress={() =>
-          setShowMore(!showMore)
-        }
-      >
-        <Text style={styles.navIcon}>
-          ⋯
-        </Text>
-
-        <Text style={styles.navText}>
-          More
-        </Text>
-      </TouchableOpacity>
-
+        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('BadgesScreen')}>
+          <Text style={styles.navIcon}>🏅</Text>
+          <Text style={styles.navLabel}>Badges</Text>
+        </TouchableOpacity>
       </View>
-
-      {showMore && (
-
-        <View style={styles.moreMenu}>
-
-          <TouchableOpacity
-            style={styles.moreItem}
-            onPress={() =>
-              navigation.navigate(
-                'GroupsScreen'
-              )
-            }
-          >
-            <Text style={styles.moreText}>
-              👥 Groups
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.moreItem}
-            onPress={() =>
-              navigation.navigate(
-                'BadgesScreen'
-              )
-            }
-          >
-            <Text style={styles.moreText}>
-              🏅 Badges
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.moreItem}
-            onPress={() =>
-              navigation.navigate(
-                'ProfileScreen'
-              )
-            }
-          >
-            <Text style={styles.moreText}>
-              👤 Profile
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.moreItem}
-            onPress={() =>
-              navigation.replace(
-                'Landing'
-              )
-            }
-          >
-            <Text style={styles.moreText}>
-              🚪 Logout
-            </Text>
-          </TouchableOpacity>
-
-        </View>
-
-      )}
-
-    </View>
-
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-
-  wrapper: {
+  safe: {
     flex: 1,
-    backgroundColor: '#F4FFF4',
+    backgroundColor: '#F6FFF5',
   },
-
   container: {
     flex: 1,
     paddingHorizontal: 18,
   },
-
-    header: {
-    marginTop: 55,
-
-    backgroundColor: '#FFFFFF',
-
-    borderRadius: 28,
-
-    padding: 18,
-
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-
-    elevation: 4,
+  contentContainer: {
+    paddingBottom: 120,
+    paddingTop: 12,
   },
-
-  headerTop: {
-    flexDirection: 'row',
-
-    justifyContent: 'space-between',
-
+  loaderWrapper: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-
-    profileChip: {
-    marginTop: 18,
-
-    alignSelf: 'flex-start',
-
-    flexDirection: 'row',
-    alignItems: 'center',
-
-    backgroundColor: '#ECFDF5',
-
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-
-    borderRadius: 999,
-  },
-
-  profileEmoji: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-
-  profileText: {
-    fontSize: 13,
+  loaderText: {
+    marginTop: 12,
     color: '#475569',
     fontFamily: 'Poppins_600SemiBold',
   },
-
+  header: {
+    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   logo: {
-    fontSize: 26,
-
+    fontSize: 28,
     fontFamily: 'Poppins_800ExtraBold',
-
     color: '#16A34A',
   },
-
-    logoutButton: {
-    backgroundColor: '#FEE2E2',
-
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-
-    borderRadius: 20,
+  profileText: {
+    marginTop: 8,
+    color: '#475569',
+    fontFamily: 'Poppins_600SemiBold',
   },
-
-  logoutText: {
-    color: '#DC2626',
-
-    fontSize: 14,
-
-    fontFamily: 'Poppins_700Bold',
+  headerActions: {
+    alignItems: 'flex-end',
   },
-
-  hero: {
-    marginTop: 24,
-
-    backgroundColor: '#22C55E',
-
-    borderRadius: 36,
-
-    padding: 20,
-  },
-
-  heroImage: {
-    width: '100%',
-    height: 220,
-  },
-
-  heroCard: {
-    backgroundColor: '#FFFFFF',
-
-    borderRadius: 30,
-
-    padding: 24,
-
-    marginTop: 18,
-  },
-
-    greetingRow: {
+  profileChip: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 12,
   },
-
-  greetingAvatar: {
-    fontSize: 34,
-    marginRight: 10,
+  profileEmoji: {
+    fontSize: 18,
+    marginRight: 8,
   },
-
-  wave: {
-    fontSize: 32,
-    marginTop: 6,
-  },
-
-  greeting: {
-    fontSize: 34,
-
-    fontFamily: 'Poppins_800ExtraBold',
-
+  profileChipText: {
+    fontSize: 13,
+    fontFamily: 'Poppins_600SemiBold',
     color: '#0F172A',
   },
-
-  subtitle: {
-    marginTop: 10,
-
-    fontSize: 16,
-
-    color: '#475569',
-
-    lineHeight: 28,
-
-    fontFamily: 'Poppins_500Medium',
+  logoutButton: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-
-  xpContainer: {
-    marginTop: 22,
-
+  logoutText: {
+    color: '#166534',
+    fontSize: 14,
+    fontFamily: 'Poppins_700Bold',
+  },
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    padding: 20,
+    marginTop: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  heroHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-
-  xpLabel: {
-    fontSize: 13,
-
-    color: '#64748B',
-
-    marginBottom: 4,
-
-    fontFamily: 'Poppins_600SemiBold',
-  },
-
-  xpText: {
-    fontSize: 28,
-
+  greeting: {
+    fontSize: 32,
     fontFamily: 'Poppins_800ExtraBold',
-
     color: '#0F172A',
   },
-
+  subtitle: {
+    marginTop: 10,
+    fontSize: 15,
+    color: '#475569',
+    lineHeight: 22,
+    fontFamily: 'Poppins_500Medium',
+    maxWidth: '75%',
+  },
+  avatarCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 999,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatar: {
+    fontSize: 36,
+  },
+  xpCard: {
+    marginTop: 22,
+  },
+  xpRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  xpLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Poppins_700Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  xpValue: {
+    fontSize: 32,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#16A34A',
+    marginTop: 6,
+  },
   levelBadge: {
-    backgroundColor: '#FEF3C7',
-
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 18,
     paddingVertical: 10,
-
     borderRadius: 999,
   },
-
   levelText: {
-    color: '#92400E',
-
-    fontSize: 14,
-
+    color: '#166534',
+    fontSize: 13,
     fontFamily: 'Poppins_700Bold',
   },
-
   progressBar: {
-    marginTop: 24,
-
     height: 12,
-
-    backgroundColor: '#DCFCE7',
-
+    backgroundColor: '#ECFDF5',
     borderRadius: 999,
+    marginTop: 16,
+    overflow: 'hidden',
   },
-
   progressFill: {
-    width: '22%',
-
     height: '100%',
-
-    backgroundColor: '#4ADE80',
-
-    borderRadius: 999,
+    backgroundColor: '#22C55E',
   },
-
-  progressText: {
+  progressInfo: {
     marginTop: 10,
-
     color: '#64748B',
-
     fontSize: 13,
-
     fontFamily: 'Poppins_500Medium',
   },
-
-  navCard: {
-    marginTop: 24,
-
-    backgroundColor: '#FFFFFF',
-
-    borderRadius: 30,
-
-    padding: 18,
-
+  quickStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#F7FEF7',
+    borderRadius: 24,
+    padding: 16,
+    marginRight: 10,
+  },
+  statValue: {
+    fontSize: 24,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#16A34A',
+  },
+  statLabel: {
+    marginTop: 6,
+    color: '#475569',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  navigationCard: {
+    marginTop: 18,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-
-  navGridButton: {
-    backgroundColor: '#FEF3C7',
-
+  navTile: {
     width: '48%',
-
-    borderRadius: 22,
-
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     paddingVertical: 18,
-
+    paddingHorizontal: 16,
+    marginBottom: 12,
     alignItems: 'center',
-
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  navTileIcon: {
+    fontSize: 28,
     marginBottom: 12,
   },
-
-  navGridText: {
+  navTileText: {
+    fontSize: 15,
     fontFamily: 'Poppins_700Bold',
-
     color: '#0F172A',
+    textAlign: 'center',
   },
-
-  sectionTitle: {
-    marginTop: 30,
-    marginBottom: 18,
-
-    fontSize: 28,
-
-    fontFamily: 'Poppins_800ExtraBold',
-
-    color: '#0F172A',
+  section: {
+    marginTop: 20,
   },
-
-  lessonCard: {
-    backgroundColor: '#FFFFFF',
-
-    borderRadius: 30,
-
-    padding: 22,
-
-    marginBottom: 16,
-
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-
-  lessonLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  lessonEmoji: {
-    fontSize: 48,
-    marginRight: 18,
-  },
-
-  lessonTitle: {
-    fontSize: 22,
-
+  sectionTitle: {
+    fontSize: 24,
     fontFamily: 'Poppins_800ExtraBold',
-
     color: '#0F172A',
   },
-
-  lessonSub: {
-    marginTop: 4,
-
-    color: '#64748B',
-
-    fontSize: 14,
-
-    fontFamily: 'Poppins_500Medium',
-  },
-
-  lessonArrow: {
-    fontSize: 28,
-
+  sectionLink: {
     color: '#16A34A',
-  },
-
-  bottomNav: {
-    position: 'absolute',
-
-    bottom: 0,
-    left: 0,
-    right: 0,
-
-    backgroundColor: '#FFFFFF',
-
-    flexDirection: 'row',
-
-    justifyContent: 'space-evenly',
-
-    alignItems: 'center',
-
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-
-    elevation: 10,
-  },
-
-  navButton: {
-    alignItems: 'center',
-
-    justifyContent: 'center',
-
-    minWidth: 50,
-
-    paddingVertical: 8,
-
-    borderRadius: 18,
-  },
-
-  activeNavButton: {
-    backgroundColor: '#FEF3C7',
-
-    borderWidth: 2,
-    borderColor: '#FCD34D',
-
-    paddingHorizontal: 16,
-  },
-
-  navIcon: {
-    fontSize: 22,
-  },
-
-  activeNavText: {
-    marginTop: 2,
-
-    color: '#16A34A',
-
-    fontSize: 11,
-
     fontFamily: 'Poppins_700Bold',
   },
-
-  navText: {
-    marginTop: 2,
-
-    color: '#334155',
-
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  cardTag: {
+    color: '#16A34A',
+    fontFamily: 'Poppins_700Bold',
+    marginBottom: 6,
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  cardMeta: {
+    color: '#64748B',
+    fontFamily: 'Poppins_500Medium',
+  },
+  cardAction: {
+    marginTop: 14,
+    alignSelf: 'flex-start',
+    color: '#16A34A',
+    fontFamily: 'Poppins_700Bold',
+  },
+  emptyState: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  emptyStateSmall: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 18,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  emptyEmoji: {
+    fontSize: 42,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#64748B',
+    fontFamily: 'Poppins_500Medium',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  badgeCard: {
+    flex: 1,
+    backgroundColor: '#F9FEF4',
+    borderRadius: 24,
+    padding: 18,
+    marginRight: 12,
+  },
+  badgeIcon: {
+    fontSize: 28,
+    marginBottom: 10,
+  },
+  badgeName: {
+    fontSize: 16,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  badgeMeta: {
+    color: '#64748B',
+    fontFamily: 'Poppins_500Medium',
+  },
+  taskCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  taskTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  taskMeta: {
+    color: '#64748B',
+    fontFamily: 'Poppins_500Medium',
+    marginBottom: 10,
+  },
+  taskXp: {
+    color: '#16A34A',
+    fontFamily: 'Poppins_700Bold',
+  },
+  bottomNav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#0F9D58',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    elevation: 12,
+  },
+  navButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    paddingVertical: 8,
+  },
+  navButtonActive: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 18,
+    marginHorizontal: 4,
+  },
+  navIcon: {
+    fontSize: 20,
+  },
+  navLabel: {
+    marginTop: 4,
     fontSize: 11,
-
+    color: '#E5E7EB',
     fontFamily: 'Poppins_600SemiBold',
   },
-
-    moreMenu: {
-    position: 'absolute',
-
-    right: 20,
-    bottom: 95,
-
-    backgroundColor: '#FFFFFF',
-
-    borderRadius: 20,
-
-    width: 180,
-
-    paddingVertical: 10,
-
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-
-    elevation: 8,
+  navLabelActive: {
+    marginTop: 4,
+    fontSize: 11,
+    color: '#166534',
+    fontFamily: 'Poppins_700Bold',
   },
-
-  moreItem: {
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-  },
-
-  moreText: {
-    fontSize: 15,
-
-    color: '#0F172A',
-
-    fontFamily:
-      'Poppins_600SemiBold',
-  },
-
 });

@@ -50,10 +50,18 @@ export default function TeacherLogin({
 
       setLoading(true);
 
-      await loginTeacher(
+      const data = await loginTeacher(
         identifier,
         password
       );
+
+      if (data.user?.mustChangePassword) {
+        navigation.replace(
+          'ChangePassword',
+          { homeRoute: 'TeacherHome' }
+        );
+        return;
+      }
 
       Alert.alert(
         'Success',

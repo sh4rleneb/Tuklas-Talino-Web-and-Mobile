@@ -10,6 +10,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 
+import {
+    ActivityIndicator,
+  } from 'react-native';
 
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/client';
@@ -38,7 +41,7 @@ export default function ProfileScreen({
 }) {
   const [dashboard, setDashboard] = useState(null);
 
-  const load = useCallback(() => api('/students/dashboard').then(setDashboard), []);
+  const load = useCallback(() => api('/dashboard').then(setDashboard), []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   async function choose(avatar) {
@@ -47,7 +50,52 @@ export default function ProfileScreen({
     load();
   }
 
-  if (!dashboard) return <Text>Loading...</Text>;
+    if (!dashboard) {
+      return (
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#F3FAF5',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              marginBottom: 24,
+              gap: 10,
+            }}
+          >
+            <Text style={{fontSize: 44}}>🦊</Text>
+            <Text style={{fontSize: 44}}>🐼</Text>
+            <Text style={{fontSize: 44}}>🐯</Text>
+            <Text style={{fontSize: 44}}>🐸</Text>
+          </View>
+
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 24,
+              borderWidth: 2,
+              borderColor: '#F2D36B',
+              paddingHorizontal: 35,
+              paddingVertical: 20,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: '800',
+                color: '#16213E',
+              }}
+            >
+              ⏳ Loading...
+            </Text>
+          </View>
+        </View>
+      );
+    }
 
   return (
   <ScrollView

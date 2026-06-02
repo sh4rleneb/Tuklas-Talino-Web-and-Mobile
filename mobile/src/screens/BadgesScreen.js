@@ -10,9 +10,12 @@ export default function BadgesScreen() {
   const [allBadges, setAllBadges] = useState([]);
 
   useFocusEffect(useCallback(() => {
-    api('/students/dashboard').then(d => api(`/students/${d.student.id}/badges`)).then(data => {
-      setBadges(data.badges);
-      setAllBadges(data.allBadges);
+    api('/badges').then(data => {
+      setBadges(data.badges || []);
+      setAllBadges(data.allBadges || []);
+    }).catch(() => {
+      setBadges([]);
+      setAllBadges([]);
     });
   }, []));
 

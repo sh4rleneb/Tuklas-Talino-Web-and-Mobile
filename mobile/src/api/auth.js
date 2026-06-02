@@ -50,3 +50,25 @@ export async function loginAdmin(identifier, password) {
 
   return data;
 }
+
+export async function changePassword(currentPassword, newPassword) {
+  return api('/auth/change-password', {
+    method: 'POST',
+    body: {
+      currentPassword,
+      newPassword,
+    },
+  });
+}
+
+export async function logout() {
+  try {
+    await api('/auth/logout', {
+      method: 'POST',
+    });
+  } catch {
+    // Local logout must still work when the API is unavailable.
+  } finally {
+    await setToken(null);
+  }
+}

@@ -50,10 +50,18 @@ export default function AdminLogin({
 
       setLoading(true);
 
-      await loginAdmin(
+      const data = await loginAdmin(
         identifier,
         password
       );
+
+      if (data.user?.mustChangePassword) {
+        navigation.replace(
+          'ChangePassword',
+          { homeRoute: 'AdminHome' }
+        );
+        return;
+      }
 
       Alert.alert(
         'Success',

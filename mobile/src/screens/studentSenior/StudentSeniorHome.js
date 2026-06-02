@@ -1,5 +1,14 @@
-import React, { useState } from 'react';
+import React, {
+  useState,
+  useCallback,
+} from 'react';
 
+import {
+  useFocusEffect,
+} from '@react-navigation/native';
+
+import { api } from '../../api/client';
+import { logout } from '../../api/auth';
 
 import {
   View,
@@ -16,8 +25,58 @@ export default function StudentSeniorHome({
   navigation,
 }) {
 
+  async function handleLogout() {
+    await logout();
+    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
+  }
+
   const [showMore, setShowMore] =
     useState(false);
+
+  const [dashboard, setDashboard] =
+    useState(null);
+
+  const load =
+    useCallback(
+      () =>
+        api('/dashboard')
+          .then(setDashboard),
+      []
+    );
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  if (!dashboard) {
+    return null;
+  }
+
+    const student =
+      dashboard.student;
+
+    const avatar =
+      student?.avatar || '🧒';
+
+    const name =
+      student?.name || 'Student';
+
+    const grade =
+      student?.gradeLevel || 1;
+
+    const section =
+      student?.section || '';
+
+    const xp =
+      student?.xp || 0;
+
+    const level =
+      Math.max(
+        1,
+        Math.floor(xp / 100) + 1
+      );
 
   return (
 
@@ -47,11 +106,7 @@ export default function StudentSeniorHome({
 
               <TouchableOpacity
                 style={styles.logoutBtn}
-                onPress={() =>
-                  navigation.replace(
-                    'Landing'
-                  )
-                }
+                onPress={handleLogout}
               >
                 <Text style={styles.logoutText}>
                   Logout
@@ -62,14 +117,18 @@ export default function StudentSeniorHome({
 
             <TouchableOpacity
               style={styles.profileChip}
+              onPress={() =>
+                navigation.navigate('ProfileScreen')
+              }
+              activeOpacity={0.8}
             >
 
               <Text style={styles.profileEmoji}>
-                🦄
+                {avatar}
               </Text>
 
               <Text style={styles.profileText}>
-                Maya • Grade 4 • Matalino
+                {name} • Grade {grade}
               </Text>
 
             </TouchableOpacity>
@@ -85,7 +144,7 @@ export default function StudentSeniorHome({
                 <View style={styles.avatarCircle}>
 
                   <Text style={styles.avatar}>
-                    🦄
+                    {avatar}
                   </Text>
 
                 </View>
@@ -93,7 +152,7 @@ export default function StudentSeniorHome({
                 <View style={{ flex: 1 }}>
 
                   <Text style={styles.heroTitle}>
-                    Hi Maya!
+                    Hi {name}!
                   </Text>
 
                   <Text style={styles.heroSubtitle}>
@@ -119,7 +178,7 @@ export default function StudentSeniorHome({
                     </Text>
 
                     <Text style={styles.xpValue}>
-                      38 XP
+                      {xp} XP
                     </Text>
 
                   </View>
@@ -127,7 +186,7 @@ export default function StudentSeniorHome({
                   <View style={styles.levelBadge}>
 
                     <Text style={styles.levelText}>
-                      Level 4
+                      Level {level}
                     </Text>
 
                   </View>
@@ -137,16 +196,21 @@ export default function StudentSeniorHome({
                 <View style={styles.progressBg}>
 
                   <View
-                    style={
-                      styles.progressFill
-                    }
-                  />
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${Math.max(
+                        5,
+                        xp % 100
+                      )}%`,
+                    },
+                  ]}
+                />
 
                 </View>
 
                 <Text style={styles.xpSub}>
-                  62 XP pa bago ang
-                  next level.
+                  {100 - (xp % 100)} XP pa bago ang next level.
                 </Text>
 
               </View>
@@ -162,7 +226,7 @@ export default function StudentSeniorHome({
                 <Text
                   style={styles.quickValue}
                 >
-                  12
+                  {dashboard.modules?.length || 0}
                 </Text>
 
                 <Text
@@ -175,10 +239,8 @@ export default function StudentSeniorHome({
 
               <View style={styles.quickCard}>
 
-                <Text
-                  style={styles.quickValue}
-                >
-                  38
+                <Text style={styles.quickValue}>
+                  {xp}
                 </Text>
 
                 <Text
@@ -194,7 +256,7 @@ export default function StudentSeniorHome({
                 <Text
                   style={styles.quickValue}
                 >
-                  4
+                  {level}
                 </Text>
 
                 <Text
@@ -223,13 +285,19 @@ export default function StudentSeniorHome({
                   Your Lessons
                 </Text>
 
-                <Text
-                  style={
-                    styles.allLessons
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate(
+                      'StudentSeniorLessons'
+                    )
                   }
                 >
-                  All Lessons →
-                </Text>
+                  <Text
+                    style={styles.allLessons}
+                  >
+                    All Lessons →
+                  </Text>
+                </TouchableOpacity>
 
               </View>
 
@@ -566,6 +634,11 @@ export default function StudentSeniorHome({
 
           <TouchableOpacity
             style={styles.navButton}
+            onPress={() =>
+              navigation.navigate(
+                'StudentSeniorLessons'
+              )
+            }
           >
 
             <Text style={styles.navIcon}>
@@ -580,6 +653,11 @@ export default function StudentSeniorHome({
 
           <TouchableOpacity
             style={styles.navButton}
+            onPress={() =>
+              navigation.navigate(
+                'QuizScreen'
+              )
+            }
           >
 
             <Text style={styles.navIcon}>
@@ -594,6 +672,11 @@ export default function StudentSeniorHome({
 
           <TouchableOpacity
             style={styles.navButton}
+            onPress={() =>
+              navigation.navigate(
+                'MissionScreen'
+              )
+            }
           >
 
             <Text style={styles.navIcon}>
@@ -624,49 +707,76 @@ export default function StudentSeniorHome({
         </View>
 
           {showMore && (
+  <>
 
-            <View style={styles.moreMenu}>
+    <TouchableOpacity
+      style={styles.moreOverlay}
+      activeOpacity={1}
+      onPress={() =>
+        setShowMore(false)
+      }
+    />
 
-              <TouchableOpacity
-                style={styles.moreItem}
-              >
-                <Text style={styles.moreText}>
-                  👥 Groups
-                </Text>
-              </TouchableOpacity>
+    <View style={styles.moreMenu}>
 
-              <TouchableOpacity
-                style={styles.moreItem}
-              >
-                <Text style={styles.moreText}>
-                  🏅 Badges
-                </Text>
-              </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.moreItem}
+        onPress={() => {
+          setShowMore(false);
+          navigation.navigate(
+            'GroupsScreen'
+          );
+        }}
+      >
+        <Text style={styles.moreText}>
+          👥 Groups
+        </Text>
+      </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.moreItem}
-              >
-                <Text style={styles.moreText}>
-                  👤 Profile
-                </Text>
-              </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.moreItem}
+        onPress={() => {
+          setShowMore(false);
+          navigation.navigate(
+            'BadgesScreen'
+          );
+        }}
+      >
+        <Text style={styles.moreText}>
+          🏅 Badges
+        </Text>
+      </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.moreItem}
-                onPress={() =>
-                  navigation.replace(
-                    'Landing'
-                  )
-                }
-              >
-                <Text style={styles.moreText}>
-                  🚪 Logout
-                </Text>
-              </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.moreItem}
+        onPress={() => {
+          setShowMore(false);
+          navigation.navigate(
+            'ProfileScreen'
+          );
+        }}
+      >
+        <Text style={styles.moreText}>
+          👤 Profile
+        </Text>
+      </TouchableOpacity>
 
-            </View>
+      <TouchableOpacity
+        style={styles.moreItem}
+        onPress={async () => {
+          setShowMore(false);
+          await handleLogout();
+        }}
+      >
+        <Text style={styles.moreText}>
+          🚪 Logout
+        </Text>
+      </TouchableOpacity>
 
-          )}
+    </View>
+
+  </>
+)}
 
       </View>
 
@@ -743,8 +853,9 @@ const styles = StyleSheet.create({
 
     paddingHorizontal: 12,
     paddingVertical: 6,
-
+    borderWidth: 1,
     borderRadius: 999,
+    borderColor: '#D1FAE5',
   },
 
   profileEmoji: {
@@ -1059,7 +1170,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
 
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0F9D58',
 
     flexDirection: 'row',
     justifyContent: 'space-evenly',
@@ -1101,14 +1212,14 @@ const styles = StyleSheet.create({
 
   navText: {
     marginTop: 2,
-    color: '#334155',
+    color: '#E5E7EB',
     fontSize: 9,
     fontFamily: 'Poppins_600SemiBold',
   },
 
   activeNavText: {
     marginTop: 2,
-    color: '#16A34A',
+    color: '#166534',
     fontSize: 9,
     fontFamily: 'Poppins_700Bold',
   },
@@ -1118,6 +1229,8 @@ const styles = StyleSheet.create({
 
     right: 20,
     bottom: 95,
+
+     zIndex: 999,
 
     backgroundColor: '#FFFFFF',
 
@@ -1132,6 +1245,17 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
 
     elevation: 8,
+  },
+
+  moreOverlay: {
+    position: 'absolute',
+
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+
+    zIndex: 998,
   },
 
   moreItem: {

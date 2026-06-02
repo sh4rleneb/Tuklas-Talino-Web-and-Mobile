@@ -11,7 +11,7 @@ export default function StudentHomeScreen() {
 
   const load = useCallback(async () => {
     setRefreshing(true);
-    try { setData(await api('/students/dashboard')); } finally { setRefreshing(false); }
+    try { setData(await api('/dashboard')); } finally { setRefreshing(false); }
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));

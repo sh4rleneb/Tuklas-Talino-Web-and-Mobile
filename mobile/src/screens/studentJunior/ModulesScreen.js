@@ -1,55 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from 'react-native';
 
-import { SafeAreaView }
-from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { api } from '../../api/client';
 
-import { api }
-from '../../api/client';
-
-export default function ModulesScreen({
-  navigation,
-}) {
-
-  const [modules, setModules] =
-    useState([]);
-
-  const [loading, setLoading] =
-    useState(true);
+export default function ModulesScreen({ navigation }) {
+  const [modules, setModules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSubject, setSelectedSubject] = useState('All');
 
   async function loadModules() {
-
     try {
-
       setLoading(true);
-
-      const data =
-        await api('/lessons');
-
-      setModules(
-        data.lessons || []
-      );
-
+      const data = await api('/lessons');
+      setModules(data.lessons || []);
     } catch (error) {
-
-      Alert.alert(
-        'Error',
-        error.message
-      );
-
+      Alert.alert('Error', error.message);
     } finally {
-
       setLoading(false);
-
     }
   }
 
@@ -57,467 +34,310 @@ export default function ModulesScreen({
     loadModules();
   }, []);
 
-  const groupedModules =
-    modules.reduce(
-      (acc, lesson) => {
+  const subjects = useMemo(() => {
+    const unique = new Set();
+    modules.forEach((lesson) => {
+      unique.add((lesson.subject || 'General').trim() || 'General');
+    });
+    return ['All', ...Array.from(unique)];
+  }, [modules]);
 
-        const subject =
-          lesson.subject ||
-          'General';
-
-        if (!acc[subject]) {
-          acc[subject] = [];
-        }
-
-        acc[subject].push(
-          lesson
-        );
-
-        return acc;
-
-      },
-      {}
+  const filteredModules = useMemo(() => {
+    if (selectedSubject === 'All') return modules;
+    return modules.filter(
+      (lesson) => (lesson.subject || 'General').trim() === selectedSubject
     );
+  }, [modules, selectedSubject]);
+
+  const sections = useMemo(() => {
+    const grouped = filteredModules.reduce((acc, lesson) => {
+      const subject = (lesson.subject || 'General').trim() || 'General';
+      if (!acc[subject]) acc[subject] = [];
+      acc[subject].push(lesson);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([subject, lessons]) => ({
+      subject,
+      lessons,
+    }));
+  }, [filteredModules]);
+
+  function renderChip({ item }) {
+    const active = item === selectedSubject;
+    return (
+      <TouchableOpacity
+        style={[styles.chip, active && styles.activeChip]}
+        onPress={() => setSelectedSubject(item)}
+      >
+        <Text style={[styles.chipText, active && styles.activeChipText]}>{item}</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  function renderLessonCard(lesson) {
+    return (
+      <TouchableOpacity
+        key={String(lesson.id)}
+        style={styles.lessonCard}
+        activeOpacity={0.9}
+        onPress={() =>
+          navigation.navigate('StudentJuniorLessonDetail', {
+            lessonId: lesson.id,
+          })
+        }
+      >
+        <View style={styles.lessonIconContainer}>
+          <Text style={styles.lessonIcon}>📘</Text>
+        </View>
+
+        <View style={styles.lessonInfo}>
+          <Text style={styles.lessonTitle}>{lesson.title}</Text>
+          <Text style={styles.lessonSubtitle}>{lesson.subject || 'General'}</Text>
+          <View style={styles.lessonMetaRow}>
+            <Text style={styles.lessonMeta}>Grade {lesson.gradeLevel}</Text>
+            <Text style={styles.lessonMeta}>⏱ {lesson.duration || 10} mins</Text>
+          </View>
+        </View>
+
+        <View style={styles.xpBadge}>
+          <Text style={styles.xpText}>+{lesson.xpReward || 0} XP</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  function renderSection({ item }) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.subjectTitle}>{item.subject}</Text>
+        <View style={styles.lessonList}>{item.lessons.map(renderLessonCard)}</View>
+      </View>
+    );
+  }
 
   return (
-
-    <SafeAreaView
-      style={styles.safe}
-    >
-
-      <View
-        style={styles.header}
-      >
-
-        <TouchableOpacity
-          style={
-            styles.backButton
-          }
-          onPress={() =>
-            navigation.goBack()
-          }
-        >
-
-          <Text
-            style={
-              styles.backText
-            }
-          >
-            ← Back
-          </Text>
-
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
-        <Text
-          style={styles.title}
-        >
-          📚 Modules
-        </Text>
+        <Text style={styles.title}>📚 Modules</Text>
 
+        <View style={styles.spacer} />
       </View>
 
       {loading ? (
-
-        <View
-          style={
-            styles.loaderContainer
-          }
-        >
-
-          <ActivityIndicator
-            size="large"
-            color="#22C55E"
-          />
-
-          <Text
-            style={
-              styles.loadingText
-            }
-          >
-            Loading lessons...
-          </Text>
-
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color="#22C55E" />
+          <Text style={styles.loadingText}>Loading lessons...</Text>
         </View>
-
       ) : (
-
-        <ScrollView
-          style={styles.container}
-          showsVerticalScrollIndicator={
-            false
-          }
-        >
-
-          {Object.keys(
-            groupedModules
-          ).length === 0 && (
-
-            <View
-              style={
-                styles.emptyCard
-              }
-            >
-
-              <Text
-                style={
-                  styles.emptyEmoji
-                }
-              >
-                📖
-              </Text>
-
-              <Text
-                style={
-                  styles.emptyTitle
-                }
-              >
-                No lessons found
-              </Text>
-
+        <FlatList
+          data={sections}
+          keyExtractor={(item) => item.subject}
+          renderItem={renderSection}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.container}
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <Text style={styles.subtitle}>{filteredModules.length} lessons available</Text>
+              <FlatList
+                data={subjects}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item}
+                renderItem={renderChip}
+                contentContainerStyle={styles.chipRow}
+              />
             </View>
-
-          )}
-
-          {Object.entries(
-            groupedModules
-          ).map(
-            (
-              [subject, lessons]
-            ) => (
-
-              <View
-                key={subject}
-              >
-
-                <Text
-                  style={
-                    styles.subjectTitle
-                  }
-                >
-                  {subject}
-                </Text>
-
-                {lessons.map(
-                  (
-                    lesson
-                  ) => (
-
-                    <TouchableOpacity
-                      key={
-                        lesson.id
-                      }
-                      style={
-                        styles.moduleCard
-                      }
-                      onPress={() =>
-                        navigation.navigate(
-                          'LessonScreen',
-                          {
-                            lessonId:
-                              lesson.id,
-                          }
-                        )
-                      }
-                    >
-
-                      <View
-                        style={
-                          styles.iconCircle
-                        }
-                      >
-
-                        <Text
-                          style={
-                            styles.icon
-                          }
-                        >
-                          📘
-                        </Text>
-
-                      </View>
-
-                      <View
-                        style={{
-                          flex: 1,
-                        }}
-                      >
-
-                        <Text
-                          style={
-                            styles.moduleTitle
-                          }
-                        >
-                          {
-                            lesson.title
-                          }
-                        </Text>
-
-                        <Text
-                          style={
-                            styles.moduleInfo
-                          }
-                        >
-                          Grade{' '}
-                          {
-                            lesson.gradeLevel
-                          }
-                        </Text>
-
-                        <Text
-                          style={
-                            styles.moduleInfo
-                          }
-                        >
-                          ⏱{' '}
-                          {
-                            lesson.duration
-                          } mins
-                        </Text>
-
-                      </View>
-
-                      <View
-                        style={
-                          styles.xpBadge
-                        }
-                      >
-
-                        <Text
-                          style={
-                            styles.xpText
-                          }
-                        >
-                          +
-                          {
-                            lesson.xpReward
-                          } XP
-                        </Text>
-
-                      </View>
-
-                    </TouchableOpacity>
-
-                  )
-                )}
-
-              </View>
-
-            )
-          )}
-
-          <View
-            style={{
-              height: 40,
-            }}
-          />
-
-        </ScrollView>
-
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyEmoji}>📖</Text>
+              <Text style={styles.emptyTitle}>No lessons found</Text>
+              <Text style={styles.emptySubtitle}>Try another subject or refresh the screen.</Text>
+            </View>
+          }
+        />
       )}
-
     </SafeAreaView>
-
   );
 }
 
-const styles =
-  StyleSheet.create({
-
-    safe: {
-      flex: 1,
-      backgroundColor:
-        '#F6FFF5',
-    },
-
-    container: {
-      flex: 1,
-      paddingHorizontal: 18,
-    },
-
-    header: {
-      paddingHorizontal: 18,
-      paddingTop: 10,
-      paddingBottom: 20,
-
-      flexDirection:
-        'row',
-
-      alignItems:
-        'center',
-
-      justifyContent:
-        'space-between',
-    },
-
-    backButton: {
-      backgroundColor:
-        '#FFFFFF',
-
-      paddingHorizontal: 18,
-      paddingVertical: 10,
-
-      borderRadius: 18,
-    },
-
-    backText: {
-      color: '#16A34A',
-      fontFamily:
-        'Poppins_700Bold',
-    },
-
-    title: {
-      fontSize: 28,
-
-      color: '#16A34A',
-
-      fontFamily:
-        'Poppins_800ExtraBold',
-    },
-
-    loaderContainer: {
-      flex: 1,
-
-      justifyContent:
-        'center',
-
-      alignItems:
-        'center',
-    },
-
-    loadingText: {
-      marginTop: 12,
-
-      color: '#64748B',
-
-      fontFamily:
-        'Poppins_600SemiBold',
-    },
-
-    subjectTitle: {
-      marginTop: 15,
-      marginBottom: 12,
-
-      fontSize: 24,
-
-      color: '#0F172A',
-
-      fontFamily:
-        'Poppins_800ExtraBold',
-    },
-
-    moduleCard: {
-      backgroundColor:
-        '#FFFFFF',
-
-      borderRadius: 26,
-
-      padding: 18,
-
-      marginBottom: 14,
-
-      flexDirection:
-        'row',
-
-      alignItems:
-        'center',
-
-      shadowColor:
-        '#000',
-
-      shadowOpacity:
-        0.05,
-
-      shadowRadius: 8,
-
-      elevation: 3,
-    },
-
-    iconCircle: {
-      width: 60,
-      height: 60,
-
-      borderRadius: 100,
-
-      backgroundColor:
-        '#DCFCE7',
-
-      justifyContent:
-        'center',
-
-      alignItems:
-        'center',
-
-      marginRight: 14,
-    },
-
-    icon: {
-      fontSize: 28,
-    },
-
-    moduleTitle: {
-      fontSize: 18,
-
-      color: '#0F172A',
-
-      fontFamily:
-        'Poppins_700Bold',
-    },
-
-    moduleInfo: {
-      marginTop: 3,
-
-      color: '#64748B',
-
-      fontFamily:
-        'Poppins_500Medium',
-    },
-
-    xpBadge: {
-      backgroundColor:
-        '#FEF3C7',
-
-      paddingHorizontal:
-        14,
-
-      paddingVertical: 8,
-
-      borderRadius: 999,
-    },
-
-    xpText: {
-      color: '#92400E',
-
-      fontFamily:
-        'Poppins_700Bold',
-    },
-
-    emptyCard: {
-      backgroundColor:
-        '#FFFFFF',
-
-      marginTop: 50,
-
-      borderRadius: 30,
-
-      padding: 30,
-
-      alignItems:
-        'center',
-    },
-
-    emptyEmoji: {
-      fontSize: 50,
-    },
-
-    emptyTitle: {
-      marginTop: 12,
-
-      fontSize: 20,
-
-      color: '#0F172A',
-
-      fontFamily:
-        'Poppins_700Bold',
-    },
-
-  });
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: '#F6FFF5',
+  },
+  container: {
+    paddingHorizontal: 18,
+    paddingBottom: 34,
+  },
+  header: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  spacer: {
+    width: 56,
+  },
+  backButton: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  backText: {
+    color: '#16A34A',
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 14,
+  },
+  title: {
+    fontSize: 30,
+    color: '#16A34A',
+    fontFamily: 'Poppins_800ExtraBold',
+  },
+  listHeader: {
+    marginBottom: 18,
+  },
+  subtitle: {
+    color: '#475569',
+    fontFamily: 'Poppins_600SemiBold',
+    marginBottom: 12,
+  },
+  chipRow: {
+    paddingBottom: 8,
+  },
+  chip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  activeChip: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#22C55E',
+  },
+  chipText: {
+    color: '#334155',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  activeChipText: {
+    color: '#166534',
+  },
+  section: {
+    marginBottom: 16,
+  },
+  subjectTitle: {
+    fontSize: 22,
+    color: '#0F172A',
+    fontFamily: 'Poppins_800ExtraBold',
+    marginBottom: 14,
+  },
+  lessonList: {
+  },
+  lessonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 22,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  lessonIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  lessonIcon: {
+    fontSize: 28,
+  },
+  lessonInfo: {
+    flex: 1,
+  },
+  lessonTitle: {
+    fontSize: 18,
+    color: '#0F172A',
+    fontFamily: 'Poppins_700Bold',
+    marginBottom: 6,
+  },
+  lessonSubtitle: {
+    color: '#475569',
+    fontFamily: 'Poppins_500Medium',
+    marginBottom: 10,
+  },
+  lessonMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  lessonMeta: {
+    color: '#64748B',
+    fontFamily: 'Poppins_500Medium',
+    marginRight: 12,
+    marginBottom: 6,
+  },
+  xpBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  xpText: {
+    color: '#92400E',
+    fontFamily: 'Poppins_700Bold',
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#64748B',
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  emptyCard: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 40,
+    borderRadius: 30,
+    padding: 30,
+    alignItems: 'center',
+  },
+  emptyEmoji: {
+    fontSize: 52,
+  },
+  emptyTitle: {
+    marginTop: 14,
+    fontSize: 22,
+    color: '#0F172A',
+    fontFamily: 'Poppins_700Bold',
+  },
+  emptySubtitle: {
+    marginTop: 8,
+    color: '#64748B',
+    textAlign: 'center',
+    fontFamily: 'Poppins_500Medium',
+  },
+});

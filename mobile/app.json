@@ -18,7 +18,8 @@
         {
           "microphonePermission": "Allow Tuklas Talino to access your microphone for speech activities."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "android": {
       "permissions": [
