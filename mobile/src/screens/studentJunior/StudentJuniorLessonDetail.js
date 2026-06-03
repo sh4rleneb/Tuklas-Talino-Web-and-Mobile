@@ -1,243 +1,468 @@
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
-
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Audio } from 'expo-av';
 
 import { api } from '../../api/client';
 
-function StepTab({
-  title,
-  active,
-}) {
-  return (
-    <View
-      style={[
-        styles.tab,
-        active &&
-          styles.activeTab,
-      ]}
-    >
-      <Text style={styles.tabText}>
-        {title}
-      </Text>
-    </View>
-  );
+function optionalProgressRequest(request, fallback) {
+  return request.catch((err) => {
+    if (err.status === 404 || err.message === 'Route not found.') {
+      return fallback;
+    }
+
+    throw err;
+  });
 }
 
-export default function StudentJuniorLessonDetail({
-  navigation,
-  route,
-}) {
-  const [step, setStep] = useState(1);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [blankAnswer, setBlankAnswer] = useState('');
-  const [lesson, setLesson] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [writingAnswer, setWritingAnswer] = useState('');
-  const [completionResult, setCompletionResult] = useState(null);
-  const [submittingCompletion, setSubmittingCompletion] = useState(false);
-
+export default function StudentJuniorLessonDetail({ navigation, route }) {
   const lessonId = route?.params?.lessonId;
+  const [lesson, setLesson] = useState(null);
+  const [student, setStudent] = useState(null);
+  const [dashboard, setDashboard] = useState(null);
+  const [step, setStep] = useState(1);
+  const [completed, setCompleted] = useState(false);
+  const [completionResult, setCompletionResult] = useState(null);
+  const [mcqAnswers, setMcqAnswers] = useState({});
+  const [writingAnswer, setWritingAnswer] = useState('');
+  const [speechTranscript, setSpeechTranscript] = useState('');
+  const [recording, setRecording] = useState(false);
+  const [recordingUri, setRecordingUri] = useState('');
+  const [playing, setPlaying] = useState(false);
+  const [speechStatus, setSpeechStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const recordingRef = useRef(null);
+  const soundRef = useRef(null);
 
   useEffect(() => {
-    if (!lessonId) return;
+    if (!lessonId) {
+      setError('Lesson ID is missing.');
+      setLoading(false);
+      return undefined;
+    }
 
     let active = true;
 
-    async function loadLesson() {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await api(`/lessons/${lessonId}`);
-        if (active) {
-          setLesson(data.lesson || null);
-        }
-      } catch (err) {
-        if (active) {
-          setError(err.message || 'Unable to load lesson.');
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
+    Promise.all([
+      api(`/lessons/${lessonId}`),
+      optionalProgressRequest(
+        api(`/lessons/${lessonId}/progress`),
+        { progress: null }
+      ),
+      api('/dashboard'),
+    ])
+      .then(([lessonData, progressData, dashboard]) => {
+        if (!active) return;
+        const loadedLesson = lessonData.lesson || null;
+        const restoredAnswers = {};
 
-    loadLesson();
+        for (const activity of loadedLesson?.activities || []) {
+          for (const question of activity.questions || []) {
+            if (question.mcqAttempt?.selectedOptionId) {
+              restoredAnswers[question.id] = {
+                selectedOptionId: question.mcqAttempt.selectedOptionId,
+                correct: Boolean(question.mcqAttempt.isCorrect),
+              };
+            }
+          }
+        }
+
+        setLesson(loadedLesson);
+        setMcqAnswers(restoredAnswers);
+        setStudent(dashboard.student || null);
+        setDashboard(dashboard);
+        setStep(progressData.progress?.currentStep || 1);
+        setCompleted(progressData.progress?.status === 'completed');
+      })
+      .catch((err) => {
+        if (active) setError(err.message || 'Unable to load lesson.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
 
     return () => {
       active = false;
     };
   }, [lessonId]);
 
-  const activities = useMemo(() => {
-    return Array.isArray(lesson?.activities) ? lesson.activities : [];
-  }, [lesson]);
+  useEffect(() => () => {
+    soundRef.current?.unloadAsync();
+    recordingRef.current?.stopAndUnloadAsync();
+  }, []);
 
-  const lessonTitle = lesson?.title || 'Lesson';
-  const xpReward = lesson?.xpReward ?? 0;
-  const stepCount = Math.max(activities.length + 1, 2);
+  const activities = useMemo(
+    () => Array.isArray(lesson?.activities) ? lesson.activities : [],
+    [lesson]
+  );
+  const totalSteps = Math.max(1, activities.length + 1);
   const currentActivity = activities[step - 1];
+  const percent = completed ? 100 : Math.round(((Math.max(1, step) - 1) / totalSteps) * 100);
+  const nextLesson = useMemo(() => {
+    const lessons = dashboard?.lessons || [];
+    const lessonIndex = lessons.findIndex((item) => Number(item.id) === Number(lessonId));
+    return lessonIndex >= 0 ? lessons[lessonIndex + 1] : null;
+  }, [dashboard, lessonId]);
+  const homeRoute = Number(student?.gradeLevel || 1) <= 2
+    ? 'StudentJuniorHome'
+    : 'StudentSeniorHome';
 
-  const currentLabel = useMemo(() => {
-    if (!currentActivity) return 'Finish';
+  async function startRecording() {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Microphone', 'Microphone permission is needed to record your speech practice.');
+        return;
+      }
 
-    switch ((currentActivity.type || '').toLowerCase()) {
-      case 'mcq':
-        return 'Quiz';
-      case 'writing':
-        return 'Write';
-      case 'speech':
-        return 'Speak';
-      case 'material':
-        return 'Material';
-      default:
-        return currentActivity.title || 'Activity';
+      await soundRef.current?.unloadAsync();
+      soundRef.current = null;
+      setPlaying(false);
+      setRecordingUri('');
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const result = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      recordingRef.current = result.recording;
+      setRecording(true);
+      setSpeechStatus('Recording in progress...');
+    } catch (err) {
+      Alert.alert('Microphone', err.message || 'Unable to start recording.');
     }
-  }, [currentActivity]);
+  }
 
-  async function handleFinishLesson() {
-    if (!lesson || submittingCompletion) return;
-    setSubmittingCompletion(true);
+  async function stopRecording() {
+    const activeRecording = recordingRef.current;
+    if (!activeRecording) return;
 
     try {
-      const result = await api(`/lessons/${lessonId}/complete`, {
+      await activeRecording.stopAndUnloadAsync();
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      const uri = activeRecording.getURI() || '';
+      recordingRef.current = null;
+      setRecording(false);
+      setRecordingUri(uri);
+      setSpeechStatus(uri ? 'Recording ready for playback.' : 'Recording stopped.');
+    } catch (err) {
+      Alert.alert('Microphone', err.message || 'Unable to stop recording.');
+    }
+  }
+
+  async function playRecording() {
+    if (!recordingUri) return;
+
+    try {
+      await soundRef.current?.unloadAsync();
+      const result = await Audio.Sound.createAsync(
+        { uri: recordingUri },
+        { shouldPlay: true },
+        (status) => {
+          if (status.isLoaded && status.didJustFinish) setPlaying(false);
+        }
+      );
+      soundRef.current = result.sound;
+      setPlaying(true);
+      setSpeechStatus('Playing your recording...');
+    } catch (err) {
+      Alert.alert('Playback', err.message || 'Unable to play your recording.');
+    }
+  }
+
+
+  async function saveNextStep(activityType) {
+    const nextStep = Math.min(step + 1, totalSteps);
+    await optionalProgressRequest(
+      api(`/lessons/${lessonId}/progress`, {
+        method: 'PATCH',
+        body: { currentStep: nextStep, lastActivityType: activityType },
+      }),
+      { progress: null }
+    );
+    setStep(nextStep);
+  }
+
+  async function advance(activityType) {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await saveNextStep(activityType);
+    } catch (err) {
+      Alert.alert('Lesson', err.message || 'Unable to save lesson progress.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function answerQuestion(question, option) {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const data = await api(`/lessons/${lessonId}/mcq`, {
+        method: 'POST',
+        body: {
+          questionId: question.id,
+          selectedOptionId: option.id,
+        },
+      });
+      setMcqAnswers((answers) => ({
+        ...answers,
+        [question.id]: {
+          selectedOptionId: option.id,
+          correct: Boolean(data.correct),
+        },
+      }));
+      Alert.alert(data.correct ? 'Correct!' : 'Try Again', data.message || 'Answer saved.');
+    } catch (err) {
+      Alert.alert('Quiz', err.message || 'Unable to save your answer.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitWriting() {
+    const task = currentActivity?.writingTask;
+    if (!task?.id) {
+      Alert.alert('Writing', 'This activity has no writing task yet.');
+      return;
+    }
+    if (writingAnswer.trim().length < 2) {
+      Alert.alert('Writing', 'Please write your answer before continuing.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const data = await api(`/lessons/${lessonId}/writing`, {
+        method: 'POST',
+        body: {
+          taskId: task.id,
+          content: writingAnswer,
+          autoChecked: Boolean(task.rubricJson?.autoChecked),
+        },
+      });
+      Alert.alert('Writing', data.message || 'Writing answer saved.');
+      if (data.correct === false) return;
+      await saveNextStep('writing');
+    } catch (err) {
+      Alert.alert('Writing', err.message || 'Unable to save your writing answer.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitSpeech() {
+    const task = currentActivity?.speechTask;
+    if (!task?.id) {
+      Alert.alert('Speech', 'This activity has no speech task yet.');
+      return;
+    }
+    if (speechTranscript.trim().length < 2) {
+      Alert.alert('Speech', 'Type what you practiced before continuing.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const data = await api(`/lessons/${lessonId}/speech`, {
+        method: 'POST',
+        body: {
+          taskId: task.id,
+          transcript: speechTranscript,
+        },
+      });
+      Alert.alert('Speech', data.message || 'Speech attempt saved.');
+      setSpeechStatus('Speech attempt submitted and saved.');
+      await saveNextStep('speech');
+    } catch (err) {
+      Alert.alert('Speech', err.message || 'Unable to save your speech attempt.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function finishLesson() {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const data = await api(`/lessons/${lessonId}/complete`, {
         method: 'POST',
         body: {},
       });
-      setCompletionResult(result);
-      setStep(step + 1);
+      setCompletionResult(data);
+      setCompleted(true);
+      setStudent((current) => current
+        ? { ...current, xp: Number(current.xp || 0) + Number(data.xpAwarded || 0) }
+        : current);
     } catch (err) {
-      Alert.alert('Error', err.message || 'Unable to complete lesson.');
+      Alert.alert('Lesson', err.message || 'Unable to complete this lesson.');
     } finally {
-      setSubmittingCompletion(false);
+      setSubmitting(false);
     }
   }
 
-  function handleClaimXP() {
-    const xp = completionResult?.xpAwarded ?? xpReward;
-    Alert.alert('🎉 Congratulations!', `+${xp} XP earned!`, [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
-  }
-
-  function renderProgressIndicators() {
-    return activities.map((activity, index) => {
-      const active = index + 1 === step;
-      return (
-        <View
-          key={`${activity.id}-${index}`}
-          style={[styles.stepIndicator, active && styles.stepIndicatorActive]}
-        />
-      );
-    });
-  }
-
-  function renderActivityContent() {
+  function renderActivity() {
     if (!currentActivity) {
       return (
         <View style={styles.card}>
-          <Text style={styles.title}>🎉 Ready to finish</Text>
-          <Text style={styles.passage}>Tap Finish to complete this lesson and claim your XP.</Text>
-          <TouchableOpacity style={styles.button} onPress={handleFinishLesson} disabled={submittingCompletion}>
-            <Text style={styles.buttonText}>{submittingCompletion ? 'Submitting...' : 'Finish'}</Text>
+          <Text style={styles.cardTitle}>🎉 Ready to finish</Text>
+          <Text style={styles.body}>You completed every activity in this lesson.</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={finishLesson} disabled={submitting}>
+            <Text style={styles.primaryText}>{submitting ? 'Saving...' : 'Finish Lesson'}</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    const activityType = (currentActivity.type || '').toLowerCase();
-
-    if (activityType === 'mcq') {
-      const question = currentActivity.questions?.[0];
+    if (currentActivity.type === 'mcq') {
+      const questions = currentActivity.questions || [];
+      const allAnswered = questions.length > 0 && questions.every((question) => mcqAnswers[question.id]);
       return (
         <View style={styles.card}>
-          <Text style={styles.title}>🎮 {currentActivity.title || 'Quiz'}</Text>
-          <Text style={styles.question}>{question?.question || currentActivity.instructions || 'Answer the question below.'}</Text>
-          {(question?.options || []).map((option) => (
-            <TouchableOpacity
-              key={option.id || option.optionText || option}
-              style={[styles.choice, selectedAnswer === option && styles.choiceSelected]}
-              onPress={() => {
-                setSelectedAnswer(option);
-                if (question?.options) {
-                  const isCorrect = option?.id
-                    ? question.options.find((opt) => opt.id === option.id)?.isCorrect
-                    : option === question.options.find((opt) => opt.isCorrect)?.optionText;
-                  Alert.alert(isCorrect ? '✅ Tama!' : '❌ Mali');
-                }
-              }}
-            >
-              <Text style={styles.choiceText}>{option.optionText || option}</Text>
-            </TouchableOpacity>
+          <Text style={styles.cardTitle}>🧠 {currentActivity.title}</Text>
+          {questions.map((question) => (
+            <View key={question.id} style={styles.questionBlock}>
+              <Text style={styles.question}>{question.question}</Text>
+              {(question.options || []).map((option) => {
+                const answer = mcqAnswers[question.id];
+                const selected = answer?.selectedOptionId === option.id;
+                return (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.option,
+                      selected && (answer.correct ? styles.optionCorrect : styles.optionIncorrect),
+                    ]}
+                    onPress={() => answerQuestion(question, option)}
+                    disabled={submitting}
+                  >
+                    <Text style={styles.optionText}>{option.optionText}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           ))}
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(step + 1)}>
-            <Text style={styles.buttonText}>Susunod →</Text>
+          {!questions.length && <Text style={styles.body}>No quiz questions are published for this activity yet.</Text>}
+          <TouchableOpacity
+            style={[styles.primaryButton, !allAnswered && styles.disabledButton]}
+            onPress={() => advance('mcq')}
+            disabled={!allAnswered || submitting}
+          >
+            <Text style={styles.primaryText}>Continue</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    if (activityType === 'writing') {
+    if (currentActivity.type === 'writing') {
+      const suggestions = currentActivity.writingTask?.rubricJson?.choices
+        || currentActivity.writingTask?.rubricJson?.wordBank
+        || [];
       return (
         <View style={styles.card}>
-          <Text style={styles.title}>✍️ {currentActivity.title || 'Writing'}</Text>
-          <Text style={styles.passage}>{currentActivity.writingTask?.prompt || currentActivity.instructions || 'Sumulat ng iyong sagot.'}</Text>
+          <Text style={styles.cardTitle}>✍️ {currentActivity.title}</Text>
+          <Text style={styles.body}>{currentActivity.writingTask?.prompt || currentActivity.instructions}</Text>
+          {suggestions.length ? (
+            <View style={styles.choiceRow}>
+              {suggestions.map((suggestion, index) => {
+                const label = String(suggestion?.text || suggestion?.word || suggestion);
+                return (
+                  <TouchableOpacity key={`${label}-${index}`} style={styles.choiceChip} onPress={() => setWritingAnswer(label)}>
+                    <Text style={styles.choiceText}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
           <TextInput
-            style={styles.textInput}
+            style={styles.input}
             multiline
             value={writingAnswer}
             onChangeText={setWritingAnswer}
-            placeholder="I-type ang sagot dito..."
+            placeholder="Type your answer here..."
           />
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(step + 1)}>
-            <Text style={styles.buttonText}>Susunod →</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={submitWriting} disabled={submitting}>
+            <Text style={styles.primaryText}>{submitting ? 'Saving...' : 'Save and Continue'}</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    if (activityType === 'speech') {
+    if (currentActivity.type === 'speech') {
       return (
         <View style={styles.card}>
-          <Text style={styles.title}>🎤 {currentActivity.title || 'Speech'}</Text>
-          <Text style={styles.passage}>{currentActivity.speechTask?.targetText || currentActivity.instructions || 'Sabihin ang pangungusap nang malinaw.'}</Text>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>🎤 Simulan</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(step + 1)}>
-            <Text style={styles.buttonText}>Tapusin →</Text>
+          <Text style={styles.cardTitle}>🎤 {currentActivity.title}</Text>
+          <Text style={styles.body}>{currentActivity.speechTask?.targetText || currentActivity.instructions}</Text>
+          <View style={styles.speechButtons}>
+            <TouchableOpacity style={[styles.secondaryButton, recording && styles.recordingButton]} onPress={recording ? stopRecording : startRecording}>
+              <Text style={styles.secondaryText}>{recording ? '⏹ Stop Recording' : '🎙 Start Recording'}</Text>
+            </TouchableOpacity>
+            {recordingUri ? (
+              <TouchableOpacity style={styles.secondaryButton} onPress={playRecording} disabled={playing}>
+                <Text style={styles.secondaryText}>{playing ? '▶ Playing...' : '▶ Play Recording'}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          {speechStatus ? <Text style={styles.statusMessage}>{speechStatus}</Text> : null}
+          <TextInput
+            style={styles.input}
+            multiline
+            value={speechTranscript}
+            onChangeText={setSpeechTranscript}
+            placeholder="Type what you practiced saying..."
+          />
+          <TouchableOpacity style={styles.primaryButton} onPress={submitSpeech} disabled={submitting}>
+            <Text style={styles.primaryText}>{submitting ? 'Saving...' : 'Save Speech Attempt'}</Text>
           </TouchableOpacity>
         </View>
       );
     }
+
+    const fileUrl = currentActivity.dataJson?.fileUrl;
+    const vocabulary = currentActivity.dataJson?.words || [];
+    const pairs = currentActivity.dataJson?.pairs || [];
 
     return (
       <View style={styles.card}>
-        <Text style={styles.title}>{currentActivity.title || 'Activity'}</Text>
-        <Text style={styles.passage}>{currentActivity.instructions || JSON.stringify(currentActivity.dataJson || currentActivity)}</Text>
-        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(step + 1)}>
-          <Text style={styles.buttonText}>Susunod →</Text>
+        <Text style={styles.cardTitle}>{currentActivity.title || 'Lesson Activity'}</Text>
+        <Text style={styles.body}>{currentActivity.instructions || currentActivity.dataJson?.content || 'Review this activity before continuing.'}</Text>
+        {vocabulary.map((item, index) => (
+          <View key={`${item.word}-${index}`} style={styles.contentRow}>
+            <Text style={styles.question}>{item.word}</Text>
+            <Text style={styles.body}>{item.meaning}</Text>
+          </View>
+        ))}
+        {pairs.map((item, index) => (
+          <View key={`${item.left}-${index}`} style={styles.contentRow}>
+            <Text style={styles.question}>{item.left}</Text>
+            <Text style={styles.body}>{item.right}</Text>
+          </View>
+        ))}
+        {fileUrl ? (
+          <TouchableOpacity style={styles.secondaryButton} onPress={() => Linking.openURL(fileUrl)}>
+            <Text style={styles.secondaryText}>📎 Open Lesson Material</Text>
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => advance(currentActivity.type || 'activity')}
+          disabled={submitting}
+        >
+          <Text style={styles.primaryText}>Continue</Text>
         </TouchableOpacity>
       </View>
     );
@@ -245,23 +470,22 @@ export default function StudentJuniorLessonDetail({
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loaderContainer}>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
           <ActivityIndicator size="large" color="#22C55E" />
-          <Text style={styles.loadingText}>Loading lesson...</Text>
+          <Text style={styles.body}>Loading lesson...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  if (error) {
+  if (error || !lesson) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Lesson failed to load.</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.reloadButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.buttonText}>Go Back</Text>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}>
+          <Text style={styles.error}>{error || 'Lesson was not found.'}</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.primaryText}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -269,287 +493,111 @@ export default function StudentJuniorLessonDetail({
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.lessonHeader}>📖 {lessonTitle}</Text>
-            <Text style={styles.stepText}>Hakbang {Math.min(step, stepCount)} of {stepCount}</Text>
-          </View>
-          <View style={styles.xpBadge}>
-            <Text style={styles.xpText}>⚡ +{xpReward} XP</Text>
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.page}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.back}>← Lesson Library</Text>
+          </TouchableOpacity>
+          <View style={styles.studentChip}>
+            <Text style={styles.avatar}>{student?.avatar || '🧒'}</Text>
+            <Text style={styles.xp}>⚡ {student?.xp || 0}</Text>
           </View>
         </View>
 
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressFill, { width: `${(Math.min(step, stepCount) / stepCount) * 100}%` }]} />
+        <Text style={styles.title}>📖 {lesson.title}</Text>
+        <Text style={styles.stepText}>Step {Math.min(step, totalSteps)} of {totalSteps} • +{lesson.xpReward || 0} XP</Text>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${percent}%` }]} />
+        </View>
+        <View style={styles.stepRow}>
+          {activities.map((activity, index) => (
+            <View key={activity.id || `${activity.type}-${index}`} style={[styles.stepDot, step > index && styles.stepDotActive]}>
+              <Text style={styles.stepIcon}>{activity.type === 'mcq' ? '🧠' : activity.type === 'writing' ? '✍️' : activity.type === 'speech' ? '🎤' : '📖'}</Text>
+            </View>
+          ))}
+          <View style={[styles.stepDot, completed && styles.stepDotActive]}>
+            <Text style={styles.stepIcon}>🏁</Text>
+          </View>
         </View>
 
-        <View style={styles.stepRow}>{renderProgressIndicators()}</View>
-
-        {step <= activities.length ? (
-          <View style={styles.stepHeaderContainer}>
-            <Text style={styles.stepHeader}>{currentLabel}</Text>
-          </View>
-        ) : null}
-
-        {step <= activities.length ? renderActivityContent() : (
-          <View style={styles.completeCard}>
-            <Text style={styles.complete}>🎉 Mission Complete!</Text>
-            <Text style={styles.rewardText}>+{completionResult?.xpAwarded ?? xpReward} XP</Text>
-            {completionResult?.message ? (
-              <Text style={styles.passage}>{completionResult.message}</Text>
+        {completed ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🎉 Lesson complete</Text>
+            <Text style={styles.reward}>+{completionResult?.xpAwarded || 0} XP earned now</Text>
+            <Text style={styles.body}>
+              {completionResult?.xpAwarded
+                ? 'Your XP and progress are saved.'
+                : 'This lesson was already completed. Your progress remains saved.'}
+            </Text>
+            {(completionResult?.newBadges || []).map((badge) => (
+              <View key={badge.id || badge.code} style={styles.badgeRow}>
+                <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
+                <View>
+                  <Text style={styles.question}>New badge unlocked</Text>
+                  <Text style={styles.body}>{badge.name}</Text>
+                </View>
+              </View>
+            ))}
+            {nextLesson ? (
+              <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.replace('StudentJuniorLessonDetail', { lessonId: nextLesson.id })}>
+                <Text style={styles.primaryText}>Next Lesson →</Text>
+              </TouchableOpacity>
             ) : null}
-            <TouchableOpacity style={styles.button} onPress={handleClaimXP}>
-              <Text style={styles.buttonText}>Claim XP</Text>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
+              <Text style={styles.primaryText}>Back to Library</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate(homeRoute)}>
+              <Text style={styles.secondaryText}>🏠 Return Home</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : renderActivity()}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles =
-StyleSheet.create({
-
-  container: {
-    flex: 1,
-    backgroundColor:
-      '#F6FFF5',
-    paddingHorizontal: 24,
-  },
-
-  header: {
-    flexDirection: 'row',
-    justifyContent:
-      'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-  },
-
-  lessonHeader: {
-    fontSize: 38,
-    fontWeight: '900',
-    color: '#16A34A',
-  },
-
-  stepText: {
-    color: '#64748B',
-  },
-
-  xpBadge: {
-    backgroundColor:
-      '#FFF',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-
-  xpText: {
-    color: '#F97316',
-    fontWeight: 'bold',
-  },
-
-  progressContainer: {
-    height: 12,
-    backgroundColor:
-      '#E5E7EB',
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-
-  progressFill: {
-    height: '100%',
-    backgroundColor:
-      '#22C55E',
-    borderRadius: 10,
-  },
-
-  tabRow: {
-    flexDirection: 'row',
-    justifyContent:
-      'space-between',
-    marginBottom: 20,
-  },
-
-  tab: {
-    width: 55,
-    height: 55,
-    borderRadius: 18,
-    backgroundColor:
-      '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  activeTab: {
-    backgroundColor:
-      '#FEF3C7',
-    borderWidth: 2,
-    borderColor:
-      '#FBBF24',
-  },
-
-  tabText: {
-    fontSize: 24,
-  },
-
-  card: {
-    backgroundColor:
-      '#FFF',
-    borderRadius: 28,
-    padding: 28,
-    marginBottom: 20,
-    elevation: 4,
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: '900',
-    marginBottom: 15,
-  },
-
-  lessonBox: {
-    fontSize: 22,
-  },
-
-  passage: {
-    fontSize: 22,
-    lineHeight: 34,
-  },
-
-  question: {
-    fontSize: 22,
-    marginBottom: 15,
-  },
-
-  choice: {
-    borderWidth: 2,
-    borderColor:
-      '#22C55E',
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 10,
-  },
-
-  choiceSelected: {
-    backgroundColor:
-      '#DCFCE7',
-  },
-
-  choiceText: {
-    color: '#0F172A',
-  },
-
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-
-  stepIndicator: {
-    width: 36,
-    height: 8,
-    borderRadius: 10,
-    backgroundColor: '#E2E8F0',
-  },
-
-  stepIndicatorActive: {
-    backgroundColor: '#22C55E',
-  },
-
-  stepHeaderContainer: {
-    marginBottom: 12,
-  },
-
-  stepHeader: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    minHeight: 120,
-    marginTop: 14,
-    textAlignVertical: 'top',
-  },
-
-  button: {
-    backgroundColor:
-      '#22C55E',
-    padding: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-
-  nextButton: {
-    backgroundColor:
-      '#A855F7',
-    padding: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-
-  buttonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-  },
-
-  completeCard: {
-    backgroundColor:
-      '#FFF',
-    borderRadius: 28,
-    padding: 30,
-    alignItems: 'center',
-  },
-
-  complete: {
-    fontSize: 28,
-    fontWeight: '900',
-  },
-
-  rewardText: {
-    fontSize: 22,
-    marginTop: 10,
-    marginBottom: 20,
-  },
-
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 28,
-  },
-
-  errorTitle: {
-    fontSize: 24,
-    fontWeight: '900',
-    marginBottom: 10,
-    color: '#0F172A',
-    textAlign: 'center',
-  },
-
-  errorText: {
-    color: '#475569',
-    textAlign: 'center',
-    marginBottom: 22,
-    fontSize: 16,
-  },
-
-  reloadButton: {
-    backgroundColor: '#22C55E',
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-  },
-
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#F6FFF5' },
+  page: { padding: 18, paddingBottom: 44 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  back: { color: '#16A34A', fontWeight: '900' },
+  studentChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 6 },
+  avatar: { fontSize: 20, marginRight: 5 },
+  xp: { color: '#F97316', fontWeight: '900' },
+  title: { color: '#16A34A', fontSize: 31, fontWeight: '900', marginTop: 20 },
+  stepText: { color: '#64748B', marginTop: 7 },
+  progressTrack: { height: 12, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 16, marginBottom: 20 },
+  progressFill: { height: '100%', backgroundColor: '#22C55E', borderRadius: 99 },
+  card: { backgroundColor: '#FFF', borderRadius: 24, padding: 18, elevation: 4 },
+  cardTitle: { color: '#0F172A', fontSize: 23, fontWeight: '900' },
+  body: { color: '#475569', lineHeight: 22, marginTop: 10 },
+  questionBlock: { marginTop: 16 },
+  question: { color: '#0F172A', fontWeight: '900', fontSize: 17 },
+  option: { borderWidth: 2, borderColor: '#D1FAE5', borderRadius: 14, padding: 12, marginTop: 9 },
+  optionCorrect: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
+  optionIncorrect: { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
+  optionText: { color: '#0F172A' },
+  choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  choiceChip: { backgroundColor: '#FEF3C7', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 9 },
+  choiceText: { color: '#92400E', fontWeight: '900' },
+  input: { borderWidth: 2, borderColor: '#D1FAE5', borderRadius: 14, minHeight: 110, padding: 12, marginTop: 16, textAlignVertical: 'top' },
+  primaryButton: { backgroundColor: '#16A34A', borderRadius: 16, alignItems: 'center', paddingVertical: 14, marginTop: 18 },
+  secondaryButton: { backgroundColor: '#E0F2FE', borderRadius: 16, alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14, marginTop: 12 },
+  recordingButton: { backgroundColor: '#FEE2E2' },
+  secondaryText: { color: '#0F172A', fontWeight: '900' },
+  speechButtons: { marginTop: 4 },
+  statusMessage: { color: '#0369A1', fontWeight: '800', marginTop: 10 },
+  contentRow: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, marginTop: 10 },
+  stepRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+  stepDot: { backgroundColor: '#E2E8F0', borderRadius: 99, padding: 7 },
+  stepDotActive: { backgroundColor: '#DCFCE7' },
+  stepIcon: { fontSize: 15 },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FEF3C7', borderRadius: 16, padding: 12, marginTop: 14 },
+  badgeIcon: { fontSize: 32 },
+  disabledButton: { backgroundColor: '#CBD5E1' },
+  primaryText: { color: '#FFF', fontWeight: '900' },
+  reward: { color: '#F97316', fontSize: 28, fontWeight: '900', marginTop: 14 },
+  error: { color: '#B91C1C', textAlign: 'center' },
 });

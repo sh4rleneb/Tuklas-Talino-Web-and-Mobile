@@ -11,6 +11,7 @@ const quickNavItems = [
   { icon: '🎮', label: 'Missions', screen: 'MissionScreen' },
   { icon: '👥', label: 'Groups', screen: 'GroupsScreen' },
   { icon: '🏅', label: 'Badges', screen: 'BadgesScreen' },
+  { icon: '🔔', label: 'Updates', screen: 'NotificationsScreen' },
 ];
 
 export default function StudentJuniorHome({ navigation }) {

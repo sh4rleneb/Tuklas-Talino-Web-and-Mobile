@@ -1,4 +1,4 @@
-import { api } from './client';
+import { api, apiText } from './client';
 
 export async function getTeacherDashboard() {
   return api('/teachers/dashboard');
@@ -16,6 +16,77 @@ export async function getPendingGroupChecks() {
   return api('/groups/task-completions/pending');
 }
 
+export async function approveGroupTask(taskId, studentId, teacherFeedback = '') {
+  return api(`/groups/tasks/${taskId}/completions/${studentId}/approve`, {
+    method: 'POST',
+    body: { teacherFeedback },
+  });
+}
+
+export async function returnGroupTask(taskId, studentId, teacherFeedback = '') {
+  return api(`/groups/tasks/${taskId}/completions/${studentId}/return`, {
+    method: 'POST',
+    body: { teacherFeedback },
+  });
+}
+
 export async function getTeacherGroups() {
   return api('/groups');
+}
+
+export async function createGroup(body) {
+  return api('/groups', { method: 'POST', body });
+}
+
+export async function addGroupTask(groupId, body) {
+  return api(`/groups/${groupId}/tasks`, { method: 'POST', body });
+}
+
+export async function addGroupMember(groupId, studentId) {
+  return api(`/groups/${groupId}/members`, {
+    method: 'POST',
+    body: { studentId },
+  });
+}
+
+export async function getTeacherLessons() {
+  return api('/lessons/mine');
+}
+
+export async function createLesson(body) {
+  return api('/lessons', { method: 'POST', body });
+}
+
+export async function updateLesson(lessonId, body) {
+  return api(`/lessons/${lessonId}`, { method: 'PATCH', body });
+}
+
+export async function archiveLesson(lessonId) {
+  return api(`/lessons/${lessonId}`, { method: 'DELETE' });
+}
+
+export async function uploadLessonMaterial(asset) {
+  const body = new FormData();
+  body.append('material', {
+    uri: asset.uri,
+    name: asset.name,
+    type: asset.mimeType || 'application/octet-stream',
+  });
+  return api('/lessons/materials/upload', { method: 'POST', body });
+}
+
+export async function getReportSummary() {
+  return api('/reports/summary');
+}
+
+export async function getStudentReportCsv() {
+  return apiText('/reports/students.csv');
+}
+
+export async function getActivityLogsCsv() {
+  return apiText('/reports/activity-logs.csv');
+}
+
+export async function getSummaryReportText() {
+  return apiText('/reports/summary.txt');
 }

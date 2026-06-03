@@ -16,6 +16,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 
 import { SafeAreaView }
@@ -36,11 +37,25 @@ export default function StudentSeniorHome({
   const [dashboard, setDashboard] =
     useState(null);
 
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState('');
+
   const load =
     useCallback(
-      () =>
-        api('/dashboard')
-          .then(setDashboard),
+      async () => {
+        setLoading(true);
+        setError('');
+        try {
+          setDashboard(await api('/dashboard'));
+        } catch (err) {
+          setError(err.message || 'Unable to load your dashboard.');
+        } finally {
+          setLoading(false);
+        }
+      },
       []
     );
 
@@ -51,7 +66,21 @@ export default function StudentSeniorHome({
   );
 
   if (!dashboard) {
-    return null;
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.loadState}>
+          {loading ? <ActivityIndicator size="large" color="#22C55E" /> : null}
+          <Text style={error ? styles.loadError : styles.loadText}>
+            {error || 'Loading your dashboard...'}
+          </Text>
+          {error ? (
+            <TouchableOpacity style={styles.retryButton} onPress={load}>
+              <Text style={styles.retryText}>Try Again</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </SafeAreaView>
+    );
   }
 
     const student =
@@ -77,6 +106,35 @@ export default function StudentSeniorHome({
         1,
         Math.floor(xp / 100) + 1
       );
+
+    const lessons =
+      dashboard.lessons || [];
+
+    const badges =
+      dashboard.badges || [];
+
+    const allBadges =
+      dashboard.allBadges || [];
+
+    const earnedBadgeIds =
+      new Set(badges.map((badge) => badge.id));
+
+    const featuredLessons =
+      lessons.slice(0, 4);
+
+    const lessonColors = [
+      '#EEF4FF',
+      '#FFF0F7',
+      '#F3F0FF',
+      '#FEF3C7',
+    ];
+
+    const lessonIcons = [
+      '📖',
+      '🎧',
+      '🔤',
+      '📜',
+    ];
 
   return (
 
@@ -226,7 +284,7 @@ export default function StudentSeniorHome({
                 <Text
                   style={styles.quickValue}
                 >
-                  {dashboard.modules?.length || 0}
+                  {lessons.length}
                 </Text>
 
                 <Text
@@ -256,7 +314,7 @@ export default function StudentSeniorHome({
                 <Text
                   style={styles.quickValue}
                 >
-                  {level}
+                  {badges.length}
                 </Text>
 
                 <Text
@@ -305,201 +363,50 @@ export default function StudentSeniorHome({
                 style={styles.lessonGrid}
               >
 
-                <TouchableOpacity
-                  style={[
-                    styles.lessonCard,
-                    {
-                      backgroundColor:
-                        '#EEF4FF',
-                    },
-                  ]}
-                >
-
-                  <Text
-                    style={
-                      styles.lessonEmoji
-                    }
-                  >
-                    🎧
-                  </Text>
-
-                  <Text
-                    style={styles.lessonTag}
-                  >
-                    Bokabularyo
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.lessonTitle
-                    }
-                  >
-                    Bahagi ng
-                    Pananalita
-                  </Text>
-
+                {featuredLessons.map((lesson, index) => (
                   <TouchableOpacity
-                    style={styles.startBtn}
+                    key={lesson.id}
+                    style={[
+                      styles.lessonCard,
+                      {
+                        backgroundColor:
+                          lessonColors[index % lessonColors.length],
+                      },
+                    ]}
+                    onPress={() =>
+                      navigation.navigate(
+                        'StudentJuniorLessonDetail',
+                        { lessonId: lesson.id }
+                      )
+                    }
                   >
-
-                    <Text
-                      style={
-                        styles.startText
-                      }
-                    >
-                      Start
+                    <Text style={styles.lessonEmoji}>
+                      {lessonIcons[index % lessonIcons.length]}
                     </Text>
 
-                  </TouchableOpacity>
-
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.lessonCard,
-                    {
-                      backgroundColor:
-                        '#FFF0F7',
-                    },
-                  ]}
-                >
-
-                  <Text
-                    style={
-                      styles.lessonEmoji
-                    }
-                  >
-                    📖
-                  </Text>
-
-                  <Text
-                    style={styles.lessonTag}
-                  >
-                    Reading
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.lessonTitle
-                    }
-                  >
-                    Reading
-                    Comprehension
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.startBtn}
-                  >
-
-                    <Text
-                      style={
-                        styles.startText
-                      }
-                    >
-                      Start
+                    <Text style={styles.lessonTag}>
+                      {lesson.subject}
                     </Text>
 
-                  </TouchableOpacity>
-
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.lessonCard,
-                    {
-                      backgroundColor:
-                        '#F3F0FF',
-                    },
-                  ]}
-                >
-
-                  <Text
-                    style={
-                      styles.lessonEmoji
-                    }
-                  >
-                    🔤
-                  </Text>
-
-                  <Text
-                    style={styles.lessonTag}
-                  >
-                    Vocabulary
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.lessonTitle
-                    }
-                  >
-                    Learn Words
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.startBtn}
-                  >
-
-                    <Text
-                      style={
-                        styles.startText
-                      }
-                    >
-                      Start
+                    <Text style={styles.lessonTitle}>
+                      {lesson.title}
                     </Text>
 
+                    <View style={styles.startBtn}>
+                      <Text style={styles.startText}>
+                        {lesson.completed ? 'Review' : 'Start'}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
-
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.lessonCard,
-                    {
-                      backgroundColor:
-                        '#FEF3C7',
-                    },
-                  ]}
-                >
-
-                  <Text
-                    style={
-                      styles.lessonEmoji
-                    }
-                  >
-                    📜
-                  </Text>
-
-                  <Text
-                    style={styles.lessonTag}
-                  >
-                    Panitikan
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.lessonTitle
-                    }
-                  >
-                    Story Quest
-                  </Text>
-
-                  <TouchableOpacity
-                    style={styles.startBtn}
-                  >
-
-                    <Text
-                      style={
-                        styles.startText
-                      }
-                    >
-                      Start
-                    </Text>
-
-                  </TouchableOpacity>
-
-                </TouchableOpacity>
+                ))}
 
               </View>
+
+              {!featuredLessons.length && (
+                <Text style={styles.emptyText}>
+                  No published lessons are available for your grade yet.
+                </Text>
+              )}
 
             </View>
 
@@ -513,95 +420,43 @@ export default function StudentSeniorHome({
 
               <View style={styles.badgeRow}>
 
-                <View
-                  style={
-                    styles.badgeUnlocked
-                  }
-                >
+                {allBadges.slice(0, 4).map((badge) => {
+                  const unlocked =
+                    earnedBadgeIds.has(badge.id);
 
-                  <Text
-                    style={
-                      styles.badgeEmoji
-                    }
-                  >
-                    🌱
-                  </Text>
+                  return (
+                    <View
+                      key={badge.id}
+                      style={
+                        unlocked
+                          ? styles.badgeUnlocked
+                          : styles.badgeLocked
+                      }
+                    >
+                      <Text style={styles.badgeEmoji}>
+                        {unlocked ? badge.icon : '🔒'}
+                      </Text>
 
-                  <Text
-                    style={styles.badgeText}
-                  >
-                    Unang Hakbang
-                  </Text>
-
-                </View>
-
-                <View
-                  style={styles.badgeLocked}
-                >
-
-                  <Text
-                    style={
-                      styles.badgeEmoji
-                    }
-                  >
-                    🔒
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.badgeLockedText
-                    }
-                  >
-                    Reader
-                  </Text>
-
-                </View>
-
-                <View
-                  style={styles.badgeLocked}
-                >
-
-                  <Text
-                    style={
-                      styles.badgeEmoji
-                    }
-                  >
-                    🔒
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.badgeLockedText
-                    }
-                  >
-                    Words
-                  </Text>
-
-                </View>
-
-                <View
-                  style={styles.badgeLocked}
-                >
-
-                  <Text
-                    style={
-                      styles.badgeEmoji
-                    }
-                  >
-                    🔒
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.badgeLockedText
-                    }
-                  >
-                    Speaker
-                  </Text>
-
-                </View>
+                      <Text
+                        style={
+                          unlocked
+                            ? styles.badgeText
+                            : styles.badgeLockedText
+                        }
+                      >
+                        {badge.name}
+                      </Text>
+                    </View>
+                  );
+                })}
 
               </View>
+
+              {!allBadges.length && (
+                <Text style={styles.emptyText}>
+                  Badge progress will appear after you start learning.
+                </Text>
+              )}
 
             </View>
 
@@ -752,6 +607,20 @@ export default function StudentSeniorHome({
         onPress={() => {
           setShowMore(false);
           navigation.navigate(
+            'NotificationsScreen'
+          );
+        }}
+      >
+        <Text style={styles.moreText}>
+          🔔 Notifications
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.moreItem}
+        onPress={() => {
+          setShowMore(false);
+          navigation.navigate(
             'ProfileScreen'
           );
         }}
@@ -790,6 +659,37 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#F6FFF5',
+  },
+
+  loadState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+
+  loadText: {
+    color: '#64748B',
+    marginTop: 12,
+  },
+
+  loadError: {
+    color: '#B91C1C',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+
+  retryButton: {
+    backgroundColor: '#16A34A',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 14,
+  },
+
+  retryText: {
+    color: '#FFF',
+    fontFamily: 'Poppins_700Bold',
   },
 
   wrapper: {
@@ -1162,6 +1062,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: 'Poppins_700Bold',
     fontSize: 14,
+  },
+
+  emptyText: {
+    color: '#64748B',
+    fontFamily: 'Poppins_500Medium',
+    marginTop: 16,
   },
 
   bottomNav: {

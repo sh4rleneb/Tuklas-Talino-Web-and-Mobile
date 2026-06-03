@@ -7,16 +7,23 @@ import { colors } from '../styles/theme';
 
 export default function MissionScreen() {
   const [missions, setMissions] = useState([]);
+  const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState(null);
+  const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
-      const data = await api('/missions');
-      setMissions(data.missions || []);
+      const [missionData, dashboard] = await Promise.all([
+        api('/missions'),
+        api('/dashboard'),
+      ]);
+      setMissions(missionData.missions || []);
+      setStudent(dashboard.student || null);
     } catch (err) {
-      Alert.alert('Mission Error', err.message || 'Unable to load missions.');
+      setError(err.message || 'Unable to load missions.');
     } finally {
       setLoading(false);
     }
@@ -33,10 +40,6 @@ export default function MissionScreen() {
     try {
       const data = await api(`/missions/${missionId}/claim`, {
         method: 'POST',
-        body: {
-          challengeId: 'default',
-          challengeTitle: 'Mission completed',
-        },
       });
       Alert.alert('Mission Claimed', data.message || `+${data.xpAwarded} XP earned!`);
       load();
@@ -47,16 +50,42 @@ export default function MissionScreen() {
     }
   }
 
+  function statusLabel(state) {
+    if (state === 'claimed') return 'Claimed';
+    if (state === 'ready_to_claim') return 'Ready';
+    if (state === 'in_progress') return 'In Progress';
+    return 'Locked';
+  }
+
+  function buttonLabel(mission) {
+    if (submittingId === mission.missionId) return 'Claiming...';
+    if (mission.state === 'claimed') return 'Already Claimed';
+    if (mission.state === 'ready_to_claim') return 'Claim XP';
+    return 'Keep Learning';
+  }
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>🎮 Missions</Text>
-      <Text style={styles.subtitle}>Complete these learning challenges to earn extra XP.</Text>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={styles.heading}>🎮 Missions</Text>
+          <Text style={styles.subtitle}>Complete lessons to unlock bonus learning rewards.</Text>
+        </View>
+        {student && (
+          <View style={styles.studentChip}>
+            <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
+            <Text style={styles.studentXp}>{student.xp || 0} XP</Text>
+          </View>
+        )}
+      </View>
 
       {loading ? (
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading missions...</Text>
         </View>
+      ) : error ? (
+        <Text style={styles.error}>{error}</Text>
       ) : (
         missions.map((mission) => (
           <Card key={mission.missionId} style={styles.card}>
@@ -65,23 +94,39 @@ export default function MissionScreen() {
                 <Text style={styles.missionTitle}>{mission.title}</Text>
                 <Text style={styles.missionMeta}>{mission.xp} XP</Text>
               </View>
-              <View style={styles.statusPill(mission.completed)}>
-                <Text style={styles.statusText}>{mission.completed ? 'Completed' : 'Ready'}</Text>
+              <View style={styles.statusPill(mission.state)}>
+                <Text style={styles.statusText}>{statusLabel(mission.state)}</Text>
               </View>
             </View>
-            <Text style={styles.description}>Earn bonus XP by completing this activity.</Text>
+            <Text style={styles.description}>
+              Complete {mission.requirement?.target || 0} lessons to unlock this reward.
+            </Text>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${mission.requirement?.percent || 0}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {mission.requirement?.current || 0}/{mission.requirement?.target || 0} lessons completed
+            </Text>
             <TouchableOpacity
-              style={[styles.button, mission.completed && styles.buttonDisabled]}
-              disabled={mission.completed || submittingId === mission.missionId}
+              style={[
+                styles.button,
+                mission.state !== 'ready_to_claim' && styles.buttonDisabled,
+              ]}
+              disabled={mission.state !== 'ready_to_claim' || Boolean(submittingId)}
               onPress={() => claimMission(mission.missionId)}
             >
-              <Text style={styles.buttonText}>{mission.completed ? 'Already Claimed' : 'Claim XP'}</Text>
+              <Text style={styles.buttonText}>{buttonLabel(mission)}</Text>
             </TouchableOpacity>
           </Card>
         ))
       )}
 
-      {!loading && missions.length === 0 && (
+      {!loading && !error && missions.length === 0 && (
         <Text style={styles.empty}>No missions are available at the moment.</Text>
       )}
     </ScrollView>
@@ -91,21 +136,33 @@ export default function MissionScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, paddingBottom: 40 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  headerText: { flex: 1, paddingRight: 12 },
   heading: { fontSize: 32, fontWeight: '900', color: colors.ink, marginBottom: 6 },
-  subtitle: { color: colors.muted, marginBottom: 20 },
+  subtitle: { color: colors.muted },
+  studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
+  studentAvatar: { fontSize: 26 },
+  studentXp: { color: colors.ink, fontWeight: '800', fontSize: 12 },
   card: { marginBottom: 16 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardText: { flex: 1, paddingRight: 10 },
   missionTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
   missionMeta: { color: colors.muted, marginTop: 4 },
-  statusPill: (completed) => ({
-    backgroundColor: completed ? '#DCFCE7' : '#E0F2FE',
+  statusPill: (state) => ({
+    backgroundColor: state === 'claimed'
+      ? '#DCFCE7'
+      : state === 'ready_to_claim'
+        ? '#E0F2FE'
+        : '#E2E8F0',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,
   }),
   statusText: { color: colors.ink, fontWeight: '700' },
   description: { color: colors.muted, marginTop: 12, marginBottom: 16 },
+  progressTrack: { height: 8, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.green, borderRadius: 99 },
+  progressText: { color: colors.muted, fontSize: 12, marginTop: 7, marginBottom: 12 },
   button: {
     backgroundColor: colors.primary,
     borderRadius: 14,
@@ -118,5 +175,6 @@ const styles = StyleSheet.create({
   buttonText: { color: '#FFF', fontWeight: '900' },
   loading: { paddingVertical: 40, alignItems: 'center' },
   loadingText: { marginTop: 12, color: colors.muted },
+  error: { color: '#B91C1C', textAlign: 'center', marginTop: 20 },
   empty: { color: colors.muted, textAlign: 'center', marginTop: 20 },
 });

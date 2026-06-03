@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   View,
@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 import { api, setToken } from '../../api/client';
@@ -33,6 +34,12 @@ export default function StudentLogin({
   const [studentValid, setStudentValid] =
     useState(false);
 
+  const [studentChecking, setStudentChecking] =
+    useState(false);
+
+  const [studentValidationMessage, setStudentValidationMessage] =
+    useState('');
+
   const [selectedAvatar, setSelectedAvatar] =
     useState('🦊');
 
@@ -48,22 +55,60 @@ export default function StudentLogin({
     '👧',
   ];
 
-  function handleStudentIdChange(
-  value
-) {
+  useEffect(() => {
+    const identifier = studentId.trim();
+    const hasValidFormat = /^STU-\d{4}-\d{3}$/.test(identifier);
+
+    if (!identifier) {
+      setStudentValid(false);
+      setStudentChecking(false);
+      setStudentValidationMessage('');
+      return undefined;
+    }
+
+    if (!hasValidFormat) {
+      setStudentValid(false);
+      setStudentChecking(false);
+      setStudentValidationMessage('Example: STU-2025-001');
+      return undefined;
+    }
+
+    let active = true;
+    setStudentValid(false);
+    setStudentChecking(true);
+    setStudentValidationMessage('Checking student ID...');
+
+    const timer = setTimeout(async () => {
+      try {
+        const data = await api(`/auth/check-student/${encodeURIComponent(identifier)}`);
+
+        if (!active) return;
+
+        setStudentValid(Boolean(data.exists));
+        setStudentValidationMessage(
+          data.exists ? '' : 'Student ID was not found or is inactive.'
+        );
+      } catch (error) {
+        if (!active) return;
+        setStudentValid(false);
+        setStudentValidationMessage(error.message || 'Unable to validate Student ID.');
+      } finally {
+        if (active) setStudentChecking(false);
+      }
+    }, 350);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [studentId]);
+
+  function handleStudentIdChange(value) {
 
   const upper =
     value.toUpperCase();
 
     setStudentId(upper);
-
-    const regex =
-      /^STU-\d{4}-\d{3}$/;
-
-    setStudentValid(
-      regex.test(upper.trim())
-    );
-
 }
 
   async function handleLogin() {
@@ -72,10 +117,10 @@ export default function StudentLogin({
 
     try {
 
-      if (!studentId || !password) {
+      if (!studentId || !password || !studentValid) {
         Alert.alert(
           'Missing Fields',
-          'Please enter Student ID and Password.'
+          'Please enter a valid Student ID and Password.'
         );
 
         return;
@@ -84,7 +129,7 @@ export default function StudentLogin({
       setLoading(true);
 
       const cleanedStudentId = studentId.trim();
-      const cleanedPassword = password.trim();
+      const cleanedPassword = password;
 
       const data = await api(
         '/auth/login',
@@ -97,11 +142,6 @@ export default function StudentLogin({
             avatar: selectedAvatar,
           },
         }
-      );
-
-      console.log(
-        'FULL LOGIN RESPONSE:',
-        data
       );
 
       const user = data.user;
@@ -119,11 +159,6 @@ export default function StudentLogin({
 
       const gradeLevel = Number(
         user.student?.gradeLevel
-      );
-
-      console.log(
-        'GRADE LEVEL:',
-        gradeLevel
       );
 
       /*
@@ -155,8 +190,6 @@ export default function StudentLogin({
       }
 
     } catch (error) {
-
-      console.log(error);
 
       Alert.alert(
         'Login Failed',
@@ -306,6 +339,7 @@ export default function StudentLogin({
               styles.inputBox,
 
               studentId.length > 0 &&
+              !studentChecking &&
               !studentValid &&
 
               styles.invalidInput,
@@ -336,14 +370,20 @@ export default function StudentLogin({
               </View>
             )}
 
+            {studentChecking && (
+              <ActivityIndicator
+                size="small"
+                color="#16A34A"
+              />
+            )}
+
           </View>
 
-            {studentId.length > 0 &&
-              !studentValid && (
+            {studentValidationMessage ? (
                 <Text style={styles.errorText}>
-                  Example: STU-2025-001
+                  {studentValidationMessage}
                 </Text>
-              )}
+              ) : null}
 
           {/* PASSWORD */}
 
@@ -387,6 +427,7 @@ export default function StudentLogin({
 
               (
                 !studentValid ||
+                studentChecking ||
                 !password.trim()
               ) &&
               styles.disabledButton,
@@ -398,6 +439,7 @@ export default function StudentLogin({
             disabled={
               loading ||
               !studentValid ||
+              studentChecking ||
               !password.trim()
             }
           >

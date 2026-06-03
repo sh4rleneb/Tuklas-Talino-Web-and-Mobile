@@ -20,9 +20,10 @@ export async function setToken(token) {
 
 export async function api(path, options = {}) {
   const token = await getToken();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
   const headers = {
-    'Content-Type': 'application/json',
+    ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers || {}),
   };
 
@@ -36,6 +37,7 @@ export async function api(path, options = {}) {
 
     body:
       options.body &&
+      !isFormData &&
       typeof options.body !== 'string'
         ? JSON.stringify(options.body)
         : options.body,
@@ -44,8 +46,32 @@ export async function api(path, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.message || 'Request failed');
+    const error = new Error(data.message || 'Request failed');
+    error.status = response.status;
+    error.code = data.code;
+    throw error;
   }
 
   return data;
+}
+
+export async function apiText(path, options = {}) {
+  const token = await getToken();
+  const headers = { ...(options.headers || {}) };
+
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+  });
+  const text = await response.text();
+
+  if (!response.ok) {
+    const error = new Error(text || 'Request failed');
+    error.status = response.status;
+    throw error;
+  }
+
+  return text;
 }

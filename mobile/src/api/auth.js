@@ -22,7 +22,7 @@ export async function loginTeacher(identifier, password) {
     method: 'POST',
     body: {
       role: 'teacher',
-      identifier,
+      identifier: identifier.trim(),
       password,
     },
   });
@@ -39,7 +39,7 @@ export async function loginAdmin(identifier, password) {
     method: 'POST',
     body: {
       role: 'admin',
-      identifier,
+      identifier: identifier.trim(),
       password,
     },
   });
