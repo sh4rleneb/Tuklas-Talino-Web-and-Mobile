@@ -117,9 +117,13 @@ export default function BadgesScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, paddingBottom: 40 },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  title: { fontSize: 30, fontWeight: '900', color: colors.ink },
+  title: { fontSize: 24, fontWeight: '900', color: colors.ink },
   subtitle: { color: colors.muted, marginTop: 4 },
   studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
   studentAvatar: { fontSize: 26 },

@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
+import StudentScreenHeader from './StudentScreenHeader';
 import { api } from '../api/client';
 
 const CATEGORIES = [
@@ -102,7 +102,15 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
   function openLesson(lesson) {
     if (!lesson.unlocked) return;
-    navigation.navigate('StudentJuniorLessonDetail', { lessonId: lesson.id });
+    navigation.navigate(
+      'Lessons',
+      {
+        screen: 'StudentJuniorLessonDetail',
+        params: {
+          lessonId: lesson.id
+        }
+      }
+    );
   }
 
   if (loading && !dashboard) {
@@ -119,15 +127,12 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.page}>
-        <View style={styles.topBar}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-          <View style={styles.studentChip}>
-            <Text style={styles.avatar}>{student.avatar || '🧒'}</Text>
-            <Text style={styles.studentChipText}>Grade {student.gradeLevel || '—'}</Text>
-          </View>
-        </View>
+        
+        <StudentScreenHeader
+          navigation={navigation}
+          avatar={student.avatar}
+          gradeLevel={student.gradeLevel}
+        />
 
         <View style={[styles.hero, playful && styles.heroPlayful]}>
           <Text style={styles.eyebrow}>{playful ? 'MGA ARALIN' : 'FILIPINO LEARNING HUB'}</Text>
@@ -220,12 +225,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
   page: { padding: 16, paddingBottom: 44 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F6FFF5' },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  backButton: { borderWidth: 2, borderColor: '#22C55E', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8 },
-  backText: { color: '#16A34A', fontWeight: '900' },
-  studentChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7 },
-  avatar: { fontSize: 20, marginRight: 6 },
-  studentChipText: { color: '#166534', fontWeight: '900' },
   hero: { backgroundColor: '#FFF', borderRadius: 26, padding: 20, marginBottom: 20 },
   heroPlayful: { backgroundColor: '#ECFDF5' },
   eyebrow: { color: '#16A34A', fontWeight: '900', fontSize: 12 },

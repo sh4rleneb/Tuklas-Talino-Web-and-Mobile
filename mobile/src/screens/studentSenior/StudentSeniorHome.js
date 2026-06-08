@@ -8,7 +8,6 @@ import {
 } from '@react-navigation/native';
 
 import { api } from '../../api/client';
-import { logout } from '../../api/auth';
 
 import {
   View,
@@ -25,11 +24,6 @@ from 'react-native-safe-area-context';
 export default function StudentSeniorHome({
   navigation,
 }) {
-
-  async function handleLogout() {
-    await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
-  }
 
   const [showMore, setShowMore] =
     useState(false);
@@ -161,17 +155,7 @@ export default function StudentSeniorHome({
               <Text style={styles.logo}>
                 🏡 Tuklas Talino
               </Text>
-
-              <TouchableOpacity
-                style={styles.logoutBtn}
-                onPress={handleLogout}
-              >
-                <Text style={styles.logoutText}>
-                  Logout
-                </Text>
-              </TouchableOpacity>
-
-            </View>
+</View>
 
             <TouchableOpacity
               style={styles.profileChip}
@@ -629,20 +613,7 @@ export default function StudentSeniorHome({
           👤 Profile
         </Text>
       </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.moreItem}
-        onPress={async () => {
-          setShowMore(false);
-          await handleLogout();
-        }}
-      >
-        <Text style={styles.moreText}>
-          🚪 Logout
-        </Text>
-      </TouchableOpacity>
-
-    </View>
+</View>
 
   </>
 )}
@@ -781,21 +752,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontFamily: 'Poppins_600SemiBold',
   },
-
-  logoutBtn: {
-    backgroundColor: '#FFE4E6',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 18,
-  },
-
-  logoutText: {
-    color: '#DC2626',
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 14,
-  },
-
-  heroCard: {
+heroCard: {
     backgroundColor: '#FFFFFF',
     marginTop: 18,
     borderRadius: 26,

@@ -19,7 +19,8 @@
           "microphonePermission": "Allow Tuklas Talino to access your microphone for speech activities."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-speech-recognition"
     ],
     "android": {
       "permissions": [

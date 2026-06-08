@@ -135,10 +135,14 @@ export default function MissionScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, paddingBottom: 40 },
+    content: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   headerText: { flex: 1, paddingRight: 12 },
-  heading: { fontSize: 32, fontWeight: '900', color: colors.ink, marginBottom: 6 },
+  heading: { fontSize: 24, fontWeight: '900', color: colors.ink, marginBottom: 6 },
   subtitle: { color: colors.muted },
   studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
   studentAvatar: { fontSize: 26 },

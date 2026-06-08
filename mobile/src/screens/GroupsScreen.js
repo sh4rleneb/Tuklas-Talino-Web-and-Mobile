@@ -97,9 +97,13 @@ export default function GroupsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, paddingBottom: 40 },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  title: { fontSize: 30, fontWeight: '900', color: colors.ink },
+  title: { fontSize: 24, fontWeight: '900', color: colors.ink },
   studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
   studentAvatar: { fontSize: 26 },
   studentXp: { color: colors.ink, fontWeight: '800', fontSize: 12 },

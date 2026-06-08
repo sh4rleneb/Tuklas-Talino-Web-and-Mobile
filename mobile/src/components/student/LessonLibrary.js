@@ -101,9 +101,15 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
   function openLesson(lesson) {
     if (!lesson.unlocked) return;
 
-    navigation.navigate('StudentJuniorLessonDetail', {
-      lessonId: lesson.id,
-    });
+    navigation.navigate(
+      'Lessons',
+      {
+        screen: 'StudentJuniorLessonDetail',
+        params: {
+          lessonId: lesson.id
+        }
+      }
+    );
   }
 
   if (loading && !dashboard) {

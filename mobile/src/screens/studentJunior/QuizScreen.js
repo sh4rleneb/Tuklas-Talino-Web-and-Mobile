@@ -1,5 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import StudentScreenHeader from '../../components/StudentScreenHeader';
 import {
   ActivityIndicator,
   Alert,
@@ -28,7 +30,7 @@ function quizCatalog(dashboard) {
   );
 }
 
-export default function QuizScreen() {
+export default function QuizScreen({ navigation }) {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -204,19 +206,27 @@ export default function QuizScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+  <SafeAreaView style={styles.safe}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+
+      <StudentScreenHeader
+        navigation={navigation}
+        avatar={student?.avatar}
+        gradeLevel={student?.gradeLevel}
+      />
+
       <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>🧠 Quizzes</Text>
-          <Text style={styles.muted}>Practice with questions from your published lessons.</Text>
-        </View>
-        {student && (
-          <View style={styles.studentChip}>
-            <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
-            <Text style={styles.studentXp}>{student.xp || 0} XP</Text>
-          </View>
-        )}
+      <View style={styles.headerText}>
+        <Text style={styles.title}>🧠 Quizzes</Text>
+        <Text style={styles.muted}>
+          Practice with questions from your published lessons.
+        </Text>
       </View>
+    </View>
 
       {error ? (
         <Text style={styles.error}>{error}</Text>
@@ -246,19 +256,26 @@ export default function QuizScreen() {
         <Text style={styles.muted}>No published lesson quizzes are available yet.</Text>
       )}
     </ScrollView>
-  );
+  </SafeAreaView>
+
+    );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: colors.bg,
+  },
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, paddingBottom: 40 },
+    content: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
   headerText: { flex: 1, paddingRight: 12 },
-  studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
-  studentAvatar: { fontSize: 26 },
-  studentXp: { color: colors.ink, fontWeight: '800', fontSize: 12 },
-  title: { color: colors.ink, fontSize: 30, fontWeight: '900', marginBottom: 4 },
+  title: { color: colors.ink, fontSize: 24, fontWeight: '900', marginBottom: 4 },
   back: { color: colors.green, fontWeight: '900', marginBottom: 14 },
   muted: { color: colors.muted, marginTop: 4 },
   error: { color: '#B91C1C', textAlign: 'center', marginTop: 30 },
@@ -278,4 +295,5 @@ const styles = StyleSheet.create({
   resultTitle: { color: colors.ink, fontSize: 24, fontWeight: '900' },
   resultScore: { color: colors.green, fontSize: 34, fontWeight: '900', marginTop: 12 },
   resultMeta: { color: colors.muted, marginTop: 6 },
+
 });

@@ -29,14 +29,14 @@ from '../screens/auth/ChangePassword';
 STUDENT
 */
 
+import StudentTabNavigator
+from './StudentTabNavigator';
+
 import StudentJuniorHome
 from '../screens/studentJunior/StudentJuniorHome';
 
 import StudentJuniorLessons
 from '../screens/studentJunior/StudentJuniorLessons';
-
-import StudentJuniorLessonDetail
-from '../screens/studentJunior/StudentJuniorLessonDetail';
 
 import ModulesScreen
 from '../screens/studentJunior/ModulesScreen';
@@ -125,6 +125,11 @@ export default function RootNavigator() {
         {/* STUDENT */}
 
         <Stack.Screen
+          name="StudentTabs"
+          component={StudentTabNavigator}
+        />
+
+        <Stack.Screen
           name="StudentJuniorHome"
           component={StudentJuniorHome}
         />
@@ -133,13 +138,6 @@ export default function RootNavigator() {
           name="StudentJuniorLessons"
           component={
             StudentJuniorLessons
-          }
-        />
-
-        <Stack.Screen
-          name="StudentJuniorLessonDetail"
-          component={
-            StudentJuniorLessonDetail
           }
         />
 

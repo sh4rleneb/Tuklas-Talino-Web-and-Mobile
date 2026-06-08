@@ -1,18 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/client';
-import { logout } from '../../api/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-
-const quickNavItems = [
-  { icon: '📘', label: 'Lessons', screen: 'StudentJuniorLessons' },
-  { icon: '🧠', label: 'Quizzes', screen: 'QuizScreen' },
-  { icon: '🎮', label: 'Missions', screen: 'MissionScreen' },
-  { icon: '👥', label: 'Groups', screen: 'GroupsScreen' },
-  { icon: '🏅', label: 'Badges', screen: 'BadgesScreen' },
-  { icon: '🔔', label: 'Updates', screen: 'NotificationsScreen' },
-];
 
 export default function StudentJuniorHome({ navigation }) {
   const [dashboard, setDashboard] = useState(null);
@@ -55,11 +46,6 @@ export default function StudentJuniorHome({ navigation }) {
 
   const showProgress = completionPct > 0;
 
-  async function handleLogout() {
-    await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
-  }
-
   if (loading && !dashboard) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -75,21 +61,43 @@ export default function StudentJuniorHome({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.logo}>Tuklas Talino</Text>
-            <Text style={styles.profileText}>{name} • Grade {grade}</Text>
+        <View style={styles.userSection}>
+
+          <View style={styles.avatarBubble}>
+            <Text style={styles.avatarBubbleText}>
+              {avatar}
+            </Text>
           </View>
 
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.profileChip} onPress={() => navigation.navigate('ProfileScreen')}>
-              <Text style={styles.profileEmoji}>{avatar}</Text>
-              <Text style={styles.profileChipText}>Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
+          <View>
+            <Text style={styles.profileName}>
+              {name}
+            </Text>
+
+            <Text style={styles.profileGrade}>
+              Grade {grade}
+            </Text>
           </View>
+
         </View>
+
+        <View style={styles.rightSection}>
+
+          <View style={styles.smallChip}>
+            <Text style={styles.smallChipText}>
+              ⚡ {xp}
+            </Text>
+          </View>
+
+          <View style={styles.smallChip}>
+            <Text style={styles.smallChipText}>
+              ⭐ Lv {level}
+            </Text>
+          </View>
+
+        </View>
+
+      </View>
 
         <View style={styles.heroCard}>
           <View style={styles.heroHeader}>
@@ -134,23 +142,12 @@ export default function StudentJuniorHome({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.navigationCard}>
-          {quickNavItems.map((item) => (
-            <TouchableOpacity
-              key={item.label}
-              style={styles.navTile}
-              onPress={() => navigation.navigate(item.screen)}
-            >
-              <Text style={styles.navTileIcon}>{item.icon}</Text>
-              <Text style={styles.navTileText}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Continue learning</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('StudentJuniorLessons')}>
+            <Text style={styles.sectionTitle}>
+              Your Lessons
+            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Lessons')}>
               <Text style={styles.sectionLink}>All lessons →</Text>
             </TouchableOpacity>
           </View>
@@ -158,15 +155,54 @@ export default function StudentJuniorHome({ navigation }) {
           {nextLesson ? (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => navigation.navigate('StudentJuniorLessonDetail', { lessonId: nextLesson.id })}
+              onPress={() => navigation.navigate(
+                'Lessons',
+                {
+                  screen: 'StudentJuniorLessonDetail',
+                  params: {
+                    lessonId: nextLesson.id
+                  }
+                }
+              )}
             >
-              <View>
-                <Text style={styles.cardTag}>{nextLesson.subject || 'Lesson'}</Text>
-                <Text style={styles.cardTitle}>{nextLesson.title}</Text>
-                <Text style={styles.cardMeta}>Grade {nextLesson.gradeLevel || '—'} • +{nextLesson.xpReward || 0} XP</Text>
+              <View style={styles.lessonCardContent}>
+              <View style={styles.lessonIconWrap}>
+                <Text style={styles.lessonIcon}>
+                  📚
+                </Text>
               </View>
-              <Text style={styles.cardAction}>▶ Continue</Text>
+
+              <View style={{ flex: 1 }}>
+
+                <Text style={styles.cardTag}>
+                  {nextLesson.subject || 'Lesson'}
+                </Text>
+
+                <Text style={styles.cardTitle}>
+                  {nextLesson.title}
+                </Text>
+
+                <Text style={styles.cardMeta}>
+                  Grade {nextLesson.gradeLevel || '—'}
+                </Text>
+
+              </View>
+
+              <View style={styles.lessonXpBadge}>
+                <Text style={styles.lessonXpText}>
+                  +{nextLesson.xpReward || 0} XP
+                </Text>
+              </View>
+
+            </View>
+
+            <View style={styles.continueButton}>
+              <Text style={styles.continueButtonText}>
+                Continue →
+              </Text>
+            </View>
             </TouchableOpacity>
+
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>📚</Text>
@@ -179,7 +215,7 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Badges</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('BadgesScreen')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Badges')}>
               <Text style={styles.sectionLink}>View all →</Text>
             </TouchableOpacity>
           </View>
@@ -205,8 +241,10 @@ export default function StudentJuniorHome({ navigation }) {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Group task</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('GroupsScreen')}>
+            <Text style={styles.sectionTitle}>
+              Your Group Tasks
+            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Groups')}>
               <Text style={styles.sectionLink}>Open groups →</Text>
             </TouchableOpacity>
           </View>
@@ -224,32 +262,11 @@ export default function StudentJuniorHome({ navigation }) {
               <Text style={styles.emptyText}>Great job! Check back later for group activities.</Text>
             </View>
           )}
+          
         </View>
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={[styles.navButton, styles.navButtonActive]}>
-          <Text style={styles.navIcon}>🏠</Text>
-          <Text style={styles.navLabelActive}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('StudentJuniorLessons')}>
-          <Text style={styles.navIcon}>📚</Text>
-          <Text style={styles.navLabel}>Lessons</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('MissionScreen')}>
-          <Text style={styles.navIcon}>🎮</Text>
-          <Text style={styles.navLabel}>Missions</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('GroupsScreen')}>
-          <Text style={styles.navIcon}>👥</Text>
-          <Text style={styles.navLabel}>Groups</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('BadgesScreen')}>
-          <Text style={styles.navIcon}>🏅</Text>
-          <Text style={styles.navLabel}>Badges</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
+
   );
 }
 
@@ -260,11 +277,13 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 18,
+    backgroundColor: '#F4FFF5',
+    paddingTop: 20,
   },
   contentContainer: {
-    paddingBottom: 120,
+    paddingHorizontal: 20,
     paddingTop: 12,
+    paddingBottom: 40,
   },
   loaderWrapper: {
     flex: 1,
@@ -277,62 +296,69 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_600SemiBold',
   },
   header: {
-    marginTop: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  logo: {
-    fontSize: 28,
-    fontFamily: 'Poppins_800ExtraBold',
-    color: '#16A34A',
-  },
-  profileText: {
-    marginTop: 8,
-    color: '#475569',
-    fontFamily: 'Poppins_600SemiBold',
-  },
-  headerActions: {
-    alignItems: 'flex-end',
-  },
-  profileChip: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+
+  userSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  profileEmoji: {
-    fontSize: 18,
-    marginRight: 8,
+
+  avatarBubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  profileChipText: {
-    fontSize: 13,
-    fontFamily: 'Poppins_600SemiBold',
+
+  avatarBubbleText: {
+    fontSize: 26,
+  },
+
+  profileName: {
+    fontSize: 20,
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#0F172A',
   },
-  logoutButton: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+
+  profileGrade: {
+    color: '#64748B',
+    marginTop: 2,
   },
-  logoutText: {
+
+  rightSection: {
+    flexDirection: 'row',
+  },
+
+  smallChip: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginLeft: 8,
+  },
+
+  smallChipText: {
     color: '#166534',
-    fontSize: 14,
     fontFamily: 'Poppins_700Bold',
+    fontSize: 12,
   },
+  
   heroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 32,
-    padding: 20,
-    marginTop: 18,
+    borderRadius: 24,
+    padding: 16,
+    marginTop: 12,
+
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 3,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -340,12 +366,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   greeting: {
-    fontSize: 32,
+    fontSize: 24,
     fontFamily: 'Poppins_800ExtraBold',
     color: '#0F172A',
   },
   subtitle: {
-    marginTop: 10,
+    marginTop: 4,
     fontSize: 15,
     color: '#475569',
     lineHeight: 22,
@@ -353,15 +379,15 @@ const styles = StyleSheet.create({
     maxWidth: '75%',
   },
   avatarCircle: {
-    width: 72,
-    height: 72,
+    width: 56,
+    height: 56,
     borderRadius: 999,
     backgroundColor: '#ECFDF5',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatar: {
-    fontSize: 36,
+    fontSize: 28,
   },
   xpCard: {
     marginTop: 22,
@@ -379,15 +405,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   xpValue: {
-    fontSize: 32,
+    fontSize: 24,
     fontFamily: 'Poppins_800ExtraBold',
     color: '#16A34A',
     marginTop: 6,
   },
   levelBadge: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
   },
   levelText: {
@@ -420,12 +446,12 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: '#F7FEF7',
-    borderRadius: 24,
-    padding: 16,
-    marginRight: 10,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 18,
     fontFamily: 'Poppins_800ExtraBold',
     color: '#16A34A',
   },
@@ -433,35 +459,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: '#475569',
     fontFamily: 'Poppins_600SemiBold',
-  },
-  navigationCard: {
-    marginTop: 18,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  navTile: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  navTileIcon: {
-    fontSize: 28,
-    marginBottom: 12,
-  },
-  navTileText: {
-    fontSize: 15,
-    fontFamily: 'Poppins_700Bold',
-    color: '#0F172A',
-    textAlign: 'center',
   },
   section: {
     marginTop: 20,
@@ -473,7 +470,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: 'Poppins_800ExtraBold',
     color: '#0F172A',
   },
@@ -551,15 +548,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+
   badgeCard: {
     flex: 1,
     backgroundColor: '#F9FEF4',
-    borderRadius: 24,
-    padding: 18,
+    borderRadius: 18,
+    padding: 14,
     marginRight: 12,
   },
   badgeIcon: {
-    fontSize: 28,
+    fontSize: 22,
     marginBottom: 10,
   },
   badgeName: {
@@ -596,45 +594,50 @@ const styles = StyleSheet.create({
     color: '#16A34A',
     fontFamily: 'Poppins_700Bold',
   },
-  bottomNav: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#0F9D58',
+
+  lessonCardContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    elevation: 12,
   },
-  navButton: {
-    alignItems: 'center',
+
+  lessonIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#DCFCE7',
     justifyContent: 'center',
-    flex: 1,
-    paddingVertical: 8,
+    alignItems: 'center',
+    marginRight: 14,
   },
-  navButtonActive: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 18,
-    marginHorizontal: 4,
+
+  lessonIcon: {
+    fontSize: 28,
   },
-  navIcon: {
-    fontSize: 20,
+
+  lessonXpBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  navLabel: {
-    marginTop: 4,
-    fontSize: 11,
-    color: '#E5E7EB',
-    fontFamily: 'Poppins_600SemiBold',
-  },
-  navLabelActive: {
-    marginTop: 4,
-    fontSize: 11,
+
+  lessonXpText: {
     color: '#166534',
+    fontSize: 12,
     fontFamily: 'Poppins_700Bold',
   },
+
+  continueButton: {
+    marginTop: 16,
+    backgroundColor: '#16A34A',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'Poppins_700Bold',
+  },
+  
 });

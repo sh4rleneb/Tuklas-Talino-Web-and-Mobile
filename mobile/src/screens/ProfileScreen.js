@@ -44,6 +44,11 @@ export default function ProfileScreen({
   const load = useCallback(() => api('/dashboard').then(setDashboard), []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  async function handleLogout() {
+    await setToken(null);
+    navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
+  }
+
   async function choose(avatar) {
     await api(`/students/${dashboard.student.id}/avatar`, { method: 'PATCH', body: { avatar } });
     Alert.alert('Avatar', 'Updated!');
@@ -291,11 +296,49 @@ export default function ProfileScreen({
 
     </View>
 
+    <View style={styles.sectionCard}>
+
+      <Text style={styles.sectionTitle}>
+        🚪 Account
+      </Text>
+
+      <Text style={styles.sectionSubtitle}>
+        Logout is available only here in Profile.
+      </Text>
+
+      <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={handleLogout}
+      >
+        <Text style={styles.logoutButtonText}>
+          Logout
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+
     </ScrollView>
 );
 }
 
 const styles = StyleSheet.create({
+
+  logoutButton: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+
+  logoutButtonText: {
+    color: '#DC2626',
+    fontSize: 16,
+    fontWeight: '800',
+  },
 
   screen: {
     flex: 1,

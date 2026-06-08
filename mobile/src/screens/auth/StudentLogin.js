@@ -163,12 +163,12 @@ export default function StudentLogin({
 
       /*
         Grade 1-2 = Junior
-        Grade 3-6 = Senior
+        Grade 1-6 = Shared student tabs
       */
 
       const homeRoute = gradeLevel <= 2
         ? 'StudentJuniorHome'
-        : 'StudentSeniorHome';
+        : 'StudentTabs';
 
       if (user.mustChangePassword) {
         navigation.replace(
@@ -177,14 +177,12 @@ export default function StudentLogin({
         );
       } else if (gradeLevel <= 2) {
 
-        navigation.replace(
-          'StudentJuniorHome'
-        );
+        navigation.replace('StudentTabs');
 
       } else {
 
         navigation.replace(
-          'StudentSeniorHome'
+          'StudentTabs'
         );
 
       }
