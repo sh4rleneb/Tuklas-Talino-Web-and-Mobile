@@ -123,6 +123,7 @@ export const lessonSchema = z.object({
   passage: z.string().optional().nullable(),
   instructions: z.string().optional().nullable(),
   speechTarget: z.string().optional().nullable(),
+  status: z.enum(['published', 'draft', 'archived']).optional().default('published'),
   activities: z.array(lessonActivitySchema).default([])
 });
 

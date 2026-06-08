@@ -127,9 +127,15 @@ router.get('/dashboard', requireRole('teacher', 'admin'), async (req, res, next)
     const groupWhere = { status: 'active' };
     if (req.role === 'teacher') groupWhere.createdByTeacherId = req.teacher?.id || 0;
 
-    const [students, lessons, completed, groups] = await Promise.all([
+    const draftWhere = {
+      ...(req.role === 'teacher' ? { createdByUserId: req.user.id } : {}),
+      status: 'draft'
+    };
+
+    const [students, lessons, draftLessons, completed, groups] = await Promise.all([
       Student.count({ where: { ...studentWhere, status: 'active' } }),
       Lesson.count({ where: lessonWhere }),
+      Lesson.count({ where: draftWhere }),
       CompletedLesson.count({ where: completedWhere }),
       Group.count({ where: groupWhere })
     ]);
@@ -141,7 +147,17 @@ router.get('/dashboard', requireRole('teacher', 'admin'), async (req, res, next)
     });
 
     res.json({
-      stats: { students, lessons, completed, groups },
+      stats: {
+        students,
+        lessons,
+        publishedLessons: lessons,
+        draftLessons,
+        completed,
+        groups,
+        classProgress: lessons && students
+          ? Math.round((completed / (lessons * students)) * 100)
+          : 0
+      },
       recentStudents,
       assignedClasses: assignmentPayload(assignments)
     });
@@ -173,6 +189,7 @@ router.get('/monitoring/stats', requireRole('teacher', 'admin'), async (req, res
         id: s.id,
         studentCode: s.studentCode,
         name: s.name,
+        avatar: s.avatar,
         gradeLevel: s.gradeLevel,
         section: s.section,
         xp: s.xp,

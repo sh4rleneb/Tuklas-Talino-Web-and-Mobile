@@ -9,6 +9,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import { setRealtime } from './realtime.js';
+import { syncModels } from './models/index.js';
 
 import { connectDatabase } from './config/database.js';
 import apiRoutes from './routes/index.js';
@@ -73,7 +74,8 @@ app.use((err, req, res, next) => {
 const port = Number(process.env.PORT || 4000);
 
 connectDatabase()
-  .then(() => {
+  .then(async() => {
+    await syncModels();
     server.listen(port, () =>
       console.log(`Tuklas Talino API running on http://localhost:${port}`)
     );

@@ -176,6 +176,29 @@ export const CompletedLesson = sequelize.define('CompletedLesson', {
   completedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, { tableName: 'completed_lessons' });
 
+export const LessonProgress = sequelize.define('LessonProgress', {
+  studentId: { type: DataTypes.INTEGER, allowNull: false, field: 'student_id' },
+  lessonId: { type: DataTypes.INTEGER, allowNull: false, field: 'lesson_id' },
+  currentStep: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1, field: 'current_step' },
+  totalSteps: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1, field: 'total_steps' },
+  status: {
+    type: DataTypes.ENUM('started', 'in_progress', 'completed'),
+    allowNull: false,
+    defaultValue: 'started'
+  },
+  lastActivityType: { type: DataTypes.STRING(40), allowNull: true, field: 'last_activity_type' },
+  startedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW, field: 'started_at' },
+  completedAt: { type: DataTypes.DATE, allowNull: true, field: 'completed_at' }
+}, {
+  tableName: 'lesson_progress',
+  indexes: [
+    {
+      unique: true,
+      fields: ['student_id', 'lesson_id']
+    }
+  ]
+});
+
 export const QuizHistory = sequelize.define('QuizHistory', {
   studentId: { type: DataTypes.INTEGER, allowNull: false },
   lessonId: { type: DataTypes.INTEGER, allowNull: false },
@@ -357,6 +380,10 @@ Student.hasMany(CompletedLesson, { foreignKey: 'studentId' });
 CompletedLesson.belongsTo(Student, { foreignKey: 'studentId' });
 Lesson.hasMany(CompletedLesson, { foreignKey: 'lessonId' });
 CompletedLesson.belongsTo(Lesson, { foreignKey: 'lessonId' });
+Student.hasMany(LessonProgress, { foreignKey: 'studentId' });
+LessonProgress.belongsTo(Student, { foreignKey: 'studentId' });
+Lesson.hasMany(LessonProgress, { foreignKey: 'lessonId' });
+LessonProgress.belongsTo(Lesson, { foreignKey: 'lessonId' });
 
 Student.hasMany(QuizAttempt, { foreignKey: 'studentId' });
 QuizAttempt.belongsTo(Student, { foreignKey: 'studentId' });
@@ -382,7 +409,7 @@ StudentBadge.belongsTo(Badge, { foreignKey: 'badgeId' });
 
 export const models = {
   Role, User, Student, Teacher, AdminProfile, Lesson, LessonActivity,
-  MCQQuestion, MCQOption, WritingTask, SpeechTask, CompletedLesson, QuizHistory,
+  MCQQuestion, MCQOption, WritingTask, SpeechTask, CompletedLesson, LessonProgress, QuizHistory,
   QuizAttempt, WritingSubmission, SpeechAttempt, Group, GroupMember, GroupTask,
   GroupTaskCompletion, MissionCompletion, Badge, StudentBadge, XpLog, AuditLog, Notification, PasskeyCredential
 };

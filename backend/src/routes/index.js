@@ -8,7 +8,6 @@ import {
 import {
   StudentBadge,
   Badge,
-  MissionCompletion,
 } from '../models/index.js';
 import studentRoutes, {
   dashboardPayload,
@@ -19,8 +18,8 @@ import studentRoutes, {
   nextLevelXp,
 } from './students.routes.js';
 import missionsRoutes, {
-  MISSION_CATALOG,
-  completeMission,
+  claimMission,
+  listMissionsForStudent,
 } from './missions.routes.js';
 import authRoutes from './auth.routes.js';
 import teacherRoutes from './teachers.routes.js';
@@ -53,6 +52,10 @@ router.get('/badges', authenticate, requirePasswordChanged, requireRole('student
 
     res.json({
       badges: badges.map((sb) => sb.Badge),
+      earnedBadges: badges.map((sb) => ({
+        ...sb.Badge.toJSON(),
+        awardedAt: sb.awardedAt,
+      })),
       allBadges,
       badgeProgress,
       level: calculateLevel(student.xp),
@@ -66,24 +69,13 @@ router.get('/badges', authenticate, requirePasswordChanged, requireRole('student
 
 router.get('/missions', authenticate, requirePasswordChanged, requireRole('student'), async (req, res, next) => {
   try {
-    const student = req.student;
-    const completions = await MissionCompletion.findAll({ where: { studentId: student.id } });
-    const completedIds = new Set(completions.map((completion) => String(completion.missionId)));
-
-    const missions = Object.entries(MISSION_CATALOG).map(([missionId, mission]) => ({
-      missionId,
-      title: mission.title,
-      xp: mission.xp,
-      completed: completedIds.has(missionId),
-    }));
-
-    res.json({ missions, completions });
+    res.json(await listMissionsForStudent(req.student.id));
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/missions/:missionId/claim', authenticate, requirePasswordChanged, requireRole('student'), completeMission);
+router.post('/missions/:missionId/claim', authenticate, requirePasswordChanged, requireRole('student'), claimMission);
 
 router.use('/auth', authRoutes);
 router.use('/students', studentRoutes);

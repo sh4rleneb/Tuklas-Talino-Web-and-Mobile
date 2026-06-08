@@ -27,6 +27,11 @@ function publicUser(user) {
   };
 }
 
+function loginAvatar(value) {
+  const avatar = typeof value === 'string' ? value.trim() : '';
+  return avatar && avatar.length <= 16 ? avatar : null;
+}
+
 router.get('/check-student/:identifier', async (req, res, next) => {
   try {
     const identifier = String(req.params.identifier || '').trim();
@@ -56,9 +61,10 @@ router.get('/check-student/:identifier', async (req, res, next) => {
 router.post('/login', async (req, res, next) => {
   try {
     const body = validate(loginSchema, req.body);
+    const identifier = body.identifier.trim();
 
     const user = await User.findOne({
-      where: { username: body.identifier },
+      where: { username: identifier },
       include: [Role, Student, Teacher, AdminProfile]
     });
 
@@ -75,6 +81,12 @@ router.post('/login', async (req, res, next) => {
     const valid = await bcrypt.compare(body.password, user.passwordHash);
     if (!valid) {
       return res.status(401).json({ message: 'Invalid credentials.' });
+    }
+
+    const requestedAvatar = loginAvatar(req.body.avatar);
+    if (user.Role?.name === 'student' && user.Student && requestedAvatar) {
+      user.Student.avatar = requestedAvatar;
+      await user.Student.save();
     }
 
     user.lastLoginAt = new Date();

@@ -1,7 +1,15 @@
 import { Router } from 'express';
 import { Op } from 'sequelize';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { Student, TeacherAssignment, AuditLog } from '../models/index.js';
+import {
+  User,
+  Student,
+  Teacher,
+  TeacherAssignment,
+  Lesson,
+  CompletedLesson,
+  AuditLog
+} from '../models/index.js';
 
 const router = Router();
 router.use(authenticate, requireRole('admin', 'teacher'));
@@ -78,11 +86,39 @@ router.get('/summary', async (req, res, next) => {
     const assignments = await getTeacherAssignments(req);
     const where = assignedStudentWhere(assignments);
 
-    const students = await Student.count({ where });
-    const active = await Student.count({ where: { ...where, status: 'active' } });
-    const xp = await Student.sum('xp', { where });
+    const [students, active, xp, lessons, completions] = await Promise.all([
+      Student.count({ where }),
+      Student.count({ where: { ...where, status: 'active' } }),
+      Student.sum('xp', { where }),
+      Lesson.count({ where: { status: 'published' } }),
+      CompletedLesson.count({
+        where: assignments === null
+          ? {}
+          : { studentId: (await Student.findAll({ where, attributes: ['id'] })).map(student => student.id) }
+      })
+    ]);
+    const teacherAssignments = await TeacherAssignment.count();
+    const totalUsers = req.role === 'admin' ? await User.count() : undefined;
+    const teachers = req.role === 'admin' ? await Teacher.count() : undefined;
+    const archivedAccounts = req.role === 'admin'
+      ? await User.count({ where: { status: 'archived' } })
+      : undefined;
 
-    res.json({ generatedAt: new Date(), students, activeStudents: active, totalXp: xp || 0 });
+    res.json({
+      generatedAt: new Date(),
+      students,
+      activeStudents: active,
+      totalXp: xp || 0,
+      lessons,
+      completions,
+      averageProgress: students && lessons
+        ? Math.round((completions / (students * lessons)) * 100)
+        : 0,
+      teacherAssignments,
+      totalUsers,
+      teachers,
+      archivedAccounts
+    });
   } catch (err) { next(err); }
 });
 
@@ -91,17 +127,41 @@ router.get('/summary.txt', async (req, res, next) => {
     const assignments = await getTeacherAssignments(req);
     const where = assignedStudentWhere(assignments);
 
-    const students = await Student.count({ where });
-    const active = await Student.count({ where: { ...where, status: 'active' } });
-    const xp = await Student.sum('xp', { where });
+    const [students, active, xp, lessons, completions] = await Promise.all([
+      Student.count({ where }),
+      Student.count({ where: { ...where, status: 'active' } }),
+      Student.sum('xp', { where }),
+      Lesson.count({ where: { status: 'published' } }),
+      CompletedLesson.count({
+        where: assignments === null
+          ? {}
+          : { studentId: (await Student.findAll({ where, attributes: ['id'] })).map(student => student.id) }
+      })
+    ]);
+    const assignmentsCount = await TeacherAssignment.count();
+    const averageProgress = students && lessons
+      ? Math.round((completions / (students * lessons)) * 100)
+      : 0;
 
     const lines = [
       'Tuklas Talino Summary Report',
       `Generated At: ${new Date().toISOString()}`,
       `Total Students: ${students}`,
       `Active Students: ${active}`,
-      `Total XP: ${xp || 0}`
+      `Total XP: ${xp || 0}`,
+      `Total Lessons: ${lessons}`,
+      `Lesson Completions: ${completions}`,
+      `Average Progress: ${averageProgress}%`
     ];
+
+    if (req.role === 'admin') {
+      lines.push(
+        `Total Users: ${await User.count()}`,
+        `Teachers: ${await Teacher.count()}`,
+        `Teacher Assignments: ${assignmentsCount}`,
+        `Archived Accounts: ${await User.count({ where: { status: 'archived' } })}`
+      );
+    }
 
     res.header('Content-Type', 'text/plain');
     res.attachment('tuklas-talino-summary-report.txt');

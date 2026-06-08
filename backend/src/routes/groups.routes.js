@@ -579,6 +579,11 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
       return res.status(404).json({ message: 'Task not found.' });
     }
 
+    const group = await Group.findByPk(task.groupId);
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({ message: 'You can only review your own groups.' });
+    }
+
     const submitterId = Number(req.params.studentId);
 
     const submitterCompletion = await GroupTaskCompletion.findOne({
@@ -734,6 +739,69 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
       message: totalXpAwarded
         ? `Group task approved for ${approvedCount} member(s).`
         : 'Group task was already approved.',
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/tasks/:taskId/completions/:studentId/return', requireRole('teacher', 'admin'), async (req, res, next) => {
+  try {
+    const task = await GroupTask.findByPk(req.params.taskId);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found.' });
+    }
+
+    const group = await Group.findByPk(task.groupId);
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({ message: 'You can only review your own groups.' });
+    }
+
+    const submitterId = Number(req.params.studentId);
+    const completion = await GroupTaskCompletion.findOne({
+      where: {
+        groupTaskId: task.id,
+        submittedByStudentId: submitterId
+      }
+    }) || await GroupTaskCompletion.findOne({
+      where: {
+        groupTaskId: task.id,
+        studentId: submitterId
+      }
+    });
+
+    if (!completion) {
+      return res.status(404).json({ message: 'Group task completion not found.' });
+    }
+
+    const teacherFeedback = String(req.body?.teacherFeedback || '').trim();
+    assertSafeText(teacherFeedback, 'teacher feedback');
+
+    await GroupTaskCompletion.update(
+      {
+        verificationStatus: 'returned',
+        reviewedAt: new Date(),
+        reviewedByTeacherId: req.teacher?.id || null,
+        teacherFeedback: teacherFeedback || null
+      },
+      {
+        where: {
+          groupTaskId: task.id,
+          submittedByStudentId: completion.submittedByStudentId || submitterId,
+          verificationStatus: 'pending'
+        }
+      }
+    );
+
+    await audit(req.user.id, 'group_task.return_group_completion', 'group_task', task.id, {
+      submittedByStudentId: completion.submittedByStudentId || submitterId,
+      teacherFeedback
+    });
+
+    res.json({
+      message: 'Group task returned for revision.',
+      verificationStatus: 'returned'
     });
   } catch (err) {
     next(err);

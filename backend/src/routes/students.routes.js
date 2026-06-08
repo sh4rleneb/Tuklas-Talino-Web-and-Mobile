@@ -12,6 +12,7 @@ import {
   WritingTask,
   SpeechTask,
   CompletedLesson,
+  LessonProgress,
   Badge,
   StudentBadge,
   XpLog,
@@ -274,6 +275,24 @@ async function dashboardPayload(student) {
   });
   const completed = await CompletedLesson.findAll({ where: { studentId: student.id } });
   const completedIds = new Set(completed.map(c => c.lessonId));
+  const lessonProgressRows = await LessonProgress.findAll({ where: { studentId: student.id } });
+  const lessonProgressMap = new Map(lessonProgressRows.map(progress => {
+    const row = progress.toJSON();
+    const totalSteps = Math.max(1, Number(row.totalSteps || 1));
+    const currentStep = Math.max(1, Math.min(Number(row.currentStep || 1), totalSteps));
+
+    return [
+      Number(row.lessonId),
+      {
+        ...row,
+        currentStep,
+        totalSteps,
+        percent: row.status === 'completed'
+          ? 100
+          : Math.round(((currentStep - 1) / totalSteps) * 100)
+      }
+    ];
+  }));
   const allBadges = await ensureCoreBadges();
   const badges = await StudentBadge.findAll({ where: { studentId: student.id }, include: [Badge] });
   const badgeProgress = await buildBadgeProgress(student.id, student.xp);
@@ -338,8 +357,16 @@ async function dashboardPayload(student) {
       totalLessons: lessons.length,
       percent: lessons.length ? Math.round((completed.length / lessons.length) * 100) : 0
     },
-    lessons: lessons.map(l => ({ ...l.toJSON(), completed: completedIds.has(l.id) })),
+    lessons: lessons.map(l => ({
+      ...l.toJSON(),
+      completed: completedIds.has(l.id),
+      progress: lessonProgressMap.get(Number(l.id)) || null
+    })),
     badges: badges.map(sb => sb.Badge),
+    earnedBadges: badges.map(sb => ({
+      ...sb.Badge.toJSON(),
+      awardedAt: sb.awardedAt
+    })),
     allBadges,
     badgeProgress,
     xpLogs,
@@ -484,7 +511,18 @@ router.get('/:id/badges', requireRole('admin', 'teacher', 'student'), async (req
     const allBadges = await ensureCoreBadges();
     const badges = await StudentBadge.findAll({ where: { studentId: student.id }, include: [Badge] });
     const badgeProgress = await buildBadgeProgress(student.id, student.xp);
-    res.json({ badges: badges.map(b => b.Badge), allBadges, badgeProgress, level: calculateLevel(student.xp), levelTitle: levelTitleForXp(student.xp), nextLevelXp: nextLevelXp(student.xp) });
+    res.json({
+      badges: badges.map(b => b.Badge),
+      earnedBadges: badges.map(b => ({
+        ...b.Badge.toJSON(),
+        awardedAt: b.awardedAt
+      })),
+      allBadges,
+      badgeProgress,
+      level: calculateLevel(student.xp),
+      levelTitle: levelTitleForXp(student.xp),
+      nextLevelXp: nextLevelXp(student.xp)
+    });
   } catch (err) { next(err); }
 });
 
@@ -511,7 +549,11 @@ router.patch('/:id/avatar', requireRole('admin', 'student'), async (req, res, ne
     const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
     if (req.role === 'student' && student.id !== req.student.id) return res.status(403).json({ message: 'Access denied.' });
-    student.avatar = req.body.avatar || student.avatar;
+    const avatar = typeof req.body.avatar === 'string' ? req.body.avatar.trim() : '';
+    if (!avatar || avatar.length > 16) {
+      return res.status(422).json({ message: 'Choose a valid avatar.' });
+    }
+    student.avatar = avatar;
     await student.save();
     res.json({ student });
   } catch (err) { next(err); }
@@ -591,6 +633,7 @@ router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) 
     if (!student) return res.status(404).json({ message: 'Student not found.' });
     await Promise.all([
       CompletedLesson.destroy({ where: { studentId: student.id } }),
+      LessonProgress.destroy({ where: { studentId: student.id } }),
       XpLog.destroy({ where: { studentId: student.id } }),
       QuizHistory.destroy({ where: { studentId: student.id } }),
       QuizAttempt.destroy({ where: { studentId: student.id } }),

@@ -10,6 +10,7 @@ import {
   WritingTask,
   SpeechTask,
   CompletedLesson,
+  LessonProgress,
   QuizHistory,
   QuizAttempt,
   WritingSubmission,
@@ -186,6 +187,25 @@ const lessonIncludes = [
   },
 ];
 
+function progressResponse(progress) {
+  const row = progress?.toJSON ? progress.toJSON() : progress;
+  const totalSteps = Math.max(1, Number(row?.totalSteps || 1));
+  const currentStep = Math.max(1, Math.min(Number(row?.currentStep || 1), totalSteps));
+
+  return {
+    ...row,
+    currentStep,
+    totalSteps,
+    percent: row?.status === 'completed'
+      ? 100
+      : Math.round(((currentStep - 1) / totalSteps) * 100)
+  };
+}
+
+async function lessonTotalSteps(lessonId) {
+  return (await LessonActivity.count({ where: { lessonId } })) + 1;
+}
+
 function buildActivityData(activity) {
   if (activity.type === 'material') {
     return {
@@ -318,6 +338,33 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+router.get('/mine', requireRole('admin', 'teacher'), async (req, res, next) => {
+  try {
+    const where = {};
+
+    if (req.role === 'teacher') {
+      where.createdByUserId = req.user.id;
+    }
+
+    if (['published', 'draft', 'archived'].includes(req.query.status)) {
+      where.status = req.query.status;
+    }
+
+    const lessons = await Lesson.findAll({
+      where,
+      include: lessonIncludes,
+      order: [
+        ['updatedAt', 'DESC'],
+        ['id', 'DESC']
+      ]
+    });
+
+    res.json({ lessons });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/materials/upload', requireRole('admin', 'teacher'), lessonMaterialUpload.single('material'), async (req, res, next) => {
   try {
     if (!req.file) {
@@ -419,6 +466,83 @@ router.delete('/:id', requireRole('admin', 'teacher'), async (req, res, next) =>
   }
 });
 
+router.get('/:id/progress', requireRole('student'), async (req, res, next) => {
+  try {
+    const lesson = await Lesson.findByPk(req.params.id);
+
+    if (!lesson) {
+      return res.status(404).json({ message: 'Lesson not found.' });
+    }
+
+    const totalSteps = await lessonTotalSteps(lesson.id);
+    const [progress] = await LessonProgress.findOrCreate({
+      where: {
+        studentId: req.student.id,
+        lessonId: lesson.id
+      },
+      defaults: {
+        currentStep: 1,
+        totalSteps,
+        status: 'started'
+      }
+    });
+
+    if (progress.totalSteps !== totalSteps) {
+      progress.totalSteps = totalSteps;
+      progress.currentStep = Math.min(progress.currentStep, totalSteps);
+      await progress.save();
+    }
+
+    res.json({ progress: progressResponse(progress) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/:id/progress', requireRole('student'), async (req, res, next) => {
+  try {
+    const lesson = await Lesson.findByPk(req.params.id);
+
+    if (!lesson) {
+      return res.status(404).json({ message: 'Lesson not found.' });
+    }
+
+    const totalSteps = await lessonTotalSteps(lesson.id);
+    const requestedStep = Number(req.body.currentStep || 1);
+    const [progress] = await LessonProgress.findOrCreate({
+      where: {
+        studentId: req.student.id,
+        lessonId: lesson.id
+      },
+      defaults: {
+        currentStep: 1,
+        totalSteps,
+        status: 'started'
+      }
+    });
+
+    if (progress.status !== 'completed') {
+      const currentStep = Math.max(
+        1,
+        Math.min(
+          Number.isFinite(requestedStep) ? requestedStep : 1,
+          totalSteps,
+          Number(progress.currentStep || 1) + 1
+        )
+      );
+      progress.currentStep = currentStep;
+      progress.totalSteps = totalSteps;
+      progress.status = currentStep > 1 ? 'in_progress' : 'started';
+      progress.lastActivityType = String(req.body.lastActivityType || '').trim().slice(0, 40) || null;
+      await progress.save();
+    }
+
+    res.json({ progress: progressResponse(progress) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
     const body = validate(lessonSchema, req.body);
@@ -446,7 +570,6 @@ router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
     const lesson = await Lesson.create({
       ...lessonPayload,
       createdByUserId: req.user.id,
-      status: 'published',
     });
 
     await createActivities(lesson, activities);
@@ -555,10 +678,30 @@ router.post('/:id/complete', requireRole('student'), async (req, res, next) => {
       });
     }
 
+    const totalSteps = await lessonTotalSteps(lesson.id);
+    const [progress] = await LessonProgress.findOrCreate({
+      where: {
+        studentId: req.student.id,
+        lessonId: lesson.id
+      },
+      defaults: {
+        currentStep: totalSteps,
+        totalSteps,
+        status: 'completed',
+        completedAt: new Date()
+      }
+    });
+    progress.currentStep = totalSteps;
+    progress.totalSteps = totalSteps;
+    progress.status = 'completed';
+    progress.completedAt = progress.completedAt || new Date();
+    await progress.save();
+
     await audit(req.user.id, 'lesson.complete', 'lesson', lesson.id);
 
     res.json({
       completed,
+      progress: progressResponse(progress),
       xpAwarded: created ? lesson.xpReward : 0,
       newBadges,
     });
@@ -571,10 +714,17 @@ router.post('/:id/mcq', requireRole('student'), async (req, res, next) => {
   try {
     const option = await MCQOption.findByPk(req.body.selectedOptionId);
     const question = await MCQQuestion.findByPk(req.body.questionId);
+    const activity = question ? await LessonActivity.findByPk(question.activityId) : null;
 
-    if (!option || !question) {
+    if (
+      !option ||
+      !question ||
+      !activity ||
+      Number(option.questionId) !== Number(question.id) ||
+      Number(activity.lessonId) !== Number(req.params.id)
+    ) {
       return res.status(404).json({
-        message: 'Question or option not found.',
+        message: 'Question or option was not found in this lesson.',
       });
     }
 
@@ -701,9 +851,72 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       });
     }
 
-    const score = Number(req.body.score || 0);
-    const total = Number(req.body.total || 0);
-    const submittedPercent = Number(req.body.percent);
+    const review = Array.isArray(req.body.review) ? req.body.review : [];
+    const normalizedReview = review
+      .map((item) => ({
+        questionId: Number(item.questionId || 0),
+        selectedOptionId: Number(item.selectedOptionId || 0),
+      }))
+      .filter((item) => item.questionId && item.selectedOptionId);
+
+    const questionIds = [...new Set(normalizedReview.map((item) => item.questionId))];
+    const optionIds = [...new Set(normalizedReview.map((item) => item.selectedOptionId))];
+
+    const [questions, options] = await Promise.all([
+      questionIds.length ? MCQQuestion.findAll({ where: { id: questionIds } }) : [],
+      optionIds.length ? MCQOption.findAll({ where: { id: optionIds } }) : [],
+    ]);
+    const lessonActivities = questions.length
+      ? await LessonActivity.findAll({
+        where: { id: [...new Set(questions.map((question) => question.activityId))] }
+      })
+      : [];
+    const lessonActivityIds = new Set(
+      lessonActivities
+        .filter((activity) => Number(activity.lessonId) === Number(lesson.id))
+        .map((activity) => Number(activity.id))
+    );
+    const questionById = new Map(questions.map((question) => [Number(question.id), question]));
+    const optionById = new Map(options.map((option) => [Number(option.id), option]));
+    const historyRows = [];
+
+    for (const item of normalizedReview) {
+      const question = questionById.get(item.questionId);
+      const option = optionById.get(item.selectedOptionId);
+
+      if (
+        !question ||
+        !option ||
+        !lessonActivityIds.has(Number(question.activityId)) ||
+        Number(option.questionId) !== Number(question.id)
+      ) {
+        continue;
+      }
+
+      historyRows.push({
+        studentId: req.student.id,
+        lessonId: lesson.id,
+        questionId: question.id,
+        selectedOptionId: option.id,
+        isCorrect: Boolean(option.isCorrect),
+      });
+    }
+
+    const hasSubmittedReview = review.length > 0;
+
+    if (hasSubmittedReview && historyRows.length !== review.length) {
+      return res.status(422).json({
+        message: 'Quiz answers must belong to this lesson.'
+      });
+    }
+
+    const score = hasSubmittedReview
+      ? historyRows.filter((row) => row.isCorrect).length
+      : Number(req.body.score || 0);
+    const total = hasSubmittedReview
+      ? historyRows.length
+      : Number(req.body.total || 0);
+    const submittedPercent = hasSubmittedReview ? Number.NaN : Number(req.body.percent);
     const percent = Number.isFinite(submittedPercent)
       ? Math.max(0, Math.min(100, Math.round(submittedPercent)))
       : total
@@ -745,44 +958,6 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
         lessonTitle: lesson.title,
         xp: xpAwarded,
         message: `${req.student.name} completed a quiz with ${percent}%`,
-      });
-    }
-
-    const review = Array.isArray(req.body.review) ? req.body.review : [];
-    const normalizedReview = review
-      .map((item) => ({
-        questionId: Number(item.questionId || 0),
-        selectedOptionId: Number(item.selectedOptionId || 0),
-      }))
-      .filter((item) => item.questionId && item.selectedOptionId);
-
-    const questionIds = [...new Set(normalizedReview.map((item) => item.questionId))];
-    const optionIds = [...new Set(normalizedReview.map((item) => item.selectedOptionId))];
-
-    const [questions, options] = await Promise.all([
-      questionIds.length ? MCQQuestion.findAll({ where: { id: questionIds } }) : [],
-      optionIds.length ? MCQOption.findAll({ where: { id: optionIds } }) : [],
-    ]);
-
-    const questionById = new Map(questions.map((question) => [Number(question.id), question]));
-    const optionById = new Map(options.map((option) => [Number(option.id), option]));
-
-    const historyRows = [];
-
-    for (const item of normalizedReview) {
-      const question = questionById.get(item.questionId);
-      const option = optionById.get(item.selectedOptionId);
-
-      if (!question || !option || Number(option.questionId) !== Number(question.id)) {
-        continue;
-      }
-
-      historyRows.push({
-        studentId: req.student.id,
-        lessonId: lesson.id,
-        questionId: question.id,
-        selectedOptionId: option.id,
-        isCorrect: Boolean(option.isCorrect),
       });
     }
 
@@ -867,6 +1042,15 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
       });
     }
 
+    const task = await WritingTask.findByPk(taskId);
+    const activity = task ? await LessonActivity.findByPk(task.activityId) : null;
+
+    if (!task || !activity || Number(activity.lessonId) !== lessonId) {
+      return res.status(404).json({
+        message: 'Writing task was not found in this lesson.'
+      });
+    }
+
     const existing = await WritingSubmission.findOne({
       where: {
         studentId: req.student.id,
@@ -900,7 +1084,6 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
     }
 
     if (autoChecked) {
-      const task = await WritingTask.findByPk(taskId);
       const rubric = task?.rubricJson && typeof task.rubricJson === 'object'
         ? task.rubricJson
         : {};
@@ -1034,6 +1217,15 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
 router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
   try {
     assertSafeText(req.body.transcript || '', 'speech transcript');
+    const task = await SpeechTask.findByPk(req.body.taskId);
+    const activity = task ? await LessonActivity.findByPk(task.activityId) : null;
+
+    if (!task || !activity || Number(activity.lessonId) !== Number(req.params.id)) {
+      return res.status(404).json({
+        message: 'Speech task was not found in this lesson.'
+      });
+    }
+
     const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
     const attempt = await SpeechAttempt.create({
       studentId: req.student.id,
@@ -1076,4 +1268,3 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
 });
 
 export default router;
-

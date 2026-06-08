@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { MissionCompletion, Student } from '../models/index.js';
+import { CompletedLesson, MissionCompletion, Student } from '../models/index.js';
 import { awardXp, calculateLevel, nextLevelXp } from '../services/progress.service.js';
 
 const router = Router();
@@ -12,31 +12,87 @@ router.use(requireRole('student'));
 const MISSION_CATALOG = {
   'word-match': {
     title: 'Word Match',
-    xp: 15
+    xp: 15,
+    requiredCompletedLessons: 1
   },
   'letter-pop': {
     title: 'Letter Pop',
     xp: 12,
-    perChallenge: true
+    perChallenge: true,
+    requiredCompletedLessons: 2
   },
   'picture-guess': {
     title: 'Picture Guess',
     xp: 12,
-    perChallenge: true
+    perChallenge: true,
+    requiredCompletedLessons: 3
   },
   'sentence-builder': {
     title: 'Sentence Builder',
     xp: 18,
-    perChallenge: true
+    perChallenge: true,
+    requiredCompletedLessons: 4
   },
   'story-quest': {
     title: 'Story Quest',
     xp: 20,
-    perChallenge: true
+    perChallenge: true,
+    requiredCompletedLessons: 5
   }
 };
 
-async function completeMission(req, res, next) {
+function missionIsCompleted(completions, missionId) {
+  return completions.some((completion) => {
+    const completionId = String(completion.missionId || '');
+    return completionId === missionId || completionId.startsWith(`${missionId}:`);
+  });
+}
+
+function missionPayload(missionId, mission, completions, completedLessons) {
+  const completed = missionIsCompleted(completions, missionId);
+  const target = Number(mission.requiredCompletedLessons || 0);
+  const current = Math.min(Number(completedLessons || 0), target);
+  const state = completed
+    ? 'claimed'
+    : current >= target
+      ? 'ready_to_claim'
+      : current > 0
+        ? 'in_progress'
+        : 'locked';
+
+  return {
+    missionId,
+    title: mission.title,
+    xp: mission.xp,
+    completed,
+    state,
+    requirement: {
+      type: 'completed_lessons',
+      current,
+      target,
+      percent: target ? Math.round((current / target) * 100) : 100
+    }
+  };
+}
+
+async function listMissionsForStudent(studentId) {
+  const [completions, completedLessons] = await Promise.all([
+    MissionCompletion.findAll({
+      where: { studentId },
+      order: [['completedAt', 'DESC']]
+    }),
+    CompletedLesson.count({ where: { studentId } })
+  ]);
+
+  return {
+    missions: Object.entries(MISSION_CATALOG).map(([missionId, mission]) =>
+      missionPayload(missionId, mission, completions, completedLessons)
+    ),
+    completions
+  };
+}
+
+async function completeMission(req, res, next, options = {}) {
   try {
     const student = req.student;
     const missionId = String(req.params.missionId || '').trim();
@@ -48,6 +104,23 @@ async function completeMission(req, res, next) {
 
     if (!mission) {
       return res.status(404).json({ message: 'Mission not found.' });
+    }
+
+    if (options.requireEligibility) {
+      const [completedLessons, completions] = await Promise.all([
+        CompletedLesson.count({ where: { studentId: student.id } }),
+        MissionCompletion.findAll({ where: { studentId: student.id } })
+      ]);
+      const availability = missionPayload(missionId, mission, completions, completedLessons);
+
+      if (availability.state !== 'ready_to_claim') {
+        return res.status(409).json({
+          message: availability.state === 'claimed'
+            ? 'Mission XP was already claimed.'
+            : `Complete ${availability.requirement.target} lessons before claiming this mission.`,
+          mission: availability
+        });
+      }
     }
 
     const challengeKey = mission.perChallenge
@@ -119,8 +192,12 @@ async function completeMission(req, res, next) {
   }
 }
 
+function claimMission(req, res, next) {
+  return completeMission(req, res, next, { requireEligibility: true });
+}
+
 router.post('/:missionId/complete', completeMission);
-router.post('/:missionId/claim', completeMission);
+router.post('/:missionId/claim', claimMission);
 
 router.get('/completions/me', async (req, res, next) => {
   try {
@@ -141,5 +218,5 @@ router.get('/completions/me', async (req, res, next) => {
   }
 });
 
-export { MISSION_CATALOG, completeMission };
+export { MISSION_CATALOG, claimMission, completeMission, listMissionsForStudent };
 export default router;

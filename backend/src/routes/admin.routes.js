@@ -16,6 +16,7 @@ import {
   CompletedLesson,
   AuditLog
 } from '../models/index.js';
+import { audit } from '../services/audit.service.js';
 
 const router = Router();
 
@@ -75,12 +76,30 @@ router.patch('/accounts/:id/status', async (req, res, next) => {
       });
     }
 
+    if (Number(user.id) === Number(req.user.id) && req.body.status === 'archived') {
+      return res.status(422).json({
+        message: 'You cannot archive your own signed-in admin account.'
+      });
+    }
+
     user.status =
       req.body.status === 'archived'
         ? 'archived'
         : 'active';
 
     await user.save();
+
+    const [student, teacher] = await Promise.all([
+      Student.findOne({ where: { userId: user.id } }),
+      Teacher.findOne({ where: { userId: user.id } })
+    ]);
+
+    if (student) await student.update({ status: user.status });
+    if (teacher) await teacher.update({ status: user.status });
+
+    await audit(req.user.id, 'account.status', 'user', user.id, {
+      status: user.status
+    });
 
     res.json({ user });
   } catch (err) {
