@@ -12,6 +12,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 18,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     ...shadow
   }
 });

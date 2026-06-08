@@ -2,13 +2,11 @@ import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/client';
-import StudentScreenHeader from '../components/StudentScreenHeader';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import PrimaryButton from '../components/PrimaryButton';
 import { colors } from '../styles/theme';
 
-export default function GroupsScreen({ navigation }) {
+export default function GroupsScreen() {
   const [groups, setGroups] = useState([]);
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,22 +45,18 @@ export default function GroupsScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <StudentScreenHeader
-        navigation={navigation}
-        avatar={student?.avatar}
-        gradeLevel={student?.gradeLevel}
-      />
-
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <View style={styles.heroCard}>
-          <Text style={styles.title}>👥 Group Tasks</Text>
-          <Text style={styles.muted}>
-            Work together and wait for teacher approval.
-          </Text>
+        <View>
+          <Text style={styles.title}>Group Tasks</Text>
+          <Text style={styles.muted}>Work together and wait for teacher approval.</Text>
         </View>
-        
+        {student && (
+          <View style={styles.studentChip}>
+            <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
+            <Text style={styles.studentXp}>{student.xp || 0} XP</Text>
+          </View>
+        )}
       </View>
 
       {loading ? (
@@ -97,32 +91,18 @@ export default function GroupsScreen({ navigation }) {
         ))}
 
       {!loading && !error && !groups.length && <Text style={styles.muted}>No group assigned yet.</Text>}
-          </ScrollView>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#F6FFF5',
-  },
-  screen: { flex: 1, backgroundColor: '#F6FFF5' },
+  screen: { flex: 1, backgroundColor: colors.bg },
   content: {
-    padding: 16,
-    paddingTop: 32,
-    paddingBottom: 44,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
   },
-  header: {
-    marginBottom: 22,
-  },
-
-  heroCard: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 26,
-    padding: 20,
-    marginBottom: 20,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   title: { fontSize: 24, fontWeight: '900', color: colors.ink },
   studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
   studentAvatar: { fontSize: 26 },

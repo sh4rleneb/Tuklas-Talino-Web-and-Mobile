@@ -1,13 +1,11 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/client';
-import StudentScreenHeader from '../components/StudentScreenHeader';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import Card from '../components/Card';
 import { colors } from '../styles/theme';
 
-export default function MissionScreen({ navigation }) {
+export default function MissionScreen() {
   const [missions, setMissions] = useState([]);
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,22 +65,18 @@ export default function MissionScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <StudentScreenHeader
-        navigation={navigation}
-        avatar={student?.avatar}
-        gradeLevel={student?.gradeLevel}
-      />
-
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <View style={styles.heroCard}>
+        <View style={styles.headerText}>
           <Text style={styles.heading}>🎮 Missions</Text>
-          <Text style={styles.subtitle}>
-            Complete lessons to unlock bonus learning rewards.
-          </Text>
+          <Text style={styles.subtitle}>Complete lessons to unlock bonus learning rewards.</Text>
         </View>
-        
+        {student && (
+          <View style={styles.studentChip}>
+            <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
+            <Text style={styles.studentXp}>{student.xp || 0} XP</Text>
+          </View>
+        )}
       </View>
 
       {loading ? (
@@ -135,33 +129,18 @@ export default function MissionScreen({ navigation }) {
       {!loading && !error && missions.length === 0 && (
         <Text style={styles.empty}>No missions are available at the moment.</Text>
       )}
-          </ScrollView>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#F6FFF5',
-  },
-  screen: { flex: 1, backgroundColor: '#F6FFF5' },
+  screen: { flex: 1, backgroundColor: colors.bg },
     content: {
-    padding: 16,
-    paddingTop: 32,
-    paddingBottom: 44,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
   },
-  header: {
-    marginBottom: 22,
-  },
-
-  heroCard: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 26,
-    padding: 20,
-    marginBottom: 20,
-    flex: 1,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   headerText: { flex: 1, paddingRight: 12 },
   heading: { fontSize: 24, fontWeight: '900', color: colors.ink, marginBottom: 6 },
   subtitle: { color: colors.muted },

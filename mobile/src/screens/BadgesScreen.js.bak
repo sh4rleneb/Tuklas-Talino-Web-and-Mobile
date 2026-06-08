@@ -2,12 +2,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/client';
-import StudentScreenHeader from '../components/StudentScreenHeader';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import { colors } from '../styles/theme';
 
-export default function BadgesScreen({ navigation }) {
+export default function BadgesScreen() {
   const [badges, setBadges] = useState([]);
   const [allBadges, setAllBadges] = useState([]);
   const [badgeProgress, setBadgeProgress] = useState([]);
@@ -42,14 +40,6 @@ export default function BadgesScreen({ navigation }) {
   }, []));
 
   const owned = new Set(badges.map(b => b.id));
-
-  const earnedCount = badges.length;
-  const totalCount = allBadges.length;
-  const lockedCount = Math.max(0, totalCount - earnedCount);
-  const completionPercent = totalCount
-    ? Math.round((earnedCount / totalCount) * 100)
-    : 0;
-
   const earnedById = useMemo(
     () => new Map(badges.map((badge) => [badge.id, badge])),
     [badges]
@@ -75,40 +65,18 @@ export default function BadgesScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <StudentScreenHeader
-        navigation={navigation}
-        avatar={student?.avatar}
-        gradeLevel={student?.gradeLevel}
-      />
-
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <View style={styles.heroCard}>
-          <Text style={styles.title}>🏅 Badges</Text>
-          <Text style={styles.subtitle}>
-            Your learning milestones and progress.
-          </Text>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statChip}>
-              <Text style={styles.statValue}>{earnedCount}</Text>
-              <Text style={styles.statLabel}>Earned</Text>
-            </View>
-
-            <View style={styles.statChip}>
-              <Text style={styles.statValue}>{lockedCount}</Text>
-              <Text style={styles.statLabel}>Locked</Text>
-            </View>
-
-            <View style={styles.statChip}>
-              <Text style={styles.statValue}>{completionPercent}%</Text>
-              <Text style={styles.statLabel}>Complete</Text>
-            </View>
-          </View>
-
+        <View>
+          <Text style={styles.title}>Badges</Text>
+          <Text style={styles.subtitle}>Your learning milestones and progress.</Text>
         </View>
-        
+        {student && (
+          <View style={styles.studentChip}>
+            <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
+            <Text style={styles.studentXp}>{student.xp || 0} XP</Text>
+          </View>
+        )}
       </View>
 
       {loading ? (
@@ -143,86 +111,28 @@ export default function BadgesScreen({ navigation }) {
       {!loading && !error && allBadges.length === 0 && (
         <Text style={styles.muted}>No badge definitions are available yet.</Text>
       )}
-          </ScrollView>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#F6FFF5',
-  },
-  screen: { flex: 1, backgroundColor: '#F6FFF5' },
+  screen: { flex: 1, backgroundColor: colors.bg },
   content: {
-    padding: 16,
-    paddingTop: 32,
-    paddingBottom: 44,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
   },
-  header: {
-    marginBottom: 22,
-  },
-
-  heroCard: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 26,
-    padding: 20,
-    marginBottom: 20,
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 24, fontWeight: '900', color: colors.ink },
   subtitle: { color: colors.muted, marginTop: 4 },
-
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 18,
-  },
-
-  statChip: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 10,
-    marginHorizontal: 4,
-    alignItems: 'center',
-  },
-
-  statValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#166534',
-  },
-
-  statLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
-
   studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
   studentAvatar: { fontSize: 26 },
   studentXp: { color: colors.ink, fontWeight: '800', fontSize: 12 },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 8,
-  },
-  badge: {
-    width: '47%',
-    alignItems: 'center',
-    minHeight: 180,
-    justifyContent: 'center',
-  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  badge: { width: '47%', alignItems: 'center' },
   locked: { opacity: .45 },
-  icon: { fontSize: 54 },
-  name: {
-    textAlign: 'center',
-    fontWeight: '900',
-    color: colors.ink,
-    fontSize: 18,
-    marginTop: 10,
-  },
+  icon: { fontSize: 42 },
+  name: { textAlign: 'center', fontWeight: '900', color: colors.ink },
   muted: { color: colors.muted, marginTop: 4, textAlign: 'center' },
   center: { paddingVertical: 50, alignItems: 'center' },
   error: { color: '#B91C1C', textAlign: 'center', marginTop: 30 },

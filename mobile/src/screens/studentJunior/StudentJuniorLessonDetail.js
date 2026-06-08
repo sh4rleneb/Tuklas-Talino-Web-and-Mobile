@@ -115,9 +115,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
     const lessonIndex = lessons.findIndex((item) => Number(item.id) === Number(lessonId));
     return lessonIndex >= 0 ? lessons[lessonIndex + 1] : null;
   }, [dashboard, lessonId]);
-  const homeRoute = Number(student?.gradeLevel || 1) <= 2
-    ? 'StudentJuniorHome'
-    : 'StudentSeniorHome';
+  const homeRoute = 'Home';
 
   async function startRecording() {
     try {

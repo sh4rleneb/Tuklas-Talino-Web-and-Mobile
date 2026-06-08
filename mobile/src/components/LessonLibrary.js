@@ -103,12 +103,9 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
   function openLesson(lesson) {
     if (!lesson.unlocked) return;
     navigation.navigate(
-      'Lessons',
+      'StudentJuniorLessonDetail',
       {
-        screen: 'StudentJuniorLessonDetail',
-        params: {
-          lessonId: lesson.id
-        }
+        lessonId: lesson.id
       }
     );
   }
