@@ -551,10 +551,19 @@ const styles = StyleSheet.create({
 
   badgeCard: {
     flex: 1,
-    backgroundColor: '#F9FEF4',
-    borderRadius: 18,
-    padding: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
     marginRight: 12,
+
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
   badgeIcon: {
     fontSize: 22,

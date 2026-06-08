@@ -185,7 +185,19 @@ export default function TeacherHome({ navigation }) {
     }
   }
 
-  async function handleLogout() {
+  
+  function confirmLogout() {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', style: 'destructive', onPress: handleLogout }
+      ]
+    );
+  }
+
+async function handleLogout() {
     await logout();
     navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
   }
@@ -616,7 +628,7 @@ export default function TeacherHome({ navigation }) {
             <Text style={styles.title}>Teacher Workspace</Text>
             <Text style={styles.subtitle}>Teach, monitor, and review learning progress from mobile.</Text>
           </View>
-          <SmallButton tone="slate" onPress={handleLogout}>Logout</SmallButton>
+          <SmallButton tone="slate" onPress={confirmLogout}>Logout</SmallButton>
         </View>
         {renderTabs()}
         {error ? <SectionCard><Text style={styles.error}>{error}</Text><SmallButton onPress={load}>Try Again</SmallButton></SectionCard> : null}

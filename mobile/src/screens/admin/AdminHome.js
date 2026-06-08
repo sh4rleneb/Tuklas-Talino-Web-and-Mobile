@@ -149,7 +149,19 @@ export default function AdminHome({ navigation }) {
     }
   }
 
-  async function handleLogout() {
+  
+  function confirmLogout() {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', style: 'destructive', onPress: handleLogout }
+      ]
+    );
+  }
+
+async function handleLogout() {
     await logout();
     navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
   }
@@ -393,7 +405,7 @@ export default function AdminHome({ navigation }) {
             <Text style={styles.title}>Admin Workspace</Text>
             <Text style={styles.subtitle}>Manage accounts, classes, archives, and reports.</Text>
           </View>
-          <Button tone="slate" onPress={handleLogout}>Logout</Button>
+          <Button tone="slate" onPress={confirmLogout}>Logout</Button>
         </View>
         {renderTabs()}
         {error ? <Card><Text style={styles.error}>{error}</Text><Button onPress={load}>Try Again</Button></Card> : null}

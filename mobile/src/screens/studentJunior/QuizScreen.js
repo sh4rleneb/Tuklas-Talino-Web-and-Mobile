@@ -145,23 +145,55 @@ export default function QuizScreen({ navigation }) {
 
   if (activeQuiz) {
     return (
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={closeQuiz}>
-          <Text style={styles.back}>← Quiz library</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.safe}>
+        <ScrollView
+          style={styles.screen}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+
+          <StudentScreenHeader
+            navigation={navigation}
+            avatar={student?.avatar}
+            gradeLevel={student?.gradeLevel}
+          />
+        <View style={{ height: 12 }} />
         <Text style={styles.title}>{activeQuiz.title}</Text>
         <Text style={styles.muted}>{activeQuiz.lessonTitle}</Text>
 
         {result ? (
-          <Card style={styles.resultCard}>
-            <Text style={styles.resultTitle}>Quiz submitted</Text>
-            <Text style={styles.resultScore}>{result.score}/{result.total} • {result.percent}%</Text>
-            <Text style={styles.resultMeta}>{result.masteryLabel}</Text>
-            <Text style={styles.resultMeta}>+{result.xpAwarded || 0} XP earned</Text>
-            <TouchableOpacity style={styles.primaryButton} onPress={closeQuiz}>
-              <Text style={styles.primaryButtonText}>Back to Quizzes</Text>
+          <View style={styles.hero}>
+            <Text style={styles.eyebrow}>QUIZ COMPLETE</Text>
+
+            <Text style={styles.resultTitle}>
+              🎉 Great Job!
+            </Text>
+
+            <Text style={styles.resultScore}>
+              {result.percent}%
+            </Text>
+
+            <Text style={styles.resultMeta}>
+              Score: {result.score}/{result.total}
+            </Text>
+
+            <Text style={styles.heroStat}>
+              {result.masteryLabel}
+            </Text>
+
+            <Text style={styles.heroStat}>
+              ⭐ +{result.xpAwarded || 0} XP Earned
+            </Text>
+
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={closeQuiz}
+            >
+              <Text style={styles.primaryButtonText}>
+                Back to Quizzes
+              </Text>
             </TouchableOpacity>
-          </Card>
+          </View>
         ) : question ? (
           <>
             <Text style={styles.progress}>
@@ -201,7 +233,8 @@ export default function QuizScreen({ navigation }) {
         ) : (
           <Text style={styles.error}>This quiz has no available questions.</Text>
         )}
-      </ScrollView>
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
@@ -288,12 +321,76 @@ const styles = StyleSheet.create({
   optionSelected: { borderColor: colors.green, backgroundColor: '#DCFCE7' },
   optionText: { color: colors.ink, fontSize: 16 },
   optionTextSelected: { fontWeight: '900' },
-  primaryButton: { backgroundColor: colors.green, borderRadius: 16, paddingVertical: 14, alignItems: 'center', marginTop: 18 },
+  primaryButton: {
+    backgroundColor: '#22C55E',
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 36,
+    alignItems: 'center',
+    marginTop: 24,
+    minWidth: 220,
+  },
   primaryButtonText: { color: '#FFF', fontWeight: '900' },
   buttonDisabled: { backgroundColor: '#CBD5E1' },
-  resultCard: { marginTop: 24, alignItems: 'center' },
-  resultTitle: { color: colors.ink, fontSize: 24, fontWeight: '900' },
-  resultScore: { color: colors.green, fontSize: 34, fontWeight: '900', marginTop: 12 },
-  resultMeta: { color: colors.muted, marginTop: 6 },
+  hero: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 26,
+    padding: 24,
+    marginTop: 24,
+    marginBottom: 20,
+    alignItems: 'center',
+
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+
+    elevation: 8,
+  },
+
+  eyebrow: {
+    color: '#16A34A',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+
+  heroStat: {
+    color: '#166534',
+    fontWeight: '900',
+    marginTop: 12,
+    fontSize: 18,
+  },
+
+  resultCard: {
+    backgroundColor: '#ECFDF5',
+    marginTop: 24,
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    borderRadius: 26,
+  },
+  resultTitle: {
+    color: '#0F172A',
+    fontSize: 36,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  resultScore: {
+    color: '#22C55E',
+    fontSize: 52,
+    fontWeight: '900',
+    marginTop: 16,
+  },
+  resultMeta: {
+    color: colors.muted,
+    marginTop: 10,
+    fontSize: 20,
+    fontWeight: '700',
+  },
 
 });

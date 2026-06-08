@@ -44,7 +44,19 @@ export default function ProfileScreen({
   const load = useCallback(() => api('/dashboard').then(setDashboard), []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  async function handleLogout() {
+  
+  function confirmLogout() {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', style: 'destructive', onPress: handleLogout }
+      ]
+    );
+  }
+
+async function handleLogout() {
     await setToken(null);
     navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
   }
@@ -296,19 +308,19 @@ export default function ProfileScreen({
 
     </View>
 
-    <View style={styles.sectionCard}>
+    <View style={[styles.sectionCard, styles.accountCard]}>
 
       <Text style={styles.sectionTitle}>
         🚪 Account
       </Text>
 
       <Text style={styles.sectionSubtitle}>
-        Logout is available only here in Profile.
+        Ready to leave? Tap Logout below.
       </Text>
 
       <TouchableOpacity
         style={styles.logoutButton}
-        onPress={handleLogout}
+        onPress={confirmLogout}
       >
         <Text style={styles.logoutButtonText}>
           Logout
@@ -325,13 +337,20 @@ const styles = StyleSheet.create({
 
   logoutButton: {
     backgroundColor: '#FEE2E2',
-    borderRadius: 22,
-    paddingVertical: 14,
+    borderRadius: 18,
+    paddingVertical: 12,
     paddingHorizontal: 18,
     alignItems: 'center',
-    marginTop: 14,
+    alignSelf: 'center',
+    width: '70%',
+    marginTop: 10,
     borderWidth: 1,
     borderColor: '#FCA5A5',
+  },
+
+  accountCard: {
+    paddingTop: 20,
+    paddingBottom: 20,
   },
 
   logoutButtonText: {
@@ -448,18 +467,18 @@ const styles = StyleSheet.create({
         shadowRadius: 15,
         elevation: 8,
 
-    borderRadius: 30,
+    borderRadius: 24,
 
-    paddingTop: 32,
-    paddingHorizontal: 28,
-    paddingBottom: 28,
+    paddingTop: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
 
     marginBottom: 16,
   },
 
   avatarContainer: {
-    width: 160,
-    height: 160,
+    width: 120,
+    height: 120,
     borderRadius: 25,
     backgroundColor: '#FFF4CC',
 
@@ -468,11 +487,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
 
-    marginBottom: 20,
+    marginBottom: 14,
   },
 
   bigAvatar: {
-    fontSize: 100,
+    fontSize: 72,
   },
 
     selectedChoice: {
@@ -482,7 +501,7 @@ const styles = StyleSheet.create({
   },
 
   profileTitle: {
-    fontSize: 44,
+    fontSize: 28,
     fontWeight: '800',
     color: '#1E293B',
 
@@ -494,7 +513,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 8,
-    marginBottom: 20,
+    marginBottom: 14,
   },
 
     profileLevel: {
@@ -507,19 +526,19 @@ const styles = StyleSheet.create({
   levelCard: {
     backgroundColor: '#FFFBEB',
     borderRadius: 24,
-    padding: 22,
+    padding: 18,
     marginTop: 8,
   },
 
   levelText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#1E293B',
     marginBottom: 14,
   },
 
   greeting: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: '900',
     color: '#0F172A',
     marginBottom: 14,
@@ -601,7 +620,7 @@ const styles = StyleSheet.create({
   },
 
   choiceText: {
-    fontSize: 34,
+    fontSize: 28,
   },
 
   summaryGrid: {

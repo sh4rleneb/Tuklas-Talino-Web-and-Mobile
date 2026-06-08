@@ -1235,13 +1235,28 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
       score: req.body.score || null,
     });
 
-    const xpResult = await awardXp(
-      req.student.id,
-      6,
-      'speech',
-      attempt.id,
-      'Submitted speech attempt'
-    );
+    const existingSpeechXp = await XpLog.findOne({
+      where: {
+        studentId: req.student.id,
+        sourceType: 'speech',
+        sourceId: task.id,
+      },
+    });
+
+    let xpAwarded = 0;
+    let xpResult = null;
+
+    if (!existingSpeechXp) {
+      xpResult = await awardXp(
+        req.student.id,
+        6,
+        'speech',
+        task.id,
+        'Submitted speech attempt'
+      );
+
+      xpAwarded = 6;
+    }
 
     notifyTeacherAndLeaderboard({
       type: 'speech_submission',
@@ -1249,7 +1264,7 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
       studentName: req.student.name,
       lessonId: Number(req.params.id),
       attemptId: attempt.id,
-      xp: 6,
+      xp: xpAwarded,
       message: `${req.student.name} submitted a speech activity`,
     });
 
@@ -1258,9 +1273,11 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
 
     res.status(201).json({
       attempt,
-      xpAwarded: 6,
+      xpAwarded,
       newBadges,
-      message: 'Speech attempt saved. +6 XP'
+      message: xpAwarded
+        ? 'Speech attempt saved. +6 XP'
+        : 'Speech attempt saved. XP already awarded for this activity.'
     });
   } catch (err) {
     next(err);
