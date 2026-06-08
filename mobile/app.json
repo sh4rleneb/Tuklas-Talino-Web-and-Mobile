@@ -20,7 +20,9 @@
         }
       ],
       "expo-font",
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      "expo-audio",
+      "expo-video"
     ],
     "android": {
       "permissions": [

@@ -472,18 +472,26 @@ router.post('/tasks/:taskId/complete', requireRole('student'), groupTaskUpload.s
         },
       });
 
-      if (!created && completion.verificationStatus !== 'approved') {
-        await completion.update({
-          verificationStatus: 'pending',
-          submittedAt: new Date(),
-          teacherFeedback: null,
-          studentRole: filePayload.studentRole,
-          submittedByStudentId: filePayload.submittedByStudentId,
-          fileName: filePayload.fileName || completion.fileName || null,
-          filePath: filePayload.filePath || completion.filePath || null,
-          fileMimeType: filePayload.fileMimeType || completion.fileMimeType || null,
-          fileSize: filePayload.fileSize || completion.fileSize || null,
-        });
+      if (!created) {
+        if (completion.verificationStatus === 'pending') {
+          return res.status(409).json({
+            message: 'This group task has already been submitted and is waiting for teacher review.'
+          });
+        }
+
+        if (completion.verificationStatus !== 'approved') {
+          await completion.update({
+            verificationStatus: 'pending',
+            submittedAt: new Date(),
+            teacherFeedback: null,
+            studentRole: filePayload.studentRole,
+            submittedByStudentId: filePayload.submittedByStudentId,
+            fileName: filePayload.fileName || completion.fileName || null,
+            filePath: filePayload.filePath || completion.filePath || null,
+            fileMimeType: filePayload.fileMimeType || completion.fileMimeType || null,
+            fileSize: filePayload.fileSize || completion.fileSize || null,
+          });
+        }
       }
 
       completions.push(completion);
