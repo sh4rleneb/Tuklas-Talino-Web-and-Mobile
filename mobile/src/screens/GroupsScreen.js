@@ -80,7 +80,13 @@ export default function GroupsScreen({ navigation }) {
             {(group.tasks || []).map(task => (
               <Card key={task.id} style={styles.inner}>
                 <Text style={styles.task}>{task.title}</Text>
-                <Text>{task.description}</Text>
+                {task.description ? (
+                  <Text>{task.description}</Text>
+                ) : (
+                  <Text style={styles.muted}>
+                    Complete this group activity with your teammates.
+                  </Text>
+                )}
                 <Text style={styles.taskXp}>+{task.xpReward || 0} XP</Text>
                 <Text style={styles.status}>{taskStatus(task)}</Text>
                 {group.currentStudentIsLeader && !task.completed && !task.pendingTeacherCheck && (

@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -492,7 +494,14 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.page}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+      <ScrollView
+        contentContainerStyle={styles.page}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Text style={styles.back}>← Lesson Library</Text>
@@ -551,6 +560,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
           </View>
         ) : renderActivity()}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

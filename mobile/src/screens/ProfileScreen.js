@@ -308,6 +308,47 @@ async function handleLogout() {
 
     </View>
 
+    <View style={styles.sectionCard}>
+
+      <Text style={styles.sectionTitle}>
+        ⭐ XP History
+      </Text>
+
+      <Text style={styles.sectionSubtitle}>
+        See where your XP comes from.
+      </Text>
+
+      {(dashboard?.xpLogs || []).length ? (
+        (dashboard.xpLogs || []).map((log, index) => {
+          const icon =
+            log.sourceType === 'lesson' ? '📚' :
+            log.sourceType === 'quiz' ? '📝' :
+            log.sourceType === 'mcq' ? '🧠' :
+            log.sourceType === 'writing' ? '✍️' :
+            log.sourceType === 'speech' ? '🎤' :
+            log.sourceType === 'mission' ? '🚀' :
+            '⭐';
+
+          return (
+            <View key={log.id || index} style={styles.xpLogItem}>
+              <Text style={styles.xpLogPoints}>
+                {icon} +{log.points} XP
+              </Text>
+
+              <Text style={styles.xpLogNote}>
+                {log.note || 'XP earned'}
+              </Text>
+            </View>
+          );
+        })
+      ) : (
+        <Text style={styles.xpLogEmpty}>
+          No XP activity yet.
+        </Text>
+      )}
+
+    </View>
+
     <View style={[styles.sectionCard, styles.accountCard]}>
 
       <Text style={styles.sectionTitle}>
@@ -646,6 +687,31 @@ const styles = StyleSheet.create({
   summaryLabel: {
     marginTop: 4,
     color: '#64748B',
+  },
+
+
+  xpLogItem: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+  },
+
+  xpLogPoints: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#16A34A',
+  },
+
+  xpLogNote: {
+    marginTop: 4,
+    color: '#475569',
+  },
+
+  xpLogEmpty: {
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 8,
   },
 
 });

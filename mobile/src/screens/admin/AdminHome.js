@@ -56,7 +56,7 @@ function Card({ children, style }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-function Field({ label, value, onChangeText, keyboardType = 'default', secureTextEntry = false }) {
+function Field({ label, value, onChangeText, keyboardType = 'default', secureTextEntry = false, placeholder = '' }) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -66,6 +66,7 @@ function Field({ label, value, onChangeText, keyboardType = 'default', secureTex
         onChangeText={onChangeText}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
+        placeholder={placeholder}
         placeholderTextColor="#94A3B8"
       />
     </View>
@@ -236,7 +237,7 @@ async function handleLogout() {
         </View>
         {accountType === 'student' ? (
           <>
-            <Field label="Student ID" value={studentForm.studentCode} onChangeText={(studentCode) => setStudentForm((current) => ({ ...current, studentCode: studentCode.toUpperCase() }))} />
+            <Field label="Student ID" placeholder="STU-2026-001" value={studentForm.studentCode} onChangeText={(studentCode) => setStudentForm((current) => ({ ...current, studentCode: studentCode.toUpperCase() }))} />
             <Field label="Name" value={studentForm.name} onChangeText={(name) => setStudentForm((current) => ({ ...current, name }))} />
             <Field label="Grade" value={studentForm.gradeLevel} keyboardType="numeric" onChangeText={(gradeLevel) => setStudentForm((current) => ({ ...current, gradeLevel }))} />
             <Field label="Section" value={studentForm.section} onChangeText={(section) => setStudentForm((current) => ({ ...current, section }))} />

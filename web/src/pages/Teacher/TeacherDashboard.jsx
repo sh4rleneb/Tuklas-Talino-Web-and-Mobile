@@ -2419,6 +2419,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
   const [showAllLessons, setShowAllLessons] = useState(false);
 
   const allRecentLessons = [...(lessons || [])]
+    .filter(lesson => (lesson.status || 'published') !== 'archived')
     .sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
