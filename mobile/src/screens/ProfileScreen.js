@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 
 import {
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   Text,
@@ -36,27 +37,50 @@ const avatars = [
   '👧',
 ];
 
+function formatXpLogDate(log) {
+  const rawDate =
+    log?.createdAt ||
+    log?.created_at ||
+    log?.awardedAt ||
+    log?.awarded_at ||
+    log?.completedAt ||
+    log?.completed_at ||
+    log?.updatedAt ||
+    log?.updated_at ||
+    log?.timestamp ||
+    log?.date;
+
+  if (!rawDate) return 'Date unavailable';
+
+  const parsedDate = new Date(rawDate);
+
+  if (Number.isNaN(parsedDate.getTime())) return 'Date unavailable';
+
+  return parsedDate.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export default function ProfileScreen({
   navigation,
 }) {
   const [dashboard, setDashboard] = useState(null);
+  const [logoutVisible, setLogoutVisible] = useState(false);
 
   const load = useCallback(() => api('/dashboard').then(setDashboard), []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  
+
   function confirmLogout() {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: handleLogout }
-      ]
-    );
+    setLogoutVisible(true);
   }
 
 async function handleLogout() {
+    setLogoutVisible(false);
     await setToken(null);
     navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
   }
@@ -331,13 +355,25 @@ async function handleLogout() {
 
           return (
             <View key={log.id || index} style={styles.xpLogItem}>
-              <Text style={styles.xpLogPoints}>
-                {icon} +{log.points} XP
-              </Text>
+              <View style={styles.xpLogAccent} />
 
-              <Text style={styles.xpLogNote}>
-                {log.note || 'XP earned'}
-              </Text>
+              <View style={styles.xpLogIconBubble}>
+                <Text style={styles.xpLogIcon}>{icon}</Text>
+              </View>
+
+              <View style={styles.xpLogContent}>
+                <Text style={styles.xpLogPoints}>
+                  +{log.points} XP
+                </Text>
+
+                <Text style={styles.xpLogNote}>
+                  {log.note || 'XP earned'}
+                </Text>
+
+                <Text style={styles.xpDate}>
+                  🕒 {formatXpLogDate(log)}
+                </Text>
+              </View>
             </View>
           );
         })
@@ -370,11 +406,160 @@ async function handleLogout() {
 
     </View>
 
+
+    <Modal
+      visible={logoutVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setLogoutVisible(false)}
+    >
+      <View style={styles.logoutModalBackdrop}>
+        <View style={styles.logoutModalCard}>
+          <View style={styles.logoutModalIcon}>
+            <Text style={styles.logoutModalIconText}>🚪</Text>
+          </View>
+
+          <Text style={styles.logoutModalTitle}>Logout?</Text>
+          <Text style={styles.logoutModalBody}>
+            Naka-save ang iyong progreso. Maaari kang bumalik anumang oras para magpatuloy.
+          </Text>
+
+          <View style={styles.logoutModalActions}>
+            <TouchableOpacity
+              style={styles.logoutCancelButton}
+              onPress={() => setLogoutVisible(false)}
+            >
+              <Text style={styles.logoutCancelText}>Kanselahin</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.logoutConfirmButton}
+              onPress={handleLogout}
+            >
+              <Text style={styles.logoutConfirmText}>Mag-logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+
     </ScrollView>
 );
 }
 
 const styles = StyleSheet.create({
+  logoutModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  logoutModalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    shadowColor: '#991B1B',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  logoutModalIcon: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  logoutModalIconText: {
+    fontSize: 42,
+  },
+  logoutModalTitle: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  logoutModalBody: {
+    fontSize: 16,
+    lineHeight: 23,
+    color: '#475569',
+    textAlign: 'center',
+    marginBottom: 22,
+  },
+  logoutModalActions: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  logoutCancelButton: {
+    flex: 1,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  logoutConfirmButton: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  logoutCancelText: {
+    color: '#334155',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  logoutConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  xpLogAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 18,
+    bottom: 18,
+    width: 5,
+    borderTopRightRadius: 999,
+    borderBottomRightRadius: 999,
+    backgroundColor: '#22C55E',
+  },
+  xpLogIconBubble: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  xpLogIcon: {
+    fontSize: 28,
+  },
+  xpLogContent: {
+    flex: 1,
+  },
+
+  xpDate: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 6,
+    fontWeight: '700',
+  },
+
 
   logoutButton: {
     backgroundColor: '#FEE2E2',

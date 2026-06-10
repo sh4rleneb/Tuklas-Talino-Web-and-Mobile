@@ -63,11 +63,6 @@ export default function AdminLogin({
         return;
       }
 
-      Alert.alert(
-        'Success',
-        'Admin login successful!'
-      );
-
       navigation.replace(
         'AdminHome'
       );

@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
+  Image,
   Linking,
   KeyboardAvoidingView,
   Platform,
@@ -47,6 +50,9 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [error, setError] = useState('');
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
+  const celebrationScale = useRef(new Animated.Value(0.92)).current;
+  const celebrationRotate = useRef(new Animated.Value(0)).current;
+
 
   useEffect(() => {
     if (!lessonId) {
@@ -105,12 +111,278 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
     recordingRef.current?.stopAndUnloadAsync();
   }, []);
 
+  useEffect(() => {
+    if (!completed) return undefined;
+
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(celebrationScale, {
+          toValue: 1.04,
+          duration: 720,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(celebrationScale, {
+          toValue: 0.96,
+          duration: 720,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const spin = Animated.loop(
+      Animated.timing(celebrationRotate, {
+        toValue: 1,
+        duration: 2600,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    pulse.start();
+    spin.start();
+
+    return () => {
+      pulse.stop();
+      spin.stop();
+    };
+  }, [completed, celebrationRotate, celebrationScale]);
+
   const activities = useMemo(
     () => Array.isArray(lesson?.activities) ? lesson.activities : [],
     [lesson]
   );
   const totalSteps = Math.max(1, activities.length + 1);
   const currentActivity = activities[step - 1];
+
+  const getActivityGuide = activity => {
+    const type = String(
+      activity?.type ||
+      activity?.activityType ||
+      activity?.category ||
+      activity?.kind ||
+      ''
+    ).toLowerCase();
+
+    const hasQuestionsWithOptions =
+      Array.isArray(activity?.questions) &&
+      activity.questions.some(question =>
+        Array.isArray(question?.options) ||
+        Array.isArray(question?.choices)
+      );
+
+    const hasChoices =
+      Array.isArray(activity?.choices) ||
+      Array.isArray(activity?.options) ||
+      Array.isArray(activity?.answers) ||
+      hasQuestionsWithOptions;
+
+    const hasAudio =
+      Boolean(activity?.audioUrl) ||
+      Boolean(activity?.audio) ||
+      Boolean(activity?.soundUrl);
+
+    if (
+      hasAudio ||
+      type.includes('listen') ||
+      type.includes('audio') ||
+      type.includes('hearing')
+    ) {
+      return {
+        icon: '👂',
+        title: 'Makinig muna',
+        body: 'Pindutin ang audio kung mayroon, pakinggan nang mabuti, pagkatapos sagutin ang gawain.',
+        steps: ['Makinig', 'Sagutin', 'Continue'],
+      };
+    }
+
+    if (
+      type.includes('write') ||
+      type.includes('writing') ||
+      type.includes('essay') ||
+      type.includes('text')
+    ) {
+      return {
+        icon: '✍️',
+        title: 'Isulat ang maikling sagot',
+        body: 'Gamitin ang kahon sa ibaba. Lalabas ang green button kapag may naisulat ka na.',
+        steps: ['Basahin', 'Magsulat', 'Save'],
+      };
+    }
+
+    if (
+      type.includes('speak') ||
+      type.includes('record') ||
+      type.includes('voice') ||
+      type.includes('oral')
+    ) {
+      return {
+        icon: '🎙️',
+        title: 'I-record ang iyong sagot',
+        body: 'Basahin ang tanong, pindutin ang record, magsalita nang malinaw, at i-save ang sagot.',
+        steps: ['Basahin', 'Record', 'Save'],
+      };
+    }
+
+    if (
+      type === 'mcq' ||
+      type.includes('mcq') ||
+      hasChoices ||
+      type.includes('quiz') ||
+      type.includes('choice') ||
+      type.includes('question') ||
+      type.includes('multiple')
+    ) {
+      return {
+        icon: '👆',
+        title: 'Pumili ng tamang sagot',
+        body: 'I-tap ang isang kahon. Kapag napili mo na ang sagot, maaari ka nang magpatuloy.',
+        steps: ['Basahin', 'Piliin', 'Continue'],
+      };
+    }
+
+    return {
+      icon: '🧭',
+      title: 'Sundin ang gawain',
+      body: 'Basahin muna ang panuto, gawin ang activity, pagkatapos pindutin ang button para magpatuloy.',
+      steps: ['Basahin', 'Gawin', 'Continue'],
+    };
+  };
+
+  const renderActivityGuide = activity => {
+    if (!activity) return null;
+
+    const guide = getActivityGuide(activity);
+
+    return (
+      <View style={styles.guideCard}>
+        <View style={styles.guideIconBubble}>
+          <Text style={styles.guideIcon}>{guide.icon}</Text>
+        </View>
+
+        <View style={styles.guideContent}>
+          <Text style={styles.guideTitle}>{guide.title}</Text>
+          <Text style={styles.guideBody}>{guide.body}</Text>
+
+          <View style={styles.guideSteps}>
+            {guide.steps.map((item, index) => (
+              <View key={`${item}-${index}`} style={styles.guideStepPill}>
+                <Text style={styles.guideStepNumber}>{index + 1}</Text>
+                <Text style={styles.guideStepText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const getActivityVisual = activity => {
+    const imageUri =
+      activity?.imageUrl ||
+      activity?.illustrationUrl ||
+      activity?.visualUrl ||
+      activity?.dataJson?.imageUrl ||
+      activity?.dataJson?.illustrationUrl ||
+      activity?.dataJson?.visualUrl ||
+      activity?.dataJson?.coverImage ||
+      lesson?.imageUrl ||
+      lesson?.illustrationUrl ||
+      lesson?.dataJson?.imageUrl ||
+      lesson?.dataJson?.illustrationUrl;
+
+    if (!imageUri) return null;
+
+    return {
+      imageUri,
+      emoji: '🖼️',
+      title: 'Tingnan ang larawan',
+      body: 'Gamitin ang larawan bilang gabay bago sagutin ang gawain.',
+    };
+  };
+
+  const renderActivityVisual = activity => {
+    if (!activity) return null;
+
+    const visual = getActivityVisual(activity);
+
+    if (!visual) return null;
+
+    return (
+      <View style={styles.visualCard}>
+        <View style={styles.visualImageWrap}>
+          {visual.imageUri ? (
+            <Image
+              source={{ uri: visual.imageUri }}
+              style={styles.visualImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.visualEmoji}>{visual.emoji}</Text>
+          )}
+        </View>
+
+        <View style={styles.visualCopy}>
+          <Text style={styles.visualTitle}>{visual.title}</Text>
+          <Text style={styles.visualBody}>{visual.body}</Text>
+        </View>
+      </View>
+    );
+  };
+
+  const getActivityPassage = activity => {
+    const candidates = [
+      activity?.passage,
+      activity?.readingPassage,
+      activity?.story,
+      activity?.content,
+      activity?.instructions,
+      activity?.dataJson?.passage,
+      activity?.dataJson?.readingPassage,
+      activity?.dataJson?.story,
+      activity?.dataJson?.content,
+      activity?.dataJson?.text,
+      activity?.dataJson?.body,
+      activity?.dataJson?.context,
+      activity?.dataJson?.lessonText,
+      activity?.questions?.[0]?.passage,
+      activity?.questions?.[0]?.context,
+      activity?.questions?.[0]?.readingText,
+      lesson?.passage,
+      lesson?.readingPassage,
+      lesson?.story,
+      lesson?.content,
+      lesson?.description,
+      lesson?.dataJson?.passage,
+      lesson?.dataJson?.readingPassage,
+      lesson?.dataJson?.story,
+      lesson?.dataJson?.content,
+      lesson?.dataJson?.text,
+      lesson?.dataJson?.body,
+      lesson?.dataJson?.context,
+    ];
+
+    const passage = candidates.find(value =>
+      typeof value === 'string' && value.trim().length >= 20
+    );
+
+    return passage?.trim() || '';
+  };
+
+  const renderActivityPassage = activity => {
+    const passage = getActivityPassage(activity);
+
+    if (!passage) return null;
+
+    return (
+      <View style={styles.passageCard}>
+        <Text style={styles.passageTitle}>📖 Basahin muna</Text>
+        <Text style={styles.passageBody}>{passage}</Text>
+      </View>
+    );
+  };
+
   const percent = completed ? 100 : Math.round(((Math.max(1, step) - 1) / totalSteps) * 100);
   const nextLesson = useMemo(() => {
     const lessons = dashboard?.lessons || [];
@@ -334,6 +606,9 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
       return (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🧠 {currentActivity.title}</Text>
+          {renderActivityGuide(currentActivity)}
+          {renderActivityVisual(currentActivity)}
+          {renderActivityPassage(currentActivity)}
           {questions.map((question) => (
             <View key={question.id} style={styles.questionBlock}>
               <Text style={styles.question}>{question.question}</Text>
@@ -376,6 +651,8 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>✍️ {currentActivity.title}</Text>
           <Text style={styles.body}>{currentActivity.writingTask?.prompt || currentActivity.instructions}</Text>
+          {renderActivityGuide(currentActivity)}
+          {renderActivityVisual(currentActivity)}
           {suggestions.length ? (
             <View style={styles.choiceRow}>
               {suggestions.map((suggestion, index) => {
@@ -388,6 +665,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
               })}
             </View>
           ) : null}
+          {renderActivityPassage(currentActivity)}
           <TextInput
             style={styles.input}
             multiline
@@ -407,6 +685,8 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🎤 {currentActivity.title}</Text>
           <Text style={styles.body}>{currentActivity.speechTask?.targetText || currentActivity.instructions}</Text>
+          {renderActivityGuide(currentActivity)}
+          {renderActivityVisual(currentActivity)}
           <View style={styles.speechButtons}>
             <TouchableOpacity style={[styles.secondaryButton, recording && styles.recordingButton]} onPress={recording ? stopRecording : startRecording}>
               <Text style={styles.secondaryText}>{recording ? '⏹ Stop Recording' : '🎙 Start Recording'}</Text>
@@ -418,6 +698,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
             ) : null}
           </View>
           {speechStatus ? <Text style={styles.statusMessage}>{speechStatus}</Text> : null}
+          {renderActivityPassage(currentActivity)}
           <TextInput
             style={styles.input}
             multiline
@@ -440,6 +721,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{currentActivity.title || 'Lesson Activity'}</Text>
         <Text style={styles.body}>{currentActivity.instructions || currentActivity.dataJson?.content || 'Review this activity before continuing.'}</Text>
+        {renderActivityGuide(currentActivity)}
         {vocabulary.map((item, index) => (
           <View key={`${item.word}-${index}`} style={styles.contentRow}>
             <Text style={styles.question}>{item.word}</Text>
@@ -530,7 +812,27 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
 
         {completed ? (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🎉 Lesson complete</Text>
+            <Animated.View
+            style={[
+              styles.celebrationHero,
+              {
+                transform: [
+                  { scale: celebrationScale },
+                  {
+                    rotate: celebrationRotate.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['-3deg', '3deg'],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.celebrationEmoji}>🎉</Text>
+            <Text style={styles.celebrationSparkles}>✨ ⭐ ✨</Text>
+          </Animated.View>
+
+          <Text style={styles.cardTitle}>🎉 Lesson complete</Text>
             <Text style={styles.reward}>+{completionResult?.xpAwarded || 0} XP earned now</Text>
             <Text style={styles.body}>
               {completionResult?.xpAwarded
@@ -566,6 +868,169 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  visualCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 22,
+    padding: 14,
+    marginBottom: 18,
+  },
+  visualImageWrap: {
+    width: 74,
+    height: 74,
+    borderRadius: 22,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+    overflow: 'hidden',
+  },
+  visualImage: {
+    width: '100%',
+    height: '100%',
+  },
+  visualEmoji: {
+    fontSize: 42,
+  },
+  visualCopy: {
+    flex: 1,
+  },
+  visualTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#1D4ED8',
+    marginBottom: 5,
+  },
+  visualBody: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#475569',
+    fontWeight: '600',
+  },
+
+  celebrationHero: {
+    alignSelf: 'center',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 4,
+    borderColor: '#FACC15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  celebrationEmoji: {
+    fontSize: 64,
+  },
+  celebrationSparkles: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#F97316',
+    marginTop: 4,
+  },
+
+  passageCard: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 18,
+  },
+  passageTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#92400E',
+    marginBottom: 8,
+  },
+  passageBody: {
+    fontSize: 15,
+    lineHeight: 23,
+    color: '#374151',
+  },
+
+  guideCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 18,
+  },
+  guideIconBubble: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  guideIcon: {
+    fontSize: 24,
+  },
+  guideContent: {
+    flex: 1,
+  },
+  guideTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#166534',
+    marginBottom: 4,
+  },
+  guideBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#475569',
+  },
+  guideSteps: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  guideStepPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  guideStepNumber: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#16A34A',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginRight: 6,
+  },
+  guideStepText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#166534',
+  },
+
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
   page: { padding: 18, paddingBottom: 44 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },

@@ -4,6 +4,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
+  Pressable,
   ScrollView,
   Share,
   StyleSheet,
@@ -99,9 +101,11 @@ function SmallButton({ children, onPress, tone = 'green', disabled = false }) {
 
 export default function TeacherHome({ navigation }) {
   const [section, setSection] = useState('dashboard');
+  const [logoutVisible, setLogoutVisible] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [monitoring, setMonitoring] = useState({ rows: [] });
   const [quizPerformance, setQuizPerformance] = useState({ summary: {}, rows: [] });
+  const [workspaceNotice, setWorkspaceNotice] = useState(null);
   const [pendingChecks, setPendingChecks] = useState({ summary: {}, rows: [] });
   const [groups, setGroups] = useState([]);
   const [lessons, setLessons] = useState([]);
@@ -174,7 +178,7 @@ export default function TeacherHome({ navigation }) {
     setBusy(action);
     try {
       const data = await work();
-      if (success) Alert.alert('Success', typeof success === 'function' ? success(data) : success);
+      if (success) setWorkspaceNotice({ type: 'success', text: typeof success === 'function' ? success(data) : success });
       await load();
       return data;
     } catch (err) {
@@ -185,16 +189,9 @@ export default function TeacherHome({ navigation }) {
     }
   }
 
-  
+
   function confirmLogout() {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: handleLogout }
-      ]
-    );
+    setLogoutVisible(true);
   }
 
 async function handleLogout() {
@@ -627,10 +624,41 @@ async function handleLogout() {
           <View style={styles.flex}>
             <Text style={styles.title}>Teacher Workspace</Text>
             <Text style={styles.subtitle}>Teach, monitor, and review learning progress from mobile.</Text>
+
           </View>
           <SmallButton tone="slate" onPress={confirmLogout}>Logout</SmallButton>
         </View>
+
+        <View style={styles.workspaceHero}>
+          <View style={styles.workspaceHeroIcon}>
+            <Text style={styles.workspaceHeroEmoji}>📚</Text>
+          </View>
+
+          <View style={styles.workspaceHeroCopy}>
+            <Text style={styles.workspaceHeroKicker}>Today&apos;s teaching hub</Text>
+            <Text style={styles.workspaceHeroTitle}>Guide lessons, groups, and progress in one place.</Text>
+
+            <View style={styles.workspaceHeroChips}>
+              <Text style={styles.workspaceHeroChip}>✨ Live class view</Text>
+              <Text style={styles.workspaceHeroChip}>✅ Checks ready</Text>
+            </View>
+          </View>
+        </View>
+
         {renderTabs()}
+        {workspaceNotice ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setWorkspaceNotice(null)}
+            style={[
+              styles.workspaceNoticeCard,
+              workspaceNotice.type === 'success' && styles.workspaceNoticeSuccess,
+            ]}
+          >
+            <Text style={styles.workspaceNoticeText}>{workspaceNotice.text}</Text>
+          </Pressable>
+        ) : null}
+
         {error ? <SectionCard><Text style={styles.error}>{error}</Text><SmallButton onPress={load}>Try Again</SmallButton></SectionCard> : null}
         {section === 'dashboard' && renderDashboard()}
         {section === 'lessons' && renderBuilder()}
@@ -638,12 +666,210 @@ async function handleLogout() {
         {section === 'assessment' && renderAssessment()}
         {section === 'students' && renderStudents()}
         {section === 'reports' && renderReports()}
+
+      <Modal
+        visible={logoutVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLogoutVisible(false)}
+      >
+        <View style={styles.workspaceLogoutModalBackdrop}>
+          <View style={styles.workspaceLogoutModalCard}>
+            <View style={styles.workspaceLogoutIcon}>
+              <Text style={styles.workspaceLogoutIconText}>🚪</Text>
+            </View>
+
+            <Text style={styles.workspaceLogoutTitle}>Mag-logout?</Text>
+            <Text style={styles.workspaceLogoutBody}>
+              Naka-save ang workspace. Maaari kang bumalik anumang oras.
+            </Text>
+
+            <View style={styles.workspaceLogoutActions}>
+              <TouchableOpacity
+                style={styles.workspaceLogoutCancel}
+                onPress={() => setLogoutVisible(false)}
+              >
+                <Text style={styles.workspaceLogoutCancelText}>Kanselahin</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.workspaceLogoutConfirm}
+                onPress={handleLogout}
+              >
+                <Text style={styles.workspaceLogoutConfirmText}>Mag-logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  workspaceNoticeCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: '#e8f8ec',
+    borderWidth: 1,
+    borderColor: '#b9efc8',
+  },
+  workspaceNoticeSuccess: {
+    backgroundColor: '#e8f8ec',
+    borderColor: '#b9efc8',
+  },
+  workspaceNoticeText: {
+    color: '#1f6f3f',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  workspaceLogoutModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  workspaceLogoutModalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    shadowColor: '#16A34A',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  workspaceLogoutIcon: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  workspaceLogoutIconText: {
+    fontSize: 42,
+  },
+  workspaceLogoutTitle: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  workspaceLogoutBody: {
+    fontSize: 16,
+    lineHeight: 23,
+    color: '#475569',
+    textAlign: 'center',
+    marginBottom: 22,
+  },
+  workspaceLogoutActions: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+  workspaceLogoutCancel: {
+    flex: 1,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  workspaceLogoutConfirm: {
+    flex: 1,
+    backgroundColor: '#16A34A',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  workspaceLogoutCancelText: {
+    color: '#334155',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  workspaceLogoutConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  workspaceHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 28,
+    padding: 18,
+    marginTop: 18,
+    marginBottom: 18,
+    shadowColor: '#16A34A',
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  workspaceHeroIcon: {
+    width: 82,
+    height: 82,
+    borderRadius: 26,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  workspaceHeroEmoji: {
+    fontSize: 44,
+  },
+  workspaceHeroCopy: {
+    flex: 1,
+  },
+  workspaceHeroKicker: {
+    color: '#15803D',
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  workspaceHeroTitle: {
+    color: '#0F172A',
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '900',
+  },
+  workspaceHeroChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 12,
+  },
+  workspaceHeroChip: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '900',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
   page: { padding: 16, paddingBottom: 44 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -659,7 +885,15 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#FFF', borderRadius: 22, padding: 16, marginBottom: 14, shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
   cardTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900', marginBottom: 10 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  statCard: { width: '48%' },
+  statCard: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 4,
+ width: '48%' },
   statIcon: { fontSize: 24 },
   statValue: { color: '#166534', fontWeight: '900', fontSize: 28, marginTop: 6 },
   muted: { color: '#64748B', marginTop: 4 },

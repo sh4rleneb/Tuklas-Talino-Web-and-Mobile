@@ -68,6 +68,10 @@ export default function LandingScreen({
       <ScrollView
         horizontal
         pagingEnabled
+        disableIntervalMomentum
+        decelerationRate="fast"
+        snapToAlignment="center"
+        scrollEventThrottle={16}
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
         snapToAlignment="center"
@@ -172,7 +176,7 @@ export default function LandingScreen({
             />
 
             <Text style={styles.swipeText}>
-              ← Swipe to continue →
+              ← Swipe one card at a time →
             </Text>
 
           </View>

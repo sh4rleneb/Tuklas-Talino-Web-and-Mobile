@@ -63,11 +63,6 @@ export default function TeacherLogin({
         return;
       }
 
-      Alert.alert(
-        'Success',
-        'Teacher login successful!'
-      );
-
       navigation.replace(
         'TeacherHome'
       );
