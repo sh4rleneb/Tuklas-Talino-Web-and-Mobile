@@ -5,6 +5,49 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 
+const HIDDEN_GROUP_STATUSES = new Set([
+  'archived',
+  'deleted',
+  'inactive',
+  'removed',
+  'disabled',
+]);
+
+function isVisibleGroupRecord(item) {
+  if (!item) return false;
+
+  const status = String(
+    item.status ||
+    item.state ||
+    item.visibility ||
+    ''
+  ).trim().toLowerCase();
+
+  return !(
+    HIDDEN_GROUP_STATUSES.has(status) ||
+    item.deletedAt ||
+    item.deleted_at ||
+    item.archivedAt ||
+    item.archived_at ||
+    item.removedAt ||
+    item.removed_at ||
+    item.isDeleted ||
+    item.deleted ||
+    item.isArchived ||
+    item.archived
+  );
+}
+
+function getVisibleGroups(rawGroups = []) {
+  return (Array.isArray(rawGroups) ? rawGroups : [])
+    .filter(isVisibleGroupRecord)
+    .map((group) => ({
+      ...group,
+      tasks: (Array.isArray(group.tasks) ? group.tasks : [])
+        .filter(isVisibleGroupRecord),
+    }));
+}
+
 export default function StudentJuniorHome({ navigation }) {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,14 +72,14 @@ export default function StudentJuniorHome({ navigation }) {
 
   const student = dashboard?.student || {};
   const lessons = dashboard?.lessons || [];
-  const groups = dashboard?.groups || [];
+  const groups = getVisibleGroups(dashboard?.groups || []);
   const badges = dashboard?.badges || [];
   const completedLessons = lessons.filter((lesson) => lesson?.completed).length;
   const totalLessons = lessons.length;
   const completionPct = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
   const nextLesson = lessons.find((lesson) => !lesson?.completed) || lessons[0];
   const badgePreview = badges.slice(-2).reverse();
-  const activeGroupTask = groups[0]?.tasks?.find((task) => !task.completed) || groups[0]?.tasks?.[0];
+  const activeGroupTask = groups.flatMap((group) => group.tasks || []).find((task) => !task.completed) || groups.flatMap((group) => group.tasks || [])[0];
 
   const xp = student?.xp || 0;
   const level = Math.max(1, Math.floor(xp / 100) + 1);
@@ -262,7 +305,7 @@ export default function StudentJuniorHome({ navigation }) {
               <Text style={styles.emptyText}>Great job! Check back later for group activities.</Text>
             </View>
           )}
-          
+
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -348,7 +391,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_700Bold',
     fontSize: 12,
   },
-  
+
   heroCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -648,5 +691,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'Poppins_700Bold',
   },
-  
+
 });

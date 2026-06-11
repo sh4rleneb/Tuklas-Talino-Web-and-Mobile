@@ -8,6 +8,49 @@ import Card from '../components/Card';
 import PrimaryButton from '../components/PrimaryButton';
 import { colors } from '../styles/theme';
 
+const HIDDEN_GROUP_STATUSES = new Set([
+  'archived',
+  'deleted',
+  'inactive',
+  'removed',
+  'disabled',
+]);
+
+function isVisibleGroupRecord(item) {
+  if (!item) return false;
+
+  const status = String(
+    item.status ||
+    item.state ||
+    item.visibility ||
+    ''
+  ).trim().toLowerCase();
+
+  return !(
+    HIDDEN_GROUP_STATUSES.has(status) ||
+    item.deletedAt ||
+    item.deleted_at ||
+    item.archivedAt ||
+    item.archived_at ||
+    item.removedAt ||
+    item.removed_at ||
+    item.isDeleted ||
+    item.deleted ||
+    item.isArchived ||
+    item.archived
+  );
+}
+
+function getVisibleGroups(rawGroups = []) {
+  return (Array.isArray(rawGroups) ? rawGroups : [])
+    .filter(isVisibleGroupRecord)
+    .map((group) => ({
+      ...group,
+      tasks: (Array.isArray(group.tasks) ? group.tasks : [])
+        .filter(isVisibleGroupRecord),
+    }));
+}
+
 export default function GroupsScreen({ navigation }) {
   const [groups, setGroups] = useState([]);
   const [student, setStudent] = useState(null);
@@ -19,7 +62,7 @@ export default function GroupsScreen({ navigation }) {
     setError('');
     try {
       const dashboard = await api('/dashboard');
-      setGroups(dashboard.groups || []);
+      setGroups(getVisibleGroups(dashboard.groups));
       setStudent(dashboard.student || null);
     } catch (err) {
       setError(err.message || 'Unable to load group tasks.');
@@ -62,7 +105,7 @@ export default function GroupsScreen({ navigation }) {
             Work together and wait for teacher approval.
           </Text>
         </View>
-        
+
       </View>
 
       {loading ? (
