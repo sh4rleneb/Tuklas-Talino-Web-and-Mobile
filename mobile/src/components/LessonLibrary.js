@@ -105,7 +105,10 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     navigation.navigate(
       'StudentJuniorLessonDetail',
       {
-        lessonId: lesson.id
+        lessonId: lesson.id,
+        homeRoute: variant === 'senior'
+          ? 'StudentSeniorHome'
+          : 'Home',
       }
     );
   }

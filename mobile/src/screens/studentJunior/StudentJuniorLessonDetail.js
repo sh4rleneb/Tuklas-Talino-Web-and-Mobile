@@ -389,7 +389,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
     const lessonIndex = lessons.findIndex((item) => Number(item.id) === Number(lessonId));
     return lessonIndex >= 0 ? lessons[lessonIndex + 1] : null;
   }, [dashboard, lessonId]);
-  const homeRoute = 'Home';
+  const homeRoute = route?.params?.homeRoute || 'Home';
 
   async function startRecording() {
     try {

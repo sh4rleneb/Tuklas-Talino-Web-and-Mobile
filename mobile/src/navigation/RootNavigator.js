@@ -38,6 +38,9 @@ from '../screens/studentJunior/StudentJuniorHome';
 import StudentJuniorLessons
 from '../screens/studentJunior/StudentJuniorLessons';
 
+import StudentJuniorLessonDetail
+from '../screens/studentJunior/StudentJuniorLessonDetail';
+
 import ModulesScreen
 from '../screens/studentJunior/ModulesScreen';
 
@@ -139,6 +142,11 @@ export default function RootNavigator() {
           component={
             StudentJuniorLessons
           }
+        />
+
+        <Stack.Screen
+          name="StudentJuniorLessonDetail"
+          component={StudentJuniorLessonDetail}
         />
 
         <Stack.Screen
