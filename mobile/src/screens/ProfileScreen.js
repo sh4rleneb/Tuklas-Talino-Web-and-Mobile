@@ -342,42 +342,53 @@ async function handleLogout() {
         See where your XP comes from.
       </Text>
 
-      {(dashboard?.xpLogs || []).length ? (
-        (dashboard.xpLogs || []).map((log, index) => {
-          const icon =
-            log.sourceType === 'lesson' ? '📚' :
-            log.sourceType === 'quiz' ? '📝' :
-            log.sourceType === 'mcq' ? '🧠' :
-            log.sourceType === 'writing' ? '✍️' :
-            log.sourceType === 'speech' ? '🎤' :
-            log.sourceType === 'mission' ? '🚀' :
-            '⭐';
+        {(dashboard?.xpLogs || []).length ? (
+          <>
+            {(dashboard.xpLogs || []).slice(0, 3).map((log, index) => {
+              const icon =
+                log.sourceType === 'lesson' ? '📚' :
+                log.sourceType === 'quiz' ? '📝' :
+                log.sourceType === 'mcq' ? '🧠' :
+                log.sourceType === 'writing' ? '✍️' :
+                log.sourceType === 'speech' ? '🎤' :
+                log.sourceType === 'mission' ? '🚀' :
+                '⭐';
 
-          return (
-            <View key={log.id || index} style={styles.xpLogItem}>
-              <View style={styles.xpLogAccent} />
+              return (
+                <View key={log.id || index} style={styles.xpLogItem}>
+                  <View style={styles.xpLogAccent} />
 
-              <View style={styles.xpLogIconBubble}>
-                <Text style={styles.xpLogIcon}>{icon}</Text>
-              </View>
+                  <View style={styles.xpLogIconBubble}>
+                    <Text style={styles.xpLogIcon}>{icon}</Text>
+                  </View>
 
-              <View style={styles.xpLogContent}>
-                <Text style={styles.xpLogPoints}>
-                  +{log.points} XP
-                </Text>
+                  <View style={styles.xpLogContent}>
+                    <Text style={styles.xpLogPoints}>
+                      +{log.points} XP
+                    </Text>
 
-                <Text style={styles.xpLogNote}>
-                  {log.note || 'XP earned'}
-                </Text>
+                    <Text style={styles.xpLogNote}>
+                      {log.note || 'XP earned'}
+                    </Text>
 
-                <Text style={styles.xpDate}>
-                  🕒 {formatXpLogDate(log)}
-                </Text>
-              </View>
-            </View>
-          );
-        })
-      ) : (
+                    <Text style={styles.xpDate}>
+                      🕒 {formatXpLogDate(log)}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+
+            {(dashboard.xpLogs || []).length > 3 ? (
+              <TouchableOpacity
+                style={styles.moreButton}
+                onPress={() => navigation.navigate('XPHistory', { xpLogs: dashboard.xpLogs || [] })}
+              >
+                <Text style={styles.moreButtonText}>More</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        ) : (
         <Text style={styles.xpLogEmpty}>
           No XP activity yet.
         </Text>
@@ -448,6 +459,21 @@ async function handleLogout() {
 }
 
 const styles = StyleSheet.create({
+  moreButton: {
+    marginTop: 8,
+    alignSelf: 'center',
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  moreButtonText: {
+    color: '#15803D',
+    fontWeight: '900',
+    fontSize: 15,
+  },
   logoutModalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.58)',
