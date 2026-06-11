@@ -1,22 +1,5 @@
 import { api, setToken } from './client';
 
-export async function loginStudent(identifier, password) {
-  const data = await api('/auth/login', {
-    method: 'POST',
-    body: {
-      role: 'student',
-      identifier,
-      password,
-    },
-  });
-
-  if (data.token) {
-    await setToken(data.token);
-  }
-
-  return data;
-}
-
 export async function loginTeacher(identifier, password) {
   const data = await api('/auth/login', {
     method: 'POST',
