@@ -357,12 +357,15 @@ export default function StudentSeniorHome({
                           lessonColors[index % lessonColors.length],
                       },
                     ]}
-                    onPress={() =>
-                      navigation.navigate(
-                        'StudentJuniorLessonDetail',
-                        { lessonId: lesson.id }
-                      )
-                    }
+                      onPress={() =>
+                        navigation.navigate(
+                          'StudentJuniorLessonDetail',
+                          {
+                            lessonId: lesson.id,
+                            homeRoute: 'StudentSeniorHome',
+                          }
+                        )
+                      }
                   >
                     <Text style={styles.lessonEmoji}>
                       {lessonIcons[index % lessonIcons.length]}

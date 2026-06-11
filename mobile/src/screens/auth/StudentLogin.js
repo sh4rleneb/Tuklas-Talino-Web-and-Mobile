@@ -162,28 +162,22 @@ export default function StudentLogin({
       );
 
       /*
-        Grade 1-2 = Junior
-        Grade 1-6 = Shared student tabs
+        Grade 1-2 = Junior tabs
+        Grade 3-6 = Senior dashboard
       */
 
       const homeRoute = gradeLevel <= 2
-        ? 'StudentJuniorHome'
-        : 'StudentTabs';
+        ? 'StudentTabs'
+        : 'StudentSeniorHome';
 
       if (user.mustChangePassword) {
         navigation.replace(
           'ChangePassword',
           { homeRoute }
         );
-      } else if (gradeLevel <= 2) {
-
-        navigation.replace('StudentTabs');
-
       } else {
 
-        navigation.replace(
-          'StudentTabs'
-        );
+        navigation.replace(homeRoute);
 
       }
 
