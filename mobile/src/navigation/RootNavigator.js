@@ -55,6 +55,8 @@ from '../screens/BadgesScreen';
 
 import ProfileScreen
 from '../screens/ProfileScreen';
+import XPHistoryScreen
+from '../screens/XPHistoryScreen';
 
 import MissionScreen
 from '../screens/MissionScreen';
@@ -182,6 +184,11 @@ export default function RootNavigator() {
         <Stack.Screen
           name="ProfileScreen"
           component={ProfileScreen}
+        />
+
+        <Stack.Screen
+          name="XPHistory"
+          component={XPHistoryScreen}
         />
         
 

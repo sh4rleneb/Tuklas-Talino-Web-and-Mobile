@@ -375,9 +375,16 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
 
     if (!passage) return null;
 
+    const passageTitle =
+      activity.type === 'writing'
+        ? '✍️ Gabay sa pagsulat'
+        : activity.type === 'speech'
+          ? '🎤 Basahin at bigkasin'
+          : '📖 Basahin ang teksto';
+
     return (
       <View style={styles.passageCard}>
-        <Text style={styles.passageTitle}>📖 Basahin muna</Text>
+        <Text style={styles.passageTitle}>{passageTitle}</Text>
         <Text style={styles.passageBody}>{passage}</Text>
       </View>
     );
@@ -810,57 +817,49 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
           </View>
         </View>
 
-        {completed ? (
-          <View style={styles.card}>
-            <Animated.View
-            style={[
-              styles.celebrationHero,
-              {
-                transform: [
-                  { scale: celebrationScale },
-                  {
-                    rotate: celebrationRotate.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['-3deg', '3deg'],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <Text style={styles.celebrationEmoji}>🎉</Text>
-            <Text style={styles.celebrationSparkles}>✨ ⭐ ✨</Text>
-          </Animated.View>
+          {completed ? (
+            <View style={styles.card}>
+              <View style={styles.completionToast}>
+                <Text style={styles.completionToastIcon}>✅</Text>
 
-          <Text style={styles.cardTitle}>🎉 Lesson complete</Text>
-            <Text style={styles.reward}>+{completionResult?.xpAwarded || 0} XP earned now</Text>
-            <Text style={styles.body}>
-              {completionResult?.xpAwarded
-                ? 'Your XP and progress are saved.'
-                : 'This lesson was already completed. Your progress remains saved.'}
-            </Text>
-            {(completionResult?.newBadges || []).map((badge) => (
-              <View key={badge.id || badge.code} style={styles.badgeRow}>
-                <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
-                <View>
-                  <Text style={styles.question}>New badge unlocked</Text>
-                  <Text style={styles.body}>{badge.name}</Text>
+                <View style={styles.completionToastCopy}>
+                  <Text style={styles.completionToastTitle}>Lesson complete</Text>
+                  <Text style={styles.completionToastBody}>
+                    {completionResult?.xpAwarded
+                      ? `+${completionResult?.xpAwarded || 0} XP earned. Your progress is saved.`
+                      : 'Your lesson progress is already saved.'}
+                  </Text>
                 </View>
               </View>
-            ))}
-            {nextLesson ? (
-              <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.replace('StudentJuniorLessonDetail', { lessonId: nextLesson.id })}>
-                <Text style={styles.primaryText}>Next Lesson →</Text>
+
+              {(completionResult?.newBadges || []).map((badge) => (
+                <View key={badge.id || badge.code} style={styles.badgeRow}>
+                  <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
+                  <View>
+                    <Text style={styles.question}>New badge unlocked</Text>
+                    <Text style={styles.body}>{badge.name}</Text>
+                  </View>
+                </View>
+              ))}
+
+              {nextLesson ? (
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={() => navigation.replace('StudentJuniorLessonDetail', { lessonId: nextLesson.id })}
+                >
+                  <Text style={styles.primaryText}>Next Lesson →</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
+                <Text style={styles.primaryText}>Back to Library</Text>
               </TouchableOpacity>
-            ) : null}
-            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
-              <Text style={styles.primaryText}>Back to Library</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate(homeRoute)}>
-              <Text style={styles.secondaryText}>🏠 Return Home</Text>
-            </TouchableOpacity>
-          </View>
-        ) : renderActivity()}
+
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate(homeRoute)}>
+                <Text style={styles.secondaryText}>🏠 Return Home</Text>
+              </TouchableOpacity>
+            </View>
+          ) : renderActivity()}
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -868,6 +867,34 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  completionToast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#ECFDF5',
+    borderColor: '#BBF7D0',
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 18,
+  },
+  completionToastIcon: {
+    fontSize: 26,
+  },
+  completionToastCopy: {
+    flex: 1,
+  },
+  completionToastTitle: {
+    color: '#064E3B',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  completionToastBody: {
+    color: '#047857',
+    fontSize: 14,
+    fontWeight: '800',
+    marginTop: 4,
+  },
   visualCard: {
     flexDirection: 'row',
     alignItems: 'center',
