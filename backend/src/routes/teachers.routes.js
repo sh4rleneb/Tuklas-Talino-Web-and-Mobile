@@ -1,9 +1,24 @@
 import { Router } from 'express';
 import { Op } from 'sequelize';
-import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
-import { Role, User, Teacher, TeacherAssignment, Student, CompletedLesson, Lesson, Group, GroupMember, QuizAttempt } from '../models/index.js';
+import {
+  Role,
+  User,
+  Teacher,
+  TeacherAssignment,
+  Student,
+  CompletedLesson,
+  Lesson,
+  Group,
+  GroupMember,
+  QuizAttempt,
+  WritingSubmission,
+  WritingTask,
+  SpeechAttempt,
+  SpeechTask,
+  LessonActivity,
+} from '../models/index.js';
+import { authenticate, requirePasswordChanged, requireRole } from '../middleware/auth.js';
 import { teacherSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
 
@@ -406,6 +421,146 @@ router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
     await audit(req.user.id, 'teacher.reactivate', 'teacher', teacher.id);
     res.json({ teacher });
   } catch (err) { next(err); }
+});
+
+
+router.get('/reviews/writing-speech', requireRole('teacher', 'admin'), async (req, res, next) => {
+  try {
+    const assignedStudentIds = await getAssignedStudentIds(req);
+
+    if (Array.isArray(assignedStudentIds) && assignedStudentIds.length === 0) {
+      return res.json({
+        summary: {
+          total: 0,
+          writing: 0,
+          speech: 0,
+        },
+        writing: [],
+        speech: [],
+      });
+    }
+
+    const scopeWhere = Array.isArray(assignedStudentIds)
+      ? { studentId: assignedStudentIds }
+      : {};
+
+    const [writingRows, speechRows] = await Promise.all([
+      WritingSubmission.findAll({
+        where: scopeWhere,
+        order: [['submittedAt', 'DESC'], ['id', 'DESC']],
+        limit: 100,
+      }),
+      SpeechAttempt.findAll({
+        where: scopeWhere,
+        order: [['createdAt', 'DESC'], ['id', 'DESC']],
+        limit: 100,
+      }),
+    ]);
+
+    const normalizeRow = (row) => row?.toJSON ? row.toJSON() : row;
+
+    const writing = writingRows.map(normalizeRow);
+    const speech = speechRows.map(normalizeRow);
+
+    const uniqueIds = (items) => [...new Set(
+      items
+        .map((item) => Number(item))
+        .filter((item) => Number.isFinite(item) && item > 0)
+    )];
+
+    const studentIds = uniqueIds([
+      ...writing.map((row) => row.studentId),
+      ...speech.map((row) => row.studentId),
+    ]);
+    const lessonIds = uniqueIds([
+      ...writing.map((row) => row.lessonId),
+      ...speech.map((row) => row.lessonId),
+    ]);
+    const writingTaskIds = uniqueIds(writing.map((row) => row.taskId));
+    const speechTaskIds = uniqueIds(speech.map((row) => row.taskId));
+
+    const [students, lessons, writingTasks, speechTasks] = await Promise.all([
+      studentIds.length ? Student.findAll({ where: { id: studentIds } }) : [],
+      lessonIds.length ? Lesson.findAll({ where: { id: lessonIds } }) : [],
+      writingTaskIds.length ? WritingTask.findAll({ where: { id: writingTaskIds } }) : [],
+      speechTaskIds.length ? SpeechTask.findAll({ where: { id: speechTaskIds } }) : [],
+    ]);
+
+    const byId = (rows) => new Map(
+      rows.map((row) => {
+        const item = normalizeRow(row);
+        return [Number(item.id), item];
+      })
+    );
+
+    const studentById = byId(students);
+    const lessonById = byId(lessons);
+    const writingTaskById = byId(writingTasks);
+    const speechTaskById = byId(speechTasks);
+
+    const formatStudent = (student) => student ? {
+      id: student.id,
+      name: student.name,
+      avatar: student.avatar,
+      gradeLevel: student.gradeLevel,
+      section: student.section,
+    } : null;
+
+    const formatLesson = (lesson) => lesson ? {
+      id: lesson.id,
+      title: lesson.title,
+      subject: lesson.subject,
+      gradeLevel: lesson.gradeLevel,
+    } : null;
+
+    const formatDate = (value) => value ? new Date(value).toISOString() : null;
+
+    return res.json({
+      summary: {
+        total: writing.length + speech.length,
+        writing: writing.length,
+        speech: speech.length,
+      },
+      writing: writing.map((row) => {
+        const task = writingTaskById.get(Number(row.taskId));
+
+        return {
+          id: row.id,
+          type: 'writing',
+          content: row.content || '',
+          feedback: row.feedback || '',
+          submittedAt: formatDate(row.submittedAt || row.createdAt),
+          student: formatStudent(studentById.get(Number(row.studentId))),
+          lesson: formatLesson(lessonById.get(Number(row.lessonId))),
+          task: task ? {
+            id: task.id,
+            prompt: task.prompt || '',
+            rubricJson: task.rubricJson || null,
+          } : null,
+        };
+      }),
+      speech: speech.map((row) => {
+        const task = speechTaskById.get(Number(row.taskId));
+
+        return {
+          id: row.id,
+          type: 'speech',
+          transcript: row.transcript || '',
+          score: row.score ?? null,
+          submittedAt: formatDate(row.createdAt || row.submittedAt),
+          student: formatStudent(studentById.get(Number(row.studentId))),
+          lesson: formatLesson(lessonById.get(Number(row.lessonId))),
+          task: task ? {
+            id: task.id,
+            targetText: task.targetText || '',
+            promptJson: task.promptJson || null,
+          } : null,
+        };
+      }),
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 export default router;

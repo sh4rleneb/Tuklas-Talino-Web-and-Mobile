@@ -48,6 +48,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [activityNotice, setActivityNotice] = useState(null);
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
   const celebrationScale = useRef(new Animated.Value(0.92)).current;
@@ -220,8 +221,8 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
       return {
         icon: '🎙️',
         title: 'I-record ang iyong sagot',
-        body: 'Basahin ang tanong, pindutin ang record, magsalita nang malinaw, at i-save ang sagot.',
-        steps: ['Basahin', 'Record', 'Save'],
+        body: 'Basahin ang speech target, pindutin ang record, magsalita nang malinaw, at i-save ang sagot.',
+        steps: ['Target', 'Record', 'Save'],
       };
     }
 
@@ -505,9 +506,21 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
           correct: Boolean(data.correct),
         },
       }));
-      Alert.alert(data.correct ? 'Correct!' : 'Try Again', data.message || 'Answer saved.');
+      setActivityNotice({
+        type: data.correct ? 'success' : 'warning',
+        title: data.correct ? 'Correct!' : 'Try again',
+        message: data.message || (
+          data.correct
+            ? 'Correct answer. XP is saved once for this question.'
+            : 'Your answer was saved. Choose another answer if needed.'
+        ),
+      });
     } catch (err) {
-      Alert.alert('Quiz', err.message || 'Unable to save your answer.');
+      setActivityNotice({
+        type: 'error',
+        title: 'Unable to save answer',
+        message: err.message || 'Please try again.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -638,6 +651,19 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
               })}
             </View>
           ))}
+          {activityNotice ? (
+            <View
+              style={[
+                styles.feedbackCard,
+                activityNotice.type === 'success' && styles.feedbackSuccess,
+                activityNotice.type === 'warning' && styles.feedbackWarning,
+                activityNotice.type === 'error' && styles.feedbackError,
+              ]}
+            >
+              <Text style={styles.feedbackTitle}>{activityNotice.title}</Text>
+              <Text style={styles.feedbackMessage}>{activityNotice.message}</Text>
+            </View>
+          ) : null}
           {!questions.length && <Text style={styles.body}>No quiz questions are published for this activity yet.</Text>}
           <TouchableOpacity
             style={[styles.primaryButton, !allAnswered && styles.disabledButton]}
@@ -705,7 +731,6 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
             ) : null}
           </View>
           {speechStatus ? <Text style={styles.statusMessage}>{speechStatus}</Text> : null}
-          {renderActivityPassage(currentActivity)}
           <TextInput
             style={styles.input}
             multiline
@@ -1079,6 +1104,35 @@ const styles = StyleSheet.create({
   optionCorrect: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
   optionIncorrect: { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
   optionText: { color: '#0F172A' },
+  feedbackCard: {
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+  },
+  feedbackSuccess: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#22C55E',
+  },
+  feedbackWarning: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  feedbackError: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+  },
+  feedbackTitle: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  feedbackMessage: {
+    color: '#475569',
+    marginTop: 4,
+    lineHeight: 20,
+    fontWeight: '700',
+  },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   choiceChip: { backgroundColor: '#FEF3C7', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 9 },
   choiceText: { color: '#92400E', fontWeight: '900' },
@@ -1088,6 +1142,7 @@ const styles = StyleSheet.create({
   recordingButton: { backgroundColor: '#FEE2E2' },
   secondaryText: { color: '#0F172A', fontWeight: '900' },
   speechButtons: { marginTop: 4 },
+  speechPassageWrap: { marginTop: 16 },
   statusMessage: { color: '#0369A1', fontWeight: '800', marginTop: 10 },
   contentRow: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, marginTop: 10 },
   stepRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },

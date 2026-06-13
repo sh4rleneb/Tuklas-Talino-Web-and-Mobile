@@ -164,6 +164,9 @@ export default function AdminLogin({
               onChangeText={setIdentifier}
               placeholder="Enter your username"
               placeholderTextColor="#94A3B8"
+              spellCheck={false}
+              autoCorrect={false}
+              autoCapitalize="none"
             />
 
           </View>
@@ -191,6 +194,9 @@ export default function AdminLogin({
               onChangeText={setPassword}
               placeholder="Enter your password"
               placeholderTextColor="#94A3B8"
+              spellCheck={false}
+              autoCorrect={false}
+              autoCapitalize="none"
             />
 
             <TouchableOpacity

@@ -12,6 +12,10 @@ export async function getTeacherQuizPerformance() {
   return api('/teachers/quiz-performance');
 }
 
+export async function getTeacherReviews() {
+  return api('/teachers/reviews/writing-speech');
+}
+
 export async function getPendingGroupChecks() {
   return api('/groups/task-completions/pending');
 }

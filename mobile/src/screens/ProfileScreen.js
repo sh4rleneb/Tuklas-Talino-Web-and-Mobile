@@ -9,6 +9,7 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 
 import {
@@ -149,9 +150,16 @@ async function handleLogout() {
 
     <View style={styles.topCard}>
 
-      <Text style={styles.brand}>
-        🏡 Tuklas Talino
-      </Text>
+      <View style={styles.brandRow}>
+        <Image
+          source={require('../../assets/icons/tuklas-logo.png')}
+          style={styles.brandLogoImage}
+          resizeMode="contain"
+        />
+        <Text style={styles.brand}>
+          Tuklas Talino
+        </Text>
+      </View>
 
       <View style={styles.pillsRow}>
 
@@ -632,6 +640,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
 
     elevation: 4,
+  },
+
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  brandLogoImage: {
+    width: 40,
+    height: 40,
+    marginRight: 10,
   },
 
   brand: {
