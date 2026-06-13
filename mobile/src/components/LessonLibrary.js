@@ -23,7 +23,7 @@ const CATEGORIES = [
 
 function categoryKey(subject = '') {
   const value = String(subject).trim().toLowerCase();
-  if (value === 'oral comm' || value === 'oral communication') return 'Oral Communication';
+  if (value === 'oral comm' || value === 'oral communication' || value === 'pagsasalita') return 'Oral Communication';
   return CATEGORIES.find((category) => category.key.toLowerCase() === value)?.key || String(subject || 'General');
 }
 
@@ -35,6 +35,44 @@ function categoryMeta(subject) {
     icon: '📚',
     accent: '#64748B',
     soft: '#F1F5F9',
+  };
+}
+
+function gameQuestMeta(subject) {
+  const key = categoryKey(subject);
+
+  const games = {
+    Pagbasa: {
+      element: 'Pagbasa',
+      title: '📖 Read & Match Game',
+      mission: 'Read the clue, tap the right answer, and collect stars for every correct match.',
+    },
+    Bokabularyo: {
+      element: 'Bokabularyo',
+      title: '🔤 Word Match Game',
+      mission: 'Match words with pictures or meanings to build your Filipino vocabulary.',
+    },
+    Panitikan: {
+      element: 'Panitikan',
+      title: '📜 Story Adventure Game',
+      mission: 'Explore the story, answer fun challenges, and unlock the next story adventure.',
+    },
+    'Oral Communication': {
+      element: 'Pagsasalita',
+      title: '🎙️ Speak Aloud Game',
+      mission: 'Say the target words aloud, practice clear speech, and earn stars as you improve.',
+    },
+    Pagsulat: {
+      element: 'Pagsulat',
+      title: '✍️ Trace & Write Game',
+      mission: 'Practice writing words or short answers, then complete the challenge to earn XP.',
+    },
+  };
+
+  return games[key] || {
+    element: key || 'Filipino',
+    title: '🎮 Learning Game',
+    mission: 'Read, tap, speak, or write to collect stars and unlock the next game.',
   };
 }
 
@@ -241,14 +279,14 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
         <View style={[styles.hero, playful && styles.heroPlayful]}>
           <Text style={styles.eyebrow}>
-            {playful ? 'QUEST MAP' : 'FILIPINO LEARNING HUB'}
+            {playful ? 'GAME QUEST MAP' : 'FILIPINO LEARNING HUB'}
           </Text>
           <Text style={styles.title}>
-            {playful ? '🗺️ Lesson Quest Map' : '📚 Lesson Library'}
+            {playful ? '🎮 Game Quest Map' : '📚 Lesson Library'}
           </Text>
           <Text style={styles.subtitle}>
             {playful
-              ? 'Pick a quest, collect stars, earn XP, and unlock the next adventure.'
+              ? 'Play Filipino learning games, collect stars, earn XP, and unlock the next challenge.'
               : 'Choose a category, earn XP, and continue where you stopped.'}
           </Text>
 
@@ -284,7 +322,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
               >
                 <Text>{category.icon}</Text>
                 <Text style={[styles.filterText, active && { color: category.accent }]}>
-                  {category.label}
+                  {playful && category.key === 'ALL' ? 'All Games' : playful ? gameQuestMeta(category.key).element : category.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -301,6 +339,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
         ) : filteredLessons.length ? (
           filteredLessons.map((lesson) => {
             const meta = categoryMeta(lesson.subject);
+            const game = gameQuestMeta(lesson.subject);
             const difficulty = lessonDifficulty(lesson, student);
             const littleQuest = isLittleQuestLesson(lesson, student, playful);
             const stars = questStarCount(lesson);
@@ -313,10 +352,10 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
             if (littleQuest) {
               action = lesson.completed
-                ? '🏆 Quest Done'
+                ? '🏆 Game Done'
                 : lesson.unlocked
-                  ? lesson.progressPercent > 0 ? '🎮 Continue Quest' : '🚀 Start Quest'
-                  : '🔒 Unlock Next';
+                  ? lesson.progressPercent > 0 ? '🎮 Continue Game' : '🕹️ Play Game'
+                  : '🔒 Unlock Game';
             }
 
             return (
@@ -361,7 +400,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                 </View>
 
                 <Text style={[styles.subject, { color: meta.accent }]}>
-                  {littleQuest ? 'Mini Quest' : meta.label}
+                  {littleQuest ? game.element : meta.label}
                 </Text>
 
                 <Text style={styles.lessonTitle}>{lesson.title}</Text>
@@ -369,7 +408,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                 {littleQuest ? (
                   <View style={styles.questBanner}>
                     <View style={styles.questBannerTop}>
-                      <Text style={styles.questLabel}>🎯 Quest Mission</Text>
+                      <Text style={styles.questLabel}>{game.title}</Text>
                       <View style={styles.starRow}>
                         {Array.from({ length: 3 }).map((_, index) => (
                           <Text
@@ -385,7 +424,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                       </View>
                     </View>
                     <Text style={styles.questHelp}>
-                      Read, tap, speak, or write to collect stars and unlock the next quest.
+                      {game.mission}
                     </Text>
                   </View>
                 ) : (
@@ -406,7 +445,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
                 <View style={styles.lessonProgressRow}>
                   <Text style={styles.muted}>
-                    {littleQuest ? 'Quest progress' : 'Lesson progress'}
+                    {littleQuest ? 'Game progress' : 'Lesson progress'}
                   </Text>
                   <Text style={styles.progressValue}>{lesson.progressPercent}%</Text>
                 </View>
