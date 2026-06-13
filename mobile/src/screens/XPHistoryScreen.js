@@ -1,12 +1,13 @@
 import React from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function formatXpLogDate(log) {
   const raw = log.createdAt || log.created_at || log.awardedAt || log.awarded_at;
@@ -82,12 +83,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
   },
   page: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
     paddingBottom: 36,
   },
   backButton: {
     alignSelf: 'flex-start',
-    marginBottom: 14,
+    marginTop: 6,
+    marginBottom: 16,
   },
   backText: {
     color: '#16A34A',

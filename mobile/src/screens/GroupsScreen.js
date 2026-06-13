@@ -1,5 +1,14 @@
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View, StyleSheet } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  StyleSheet,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/client';
 import StudentScreenHeader from '../components/StudentScreenHeader';
@@ -15,6 +24,13 @@ const HIDDEN_GROUP_STATUSES = new Set([
   'removed',
   'disabled',
 ]);
+
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'todo', label: 'To Do' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'done', label: 'Done' },
+];
 
 function isVisibleGroupRecord(item) {
   if (!item) return false;
@@ -51,15 +67,47 @@ function getVisibleGroups(rawGroups = []) {
     }));
 }
 
+function getTaskBucket(task) {
+  if (task?.completed) return 'done';
+  if (task?.pendingTeacherCheck) return 'pending';
+  return 'todo';
+}
+
+function taskStatus(task) {
+  if (task.completed) return 'Approved';
+  if (task.pendingTeacherCheck) return 'Pending teacher review';
+  if (task.returnedByTeacher) return 'Returned for revision';
+  return 'Not submitted';
+}
+
+function normalizeText(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function taskSearchText(task) {
+  return normalizeText([
+    task?.title,
+    task?.description,
+    taskStatus(task),
+    task?.xpReward,
+  ].join(' '));
+}
+
 export default function GroupsScreen({ navigation }) {
   const [groups, setGroups] = useState([]);
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [busyTaskId, setBusyTaskId] = useState(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState(null);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ quiet = false } = {}) => {
+    if (!quiet) setLoading(true);
     setError('');
+
     try {
       const dashboard = await api('/dashboard');
       setGroups(getVisibleGroups(dashboard.groups));
@@ -67,86 +115,311 @@ export default function GroupsScreen({ navigation }) {
     } catch (err) {
       setError(err.message || 'Unable to load group tasks.');
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
+      setRefreshing(false);
     }
   }, []);
+
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    load({ quiet: true });
+  }, [load]);
+
   async function complete(taskId) {
+    if (busyTaskId) return;
+
+    setBusyTaskId(taskId);
+    setNotice(null);
+
     try {
       const data = await api(`/groups/tasks/${taskId}/complete`, { method: 'POST' });
-      Alert.alert('Group Task', data.message || 'Submitted for teacher review.');
-      load();
+      setNotice({
+        tone: 'success',
+        message: data.message || 'Submitted for teacher review.',
+      });
+      await load({ quiet: true });
     } catch (err) {
-      Alert.alert('Group Task', err.message || 'Unable to submit this task.');
+      setNotice({
+        tone: 'error',
+        message: err.message || 'Unable to submit this task.',
+      });
+    } finally {
+      setBusyTaskId(null);
     }
   }
 
-  function taskStatus(task) {
-    if (task.completed) return 'Approved';
-    if (task.pendingTeacherCheck) return 'Pending teacher review';
-    if (task.returnedByTeacher) return 'Returned for revision';
-    return 'Not submitted';
+  const summary = useMemo(() => {
+    const tasks = groups.flatMap((group) => group.tasks || []);
+
+    return {
+      groups: groups.length,
+      todo: tasks.filter((task) => getTaskBucket(task) === 'todo').length,
+      pending: tasks.filter((task) => getTaskBucket(task) === 'pending').length,
+      done: tasks.filter((task) => getTaskBucket(task) === 'done').length,
+    };
+  }, [groups]);
+
+  const filteredGroups = useMemo(() => {
+    const search = normalizeText(query);
+
+    return groups
+      .map((group) => {
+        const tasks = Array.isArray(group.tasks) ? group.tasks : [];
+        const groupMatches = !search || normalizeText([
+          group.name,
+          group.description,
+          group.currentStudentIsLeader ? 'leader' : 'member',
+        ].join(' ')).includes(search);
+
+        const filteredTasks = tasks.filter((task) => {
+          const bucket = getTaskBucket(task);
+          const matchesFilter = statusFilter === 'all' || bucket === statusFilter;
+          const matchesSearch = !search || groupMatches || taskSearchText(task).includes(search);
+
+          return matchesFilter && matchesSearch;
+        });
+
+        if (statusFilter === 'all' && groupMatches) {
+          return { ...group, tasks };
+        }
+
+        if (filteredTasks.length) {
+          return { ...group, tasks: filteredTasks };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+  }, [groups, query, statusFilter]);
+
+  const hasFilters = Boolean(query.trim()) || statusFilter !== 'all';
+
+  function clearFilters() {
+    setQuery('');
+    setStatusFilter('all');
+  }
+
+  function renderFilterChip(item) {
+    const active = statusFilter === item.key;
+
+    return (
+      <TouchableOpacity
+        key={item.key}
+        style={[styles.filterChip, active && styles.filterChipActive]}
+        onPress={() => setStatusFilter(item.key)}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.filterText, active && styles.filterTextActive]}>
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
+  function renderTask(group, task) {
+    const bucket = getTaskBucket(task);
+    const isBusy = busyTaskId === task.id;
+    const canSubmit = group.currentStudentIsLeader && !task.completed && !task.pendingTeacherCheck;
+
+    return (
+      <Card key={task.id} style={styles.inner}>
+        <View style={styles.taskHeader}>
+          <Text style={styles.task}>{task.title}</Text>
+          <View style={[styles.statusPill, bucket === 'done' && styles.statusDone, bucket === 'pending' && styles.statusPending]}>
+            <Text style={[styles.statusPillText, bucket === 'done' && styles.statusDoneText, bucket === 'pending' && styles.statusPendingText]}>
+              {taskStatus(task)}
+            </Text>
+          </View>
+        </View>
+
+        {task.description ? (
+          <Text style={styles.taskDescription}>{task.description}</Text>
+        ) : (
+          <Text style={styles.muted}>
+            Complete this group activity with your teammates.
+          </Text>
+        )}
+
+        <View style={styles.taskFooter}>
+          <Text style={styles.taskXp}>+{task.xpReward || 0} XP</Text>
+          {task.returnedByTeacher ? (
+            <Text style={styles.revisionText}>Needs revision</Text>
+          ) : null}
+        </View>
+
+        {canSubmit && (
+          <PrimaryButton variant="secondary" onPress={() => complete(task.id)}>
+            {isBusy ? 'Submitting...' : task.returnedByTeacher ? 'Resubmit for Review' : 'Submit for Review'}
+          </PrimaryButton>
+        )}
+      </Card>
+    );
+  }
+
+  function renderGroup(group) {
+    const tasks = Array.isArray(group.tasks) ? group.tasks : [];
+    const memberCount = Array.isArray(group.members) ? group.members.length : 0;
+
+    return (
+      <Card key={group.id} style={styles.groupCard}>
+        <View style={styles.groupHeader}>
+          <View style={styles.groupIconWrap}>
+            <Text style={styles.groupIcon}>🤝</Text>
+          </View>
+
+          <View style={styles.groupTitleBlock}>
+            <Text style={styles.group}>{group.name}</Text>
+            <Text style={styles.muted}>
+              {group.description || 'Your assigned learning group.'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.metaRow}>
+          <View style={styles.metaPill}>
+            <Text style={styles.metaText}>{tasks.length} task{tasks.length === 1 ? '' : 's'}</Text>
+          </View>
+          {memberCount > 0 ? (
+            <View style={styles.metaPill}>
+              <Text style={styles.metaText}>{memberCount} member{memberCount === 1 ? '' : 's'}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <Text style={styles.role}>
+          {group.currentStudentIsLeader
+            ? 'You are the group leader. Submit finished tasks for teacher review.'
+            : 'Work with your teammates. Your group leader submits tasks.'}
+        </Text>
+
+        {tasks.map((task) => renderTask(group, task))}
+
+        {tasks.length === 0 && (
+          <View style={styles.emptyMini}>
+            <Text style={styles.emptyMiniTitle}>No tasks here yet</Text>
+            <Text style={styles.muted}>
+              {hasFilters
+                ? 'Try another search or filter.'
+                : 'No tasks have been assigned to this group yet.'}
+            </Text>
+          </View>
+        )}
+      </Card>
+    );
   }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <StudentScreenHeader
-        navigation={navigation}
-        avatar={student?.avatar}
-        gradeLevel={student?.gradeLevel}
-      />
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.secondary]}
+            tintColor={colors.secondary}
+          />
+        }
+      >
+        <StudentScreenHeader
+          navigation={navigation}
+          avatar={student?.avatar}
+          gradeLevel={student?.gradeLevel}
+        />
 
-      <View style={styles.header}>
-        <View style={styles.heroCard}>
-          <Text style={styles.title}>👥 Group Tasks</Text>
-          <Text style={styles.muted}>
-            Work together and wait for teacher approval.
-          </Text>
+        <View style={styles.header}>
+          <View style={styles.heroCard}>
+            <Text style={styles.title}>👥 Group Tasks</Text>
+            <Text style={styles.muted}>
+              Work together, track progress, and submit tasks for teacher approval.
+            </Text>
+
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryValue}>{summary.groups}</Text>
+                <Text style={styles.summaryLabel}>Groups</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryValue}>{summary.todo}</Text>
+                <Text style={styles.summaryLabel}>To Do</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryValue}>{summary.pending}</Text>
+                <Text style={styles.summaryLabel}>Pending</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryValue}>{summary.done}</Text>
+                <Text style={styles.summaryLabel}>Done</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-      </View>
+        <Card style={styles.toolsCard}>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search groups or tasks"
+            placeholderTextColor={colors.muted}
+            style={styles.searchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.secondary} />
-          <Text style={styles.muted}>Loading group tasks...</Text>
-        </View>
-      ) : error ? (
-        <Text style={styles.error}>{error}</Text>
-      ) : groups.map(group => (
-          <Card key={group.id}>
-            <Text style={styles.group}>🤝 {group.name}</Text>
-            <Text style={styles.muted}>{group.description || 'Your assigned learning group.'}</Text>
-            <Text style={styles.role}>{group.currentStudentIsLeader ? 'You are the group leader.' : 'Your group leader submits tasks.'}</Text>
-            {(group.tasks || []).map(task => (
-              <Card key={task.id} style={styles.inner}>
-                <Text style={styles.task}>{task.title}</Text>
-                {task.description ? (
-                  <Text>{task.description}</Text>
-                ) : (
-                  <Text style={styles.muted}>
-                    Complete this group activity with your teammates.
-                  </Text>
-                )}
-                <Text style={styles.taskXp}>+{task.xpReward || 0} XP</Text>
-                <Text style={styles.status}>{taskStatus(task)}</Text>
-                {group.currentStudentIsLeader && !task.completed && !task.pendingTeacherCheck && (
-                  <PrimaryButton variant="secondary" onPress={() => complete(task.id)}>
-                    {task.returnedByTeacher ? 'Resubmit for Review' : 'Submit for Review'}
-                  </PrimaryButton>
-                )}
-              </Card>
-            ))}
-            {(group.tasks || []).length === 0 && (
-              <Text style={styles.muted}>No tasks have been assigned to this group yet.</Text>
-            )}
-          </Card>
-        ))}
-
-      {!loading && !error && !groups.length && <Text style={styles.muted}>No group assigned yet.</Text>}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {FILTERS.map(renderFilterChip)}
           </ScrollView>
+        </Card>
+
+        {notice ? (
+          <View style={[styles.notice, notice.tone === 'error' && styles.noticeError]}>
+            <Text style={[styles.noticeText, notice.tone === 'error' && styles.noticeErrorText]}>
+              {notice.message}
+            </Text>
+          </View>
+        ) : null}
+
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={colors.secondary} />
+            <Text style={styles.muted}>Loading group tasks...</Text>
+          </View>
+        ) : error ? (
+          <Card style={styles.errorCard}>
+            <Text style={styles.error}>{error}</Text>
+            <PrimaryButton variant="secondary" onPress={() => load()}>
+              Try Again
+            </PrimaryButton>
+          </Card>
+        ) : filteredGroups.length ? (
+          filteredGroups.map(renderGroup)
+        ) : (
+          <Card style={styles.emptyCard}>
+            <Text style={styles.emptyIcon}>🔎</Text>
+            <Text style={styles.emptyTitle}>
+              {groups.length ? 'No matching group tasks' : 'No group assigned yet'}
+            </Text>
+            <Text style={styles.muted}>
+              {groups.length
+                ? 'Try a different search or filter to find your group activity.'
+                : 'Your teacher can add you to a group and assign collaborative tasks.'}
+            </Text>
+
+            {hasFilters ? (
+              <TouchableOpacity style={styles.clearButton} onPress={clearFilters} activeOpacity={0.85}>
+                <Text style={styles.clearButtonText}>Clear search and filters</Text>
+              </TouchableOpacity>
+            ) : null}
+          </Card>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -163,26 +436,255 @@ const styles = StyleSheet.create({
     paddingBottom: 44,
   },
   header: {
-    marginBottom: 22,
+    marginBottom: 14,
   },
-
   heroCard: {
     backgroundColor: '#ECFDF5',
     borderRadius: 26,
     padding: 20,
-    marginBottom: 20,
+    marginBottom: 6,
   },
-  title: { fontSize: 24, fontWeight: '900', color: colors.ink },
-  studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
-  studentAvatar: { fontSize: 26 },
-  studentXp: { color: colors.ink, fontWeight: '800', fontSize: 12 },
-  group: { fontSize: 18, fontWeight: '900', color: colors.ink },
-  task: { fontWeight: '900', marginBottom: 6 },
-  muted: { color: colors.muted },
-  role: { color: colors.muted, fontSize: 12, marginTop: 8 },
-  inner: { backgroundColor: '#fff7df', marginTop: 10 },
-  taskXp: { color: colors.green, fontWeight: '900', marginTop: 8 },
-  status: { color: colors.muted, marginTop: 4 },
-  center: { alignItems: 'center', paddingVertical: 50 },
-  error: { color: '#B91C1C', textAlign: 'center', marginTop: 30 },
+  title: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.ink,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  summaryValue: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  summaryLabel: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  toolsCard: {
+    marginBottom: 14,
+  },
+  searchInput: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#DDE7D8',
+    borderWidth: 1,
+    borderRadius: 18,
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: '700',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  filterRow: {
+    gap: 8,
+    paddingTop: 12,
+  },
+  filterChip: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  filterChipActive: {
+    backgroundColor: colors.secondary,
+  },
+  filterText: {
+    color: colors.muted,
+    fontWeight: '900',
+    fontSize: 12,
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+  },
+  notice: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC',
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+  },
+  noticeError: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  noticeText: {
+    color: '#166534',
+    fontWeight: '800',
+  },
+  noticeErrorText: {
+    color: '#B91C1C',
+  },
+  groupCard: {
+    marginBottom: 14,
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  groupIconWrap: {
+    backgroundColor: '#DCFCE7',
+    borderRadius: 18,
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupIcon: {
+    fontSize: 22,
+  },
+  groupTitleBlock: {
+    flex: 1,
+  },
+  group: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.ink,
+  },
+  muted: {
+    color: colors.muted,
+    lineHeight: 20,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  metaPill: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  metaText: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  role: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 10,
+  },
+  inner: {
+    backgroundColor: '#fff7df',
+    marginTop: 12,
+  },
+  taskHeader: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  task: {
+    color: colors.ink,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  taskDescription: {
+    color: colors.ink,
+    lineHeight: 20,
+  },
+  taskFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 10,
+    gap: 10,
+  },
+  taskXp: {
+    color: colors.green,
+    fontWeight: '900',
+  },
+  revisionText: {
+    color: '#B45309',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  statusPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  statusPending: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusDone: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusPillText: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  statusPendingText: {
+    color: '#B45309',
+  },
+  statusDoneText: {
+    color: '#166534',
+  },
+  emptyMini: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 18,
+    marginTop: 12,
+    padding: 14,
+  },
+  emptyMiniTitle: {
+    color: colors.ink,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  center: {
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  errorCard: {
+    gap: 12,
+  },
+  error: {
+    color: '#B91C1C',
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: 28,
+  },
+  emptyIcon: {
+    fontSize: 34,
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  clearButton: {
+    backgroundColor: colors.secondary,
+    borderRadius: 999,
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+  },
+  clearButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
 });

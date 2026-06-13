@@ -33,6 +33,7 @@ import {
   getTeacherLessons,
   getTeacherMonitoringStats,
   getTeacherQuizPerformance,
+  getTeacherReviews,
   returnGroupTask,
   updateLesson,
   uploadLessonMaterial,
@@ -44,6 +45,7 @@ const NAV_ITEMS = [
   ['lessons', '📚', 'Lessons'],
   ['groups', '👥', 'Groups'],
   ['assessment', '🧠', 'Assessment'],
+  ['review', '📝', 'Review'],
   ['students', '🎓', 'Students'],
   ['reports', '📊', 'Reports'],
 ];
@@ -107,6 +109,7 @@ export default function TeacherHome({ navigation }) {
   const [quizPerformance, setQuizPerformance] = useState({ summary: {}, rows: [] });
   const [workspaceNotice, setWorkspaceNotice] = useState(null);
   const [pendingChecks, setPendingChecks] = useState({ summary: {}, rows: [] });
+  const [reviewQueue, setReviewQueue] = useState({ summary: {}, writing: [], speech: [] });
   const [groups, setGroups] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [reportSummary, setReportSummary] = useState(null);
@@ -134,7 +137,7 @@ export default function TeacherHome({ navigation }) {
     setLoading(true);
     setError('');
     try {
-      const [dash, monitor, quiz, pending, groupData, lessonData, summary] = await Promise.all([
+      const [dash, monitor, quiz, pending, groupData, lessonData, summary, reviews] = await Promise.all([
         getTeacherDashboard(),
         getTeacherMonitoringStats(),
         getTeacherQuizPerformance(),
@@ -142,6 +145,7 @@ export default function TeacherHome({ navigation }) {
         getTeacherGroups(),
         getTeacherLessons(),
         getReportSummary(),
+        getTeacherReviews(),
       ]);
       setDashboard(dash);
       setMonitoring(monitor);
@@ -150,6 +154,7 @@ export default function TeacherHome({ navigation }) {
       setGroups((groupData.groups || []).filter((group) => group.status !== 'archived'));
       setLessons(lessonData.lessons || []);
       setReportSummary(summary);
+      setReviewQueue(reviews || { summary: {}, writing: [], speech: [] });
     } catch (err) {
       setError(err.message || 'Unable to load teacher workspace.');
     } finally {
@@ -182,7 +187,7 @@ export default function TeacherHome({ navigation }) {
       await load();
       return data;
     } catch (err) {
-      Alert.alert('Unable to save', err.message || 'Please try again.');
+      setWorkspaceNotice({ type: 'error', text: err.message || 'Unable to save. Please try again.' });
       return null;
     } finally {
       setBusy('');
@@ -234,7 +239,7 @@ async function handleLogout() {
 
     if (type === 'mcq') {
       if (!newActivity.question.trim() || !newActivity.optionA.trim() || !newActivity.optionB.trim()) {
-        Alert.alert('Activities', 'Add a question and two answer choices.');
+        setWorkspaceNotice({ type: 'warning', text: 'Add a question and two answer choices.' });
         return;
       }
       activity = {
@@ -250,13 +255,22 @@ async function handleLogout() {
         }],
       };
     } else if (type === 'writing') {
-      if (!newActivity.content.trim()) return Alert.alert('Activities', 'Add a writing prompt.');
+      if (!newActivity.content.trim()) {
+        setWorkspaceNotice({ type: 'warning', text: 'Add a writing prompt first.' });
+        return;
+      }
       activity = { type, title, instructions: newActivity.instructions, prompt: newActivity.content };
     } else if (type === 'speech') {
-      if (!newActivity.content.trim()) return Alert.alert('Activities', 'Add a speech target.');
-      activity = { type, title, instructions: newActivity.instructions, targetText: newActivity.content };
+      if (!newActivity.content.trim()) {
+        setWorkspaceNotice({ type: 'warning', text: 'Add the exact words students should say in Speech Target Only.' });
+        return;
+      }
+      activity = { type, title, instructions: '', targetText: newActivity.content };
     } else {
-      if (!newActivity.content.trim()) return Alert.alert('Activities', 'Add lesson-note content.');
+      if (!newActivity.content.trim()) {
+        setWorkspaceNotice({ type: 'warning', text: 'Add lesson-note content first.' });
+        return;
+      }
       activity = { type: 'infographic', title, instructions: newActivity.instructions, content: newActivity.content };
     }
 
@@ -424,7 +438,9 @@ async function handleLogout() {
             <Text style={styles.cardTitle}>Activities</Text>
             <View style={styles.choiceRow}>{['infographic', 'mcq', 'writing', 'speech'].map((type) => <SmallButton key={type} tone={newActivity.type === type ? 'green' : 'slate'} onPress={() => setNewActivity((current) => ({ ...current, type }))}>{type}</SmallButton>)}</View>
             <Field label="Activity Title" value={newActivity.title} onChangeText={(value) => setNewActivity((current) => ({ ...current, title: value }))} />
-            <Field label="Instructions" value={newActivity.instructions} onChangeText={(value) => setNewActivity((current) => ({ ...current, instructions: value }))} multiline />
+            {newActivity.type !== 'speech' ? (
+              <Field label="Instructions" value={newActivity.instructions} onChangeText={(value) => setNewActivity((current) => ({ ...current, instructions: value }))} multiline />
+            ) : null}
             {newActivity.type === 'mcq' ? (
               <>
                 <Field label="Question" value={newActivity.question} onChangeText={(value) => setNewActivity((current) => ({ ...current, question: value }))} />
@@ -434,7 +450,15 @@ async function handleLogout() {
                 <View style={styles.choiceRow}>{['A', 'B'].map((choice) => <SmallButton key={choice} tone={newActivity.correctOption === choice ? 'green' : 'slate'} onPress={() => setNewActivity((current) => ({ ...current, correctOption: choice }))}>{choice}</SmallButton>)}</View>
               </>
             ) : (
-              <Field label={newActivity.type === 'writing' ? 'Writing Prompt' : newActivity.type === 'speech' ? 'Speech Target' : 'Content'} value={newActivity.content} onChangeText={(value) => setNewActivity((current) => ({ ...current, content: value }))} multiline />
+              <>
+                <Field label={newActivity.type === 'writing' ? 'Writing Prompt' : newActivity.type === 'speech' ? 'Speech Target Only' : 'Content'} value={newActivity.content} onChangeText={(value) => setNewActivity((current) => ({ ...current, content: value }))} multiline />
+                {newActivity.type === 'speech' ? (
+                  <View style={styles.softRow}>
+                    <Text style={styles.rowTitle}>Speech target only</Text>
+                    <Text style={styles.muted}>Type only the exact words students should say aloud. Do not add writing instructions or passage prompts here.</Text>
+                  </View>
+                ) : null}
+              </>
             )}
             <SmallButton onPress={addActivity}>Add Activity</SmallButton>
             {draft.activities.map((activity, index) => (
@@ -571,6 +595,98 @@ async function handleLogout() {
     );
   }
 
+
+  function formatReviewDate(value) {
+    if (!value) return 'No date';
+    try {
+      return new Date(value).toLocaleDateString();
+    } catch (err) {
+      return 'No date';
+    }
+  }
+
+  function renderReviewItem(item, type) {
+    const student = item.student || {};
+    const lesson = item.lesson || {};
+    const task = item.task || {};
+    const isWriting = type === 'writing';
+
+    return (
+      <View key={`${type}-${item.id}`} style={styles.softRow}>
+        <Text style={styles.rowTitle}>
+          {student.avatar || '🧒'} {student.name || 'Student'}
+        </Text>
+        <Text style={styles.muted}>
+          Grade {student.gradeLevel || '—'} • {student.section || 'No section'} • {formatReviewDate(item.submittedAt)}
+        </Text>
+        <Text style={styles.muted}>
+          {lesson.title || 'Untitled lesson'} {lesson.subject ? `• ${lesson.subject}` : ''}
+        </Text>
+
+        <Text style={styles.fieldLabel}>
+          {isWriting ? 'Writing Prompt' : 'Speech Target Only'}
+        </Text>
+        <Text style={styles.body}>
+          {isWriting
+            ? task.prompt || 'No writing prompt saved.'
+            : task.targetText || 'No speech target saved.'}
+        </Text>
+
+        <Text style={styles.fieldLabel}>
+          {isWriting ? 'Student Answer' : 'Student Transcript'}
+        </Text>
+        <Text style={styles.body}>
+          {isWriting
+            ? item.content || 'No answer text.'
+            : item.transcript || 'No transcript text.'}
+        </Text>
+
+        {isWriting && item.feedback ? (
+          <Text style={styles.statusText}>{item.feedback}</Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  function renderReviews() {
+    const writing = reviewQueue.writing || [];
+    const speech = reviewQueue.speech || [];
+    const summary = reviewQueue.summary || {};
+
+    return (
+      <>
+        <View style={styles.statsGrid}>
+          {[
+            ['📝', summary.total ?? writing.length + speech.length, 'Total Reviews'],
+            ['✍️', summary.writing ?? writing.length, 'Writing'],
+            ['🎤', summary.speech ?? speech.length, 'Speech'],
+            ['👀', writing.length || speech.length ? 'Ready' : 'Empty', 'Queue'],
+          ].map(([icon, value, label]) => (
+            <SectionCard key={label} style={styles.statCard}>
+              <Text style={styles.statIcon}>{icon}</Text>
+              <Text style={styles.statValue}>{value}</Text>
+              <Text style={styles.muted}>{label}</Text>
+            </SectionCard>
+          ))}
+        </View>
+
+        <SectionCard>
+          <Text style={styles.cardTitle}>Writing Submissions</Text>
+          <Text style={styles.muted}>Review students’ essay and writing answers.</Text>
+          {writing.map((item) => renderReviewItem(item, 'writing'))}
+          {!writing.length && <Text style={styles.muted}>No writing submissions yet.</Text>}
+        </SectionCard>
+
+        <SectionCard>
+          <Text style={styles.cardTitle}>Speech Attempts</Text>
+          <Text style={styles.muted}>Check students’ speech transcripts and targets.</Text>
+          {speech.map((item) => renderReviewItem(item, 'speech'))}
+          {!speech.length && <Text style={styles.muted}>No speech attempts yet.</Text>}
+        </SectionCard>
+      </>
+    );
+  }
+
   function renderStudents() {
     return (
       <SectionCard>
@@ -664,6 +780,7 @@ async function handleLogout() {
         {section === 'lessons' && renderBuilder()}
         {section === 'groups' && renderGroups()}
         {section === 'assessment' && renderAssessment()}
+        {section === 'review' && renderReviews()}
         {section === 'students' && renderStudents()}
         {section === 'reports' && renderReports()}
 

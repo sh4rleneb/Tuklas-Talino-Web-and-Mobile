@@ -16,6 +16,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 
 import { SafeAreaView }
@@ -25,8 +26,6 @@ export default function StudentSeniorHome({
   navigation,
 }) {
 
-  const [showMore, setShowMore] =
-    useState(false);
 
   const [dashboard, setDashboard] =
     useState(null);
@@ -152,9 +151,16 @@ export default function StudentSeniorHome({
 
             <View style={styles.headerTop}>
 
-              <Text style={styles.logo}>
-                🏡 Tuklas Talino
-              </Text>
+              <View style={styles.brandLogoRow}>
+                  <Image
+                    source={require('../../../assets/icons/tuklas-logo.png')}
+                    style={styles.brandLogoImage}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.logo}>
+                    Tuklas Talino
+                  </Text>
+                </View>
 </View>
 
             <TouchableOpacity
@@ -362,7 +368,7 @@ export default function StudentSeniorHome({
                           'StudentJuniorLessonDetail',
                           {
                             lessonId: lesson.id,
-                            homeRoute: 'StudentSeniorHome',
+                            homeRoute: 'StudentSeniorTabs',
                           }
                         )
                       }
@@ -451,178 +457,8 @@ export default function StudentSeniorHome({
 
         </ScrollView>
 
-        {/* BOTTOM NAV */}
-
-        <View style={styles.bottomNav}>
-
-          <TouchableOpacity
-            style={[
-              styles.navButton,
-              styles.activeNavButton,
-            ]}
-          >
-
-            <Text style={styles.navIcon}>
-              🏠
-            </Text>
-
-            <Text
-              style={styles.activeNavText}
-            >
-              Home
-            </Text>
-
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() =>
-              navigation.navigate(
-                'StudentSeniorLessons'
-              )
-            }
-          >
-
-            <Text style={styles.navIcon}>
-              📚
-            </Text>
-
-            <Text style={styles.navText}>
-              Lessons
-            </Text>
-
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() =>
-              navigation.navigate(
-                'QuizScreen'
-              )
-            }
-          >
-
-            <Text style={styles.navIcon}>
-              🧠
-            </Text>
-
-            <Text style={styles.navText}>
-              Quizzes
-            </Text>
-
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() =>
-              navigation.navigate(
-                'MissionScreen'
-              )
-            }
-          >
-
-            <Text style={styles.navIcon}>
-              🎮
-            </Text>
-
-            <Text style={styles.navText}>
-              Missions
-            </Text>
-
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navButton}
-            onPress={() =>
-              setShowMore(!showMore)
-            }
-          >
-            <Text style={styles.navIcon}>
-              ⋯
-            </Text>
-
-            <Text style={styles.navText}>
-              More
-            </Text>
-          </TouchableOpacity>
 
         </View>
-
-          {showMore && (
-  <>
-
-    <TouchableOpacity
-      style={styles.moreOverlay}
-      activeOpacity={1}
-      onPress={() =>
-        setShowMore(false)
-      }
-    />
-
-    <View style={styles.moreMenu}>
-
-      <TouchableOpacity
-        style={styles.moreItem}
-        onPress={() => {
-          setShowMore(false);
-          navigation.navigate(
-            'GroupsScreen'
-          );
-        }}
-      >
-        <Text style={styles.moreText}>
-          👥 Groups
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.moreItem}
-        onPress={() => {
-          setShowMore(false);
-          navigation.navigate(
-            'BadgesScreen'
-          );
-        }}
-      >
-        <Text style={styles.moreText}>
-          🏅 Badges
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.moreItem}
-        onPress={() => {
-          setShowMore(false);
-          navigation.navigate(
-            'NotificationsScreen'
-          );
-        }}
-      >
-        <Text style={styles.moreText}>
-          🔔 Notifications
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.moreItem}
-        onPress={() => {
-          setShowMore(false);
-          navigation.navigate(
-            'ProfileScreen'
-          );
-        }}
-      >
-        <Text style={styles.moreText}>
-          👤 Profile
-        </Text>
-      </TouchableOpacity>
-</View>
-
-  </>
-)}
-
-      </View>
-
     </SafeAreaView>
 
   );
@@ -741,6 +577,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#475569',
     fontFamily: 'Poppins_600SemiBold',
+  },
+
+  brandLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  brandLogoImage: {
+    width: 44,
+    height: 44,
+    marginRight: 10,
   },
 
   logo: {
@@ -930,16 +777,15 @@ heroCard: {
   },
 
   lessonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
   },
 
   lessonCard: {
     marginTop: 16,
     borderRadius: 22,
-    padding: 18,
-    width: '48%',
+    padding: 20,
+    width: '100%',
+    minHeight: 190,
   },
 
   lessonEmoji: {
@@ -949,16 +795,16 @@ heroCard: {
   lessonTag: {
     color: '#22C55E',
     fontFamily: 'Poppins_700Bold',
-    marginTop: 10,
-    fontSize: 12,
+    marginTop: 12,
+    fontSize: 14,
   },
 
   lessonTitle: {
-    fontSize: 18,
+    fontSize: 21,
     fontFamily: 'Poppins_800ExtraBold',
     color: '#0F172A',
     marginTop: 8,
-    lineHeight: 26,
+    lineHeight: 30,
   },
 
   startBtn: {
@@ -1030,112 +876,10 @@ heroCard: {
     marginTop: 16,
   },
 
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
 
-    backgroundColor: '#0F9D58',
 
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
 
-    alignItems: 'center',
 
-    paddingVertical: 12,
-    paddingHorizontal: 8,
 
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-
-    elevation: 10,
-  },
-
-  navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    minWidth: 52,
-
-    paddingVertical: 8,
-
-    borderRadius: 18,
-  },
-
-  activeNavButton: {
-    backgroundColor: '#FEF3C7',
-
-    borderWidth: 2,
-    borderColor: '#FCD34D',
-
-    paddingHorizontal: 12,
-  },
-
-  navIcon: {
-    fontSize: 20,
-  },
-
-  navText: {
-    marginTop: 2,
-    color: '#E5E7EB',
-    fontSize: 9,
-    fontFamily: 'Poppins_600SemiBold',
-  },
-
-  activeNavText: {
-    marginTop: 2,
-    color: '#166534',
-    fontSize: 9,
-    fontFamily: 'Poppins_700Bold',
-  },
-
-    moreMenu: {
-    position: 'absolute',
-
-    right: 20,
-    bottom: 95,
-
-     zIndex: 999,
-
-    backgroundColor: '#FFFFFF',
-
-    borderRadius: 20,
-
-    width: 180,
-
-    paddingVertical: 10,
-
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-
-    elevation: 8,
-  },
-
-  moreOverlay: {
-    position: 'absolute',
-
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-
-    zIndex: 998,
-  },
-
-  moreItem: {
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-  },
-
-  moreText: {
-    fontSize: 15,
-
-    color: '#0F172A',
-
-    fontFamily:
-      'Poppins_600SemiBold',
-  },
 
 });

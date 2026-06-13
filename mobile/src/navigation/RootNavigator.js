@@ -32,6 +32,9 @@ STUDENT
 import StudentTabNavigator
 from './StudentTabNavigator';
 
+import StudentSeniorTabNavigator
+from './StudentSeniorTabNavigator';
+
 import StudentJuniorHome
 from '../screens/studentJunior/StudentJuniorHome';
 
@@ -133,6 +136,12 @@ export default function RootNavigator() {
           name="StudentTabs"
           component={StudentTabNavigator}
         />
+
+
+          <Stack.Screen
+            name="StudentSeniorTabs"
+            component={StudentSeniorTabNavigator}
+          />
 
         <Stack.Screen
           name="StudentJuniorHome"

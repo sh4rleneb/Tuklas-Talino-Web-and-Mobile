@@ -48,6 +48,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [activityNotice, setActivityNotice] = useState(null);
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
   const celebrationScale = useRef(new Animated.Value(0.92)).current;
@@ -155,6 +156,196 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   );
   const totalSteps = Math.max(1, activities.length + 1);
   const currentActivity = activities[step - 1];
+  const littleLearnerGame = Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 2;
+
+  const getGameMeta = activity => {
+    const type = String(activity?.type || activity?.activityType || activity?.kind || '').toLowerCase();
+
+    if (type.includes('writing') || type.includes('write') || type.includes('essay') || type.includes('text')) {
+      return {
+        icon: '✍️',
+        title: 'Word Builder Game',
+        mission: 'Build an answer using word power-ups. Fill the answer box to claim your star.',
+        steps: ['Pick', 'Build', 'Claim Star'],
+        button: '🏁 Claim Star & Continue',
+      };
+    }
+
+    if (type.includes('speech') || type.includes('speak') || type.includes('oral') || type.includes('voice') || type.includes('record')) {
+      return {
+        icon: '🎙️',
+        title: 'Voice Quest Game',
+        mission: 'Say the target words clearly, record your voice, then save your attempt to earn a star.',
+        steps: ['Listen', 'Speak', 'Claim Star'],
+        button: '⭐ Save Voice Quest',
+      };
+    }
+
+    if (type === 'mcq' || type.includes('quiz') || type.includes('choice') || type.includes('question')) {
+      return {
+        icon: '👆',
+        title: 'Tap the Answer Game',
+        mission: 'Choose the correct answer tile. Correct answers move you closer to the finish flag.',
+        steps: ['Read', 'Tap', 'Win'],
+        button: '🚀 Continue Game',
+      };
+    }
+
+    return {
+      icon: '🎮',
+      title: 'Learning Game',
+      mission: 'Complete the challenge, collect stars, and unlock the next activity.',
+      steps: ['Look', 'Play', 'Win'],
+      button: '🚀 Continue Game',
+    };
+  };
+
+  const buildWordPowerUps = activity => {
+    const rawSuggestions = activity?.writingTask?.rubricJson?.choices
+      || activity?.writingTask?.rubricJson?.wordBank
+      || activity?.dataJson?.choices
+      || activity?.dataJson?.wordBank
+      || [];
+
+    const normalized = rawSuggestions
+      .map(item => String(item?.text || item?.word || item || '').trim())
+      .filter(Boolean);
+
+    if (normalized.length) return normalized.slice(0, 8);
+
+    const text = [
+      activity?.writingTask?.prompt,
+      activity?.prompt,
+      activity?.instructions,
+      lesson?.title,
+      lesson?.passage,
+    ].filter(Boolean).join(' ');
+
+    const blocked = new Set([
+      'ang', 'ng', 'sa', 'at', 'ay', 'mga', 'na', 'ka', 'ko', 'mo', 'niya',
+      'ito', 'iyon', 'kung', 'para', 'with', 'your', 'answer', 'here',
+      'type', 'write', 'sumulat', 'isulat', 'gamitin', 'maikling', 'sagot',
+    ]);
+
+    const words = String(text)
+      .replace(/[^A-Za-zÀ-ÿñÑ\s]/g, ' ')
+      .split(/\s+/)
+      .map(word => word.trim())
+      .filter(word => word.length > 2 && !blocked.has(word.toLowerCase()));
+
+    return Array.from(new Set(words)).slice(0, 8);
+  };
+
+  const renderGameHeader = activity => {
+    if (!littleLearnerGame || !activity) return null;
+
+    const game = getGameMeta(activity);
+
+    return (
+      <View style={{
+        backgroundColor: '#ECFDF5',
+        borderColor: '#BBF7D0',
+        borderWidth: 2,
+        borderRadius: 28,
+        padding: 18,
+        marginBottom: 18,
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <View style={{
+            width: 58,
+            height: 58,
+            borderRadius: 29,
+            backgroundColor: '#DCFCE7',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 12,
+          }}>
+            <Text style={{ fontSize: 30 }}>{game.icon}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#15803D', fontSize: 13, fontWeight: '900', letterSpacing: 1 }}>
+              MINI GAME
+            </Text>
+            <Text style={{ color: '#0F172A', fontSize: 24, fontWeight: '900' }}>
+              {game.title}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={{ color: '#334155', fontSize: 17, lineHeight: 25, marginBottom: 14 }}>
+          {game.mission}
+        </Text>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+          {game.steps.map((item, index) => (
+            <View
+              key={`${item}-${index}`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#FFFFFF',
+                borderColor: '#BBF7D0',
+                borderWidth: 1,
+                borderRadius: 999,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+              }}
+            >
+              <Text style={{
+                backgroundColor: '#16A34A',
+                color: '#FFFFFF',
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                textAlign: 'center',
+                fontWeight: '900',
+                marginRight: 8,
+              }}>
+                {index + 1}
+              </Text>
+              <Text style={{ color: '#15803D', fontWeight: '900' }}>{item}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderPowerUpTray = activity => {
+    if (!littleLearnerGame || !activity) return null;
+
+    const words = buildWordPowerUps(activity);
+    if (!words.length) return null;
+
+    return (
+      <View style={{
+        backgroundColor: '#FFFBEB',
+        borderColor: '#FDE68A',
+        borderWidth: 2,
+        borderRadius: 24,
+        padding: 16,
+        marginBottom: 18,
+      }}>
+        <Text style={{ color: '#92400E', fontSize: 18, fontWeight: '900', marginBottom: 8 }}>
+          ⭐ Word Power-Ups
+        </Text>
+        <Text style={{ color: '#475569', fontSize: 15, lineHeight: 22, marginBottom: 12 }}>
+          Tap a word to drop it into your answer.
+        </Text>
+        <View style={styles.choiceRow}>
+          {words.map((word, index) => (
+            <TouchableOpacity
+              key={`${word}-${index}`}
+              style={styles.choiceChip}
+              onPress={() => setWritingAnswer(current => [current.trim(), word].filter(Boolean).join(' '))}
+            >
+              <Text style={styles.choiceText}>✨ {word}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
 
   const getActivityGuide = activity => {
     const type = String(
@@ -220,8 +411,8 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
       return {
         icon: '🎙️',
         title: 'I-record ang iyong sagot',
-        body: 'Basahin ang tanong, pindutin ang record, magsalita nang malinaw, at i-save ang sagot.',
-        steps: ['Basahin', 'Record', 'Save'],
+        body: 'Basahin ang speech target, pindutin ang record, magsalita nang malinaw, at i-save ang sagot.',
+        steps: ['Target', 'Record', 'Save'],
       };
     }
 
@@ -236,9 +427,11 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
     ) {
       return {
         icon: '👆',
-        title: 'Pumili ng tamang sagot',
-        body: 'I-tap ang isang kahon. Kapag napili mo na ang sagot, maaari ka nang magpatuloy.',
-        steps: ['Basahin', 'Piliin', 'Continue'],
+        title: littleLearnerGame ? 'Tap the Answer Game' : 'Pumili ng tamang sagot',
+        body: littleLearnerGame
+          ? 'Tap the correct answer tile to move closer to the finish flag.'
+          : 'I-tap ang isang kahon. Kapag napili mo na ang sagot, maaari ka nang magpatuloy.',
+        steps: littleLearnerGame ? ['Read', 'Tap', 'Win'] : ['Basahin', 'Piliin', 'Continue'],
       };
     }
 
@@ -505,9 +698,21 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
           correct: Boolean(data.correct),
         },
       }));
-      Alert.alert(data.correct ? 'Correct!' : 'Try Again', data.message || 'Answer saved.');
+      setActivityNotice({
+        type: data.correct ? 'success' : 'warning',
+        title: data.correct ? 'Correct!' : 'Try again',
+        message: data.message || (
+          data.correct
+            ? 'Correct answer. XP is saved once for this question.'
+            : 'Your answer was saved. Choose another answer if needed.'
+        ),
+      });
     } catch (err) {
-      Alert.alert('Quiz', err.message || 'Unable to save your answer.');
+      setActivityNotice({
+        type: 'error',
+        title: 'Unable to save answer',
+        message: err.message || 'Please try again.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -574,6 +779,12 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
     }
   }
 
+  function goToPreviousStep() {
+    if (submitting || completed) return;
+    setActivityNotice(null);
+    setStep((current) => Math.max(1, Number(current || 1) - 1));
+  }
+
   async function finishLesson() {
     if (submitting) return;
     setSubmitting(true);
@@ -638,6 +849,19 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
               })}
             </View>
           ))}
+          {activityNotice ? (
+            <View
+              style={[
+                styles.feedbackCard,
+                activityNotice.type === 'success' && styles.feedbackSuccess,
+                activityNotice.type === 'warning' && styles.feedbackWarning,
+                activityNotice.type === 'error' && styles.feedbackError,
+              ]}
+            >
+              <Text style={styles.feedbackTitle}>{activityNotice.title}</Text>
+              <Text style={styles.feedbackMessage}>{activityNotice.message}</Text>
+            </View>
+          ) : null}
           {!questions.length && <Text style={styles.body}>No quiz questions are published for this activity yet.</Text>}
           <TouchableOpacity
             style={[styles.primaryButton, !allAnswered && styles.disabledButton]}
@@ -654,13 +878,30 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
       const suggestions = currentActivity.writingTask?.rubricJson?.choices
         || currentActivity.writingTask?.rubricJson?.wordBank
         || [];
+      const game = getGameMeta(currentActivity);
+
       return (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>✍️ {currentActivity.title}</Text>
-          <Text style={styles.body}>{currentActivity.writingTask?.prompt || currentActivity.instructions}</Text>
-          {renderActivityGuide(currentActivity)}
+        <View style={[
+          styles.card,
+          littleLearnerGame && {
+            borderWidth: 2,
+            borderColor: '#BBF7D0',
+            backgroundColor: '#FFFFFF',
+          },
+        ]}>
+          {renderGameHeader(currentActivity)}
+          <Text style={styles.cardTitle}>
+            {littleLearnerGame ? `${game.icon} ${game.title}` : `✍️ ${currentActivity.title}`}
+          </Text>
+          <Text style={styles.body}>
+            {littleLearnerGame
+              ? 'Your mission: build a short answer and claim the finish star.'
+              : currentActivity.writingTask?.prompt || currentActivity.instructions}
+          </Text>
+          {littleLearnerGame ? null : renderActivityGuide(currentActivity)}
           {renderActivityVisual(currentActivity)}
-          {suggestions.length ? (
+          {littleLearnerGame ? renderPowerUpTray(currentActivity) : null}
+          {!littleLearnerGame && suggestions.length ? (
             <View style={styles.choiceRow}>
               {suggestions.map((suggestion, index) => {
                 const label = String(suggestion?.text || suggestion?.word || suggestion);
@@ -672,31 +913,65 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
               })}
             </View>
           ) : null}
-          {renderActivityPassage(currentActivity)}
-          <TextInput
-            style={styles.input}
-            multiline
-            value={writingAnswer}
-            onChangeText={setWritingAnswer}
-            placeholder="Type your answer here..."
-          />
+          {littleLearnerGame ? null : renderActivityPassage(currentActivity)}
+          <View style={littleLearnerGame ? {
+            backgroundColor: '#F8FAFC',
+            borderColor: '#BBF7D0',
+            borderWidth: 2,
+            borderRadius: 24,
+            padding: 12,
+            marginBottom: 16,
+          } : null}>
+            {littleLearnerGame ? (
+              <Text style={{ color: '#15803D', fontWeight: '900', fontSize: 17, marginBottom: 8 }}>
+                🧩 Answer Builder
+              </Text>
+            ) : null}
+            <TextInput
+              style={[
+                styles.input,
+                littleLearnerGame && {
+                  borderColor: '#86EFAC',
+                  backgroundColor: '#FFFFFF',
+                  minHeight: 130,
+                  fontSize: 18,
+                },
+              ]}
+              multiline
+              value={writingAnswer}
+              onChangeText={setWritingAnswer}
+              placeholder={littleLearnerGame ? 'Tap power-ups or type your answer here...' : 'Type your answer here...'}
+            />
+          </View>
           <TouchableOpacity style={styles.primaryButton} onPress={submitWriting} disabled={submitting}>
-            <Text style={styles.primaryText}>{submitting ? 'Saving...' : 'Save and Continue'}</Text>
+            <Text style={styles.primaryText}>{submitting ? 'Saving...' : littleLearnerGame ? game.button : 'Save and Continue'}</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
     if (currentActivity.type === 'speech') {
+      const game = getGameMeta(currentActivity);
+
       return (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🎤 {currentActivity.title}</Text>
+        <View style={[
+          styles.card,
+          littleLearnerGame && {
+            borderWidth: 2,
+            borderColor: '#FDE68A',
+            backgroundColor: '#FFFFFF',
+          },
+        ]}>
+          {renderGameHeader(currentActivity)}
+          <Text style={styles.cardTitle}>
+            {littleLearnerGame ? `${game.icon} ${game.title}` : `🎤 ${currentActivity.title}`}
+          </Text>
           <Text style={styles.body}>{currentActivity.speechTask?.targetText || currentActivity.instructions}</Text>
-          {renderActivityGuide(currentActivity)}
+          {littleLearnerGame ? null : renderActivityGuide(currentActivity)}
           {renderActivityVisual(currentActivity)}
           <View style={styles.speechButtons}>
             <TouchableOpacity style={[styles.secondaryButton, recording && styles.recordingButton]} onPress={recording ? stopRecording : startRecording}>
-              <Text style={styles.secondaryText}>{recording ? '⏹ Stop Recording' : '🎙 Start Recording'}</Text>
+              <Text style={styles.secondaryText}>{recording ? '⏹ Stop Recording' : littleLearnerGame ? '🎮 Start Voice Quest' : '🎙 Start Recording'}</Text>
             </TouchableOpacity>
             {recordingUri ? (
               <TouchableOpacity style={styles.secondaryButton} onPress={playRecording} disabled={playing}>
@@ -705,16 +980,23 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
             ) : null}
           </View>
           {speechStatus ? <Text style={styles.statusMessage}>{speechStatus}</Text> : null}
-          {renderActivityPassage(currentActivity)}
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              littleLearnerGame && {
+                borderColor: '#FDE68A',
+                backgroundColor: '#FFFBEB',
+                minHeight: 110,
+                fontSize: 18,
+              },
+            ]}
             multiline
             value={speechTranscript}
             onChangeText={setSpeechTranscript}
-            placeholder="Type what you practiced saying..."
+            placeholder={littleLearnerGame ? 'Type the words you said to claim your star...' : 'Type what you practiced saying...'}
           />
           <TouchableOpacity style={styles.primaryButton} onPress={submitSpeech} disabled={submitting}>
-            <Text style={styles.primaryText}>{submitting ? 'Saving...' : 'Save Speech Attempt'}</Text>
+            <Text style={styles.primaryText}>{submitting ? 'Saving...' : littleLearnerGame ? game.button : 'Save Speech Attempt'}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -816,6 +1098,16 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
             <Text style={styles.stepIcon}>🏁</Text>
           </View>
         </View>
+
+        {!completed && step > 1 ? (
+          <TouchableOpacity
+            style={styles.previousStepButton}
+            onPress={goToPreviousStep}
+            disabled={submitting}
+          >
+            <Text style={styles.previousStepText}>← Previous Step</Text>
+          </TouchableOpacity>
+        ) : null}
 
           {completed ? (
             <View style={styles.card}>
@@ -1070,7 +1362,18 @@ const styles = StyleSheet.create({
   stepText: { color: '#64748B', marginTop: 7 },
   progressTrack: { height: 12, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 16, marginBottom: 20 },
   progressFill: { height: '100%', backgroundColor: '#22C55E', borderRadius: 99 },
-  card: { backgroundColor: '#FFF', borderRadius: 24, padding: 18, elevation: 4 },
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+  },
   cardTitle: { color: '#0F172A', fontSize: 23, fontWeight: '900' },
   body: { color: '#475569', lineHeight: 22, marginTop: 10 },
   questionBlock: { marginTop: 16 },
@@ -1079,6 +1382,35 @@ const styles = StyleSheet.create({
   optionCorrect: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
   optionIncorrect: { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
   optionText: { color: '#0F172A' },
+  feedbackCard: {
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+  },
+  feedbackSuccess: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#22C55E',
+  },
+  feedbackWarning: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  feedbackError: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+  },
+  feedbackTitle: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  feedbackMessage: {
+    color: '#475569',
+    marginTop: 4,
+    lineHeight: 20,
+    fontWeight: '700',
+  },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   choiceChip: { backgroundColor: '#FEF3C7', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 9 },
   choiceText: { color: '#92400E', fontWeight: '900' },
@@ -1088,12 +1420,28 @@ const styles = StyleSheet.create({
   recordingButton: { backgroundColor: '#FEE2E2' },
   secondaryText: { color: '#0F172A', fontWeight: '900' },
   speechButtons: { marginTop: 4 },
+  speechPassageWrap: { marginTop: 16 },
   statusMessage: { color: '#0369A1', fontWeight: '800', marginTop: 10 },
   contentRow: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, marginTop: 10 },
   stepRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
   stepDot: { backgroundColor: '#E2E8F0', borderRadius: 99, padding: 7 },
   stepDotActive: { backgroundColor: '#DCFCE7' },
   stepIcon: { fontSize: 15 },
+  previousStepButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#BBF7D0',
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  previousStepText: {
+    color: '#15803D',
+    fontSize: 15,
+    fontWeight: '900',
+  },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FEF3C7', borderRadius: 16, padding: 12, marginTop: 14 },
   badgeIcon: { fontSize: 32 },
   disabledButton: { backgroundColor: '#CBD5E1' },
