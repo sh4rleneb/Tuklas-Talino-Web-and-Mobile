@@ -22,6 +22,8 @@ const uploadsDir = path.join(__dirname, '..', 'uploads');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 const allowedOrigins = (process.env.APP_URL || 'http://localhost:5173')
