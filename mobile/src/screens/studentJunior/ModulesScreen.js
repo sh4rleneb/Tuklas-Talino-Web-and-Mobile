@@ -198,20 +198,20 @@ const styles = StyleSheet.create({
   },
   backText: {
     color: '#16A34A',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     fontSize: 14,
   },
   title: {
     fontSize: 30,
     color: '#16A34A',
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
   },
   listHeader: {
     marginBottom: 18,
   },
   subtitle: {
     color: '#475569',
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: 'Nunito_800ExtraBold',
     marginBottom: 12,
   },
   chipRow: {
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: '#334155',
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: 'Nunito_800ExtraBold',
   },
   activeChipText: {
     color: '#166534',
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   subjectTitle: {
     fontSize: 22,
     color: '#0F172A',
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     marginBottom: 14,
   },
   lessonList: {
@@ -278,12 +278,12 @@ const styles = StyleSheet.create({
   lessonTitle: {
     fontSize: 18,
     color: '#0F172A',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     marginBottom: 6,
   },
   lessonSubtitle: {
     color: '#475569',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
     marginBottom: 10,
   },
   lessonMetaRow: {
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   lessonMeta: {
     color: '#64748B',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
     marginRight: 12,
     marginBottom: 6,
   },
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   xpText: {
     color: '#92400E',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
   loaderContainer: {
     flex: 1,
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     color: '#64748B',
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: 'Nunito_800ExtraBold',
   },
   emptyCard: {
     backgroundColor: '#FFFFFF',
@@ -332,12 +332,12 @@ const styles = StyleSheet.create({
     marginTop: 14,
     fontSize: 22,
     color: '#0F172A',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
   emptySubtitle: {
     marginTop: 8,
     color: '#64748B',
     textAlign: 'center',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 });

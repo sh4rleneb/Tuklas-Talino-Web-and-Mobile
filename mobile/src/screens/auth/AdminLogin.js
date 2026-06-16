@@ -286,13 +286,13 @@ const styles = StyleSheet.create({
   homeText: {
     color: '#7C3AED',
 
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
 
   title: {
     fontSize: 22,
 
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
 
     color: '#7C3AED',
   },
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
 
     textAlign: 'center',
 
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
 
     color: '#6D28D9',
   },
@@ -355,13 +355,13 @@ const styles = StyleSheet.create({
 
     textAlign: 'center',
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   label: {
     fontSize: 18,
 
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
 
     color: '#5B21B6',
 
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
 
     color: '#0F172A',
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   passwordContainer: {
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
 
     color: '#0F172A',
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   loginButton: {
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
 
     fontSize: 21,
 
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
   },
 
   footer: {
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
 
     lineHeight: 24,
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
 });

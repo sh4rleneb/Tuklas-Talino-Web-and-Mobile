@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   loaderText: {
     marginTop: 12,
     color: '#475569',
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: 'Nunito_800ExtraBold',
   },
   header: {
     flexDirection: 'row',
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
 
   profileName: {
     fontSize: 20,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
   },
 
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
 
   smallChipText: {
     color: '#166534',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     fontSize: 12,
   },
 
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 24,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
   },
   subtitle: {
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#475569',
     lineHeight: 22,
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
     maxWidth: '75%',
   },
   avatarCircle: {
@@ -443,13 +443,13 @@ const styles = StyleSheet.create({
   xpLabel: {
     fontSize: 12,
     color: '#64748B',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   xpValue: {
     fontSize: 24,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#16A34A',
     marginTop: 6,
   },
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   levelText: {
     color: '#166534',
     fontSize: 13,
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
   progressBar: {
     height: 12,
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#64748B',
     fontSize: 13,
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
   quickStatsRow: {
     flexDirection: 'row',
@@ -495,13 +495,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 18,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#16A34A',
   },
   statLabel: {
     marginTop: 6,
     color: '#475569',
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: 'Nunito_800ExtraBold',
   },
   section: {
     marginTop: 20,
@@ -514,12 +514,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
   },
   sectionLink: {
     color: '#16A34A',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -533,24 +533,24 @@ const styles = StyleSheet.create({
   },
   cardTag: {
     color: '#16A34A',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     marginBottom: 6,
   },
   cardTitle: {
     fontSize: 20,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
     marginBottom: 8,
   },
   cardMeta: {
     color: '#64748B',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
   cardAction: {
     marginTop: 14,
     alignSelf: 'flex-start',
     color: '#16A34A',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
   emptyState: {
     backgroundColor: '#FFFFFF',
@@ -578,14 +578,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
     marginBottom: 6,
   },
   emptyText: {
     textAlign: 'center',
     color: '#64748B',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
   badgeRow: {
     flexDirection: 'row',
@@ -614,13 +614,13 @@ const styles = StyleSheet.create({
   },
   badgeName: {
     fontSize: 16,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
     marginBottom: 6,
   },
   badgeMeta: {
     color: '#64748B',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
   taskCard: {
     backgroundColor: '#FFFFFF',
@@ -633,18 +633,18 @@ const styles = StyleSheet.create({
   },
   taskTitle: {
     fontSize: 18,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
     marginBottom: 8,
   },
   taskMeta: {
     color: '#64748B',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
     marginBottom: 10,
   },
   taskXp: {
     color: '#16A34A',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
 
   lessonCardContent: {
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   lessonXpText: {
     color: '#166534',
     fontSize: 12,
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
 
   continueButton: {
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
 
   continueButtonText: {
     color: '#FFFFFF',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
 
 });

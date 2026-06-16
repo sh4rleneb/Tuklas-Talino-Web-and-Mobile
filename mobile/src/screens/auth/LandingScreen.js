@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   logoTitle: {
     fontSize: 28,
 
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
 
     color: '#16A34A',
   },
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
 
     marginTop: 2,
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   slide: {
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 32,
 
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
 
     color: '#15803D',
 
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
 
     marginTop: 18,
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   featureRow: {
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
 
     fontSize: 15,
 
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
 
     color: '#0F172A',
   },
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
 
     textAlign: 'center',
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   studentCard: {
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
   studentTitle: {
     fontSize: 38,
 
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
 
     color: '#16A34A',
   },
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
   teacherTitle: {
     fontSize: 38,
 
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
 
     color: '#2563EB',
   },
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   adminTitle: {
     fontSize: 38,
 
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
 
     color: '#9333EA',
   },
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
 
     marginTop: 14,
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   studentButton: {
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
 
     fontSize: 20,
 
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
 
   pagination: {

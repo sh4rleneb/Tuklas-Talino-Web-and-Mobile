@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
 
   retryText: {
     color: '#FFF',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
 
   wrapper: {
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
   profileText: {
     fontSize: 13,
     color: '#475569',
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: 'Nunito_800ExtraBold',
   },
 
   brandLogoRow: {
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
 
   logo: {
     fontSize: 24,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#22C55E',
   },
 
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 14,
     color: '#64748B',
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: 'Nunito_800ExtraBold',
   },
 heroCard: {
     backgroundColor: '#FFFFFF',
@@ -640,7 +640,7 @@ heroCard: {
 
   heroTitle: {
     fontSize: 28,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#22C55E',
   },
 
@@ -649,7 +649,7 @@ heroCard: {
     color: '#334155',
     marginTop: 6,
     lineHeight: 24,
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   xpCard: {
@@ -667,13 +667,13 @@ heroCard: {
 
   xpLabel: {
     fontSize: 14,
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     color: '#64748B',
   },
 
   xpValue: {
     fontSize: 32,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#22C55E',
     marginTop: 4,
   },
@@ -688,7 +688,7 @@ heroCard: {
   levelText: {
     color: '#166534',
     fontSize: 14,
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
   },
 
   progressBg: {
@@ -709,7 +709,7 @@ heroCard: {
     marginTop: 12,
     fontSize: 13,
     color: '#64748B',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   quickStats: {
@@ -735,14 +735,14 @@ heroCard: {
   quickValue: {
     fontSize: 26,
     color: '#22C55E',
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
   },
 
   quickLabel: {
     marginTop: 6,
     fontSize: 12,
     color: '#64748B',
-    fontFamily: 'Poppins_600SemiBold',
+    fontFamily: 'Nunito_800ExtraBold',
   },
 
   section: {
@@ -766,13 +766,13 @@ heroCard: {
 
   sectionTitle: {
     fontSize: 24,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
   },
 
   allLessons: {
     color: '#22C55E',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     fontSize: 14,
   },
 
@@ -794,14 +794,14 @@ heroCard: {
 
   lessonTag: {
     color: '#22C55E',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     marginTop: 12,
     fontSize: 14,
   },
 
   lessonTitle: {
     fontSize: 21,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
     marginTop: 8,
     lineHeight: 30,
@@ -818,7 +818,7 @@ heroCard: {
 
   startText: {
     color: '#FFFFFF',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     fontSize: 13,
   },
 
@@ -856,7 +856,7 @@ heroCard: {
 
   badgeText: {
     marginTop: 10,
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     color: '#166534',
     textAlign: 'center',
     fontSize: 14,
@@ -866,13 +866,13 @@ heroCard: {
     marginTop: 10,
     color: '#94A3B8',
     textAlign: 'center',
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
     fontSize: 14,
   },
 
   emptyText: {
     color: '#64748B',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
     marginTop: 16,
   },
 

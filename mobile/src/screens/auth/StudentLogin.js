@@ -484,12 +484,12 @@ const styles = StyleSheet.create({
 
   homeText: { 
     color: '#16A34A', 
-    fontFamily: 'Poppins_700Bold', 
+    fontFamily: 'Fredoka_600SemiBold', 
   },
 
   title: {
     fontSize: 24,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#16A34A',
   },
 
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
 
   heading: {
     fontSize: 22,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
 
     flexShrink: 1,
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748B',
 
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
 
     lineHeight: 22,
 
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 18,
-    fontFamily: 'Poppins_700Bold',
+    fontFamily: 'Fredoka_600SemiBold',
 
     color: '#166534',
 
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
 
     fontSize: 16,
     color: '#0F172A',
-    fontFamily: 'Poppins_500Medium',
+    fontFamily: 'Nunito_700Bold',
   },
 
   invalidInput: {
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
 
     fontSize: 22,
-    fontFamily: 'Poppins_800ExtraBold',
+    fontFamily: 'Fredoka_700Bold',
   },
 
     errorText: {
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     marginTop: -16,
     marginBottom: 16,
     fontFamily:
-      'Poppins_500Medium',
+      'Nunito_700Bold',
   },
 
   disabledButton: {
