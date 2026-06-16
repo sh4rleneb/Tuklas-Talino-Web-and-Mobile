@@ -177,7 +177,10 @@ export default function StudentLogin({
         );
       } else {
 
-        navigation.replace(homeRoute);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: homeRoute }],
+        });
 
       }
 

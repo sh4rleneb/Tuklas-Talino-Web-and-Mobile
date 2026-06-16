@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { getToken, api } from '../api/client';
+
 
 import { NavigationContainer }
 from '@react-navigation/native';
@@ -93,10 +95,58 @@ const Stack =
   createNativeStackNavigator();
 
 export default function RootNavigator() {
+
+  const [booting, setBooting] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('Landing');
+
+  useEffect(() => {
+    async function boot() {
+      try {
+        const token = await getToken();
+
+        if (!token) {
+          return;
+        }
+
+        const data = await api('/auth/me');
+        const user = data.user;
+
+        if (!user) {
+          return;
+        }
+
+        if (user.role === 'student') {
+          const gradeLevel =
+            Number(user.student?.gradeLevel || 0);
+
+          setInitialRoute(
+            gradeLevel <= 2
+              ? 'StudentTabs'
+              : 'StudentSeniorTabs'
+          );
+        } else if (user.role === 'teacher') {
+          setInitialRoute('TeacherHome');
+        } else if (user.role === 'admin') {
+          setInitialRoute('AdminHome');
+        }
+      } catch (err) {
+        console.log('Boot restore failed:', err?.message);
+      } finally {
+        setBooting(false);
+      }
+    }
+
+    boot();
+  }, []);
+
+  if (booting) {
+    return null;
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Landing"
+        initialRouteName={initialRoute}
         screenOptions={{
           headerShown: false,
         }}
