@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  'http://47.129.233.4:4000/api';
+  'http://tuklas-talino.ddns.net/api';
 
 const TOKEN_KEY = 'tuklas_token';
 
