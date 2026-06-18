@@ -82,8 +82,11 @@ export default function ModulesScreen({ navigation }) {
         style={styles.lessonCard}
         activeOpacity={0.9}
         onPress={() =>
-          navigation.navigate('StudentJuniorLessonDetail', {
-            lessonId: lesson.id,
+          navigation.navigate('Lessons', {
+            screen: 'StudentJuniorLessonDetail',
+            params: {
+              lessonId: lesson.id,
+            },
           })
         }
       >

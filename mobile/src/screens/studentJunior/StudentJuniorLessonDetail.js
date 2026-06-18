@@ -589,7 +589,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
     const lessonIndex = lessons.findIndex((item) => Number(item.id) === Number(lessonId));
     return lessonIndex >= 0 ? lessons[lessonIndex + 1] : null;
   }, [dashboard, lessonId]);
-  const homeRoute = route?.params?.homeRoute || 'Home';
+  const homeRoute = route?.params?.homeRoute || 'StudentTabs';
 
   async function startRecording() {
     try {
@@ -1055,7 +1055,11 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <Text style={styles.error}>{error || 'Lesson was not found.'}</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
+          <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() =>
+                  navigation.popToTop()
+                }>
             <Text style={styles.primaryText}>Go Back</Text>
           </TouchableOpacity>
         </View>
@@ -1137,17 +1141,32 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
               {nextLesson ? (
                 <TouchableOpacity
                   style={styles.primaryButton}
-                  onPress={() => navigation.replace('StudentJuniorLessonDetail', { lessonId: nextLesson.id })}
+                  onPress={() => navigation.navigate('Lessons', {
+                    screen: 'StudentJuniorLessonDetail',
+                    params: { lessonId: nextLesson.id },
+                  })}
                 >
                   <Text style={styles.primaryText}>Next Lesson →</Text>
                 </TouchableOpacity>
               ) : null}
 
-              <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.goBack()}>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() =>
+                  navigation.navigate('Lessons', {
+                    screen: 'LessonsList',
+                  })
+                }>
                 <Text style={styles.primaryText}>Back to Library</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate(homeRoute)}>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() =>
+                  navigation.navigate('StudentTabs', {
+                    screen: 'Home',
+                  })
+                }>
                 <Text style={styles.secondaryText}>🏠 Return Home</Text>
               </TouchableOpacity>
             </View>

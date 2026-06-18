@@ -247,12 +247,13 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
   function openLesson(lesson) {
     if (!lesson.unlocked) return;
     navigation.navigate(
-      'StudentJuniorLessonDetail',
+      'Lessons',
       {
-        lessonId: lesson.id,
-        homeRoute: variant === 'senior'
-          ? 'StudentSeniorHome'
-          : 'Home',
+        screen: 'StudentJuniorLessonDetail',
+        params: {
+          lessonId: lesson.id,
+          homeRoute: 'StudentTabs',
+        },
       }
     );
   }
