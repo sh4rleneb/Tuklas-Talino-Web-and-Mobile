@@ -38,7 +38,28 @@ export default function AdminDashboard({
     logs.map(log => log.action).filter(Boolean)
   )];
 
-  const filteredLogs = logs.filter(log => {
+  
+  const now = new Date();
+
+  const todayLogs = logs.filter(log => {
+    const d = new Date(log.createdAt);
+    return d.toDateString() === now.toDateString();
+  }).length;
+
+  const weekLogs = logs.filter(log => {
+    const d = new Date(log.createdAt);
+    return (now - d) <= (7 * 24 * 60 * 60 * 1000);
+  }).length;
+
+  const monthLogs = logs.filter(log => {
+    const d = new Date(log.createdAt);
+    return (
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
+  }).length;
+
+const filteredLogs = logs.filter(log => {
     const createdAt = new Date(log.createdAt);
 
     const matchesSearch =
@@ -541,7 +562,91 @@ export default function AdminDashboard({
                   </div>
                 </div>
 
+                
                 <div
+                  style={{
+                    display:'grid',
+                    gridTemplateColumns:'repeat(4,1fr)',
+                    gap:12,
+                    marginBottom:20
+                  }}
+                >
+                  <div className="teacher-stat-card">
+                    <strong>{logs.length}</strong>
+                    <div>Total Logs</div>
+                  </div>
+
+                  <div className="teacher-stat-card">
+                    <strong>{todayLogs}</strong>
+                    <div>Today</div>
+                  </div>
+
+                  <div className="teacher-stat-card">
+                    <strong>{weekLogs}</strong>
+                    <div>Last 7 Days</div>
+                  </div>
+
+                  <div className="teacher-stat-card">
+                    <strong>{monthLogs}</strong>
+                    <div>This Month</div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display:'flex',
+                    gap:10,
+                    flexWrap:'wrap',
+                    marginBottom:16
+                  }}
+                >
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      const d = new Date();
+                      setFromDate(d.toISOString().slice(0,10));
+                      setToDate(d.toISOString().slice(0,10));
+                    }}
+                  >
+                    Today
+                  </button>
+
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate()-7);
+                      setFromDate(d.toISOString().slice(0,10));
+                      setToDate(new Date().toISOString().slice(0,10));
+                    }}
+                  >
+                    Last 7 Days
+                  </button>
+
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate()-30);
+                      setFromDate(d.toISOString().slice(0,10));
+                      setToDate(new Date().toISOString().slice(0,10));
+                    }}
+                  >
+                    Last 30 Days
+                  </button>
+
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setFromDate('');
+                      setToDate('');
+                    }}
+                  >
+                    All
+                  </button>
+                </div>
+
+<div
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
