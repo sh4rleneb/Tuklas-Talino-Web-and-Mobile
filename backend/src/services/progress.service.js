@@ -299,6 +299,34 @@ export async function awardXp(studentId, points, sourceType, sourceId = null, no
   student.xp = Number(student.xp || 0) + safePoints;
   student.lastActiveAt = new Date();
 
+  const today = new Date().toISOString().slice(0, 10);
+  const previousDate = student.lastActivityDate;
+
+  if (!previousDate) {
+    student.currentStreak = 1;
+  } else {
+    const previous = new Date(previousDate);
+    const current = new Date(today);
+
+    const diffDays = Math.floor(
+      (current - previous) / (1000 * 60 * 60 * 24)
+    );
+
+    if (diffDays === 1) {
+      student.currentStreak =
+        Number(student.currentStreak || 0) + 1;
+    } else if (diffDays > 1) {
+      student.currentStreak = 1;
+    }
+  }
+
+  student.longestStreak = Math.max(
+    Number(student.longestStreak || 0),
+    Number(student.currentStreak || 0)
+  );
+
+  student.lastActivityDate = today;
+
   await student.save();
   await XpLog.create({ studentId, sourceType, sourceId, points: safePoints, note });
 

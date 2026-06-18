@@ -55,7 +55,24 @@ export const Student = sequelize.define('Student', {
   avatar: { type: DataTypes.STRING(16), allowNull: false, defaultValue: '🦊' },
   xp: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
   status: { type: DataTypes.ENUM('active', 'archived'), allowNull: false, defaultValue: 'active' },
-  lastActiveAt: { type: DataTypes.DATE, allowNull: true }
+  lastActiveAt: { type: DataTypes.DATE, allowNull: true },
+
+  currentStreak: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+
+  longestStreak: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+
+  lastActivityDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  }
 }, { tableName: 'students' });
 
 export const Teacher = sequelize.define('Teacher', {

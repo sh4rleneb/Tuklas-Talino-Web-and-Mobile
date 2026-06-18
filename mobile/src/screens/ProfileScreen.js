@@ -336,6 +336,36 @@ async function handleLogout() {
           </Text>
         </View>
 
+        <View
+          style={[
+            styles.summaryItem,
+            { backgroundColor: '#FFF7ED' }
+          ]}
+        >
+          <Text style={styles.summaryValue}>
+            🔥 {dashboard.student.currentStreak || 0}
+          </Text>
+
+          <Text style={styles.summaryLabel}>
+            Day Streak
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.summaryItem,
+            { backgroundColor: '#F5F3FF' }
+          ]}
+        >
+          <Text style={styles.summaryValue}>
+            🏆 {dashboard.student.longestStreak || 0}
+          </Text>
+
+          <Text style={styles.summaryLabel}>
+            Best Streak
+          </Text>
+        </View>
+
       </View>
 
     </View>

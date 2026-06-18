@@ -33,6 +33,9 @@ CREATE TABLE students (
   xp INT NOT NULL DEFAULT 0,
   status ENUM('active','archived') NOT NULL DEFAULT 'active',
   last_active_at DATETIME NULL,
+  current_streak INT NOT NULL DEFAULT 0,
+  longest_streak INT NOT NULL DEFAULT 0,
+  last_activity_date DATE NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_students_user FOREIGN KEY (user_id) REFERENCES users(id)
