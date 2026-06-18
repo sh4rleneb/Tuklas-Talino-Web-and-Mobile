@@ -20,6 +20,11 @@ export default function AdminDashboard({
 }) {
   const [adminTab, setAdminTab] = useState('overview');
 
+  const [logSearch, setLogSearch] = useState('');
+  const [logAction, setLogAction] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   const stats = data.stats || {};
   const students = data.students || [];
   const archivedStudents = data.archivedStudents || [];
@@ -28,6 +33,38 @@ export default function AdminDashboard({
   const teacherAssignments = data.teacherAssignments || [];
   const classOptions = data.classOptions || [];
   const logs = data.logs || [];
+
+  const actionOptions = [...new Set(
+    logs.map(log => log.action).filter(Boolean)
+  )];
+
+  const filteredLogs = logs.filter(log => {
+    const createdAt = new Date(log.createdAt);
+
+    const matchesSearch =
+      !logSearch ||
+      log.action?.toLowerCase().includes(logSearch.toLowerCase()) ||
+      log.entityType?.toLowerCase().includes(logSearch.toLowerCase());
+
+    const matchesAction =
+      !logAction ||
+      log.action === logAction;
+
+    const matchesFrom =
+      !fromDate ||
+      createdAt >= new Date(fromDate);
+
+    const matchesTo =
+      !toDate ||
+      createdAt <= new Date(`${toDate}T23:59:59`);
+
+    return (
+      matchesSearch &&
+      matchesAction &&
+      matchesFrom &&
+      matchesTo
+    );
+  });
 
   const [assignGradeFilter, setAssignGradeFilter] = useState('');
   const sectionOptions = [...new Set(
@@ -504,6 +541,60 @@ export default function AdminDashboard({
                   </div>
                 </div>
 
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1fr 1fr 1fr auto',
+                    gap: 12,
+                    marginBottom: 20,
+                    alignItems: 'end'
+                  }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Search action or entity..."
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                  />
+
+                  <select
+                    value={logAction}
+                    onChange={(e) => setLogAction(e.target.value)}
+                  >
+                    <option value="">All Actions</option>
+
+                    {actionOptions.map(action => (
+                      <option key={action} value={action}>
+                        {action}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                  />
+
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                  />
+
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setLogSearch('');
+                      setLogAction('');
+                      setFromDate('');
+                      setToDate('');
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+
                 <div className="admin-clean-table admin-audit-table">
                   <div className="admin-clean-table-head">
                     <span>Action</span>
@@ -512,7 +603,7 @@ export default function AdminDashboard({
                     <span>Date</span>
                   </div>
 
-                  {logs.map(log => (
+                  {filteredLogs.map(log => (
                     <div className="admin-clean-table-row" key={log.id}>
                       <span>
                         <strong>{log.action}</strong>
@@ -532,8 +623,8 @@ export default function AdminDashboard({
                     </div>
                   ))}
 
-                  {!logs.length && (
-                    <div className="lms-empty-line">No audit logs yet.</div>
+                  {!filteredLogs.length && (
+                    <div className="lms-empty-line">No audit logs match the selected filters.</div>
                   )}
                 </div>
               </section>
