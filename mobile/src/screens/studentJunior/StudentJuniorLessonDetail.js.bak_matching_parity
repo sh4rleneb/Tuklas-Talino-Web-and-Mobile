@@ -1212,135 +1212,56 @@ const [selectedWords, setSelectedWords] = useState([]);
               🧩 Itugma ang Magkapareho!
             </Text>
 
-            <Text
-              style={{
-                textAlign: 'center',
-                marginBottom: 12,
-                color: '#475569',
-                fontWeight: '700',
-              }}
-            >
-              {selectedMatch
-                ? `🎯 Napili: ${selectedMatch}`
-                : 'Pumili muna ng salita sa kaliwa'}
-            </Text>
+            {pairs.map((item, index) => {
+              const key = `${item.left}-${item.right}`;
+              const matched = matchedPairs[key];
 
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                {pairs.map((item, index) => {
-                  const key = `${item.left}-${item.right}`;
-                  const matched = matchedPairs[key];
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={{
+                    backgroundColor: matched ? '#DCFCE7' : '#EFF6FF',
+                    borderRadius: 20,
+                    padding: 16,
+                    marginBottom: 12,
+                    borderWidth: 2,
+                    borderColor: matched ? '#22C55E' : '#BFDBFE',
+                  }}
+                  onPress={() => {
+                    setMatchedPairs(current => ({
+                      ...current,
+                      [key]: true,
+                    }));
 
-                  return (
-                    <TouchableOpacity
-                      key={`left-${key}`}
-                      disabled={matched}
-                      style={{
-                        backgroundColor: matched
-                          ? '#DCFCE7'
-                          : selectedMatch === item.left
-                          ? '#DBEAFE'
-                          : '#EFF6FF',
-                        borderRadius: 20,
-                        padding: 16,
-                        marginBottom: 10,
-                        borderWidth: 2,
-                        borderColor: matched
-                          ? '#22C55E'
-                          : selectedMatch === item.left
-                          ? '#2563EB'
-                          : '#BFDBFE',
-                      }}
-                      onPress={() => setSelectedMatch(item.left)}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 18,
-                          fontWeight: '900',
-                          textAlign: 'center',
-                        }}
-                      >
-                        {matched ? '✅ ' : ''}{item.left}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                    Alert.alert(
+                      '⭐ Magaling!',
+                      `${item.left} = ${item.right}`
+                    );
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 20,
+                      fontWeight: '900',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {item.left}
+                  </Text>
 
-              <View style={{ flex: 1 }}>
-                {pairs.map((item, index) => {
-                  const key = `${item.left}-${item.right}`;
-                  const matched = matchedPairs[key];
-
-                  return (
-                    <TouchableOpacity
-                      key={`right-${key}`}
-                      disabled={matched}
-                      style={{
-                        backgroundColor: matched ? '#DCFCE7' : '#FEF3C7',
-                        borderRadius: 20,
-                        padding: 16,
-                        marginBottom: 10,
-                        borderWidth: 2,
-                        borderColor: matched ? '#22C55E' : '#F59E0B',
-                      }}
-                      onPress={() => {
-                        if (!selectedMatch) {
-                          setActivityNotice({
-                            type: 'warning',
-                            title: '💡 Pumili Muna',
-                            message: 'Pumili muna ng salita sa kaliwa.',
-                          });
-                          return;
-                        }
-
-                        const correct = selectedMatch === item.left;
-
-                        if (correct) {
-                          const next = {
-                            ...matchedPairs,
-                            [key]: true,
-                          };
-
-                          setMatchedPairs(next);
-
-                          const complete =
-                            Object.keys(next).length === pairs.length;
-
-                          setActivityNotice({
-                            type: 'success',
-                            title: complete
-                              ? '🏆 Matching Complete!'
-                              : '⭐ Magaling!',
-                            message: complete
-                              ? 'Natapos mo ang matching game!'
-                              : `${item.left} = ${item.right}`,
-                          });
-                        } else {
-                          setActivityNotice({
-                            type: 'warning',
-                            title: '🔄 Subukan Muli',
-                            message: 'Hindi magkatugma ang napili.',
-                          });
-                        }
-
-                        setSelectedMatch(null);
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 18,
-                          fontWeight: '800',
-                          textAlign: 'center',
-                        }}
-                      >
-                        {item.right}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+                  <Text
+                    style={{
+                      marginTop: 8,
+                      fontSize: 18,
+                      textAlign: 'center',
+                      color: '#334155',
+                    }}
+                  >
+                    {item.right}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ) : (
           pairs.map((item, index) => (

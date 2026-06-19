@@ -77,10 +77,25 @@ export default function MissionScreen({ navigation }) {
 
       <View style={styles.header}>
         <View style={styles.heroCard}>
-          <Text style={styles.heading}>🎮 Missions</Text>
+          <Text style={styles.heading}>🎯 Daily Quests</Text>
           <Text style={styles.subtitle}>
-            Complete lessons to unlock bonus learning rewards.
+            Complete quests, earn XP, maintain streaks, and unlock badges.
           </Text>
+
+          {!!student && (
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 12,
+                marginTop: 12,
+              }}
+            >
+              <Text>⚡ {student.xp || 0} XP</Text>
+              <Text>🔥 {student.currentStreak || 0} Day Streak</Text>
+              <Text>🏆 Best {student.longestStreak || 0}</Text>
+            </View>
+          )}
         </View>
         
       </View>

@@ -9,6 +9,7 @@ import StudentMissionStack from './StudentMissionStack';
 import StudentGroupsStack from './StudentGroupsStack';
 import StudentBadgesStack from './StudentBadgesStack';
 import StudentProfileStack from './StudentProfileStack';
+import StudentLeaderboardStack from './StudentLeaderboardStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -45,7 +46,11 @@ export default function StudentSeniorTabNavigator() {
               iconName = 'people';
               break;
 
-            case 'Badges':
+            case 'Leaderboard':
+              iconName = 'podium';
+              break;
+
+case 'Badges':
               iconName = 'ribbon';
               break;
 
@@ -73,6 +78,7 @@ export default function StudentSeniorTabNavigator() {
       <Tab.Screen name="Missions" component={StudentMissionStack} />
       <Tab.Screen name="Groups" component={StudentGroupsStack} />
       <Tab.Screen name="Badges" component={StudentBadgesStack} />
+      <Tab.Screen name="Leaderboard" component={StudentLeaderboardStack} />
       <Tab.Screen name="Profile" component={StudentProfileStack} />
     </Tab.Navigator>
   );

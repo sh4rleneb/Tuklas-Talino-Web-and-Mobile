@@ -8,6 +8,7 @@ import {
 import {
   StudentBadge,
   Badge,
+  Student,
 } from '../models/index.js';
 import studentRoutes, {
   dashboardPayload,
@@ -70,6 +71,35 @@ router.get('/badges', authenticate, requirePasswordChanged, requireRole('student
 router.get('/missions', authenticate, requirePasswordChanged, requireRole('student'), async (req, res, next) => {
   try {
     res.json(await listMissionsForStudent(req.student.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+
+router.get('/leaderboard', authenticate, requirePasswordChanged, requireRole('student'), async (req, res, next) => {
+  try {
+    const students = await Student.findAll({
+      where: { status: 'active' },
+      attributes: [
+        'id',
+        'name',
+        'avatar',
+        'xp',
+        'currentStreak',
+        'gradeLevel',
+      ],
+      order: [['xp', 'DESC']],
+      limit: 20,
+    });
+
+    res.json({
+      leaderboard: students.map((student, index) => ({
+        rank: index + 1,
+        ...student.toJSON(),
+      })),
+    });
   } catch (err) {
     next(err);
   }

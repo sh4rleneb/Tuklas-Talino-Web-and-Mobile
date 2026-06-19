@@ -162,6 +162,18 @@ export default function StudentJuniorHome({ navigation }) {
               <View style={styles.levelBadge}>
                 <Text style={styles.levelText}>Level {level}</Text>
               </View>
+
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelText}>
+                  🔥 {student?.currentStreak || 0}
+                </Text>
+              </View>
+
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelText}>
+                  🏆 {student?.longestStreak || 0}
+                </Text>
+              </View>
             </View>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${Math.min((xp % 100), 100)}%` }]} />

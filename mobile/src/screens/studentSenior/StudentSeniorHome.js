@@ -239,6 +239,18 @@ export default function StudentSeniorHome({
 
                   </View>
 
+                  <View style={styles.levelBadge}>
+                    <Text style={styles.levelText}>
+                      🔥 {student?.currentStreak || 0}
+                    </Text>
+                  </View>
+
+                  <View style={styles.levelBadge}>
+                    <Text style={styles.levelText}>
+                      🏆 {student?.longestStreak || 0}
+                    </Text>
+                  </View>
+
                 </View>
 
                 <View style={styles.progressBg}>
@@ -261,9 +273,34 @@ export default function StudentSeniorHome({
                   {100 - (xp % 100)} XP pa bago ang next level.
                 </Text>
 
+              
+</View>
+
+            <View style={styles.achievementRow}>
+
+              <View style={styles.achievementCard}>
+                <Text style={styles.achievementValue}>🔥 {student?.currentStreak || 0}</Text>
+                <Text style={styles.achievementLabel}>Current Streak</Text>
+              </View>
+
+              <View style={styles.achievementCard}>
+                <Text style={styles.achievementValue}>🏆 {student?.longestStreak || 0}</Text>
+                <Text style={styles.achievementLabel}>Best Streak</Text>
+              </View>
+
+              <View style={styles.achievementCard}>
+                <Text style={styles.achievementValue}>🏅 {badges.length}</Text>
+                <Text style={styles.achievementLabel}>Badges</Text>
+              </View>
+
+              <View style={styles.achievementCard}>
+                <Text style={styles.achievementValue}>⭐ {level}</Text>
+                <Text style={styles.achievementLabel}>Level</Text>
               </View>
 
             </View>
+
+          </View>
 
             {/* QUICK STATS */}
 
@@ -710,6 +747,36 @@ heroCard: {
     fontSize: 13,
     color: '#64748B',
     fontFamily: 'Nunito_700Bold',
+  },
+
+
+  achievementRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+
+  achievementCard: {
+    backgroundColor: '#FFFFFF',
+    width: '23%',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    elevation: 2,
+  },
+
+  achievementValue: {
+    fontSize: 18,
+    fontFamily: 'Fredoka_700Bold',
+    color: '#22C55E',
+  },
+
+  achievementLabel: {
+    marginTop: 4,
+    fontSize: 10,
+    textAlign: 'center',
+    color: '#64748B',
+    fontFamily: 'Nunito_800ExtraBold',
   },
 
   quickStats: {

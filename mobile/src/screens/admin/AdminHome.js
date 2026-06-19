@@ -95,6 +95,13 @@ export default function AdminHome({ navigation }) {
   const [archivedStudents, setArchivedStudents] = useState([]);
   const [archivedTeachers, setArchivedTeachers] = useState([]);
   const [logs, setLogs] = useState([]);
+  
+const [auditSearch, setAuditSearch] = useState('');
+  const [actionFilter, setActionFilter] = useState('all');
+  const [entityFilter, setEntityFilter] = useState('all');
+  const [userFilter, setUserFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState('newest');
+
   const [reportSummary, setReportSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
@@ -353,11 +360,110 @@ async function handleLogout() {
     );
   }
 
-  function renderLogs() {
+  
+function renderLogs() {
+    const actionOptions = [...new Set(logs.map(l => l.action).filter(Boolean))];
+    const entityOptions = [...new Set(logs.map(l => l.entityType).filter(Boolean))];
+    const userOptions = [...new Set(logs.map(l => l.actorUserId).filter(Boolean))];
+
+    const filteredLogs = logs
+      .filter((log) => {
+        const matchesSearch =
+          JSON.stringify(log)
+            .toLowerCase()
+            .includes(auditSearch.toLowerCase());
+
+        const matchesAction =
+          actionFilter === 'all' ||
+          log.action === actionFilter;
+
+        const matchesEntity =
+          entityFilter === 'all' ||
+          log.entityType === entityFilter;
+
+        const matchesUser =
+          userFilter === 'all' ||
+          String(log.actorUserId) === String(userFilter);
+
+        return (
+          matchesSearch &&
+          matchesAction &&
+          matchesEntity &&
+          matchesUser
+        );
+      })
+      .sort((a, b) =>
+        sortOrder === 'newest'
+          ? new Date(b.createdAt) - new Date(a.createdAt)
+          : new Date(a.createdAt) - new Date(b.createdAt)
+      );
+
     return (
       <Card>
         <Text style={styles.cardTitle}>Audit Log Timeline</Text>
-        {logs.map((log) => (
+
+        <TextInput
+          value={auditSearch}
+          onChangeText={setAuditSearch}
+          placeholder="Search logs..."
+          style={{
+            borderWidth: 1,
+            borderColor: '#ddd',
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginBottom: 12,
+          }}
+
+        />
+
+        <Text style={styles.muted}>
+          Logs: {filteredLogs.length} • Actions: {actionOptions.length} • Users: {userOptions.length}
+        </Text>
+
+        <TextInput
+          value={actionFilter}
+          onChangeText={setActionFilter}
+          placeholder="Action filter (or all)"
+          style={{
+            borderWidth: 1,
+            borderColor: '#ddd',
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginTop: 10,
+            marginBottom: 10,
+          }}
+        />
+
+        <TextInput
+          value={entityFilter}
+          onChangeText={setEntityFilter}
+          placeholder="Entity filter (or all)"
+          style={{
+            borderWidth: 1,
+            borderColor: '#ddd',
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginBottom: 10,
+          }}
+        />
+
+        <TextInput
+          value={userFilter}
+          onChangeText={setUserFilter}
+          placeholder="User ID filter (or all)"
+          style={{
+            borderWidth: 1,
+            borderColor: '#ddd',
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginBottom: 10,
+          }}
+        />
+        {filteredLogs.map((log) => (
           <View key={log.id} style={styles.timelineItem}>
             <Text style={styles.rowTitle}>{log.action}</Text>
             <Text style={styles.muted}>{log.entityType || 'record'} #{log.entityId ?? '—'}</Text>
