@@ -1431,52 +1431,106 @@ const [selectedWords, setSelectedWords] = useState([]);
           >
             <Text
               style={{
-                fontSize:20,
-                fontWeight:'900',
-                color:'#C2410C',
-                textAlign:'center',
-              }}
-            >
-              🚀 Misyon {Math.min(step, totalSteps)} sa {totalSteps}
-            </Text>
-
-            <Text
-              style={{
                 fontSize:28,
-                textAlign:'center',
-                marginTop:8,
+                fontWeight:'900',
+                color:'#15803D',
               }}
             >
-              {'⭐'.repeat(Math.min(totalSteps, step))}
-              {'☆'.repeat(Math.max(0, totalSteps - Math.min(totalSteps, step)))}
+              {(currentActivity?.type === 'mcq'
+                ? '🎮 Mini Quiz'
+                : currentActivity?.type === 'writing'
+                ? '🧩 Punan ang Patlang'
+                : currentActivity?.type === 'speech'
+                ? '🎤 Bigkasin Mo'
+                : currentActivity?.type === 'vocabulary'
+                ? '📚 Mga Salita'
+                : currentActivity?.type === 'matching'
+                ? '🧩 Matching Game'
+                : currentActivity?.type === 'infographic'
+                ? '📖 Basahin Muna'
+                : '🚀 Mission') + ' ⭐'}
             </Text>
 
             <Text
               style={{
-                textAlign:'center',
-                color:'#9A3412',
-                marginTop:8,
+                marginTop:4,
+                color:'#475569',
                 fontWeight:'700',
               }}
             >
-              Kumpletuhin ang hamon para makakuha ng bituin!
+              Hakbang {Math.min(step, totalSteps)} of {totalSteps}
             </Text>
+
+            <View
+              style={{
+                height:10,
+                backgroundColor:'#DCFCE7',
+                borderRadius:999,
+                marginTop:14,
+                overflow:'hidden',
+              }}
+            >
+              <View
+                style={{
+                  height:'100%',
+                  width:`${Math.round((Math.min(step,totalSteps)/Math.max(totalSteps,1))*100)}%`,
+                  backgroundColor:'#22C55E',
+                }}
+              />
+            </View>
+
+            <View
+              style={{
+                flexDirection:'row',
+                justifyContent:'space-between',
+                marginTop:16,
+              }}
+            >
+              {[
+                ['👂','Makinig'],
+                ['📖','Basahin'],
+                ['🎮','Quiz'],
+                ['🧩','Patlang'],
+                ['🎤','Bigkas'],
+                ['⭐','Tapos'],
+              ].slice(0,totalSteps).map(([icon,label],index)=>(
+                <View
+                  key={label}
+                  style={{
+                    flex:1,
+                    marginHorizontal:3,
+                    paddingVertical:10,
+                    borderRadius:14,
+                    backgroundColor:
+                      step === index + 1
+                        ? '#FEF3C7'
+                        : step > index + 1
+                        ? '#DCFCE7'
+                        : '#F1F5F9',
+                    borderWidth:1,
+                    borderColor:
+                      step === index + 1
+                        ? '#F59E0B'
+                        : '#E2E8F0',
+                    alignItems:'center',
+                  }}
+                >
+                  <Text style={{fontSize:18}}>{icon}</Text>
+                  <Text
+                    style={{
+                      fontSize:11,
+                      fontWeight:'800',
+                      marginTop:4,
+                    }}
+                  >
+                    {label}
+                  </Text>
+                </View>
+              ))}
+            </View>
           </View>
         ) : null}
 
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${percent}%` }]} />
-        </View>
-        <View style={styles.stepRow}>
-          {activities.map((activity, index) => (
-            <View key={activity.id || `${activity.type}-${index}`} style={[styles.stepDot, step > index && styles.stepDotActive]}>
-              <Text style={styles.stepIcon}>{activity.type === 'mcq' ? '🧠' : activity.type === 'writing' ? '✍️' : activity.type === 'speech' ? '🎤' : '📖'}</Text>
-            </View>
-          ))}
-          <View style={[styles.stepDot, completed && styles.stepDotActive]}>
-            <Text style={styles.stepIcon}>🏁</Text>
-          </View>
-        </View>
 
         {!completed && step > 1 ? (
           <TouchableOpacity
@@ -1490,16 +1544,108 @@ const [selectedWords, setSelectedWords] = useState([]);
 
           {completed ? (
             <View style={styles.card}>
-              <View style={styles.completionToast}>
-                <Text style={styles.completionToastIcon}>🎉</Text>
+              <View
+                style={{
+                  backgroundColor:'#FFFBEB',
+                  borderRadius:28,
+                  padding:24,
+                  alignItems:'center',
+                  marginBottom:20,
+                  borderWidth:2,
+                  borderColor:'#FDE68A',
+                }}
+              >
+                <Text style={{fontSize:72}}>🏆</Text>
 
-                <View style={styles.completionToastCopy}>
-                  <Text style={styles.completionToastTitle}>LESSON COMPLETE!</Text>
-                  <Text style={styles.completionToastBody}>
-                    {completionResult?.xpAwarded
-                      ? `+${completionResult?.xpAwarded || 0} XP earned. 🔥 Streak protected.`
-                      : 'Your lesson progress is already saved.'}
+                <Text
+                  style={{
+                    fontSize:28,
+                    fontWeight:'900',
+                    color:'#92400E',
+                    marginTop:8,
+                  }}
+                >
+                  Lesson Complete!
+                </Text>
+
+                <Text
+                  style={{
+                    textAlign:'center',
+                    color:'#78716C',
+                    marginTop:8,
+                    marginBottom:18,
+                  }}
+                >
+                  Great job! You finished the lesson and earned rewards.
+                </Text>
+
+                <View
+                  style={{
+                    width:'100%',
+                    backgroundColor:'#ECFDF5',
+                    borderRadius:18,
+                    padding:16,
+                    marginBottom:12,
+                    borderWidth:1,
+                    borderColor:'#BBF7D0',
+                  }}
+                >
+                  <Text style={{fontSize:16,fontWeight:'900',color:'#166534'}}>
+                    ⚡ XP Earned
                   </Text>
+
+                  <Text
+                    style={{
+                      fontSize:30,
+                      fontWeight:'900',
+                      color:'#15803D',
+                      marginTop:4,
+                    }}
+                  >
+                    +{completionResult?.xpAwarded || 0}
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    flexDirection:'row',
+                    width:'100%',
+                    gap:8,
+                    marginTop:4,
+                  }}
+                >
+                  <View
+                    style={{
+                      flex:1,
+                      backgroundColor:'#FEF3C7',
+                      borderRadius:16,
+                      padding:12,
+                      alignItems:'center',
+                    }}
+                  >
+                    <Text style={{fontSize:22}}>🔥</Text>
+                    <Text style={{fontWeight:'900',fontSize:12}}>
+                      STREAK SAFE
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flex:1,
+                      backgroundColor:'#DBEAFE',
+                      borderRadius:16,
+                      padding:12,
+                      alignItems:'center',
+                    }}
+                  >
+                    <Text style={{fontSize:22}}>🏅</Text>
+                    <Text style={{fontWeight:'900',fontSize:12}}>
+                      {(completionResult?.newBadges || []).length}
+                    </Text>
+                    <Text style={{fontSize:11}}>
+                      BADGES
+                    </Text>
+                  </View>
                 </View>
               </View>
 
@@ -1507,8 +1653,34 @@ const [selectedWords, setSelectedWords] = useState([]);
                 <View key={badge.id || badge.code} style={styles.badgeRow}>
                   <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
                   <View>
-                    <Text style={styles.question}>New badge unlocked</Text>
-                    <Text style={styles.body}>{badge.name}</Text>
+                    <Text
+                      style={{
+                        fontSize:16,
+                        fontWeight:'900',
+                        color:'#92400E',
+                      }}
+                    >
+                      🏅 Badge Unlocked
+                    </Text>
+
+                    <Text
+                      style={{
+                        fontSize:18,
+                        fontWeight:'900',
+                        marginTop:4,
+                      }}
+                    >
+                      {badge.name}
+                    </Text>
+
+                    <Text
+                      style={{
+                        color:'#78716C',
+                        marginTop:2,
+                      }}
+                    >
+                      Achievement Earned
+                    </Text>
                   </View>
                 </View>
               ))}
@@ -1851,7 +2023,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
   },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FEF3C7', borderRadius: 16, padding: 12, marginTop: 14 },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FFF7ED',
+    borderWidth: 2,
+    borderColor: '#FDE68A',
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
   badgeIcon: { fontSize: 32 },
   disabledButton: { backgroundColor: '#CBD5E1' },
   primaryText: { color: '#FFF', fontWeight: '900' },
