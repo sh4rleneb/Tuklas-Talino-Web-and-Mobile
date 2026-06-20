@@ -1273,12 +1273,16 @@ async function reactivateStudent(id) {
   });
 }
 
-async function resetStudentPassword(id, name = 'student') {
-  const confirmed = window.confirm(
-    `Reset password for ${name}? The system will generate a temporary 6-digit PIN. The student must change it after logging in.`
-  );
+async function resetStudentPassword(id, name = 'student', silent = false) {
+  if (!silent) {
+    const confirmed = window.confirm(
+      `Reset password for ${name}? The system will generate a temporary 6-digit PIN. The student must change it after logging in.`
+    );
 
-  if (!confirmed) return;
+    if (!confirmed) return;
+  }
+
+  let temporaryPin = '';
 
   await safeRun(async () => {
     const data = await api(`/students/${id}/reset-password`, {
@@ -1286,13 +1290,19 @@ async function resetStudentPassword(id, name = 'student') {
       body: {}
     });
 
-    window.alert(
-      `Temporary PIN for ${name}:\n\n${data.temporaryPin}\n\nGive this PIN to the student. They will be required to change their password after logging in.`
-    );
+    temporaryPin = data.temporaryPin || '';
+
+    if (!silent) {
+      window.alert(
+        `Temporary PIN for ${name}:\n\n${data.temporaryPin}\n\nGive this PIN to the student. They will be required to change their password after logging in.`
+      );
+    }
 
     notify('Student password reset. Temporary PIN was shown to admin.');
     await loadAdminDashboard();
   }, 'Hindi na-reset ang password.');
+
+  return temporaryPin;
 }
 
   async function resetStudent(id) {
@@ -1304,12 +1314,16 @@ async function resetStudentPassword(id, name = 'student') {
     });
   }
 
-  async function resetTeacherPassword(id, name = 'teacher') {
-  const confirmed = window.confirm(
-    `Reset password for ${name}? The system will generate a temporary 6-digit PIN. The teacher must change it after logging in.`
-  );
+  async function resetTeacherPassword(id, name = 'teacher', silent = false) {
+  if (!silent) {
+    const confirmed = window.confirm(
+      `Reset password for ${name}? The system will generate a temporary 6-digit PIN. The teacher must change it after logging in.`
+    );
 
-  if (!confirmed) return;
+    if (!confirmed) return;
+  }
+
+  let temporaryPin = '';
 
   await safeRun(async () => {
     const data = await api(`/teachers/${id}/reset-password`, {
@@ -1317,13 +1331,19 @@ async function resetStudentPassword(id, name = 'student') {
       body: {}
     });
 
-    window.alert(
-      `Temporary PIN for ${name}:\n\n${data.temporaryPin}\n\nGive this PIN to the teacher. They will be required to change their password after logging in.`
-    );
+    temporaryPin = data.temporaryPin || '';
+
+    if (!silent) {
+      window.alert(
+        `Temporary PIN for ${name}:\n\n${data.temporaryPin}\n\nGive this PIN to the teacher. They will be required to change their password after logging in.`
+      );
+    }
 
     notify('Teacher password reset. Temporary PIN was shown to admin.');
     await loadAdminDashboard();
   }, 'Hindi na-reset ang teacher password.');
+
+  return temporaryPin;
 }
 
 async function reactivateTeacher(id) {

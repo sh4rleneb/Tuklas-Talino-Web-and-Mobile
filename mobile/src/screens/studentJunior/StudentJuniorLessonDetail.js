@@ -57,6 +57,10 @@ const [matchedPairs, setMatchedPairs] = useState({});
 
 const [selectedWords, setSelectedWords] = useState([]);
 
+const [badgePopup, setBadgePopup] = useState(null);
+const badgeScale = useRef(new Animated.Value(0.6)).current;
+
+
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
   const celebrationScale = useRef(new Animated.Value(0.92)).current;
@@ -891,7 +895,11 @@ const [selectedWords, setSelectedWords] = useState([]);
         },
       });
       Alert.alert('Speech', data.message || 'Speech attempt saved.');
-      setSpeechStatus('Speech attempt submitted and saved.');
+      setSpeechStatus(
+        littleLearnerGame
+          ? '⭐ Voice Quest complete! Recording saved successfully.'
+          : '🎤 Speech attempt submitted and saved.'
+      );
       await saveNextStep('speech');
     } catch (err) {
       Alert.alert('Speech', err.message || 'Unable to save your speech attempt.');
@@ -901,6 +909,8 @@ const [selectedWords, setSelectedWords] = useState([]);
   }
 
   function goToPreviousStep() {
+
+
     if (submitting || completed) return;
     setActivityNotice(null);
     setStep((current) => Math.max(1, Number(current || 1) - 1));
@@ -915,6 +925,23 @@ const [selectedWords, setSelectedWords] = useState([]);
         body: {},
       });
       setCompletionResult(data);
+
+      if (Array.isArray(data?.newBadges) && data.newBadges.length) {
+        setBadgePopup(data.newBadges[0]);
+
+        badgeScale.setValue(0.6);
+
+        Animated.spring(badgeScale, {
+          toValue: 1,
+          friction: 6,
+          useNativeDriver: true,
+        }).start();
+
+        setTimeout(() => {
+          setBadgePopup(null);
+        }, 5500);
+      }
+
       setCompleted(true);
       setStudent((current) => current
         ? { ...current, xp: Number(current.xp || 0) + Number(data.xpAwarded || 0) }
@@ -1448,6 +1475,8 @@ const [selectedWords, setSelectedWords] = useState([]);
                 ? '🧩 Matching Game'
                 : currentActivity?.type === 'infographic'
                 ? '📖 Basahin Muna'
+                : !currentActivity
+                ? '🏁 Lesson Complete'
                 : '🚀 Mission') + ' ⭐'}
             </Text>
 
@@ -1720,6 +1749,72 @@ const [selectedWords, setSelectedWords] = useState([]);
           ) : renderActivity()}
       </ScrollView>
       </KeyboardAvoidingView>
+
+      {badgePopup ? (
+        <Animated.View
+          style={{
+            position:'absolute',
+            top:70,
+            right:16,
+            left:16,
+            backgroundColor:'#FFFFFF',
+            borderRadius:24,
+            padding:18,
+            borderWidth:2,
+            borderColor:'#FDE68A',
+            shadowColor:'#000',
+            shadowOpacity:0.15,
+            shadowRadius:12,
+            elevation:6,
+            flexDirection:'row',
+            alignItems:'center',
+            transform:[{ scale: badgeScale }],
+          }}
+        >
+          <Text
+            style={{
+              fontSize:42,
+              marginRight:14,
+            }}
+          >
+            {badgePopup?.icon || '🏅'}
+          </Text>
+
+          <View style={{ flex:1 }}>
+            <Text
+              style={{
+                color:'#D97706',
+                fontWeight:'900',
+                fontSize:12,
+              }}
+            >
+              Badge Unlocked!
+            </Text>
+
+            <Text
+              style={{
+                fontSize:18,
+                fontWeight:'900',
+                color:'#92400E',
+                marginTop:2,
+              }}
+            >
+              {badgePopup?.name || 'New Achievement'}
+            </Text>
+
+            <Text
+              style={{
+                color:'#78716C',
+                marginTop:2,
+                fontSize:13,
+              }}
+            >
+              Achievement Earned ⭐
+            </Text>
+          </View>
+        </Animated.View>
+      ) : null}
+
     </SafeAreaView>
   );
 }

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import { Op } from 'sequelize';
 import crypto from 'crypto';
 import {

@@ -999,6 +999,54 @@ export function Grade46ReferenceStyles() {
       }
       /* === End Grade 3-6 Badges Final Clean UI === */
 
+
+      .vault-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15,23,42,.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+
+      .vault-card {
+        width: min(520px, 92vw);
+        background: #ffffff;
+        border-radius: 28px;
+        padding: 24px;
+      }
+
+      .vault-row {
+        padding: 12px 0;
+        border-bottom: 1px solid #E2E8F0;
+      }
+
+      .vault-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .vault-pin {
+        margin-top: 10px;
+        padding: 14px;
+        border-radius: 16px;
+        background: #EFF6FF;
+        border: 1px solid #BFDBFE;
+        color: #1D4ED8;
+        font-size: 24px;
+        font-weight: 900;
+        letter-spacing: 0.25em;
+        text-align: center;
+      }
+
+      .vault-note {
+        margin-top: 14px;
+        color: #475569;
+        font-size: 14px;
+      }
+
 `}</style>
   );
 }

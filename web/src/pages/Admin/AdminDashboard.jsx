@@ -116,6 +116,35 @@ const filteredLogs = logs.filter(log => {
     return teacher?.User?.username || teacher?.user?.username || teacher?.username || teacher?.employeeCode || 'No username';
   }
 
+
+  const [vaultOpen, setVaultOpen] = useState(false);
+  const [vaultUser, setVaultUser] = useState(null);
+  const [generatedPin, setGeneratedPin] = useState('');
+
+  async function openVault(userType, user) {
+    try {
+      setGeneratedPin('');
+
+      const pin =
+        userType === 'Student'
+          ? await resetStudentPassword(user.id, user.name, true)
+          : await resetTeacherPassword(user.id, user.name, true);
+
+      setVaultUser({
+        ...user,
+        type: userType
+      });
+
+      setGeneratedPin(pin || '');
+      setVaultOpen(true);
+    } catch (err) {
+      window.alert(
+        err?.message ||
+        'Unable to generate temporary PIN.'
+      );
+    }
+  }
+
   function teacherNameForAssignment(assignment) {
     return assignment.Teacher?.name || teachers.find(t => Number(t.id) === Number(assignment.teacherId))?.name || 'Teacher';
   }
@@ -436,7 +465,7 @@ const filteredLogs = logs.filter(log => {
                       </span>
 
                       <span className="admin-clean-actions">
-                        <button className="btn btn-outline btn-sm" onClick={() => resetStudentPassword(s.id, s.name)}>Reset Password</button>
+                        <button className="btn btn-outline btn-sm" onClick={() => openVault('Student', s)}>Credential Vault</button>
                         <button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset Progress</button>
                         <button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button>
                       </span>
@@ -480,7 +509,7 @@ const filteredLogs = logs.filter(log => {
                         </div>
 
                         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                          <button className="btn btn-outline btn-sm" onClick={() => resetTeacherPassword(t.id, t.name)}>Reset Password</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => openVault('Teacher', t)}>Credential Vault</button>
                           <button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button>
                         </div>
                       </div>
@@ -736,6 +765,58 @@ const filteredLogs = logs.filter(log => {
             )}
           </div>
         </div>
+      {vaultOpen && (
+        <div
+          className="vault-overlay"
+          onClick={() => setVaultOpen(false)}
+        >
+          <div
+            className="vault-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Credential Vault</h2>
+
+            <div className="vault-row">
+              <strong>Name</strong>
+              <span>{vaultUser?.name}</span>
+            </div>
+
+            <div className="vault-row">
+              <strong>Account Type</strong>
+              <span>{vaultUser?.type}</span>
+            </div>
+
+            <div className="vault-row">
+              <strong>Temporary PIN</strong>
+              <div className="vault-pin">
+                {generatedPin}
+              </div>
+            </div>
+
+            <div className="vault-note">
+              User must change password on next login.
+            </div>
+
+            <div className="vault-actions">
+              <button
+                className="btn btn-primary"
+                onClick={() => navigator.clipboard.writeText(generatedPin)}
+              >
+                Copy PIN
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                onClick={() => setVaultOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       </main>
     </div>
   );

@@ -86,6 +86,10 @@ function Button({ children, onPress, tone = 'dark', disabled = false }) {
 export default function AdminHome({ navigation }) {
   const [section, setSection] = useState('overview');
   const [logoutVisible, setLogoutVisible] = useState(false);
+  const [vaultVisible, setVaultVisible] = useState(false);
+  const [vaultUser, setVaultUser] = useState(null);
+  const [generatedPin, setGeneratedPin] = useState('');
+
   const [stats, setStats] = useState({});
   const [enrollments, setEnrollments] = useState({ students: [], teachers: [], teacherAssignments: [], classOptions: [] });
   const [accounts, setAccounts] = useState([]);
@@ -305,6 +309,17 @@ async function handleLogout() {
             <View style={styles.choiceRow}>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`student-pin-${student.id}`, () => resetStudentPassword(student.id), (data) => `Temporary PIN: ${data.temporaryPin}`)}>Reset Password</Button>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`student-progress-${student.id}`, () => resetStudentProgress(student.id), 'Progress reset.')}>Reset Progress</Button>
+              <Button tone="slate" onPress={() => {
+                setGeneratedPin('');
+                setVaultUser({
+                  id: student.id,
+                  type: 'Student',
+                  username: student?.User?.username || student.studentCode,
+                  email: student?.User?.email || 'Not provided',
+                  status: student?.status || 'active'
+                });
+                setVaultVisible(true);
+              }}>Credential Vault</Button>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`student-archive-${student.id}`, () => archiveStudent(student.id), 'Student archived.')}>Archive</Button>
             </View>
             <View style={styles.choiceRow}>
@@ -330,6 +345,17 @@ async function handleLogout() {
               <Text style={styles.muted}>{teacherAssignments.map((assignment) => `G${assignment.gradeLevel} ${assignment.section}`).join(' • ') || 'No assigned classes'}</Text>
               <View style={styles.choiceRow}>
                 <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`teacher-pin-${teacher.id}`, () => resetTeacherPassword(teacher.id), (data) => `Temporary PIN: ${data.temporaryPin}`)}>Reset Password</Button>
+                <Button tone="slate" onPress={() => {
+                  setGeneratedPin('');
+                  setVaultUser({
+                    id: teacher.id,
+                    type: 'Teacher',
+                    username: teacher?.User?.username || teacher.employeeCode,
+                    email: teacher?.User?.email || 'Not provided',
+                    status: teacher?.status || 'active'
+                  });
+                  setVaultVisible(true);
+                }}>Credential Vault</Button>
                 <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`teacher-archive-${teacher.id}`, () => archiveTeacher(teacher.id), 'Teacher archived.')}>Archive</Button>
               </View>
             </View>
@@ -554,6 +580,111 @@ function renderLogs() {
         {section === 'logs' && renderLogs()}
         {section === 'reports' && renderReports()}
 
+
+      <Modal
+        visible={vaultVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVaultVisible(false)}
+      >
+        <View style={styles.workspaceLogoutModalBackdrop}>
+          <View style={styles.workspaceLogoutModalCard}>
+            <Text style={styles.vaultTitle}>🔐 Credential Vault</Text>
+
+            <View style={styles.vaultRow}>
+              <Text style={styles.fieldLabel}>Role</Text>
+              <Text style={styles.rowTitle}>{vaultUser?.type}</Text>
+            </View>
+
+            <View style={styles.vaultRow}>
+              <Text style={styles.fieldLabel}>Username</Text>
+              <Text style={styles.rowTitle}>{vaultUser?.username}</Text>
+            </View>
+
+            <View style={styles.vaultRow}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.rowTitle}>{vaultUser?.email}</Text>
+            </View>
+
+            <View style={styles.vaultRow}>
+              <Text style={styles.fieldLabel}>Status</Text>
+              <Text style={styles.rowTitle}>{vaultUser?.status}</Text>
+            </View>
+
+            <View style={styles.vaultRow}>
+              <Text style={styles.fieldLabel}>Password</Text>
+              <Text style={styles.rowTitle}>Protected by Encryption</Text>
+            </View>
+
+            {generatedPin ? (
+              <>
+                <Text style={styles.fieldLabel}>Temporary PIN</Text>
+                <Text
+                  style={{
+                    fontSize: 28,
+                    fontWeight: '900',
+                    color: '#16A34A',
+                    textAlign: 'center',
+                    marginTop: 6,
+                    marginBottom: 10
+                  }}
+                >
+                  {generatedPin}
+                </Text>
+
+                <Text
+                  style={{
+                    color: '#64748B',
+                    textAlign: 'center',
+                    marginBottom: 14
+                  }}
+                >
+                  User must change password on next login.
+                </Text>
+              </>
+            ) : null}
+
+            <View style={styles.workspaceLogoutActions}>
+              <TouchableOpacity
+                style={styles.vaultGenerateButton}
+                onPress={async () => {
+                  if (!vaultUser?.id) return;
+
+                  try {
+                    const result =
+                      vaultUser.type === 'Student'
+                        ? await resetStudentPassword(vaultUser.id)
+                        : await resetTeacherPassword(vaultUser.id);
+
+                    setGeneratedPin(result?.temporaryPin || '');
+                  } catch (err) {
+                    Alert.alert(
+                      'Unable to Reset PIN',
+                      err?.message || 'Please try again.'
+                    );
+                  }
+                }}
+              >
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={styles.vaultGenerateText}
+                >
+                  Generate / Reset PIN
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.workspaceLogoutConfirm}
+                onPress={() => setVaultVisible(false)}
+              >
+                <Text style={styles.workspaceLogoutConfirmText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal
         visible={logoutVisible}
         transparent
@@ -691,6 +822,47 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '900',
+  },
+
+  vaultGenerateText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+
+  vaultCard: {
+    width: '100%',
+    maxHeight: '85%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+
+  vaultTitle: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+
+  vaultRow: {
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+
+  vaultGenerateButton: {
+    flex: 1,
+    backgroundColor: '#16A34A',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginRight: 10,
   },
 
   workspaceHero: {
