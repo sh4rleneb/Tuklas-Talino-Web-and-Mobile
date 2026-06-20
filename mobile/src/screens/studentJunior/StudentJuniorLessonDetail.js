@@ -1447,8 +1447,8 @@ const [selectedWords, setSelectedWords] = useState([]);
                 marginTop:8,
               }}
             >
-              {'⭐'.repeat(Math.max(1, step - 1))}
-              {'☆'.repeat(Math.max(0, totalSteps - step + 1))}
+              {'⭐'.repeat(Math.min(totalSteps, step))}
+              {'☆'.repeat(Math.max(0, totalSteps - Math.min(totalSteps, step)))}
             </Text>
 
             <Text
