@@ -102,8 +102,6 @@ export default function AdminHome({ navigation }) {
   
 const [auditSearch, setAuditSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
-  const [entityFilter, setEntityFilter] = useState('all');
-  const [userFilter, setUserFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
 
   const [reportSummary, setReportSummary] = useState(null);
@@ -389,8 +387,6 @@ async function handleLogout() {
   
 function renderLogs() {
     const actionOptions = [...new Set(logs.map(l => l.action).filter(Boolean))];
-    const entityOptions = [...new Set(logs.map(l => l.entityType).filter(Boolean))];
-    const userOptions = [...new Set(logs.map(l => l.actorUserId).filter(Boolean))];
 
     const filteredLogs = logs
       .filter((log) => {
@@ -403,19 +399,9 @@ function renderLogs() {
           actionFilter === 'all' ||
           log.action === actionFilter;
 
-        const matchesEntity =
-          entityFilter === 'all' ||
-          log.entityType === entityFilter;
-
-        const matchesUser =
-          userFilter === 'all' ||
-          String(log.actorUserId) === String(userFilter);
-
         return (
           matchesSearch &&
-          matchesAction &&
-          matchesEntity &&
-          matchesUser
+          matchesAction
         );
       })
       .sort((a, b) =>
@@ -444,56 +430,85 @@ function renderLogs() {
         />
 
         <Text style={styles.muted}>
-          Logs: {filteredLogs.length} • Actions: {actionOptions.length} • Users: {userOptions.length}
+          Logs: {filteredLogs.length} • Actions: {actionOptions.length}
         </Text>
 
-        <TextInput
-          value={actionFilter}
-          onChangeText={setActionFilter}
-          placeholder="Action filter (or all)"
-          style={{
-            borderWidth: 1,
-            borderColor: '#ddd',
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            marginTop: 10,
-            marginBottom: 10,
-          }}
-        />
+        <Text style={styles.fieldLabel}>Action</Text>
 
-        <TextInput
-          value={entityFilter}
-          onChangeText={setEntityFilter}
-          placeholder="Entity filter (or all)"
-          style={{
-            borderWidth: 1,
-            borderColor: '#ddd',
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            marginBottom: 10,
-          }}
-        />
+        <View style={styles.choiceRow}>
+          <TouchableOpacity
+            style={[styles.navChip, actionFilter === 'all' && styles.navChipActive]}
+            onPress={() => setActionFilter('all')}
+          >
+            <Text style={[styles.navLabel, actionFilter === 'all' && styles.navLabelActive]}>
+              All
+            </Text>
+          </TouchableOpacity>
 
-        <TextInput
-          value={userFilter}
-          onChangeText={setUserFilter}
-          placeholder="User ID filter (or all)"
-          style={{
-            borderWidth: 1,
-            borderColor: '#ddd',
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            marginBottom: 10,
+          {actionOptions.map(action => (
+            <TouchableOpacity
+              key={action}
+              style={[styles.navChip, actionFilter === action && styles.navChipActive]}
+              onPress={() => setActionFilter(action)}
+            >
+              <Text style={[styles.navLabel, actionFilter === action && styles.navLabelActive]}>
+                {action}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.fieldLabel}>Sort</Text>
+
+        <View style={styles.choiceRow}>
+          <TouchableOpacity
+            style={[styles.navChip, sortOrder === 'newest' && styles.navChipActive]}
+            onPress={() => setSortOrder('newest')}
+          >
+            <Text style={[styles.navLabel, sortOrder === 'newest' && styles.navLabelActive]}>
+              Newest
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.navChip, sortOrder === 'oldest' && styles.navChipActive]}
+            onPress={() => setSortOrder('oldest')}
+          >
+            <Text style={[styles.navLabel, sortOrder === 'oldest' && styles.navLabelActive]}>
+              Oldest
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <Button
+          tone="slate"
+          onPress={() => {
+            setAuditSearch('');
+            setActionFilter('all');
+            setSortOrder('newest');
           }}
-        />
+        >
+          Reset Filters
+        </Button>
         {filteredLogs.map((log) => (
           <View key={log.id} style={styles.timelineItem}>
-            <Text style={styles.rowTitle}>{log.action}</Text>
-            <Text style={styles.muted}>{log.entityType || 'record'} #{log.entityId ?? '—'}</Text>
-            <Text style={styles.muted}>{new Date(log.createdAt).toLocaleString()}</Text>
+            <View style={styles.auditHeader}>
+              <Text style={styles.auditAction}>
+                {log.action}
+              </Text>
+
+              <Text style={styles.auditEntity}>
+                {log.entityType || 'record'}
+              </Text>
+            </View>
+
+            <Text style={styles.auditRecord}>
+              Record #{log.entityId ?? '—'}
+            </Text>
+
+            <Text style={styles.auditDate}>
+              {new Date(log.createdAt).toLocaleString()}
+            </Text>
           </View>
         ))}
         {!logs.length && <Text style={styles.muted}>No audit logs available.</Text>}
@@ -958,7 +973,48 @@ const styles = StyleSheet.create({
   muted: { color: '#64748B', marginTop: 4 },
   body: { color: '#475569', marginTop: 7, lineHeight: 20 },
   rowTitle: { color: '#0F172A', fontWeight: '800' },
-  timelineItem: { borderLeftWidth: 3, borderLeftColor: '#93C5FD', paddingLeft: 12, marginTop: 12 },
+
+  auditHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  auditAction: {
+    color: '#0F172A',
+    fontWeight: '900',
+    flex: 1,
+  },
+
+  auditEntity: {
+    backgroundColor: '#DBEAFE',
+    color: '#1D4ED8',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+
+  auditRecord: {
+    color: '#475569',
+    marginTop: 8,
+  },
+
+  auditDate: {
+    color: '#94A3B8',
+    marginTop: 6,
+    fontSize: 12,
+  },
+
+  timelineItem: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
   field: { marginTop: 12 },
   fieldLabel: { color: '#334155', fontWeight: '800', marginTop: 8, marginBottom: 5 },
   input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, color: '#0F172A', backgroundColor: '#FFF' },
