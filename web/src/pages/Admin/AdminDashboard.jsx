@@ -685,6 +685,7 @@ const filteredLogs = logs.filter(log => {
                   }}
                 >
                   <input
+                    className="input-field"
                     type="text"
                     placeholder="Search action or entity..."
                     value={logSearch}
@@ -692,6 +693,7 @@ const filteredLogs = logs.filter(log => {
                   />
 
                   <select
+                    className="input-field"
                     value={logAction}
                     onChange={(e) => setLogAction(e.target.value)}
                   >
@@ -705,12 +707,14 @@ const filteredLogs = logs.filter(log => {
                   </select>
 
                   <input
+                    className="input-field"
                     type="date"
                     value={fromDate}
                     onChange={(e) => setFromDate(e.target.value)}
                   />
 
                   <input
+                    className="input-field"
                     type="date"
                     value={toDate}
                     onChange={(e) => setToDate(e.target.value)}
