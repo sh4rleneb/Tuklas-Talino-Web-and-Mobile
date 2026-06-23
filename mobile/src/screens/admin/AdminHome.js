@@ -101,6 +101,8 @@ export default function AdminHome({ navigation }) {
   const [passwordVerifyInput, setPasswordVerifyInput] = useState('');
   const [pendingAction, setPendingAction] = useState(null);
 
+  const [verificationExpiresAt, setVerificationExpiresAt] = useState(null);
+
 
   useEffect(() => {
     if (!recentCredentials.length) {
@@ -191,6 +193,7 @@ const [auditSearch, setAuditSearch] = useState('');
 async function handleLogout() {
     setRecentCredentials([]);
     setGeneratedPin('');
+    setVerificationExpiresAt(null);
     setVaultUser(null);
     setVaultVisible(false);
 
@@ -200,9 +203,31 @@ async function handleLogout() {
   }
 
 
+  function hasActiveVerificationSession() {
+    return (
+      verificationExpiresAt &&
+      Date.now() < verificationExpiresAt
+    );
+  }
+
+  function runProtectedAction(action) {
+    if (hasActiveVerificationSession()) {
+      action();
+      return;
+    }
+
+    setPendingAction(() => action);
+    setPasswordVerifyInput('');
+    setPasswordVerifyVisible(true);
+  }
+
   async function executeVerifiedAction() {
     try {
       await verifyPassword(passwordVerifyInput);
+
+      setVerificationExpiresAt(
+        Date.now() + (5 * 60 * 1000)
+      );
 
       const action = pendingAction;
 
@@ -692,7 +717,7 @@ function renderLogs() {
                 <Button
                   tone="slate"
                   onPress={() => {
-                    setPendingAction(() => async () => {
+                    runProtectedAction(async () => {
                       setRevealedPins(current => ({
                         ...current,
                         [credential.username]: true
@@ -705,9 +730,6 @@ function renderLogs() {
                         }));
                       }, 10000);
                     });
-
-                    setPasswordVerifyInput('');
-                    setPasswordVerifyVisible(true);
                   }}
                 >
                   Reveal PIN
@@ -716,7 +738,7 @@ function renderLogs() {
                 <Button
                   tone="slate"
                   onPress={() => {
-                    setPendingAction(() => async () => {
+                    runProtectedAction(async () => {
                       await Share.share({
                         title: 'Tuklas Talino Credentials',
                       message:
@@ -729,9 +751,6 @@ Temporary PIN: ${credential.pin}
 You will be required to change this PIN after first login.`
                       });
                     });
-
-                    setPasswordVerifyInput('');
-                    setPasswordVerifyVisible(true);
                   }}
                 >
                   Share Credential
@@ -832,7 +851,7 @@ You will be required to change this PIN after first login.`
                 onPress={() => {
                   if (!vaultUser?.id) return;
 
-                  setPendingAction(() => async () => {
+                  runProtectedAction(async () => {
                     try {
                       const result =
                         vaultUser.type === 'Student'
@@ -847,9 +866,6 @@ You will be required to change this PIN after first login.`
                       );
                     }
                   });
-
-                  setPasswordVerifyInput('');
-                  setPasswordVerifyVisible(true);
                 }}
               >
                 <Text
