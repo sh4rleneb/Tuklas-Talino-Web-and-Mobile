@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { TeacherRedesignStyles } from '../../components/styles/StyleBlocks';
 import { fmtDate } from '../../utils/studentHelpers';
+import { verifyPassword } from '../../api/client';
 
 export default function AdminDashboard({
   data,
@@ -121,16 +122,21 @@ const filteredLogs = logs.filter(log => {
   const [vaultUser, setVaultUser] = useState(null);
   const [generatedPin, setGeneratedPin] = useState('');
 
+  const [passwordVerifyOpen, setPasswordVerifyOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [pendingVaultUser, setPendingVaultUser] = useState(null);
+
+
   async function openVault(userType, user) {
     try {
-      setGeneratedPin('');
+      setPasswordInput('');
 
-      setVaultUser({
+      setPendingVaultUser({
         ...user,
         type: userType
       });
 
-      setVaultOpen(true);
+      setPasswordVerifyOpen(true);
     } catch (err) {
       window.alert(
         err?.message ||
@@ -139,7 +145,28 @@ const filteredLogs = logs.filter(log => {
     }
   }
 
-  function teacherNameForAssignment(assignment) {
+  
+  async function executeVerifiedOpenVault() {
+    try {
+      await verifyPassword(passwordInput);
+
+      setGeneratedPin('');
+
+      setVaultUser(pendingVaultUser);
+      setVaultOpen(true);
+
+      setPasswordVerifyOpen(false);
+      setPasswordInput('');
+      setPendingVaultUser(null);
+    } catch (err) {
+      window.alert(
+        err?.message ||
+        'Password verification failed.'
+      );
+    }
+  }
+
+function teacherNameForAssignment(assignment) {
     return assignment.Teacher?.name || teachers.find(t => Number(t.id) === Number(assignment.teacherId))?.name || 'Teacher';
   }
 
@@ -763,7 +790,58 @@ const filteredLogs = logs.filter(log => {
             )}
           </div>
         </div>
-      {vaultOpen && (
+      
+      {passwordVerifyOpen && (
+        <div
+          className="vault-overlay"
+          onClick={() => {
+            setPasswordVerifyOpen(false);
+            setPasswordInput('');
+            setPendingVaultUser(null);
+          }}
+        >
+          <div
+            className="vault-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>🔐 Verify Password</h2>
+
+            <div className="vault-note">
+              Re-enter your admin password to continue.
+            </div>
+
+            <input
+              className="input-field"
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              placeholder="Admin password"
+            />
+
+            <div className="vault-actions">
+              <button
+                className="btn btn-primary"
+                onClick={executeVerifiedOpenVault}
+              >
+                Verify
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setPasswordVerifyOpen(false);
+                  setPasswordInput('');
+                  setPendingVaultUser(null);
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+{vaultOpen && (
         <div
           className="vault-overlay"
           onClick={() => setVaultOpen(false)}

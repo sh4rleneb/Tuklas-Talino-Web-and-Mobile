@@ -31,6 +31,14 @@ export async function api(path, options = {}) {
   return data;
 }
 
+
+export async function verifyPassword(password) {
+  return api('/auth/verify-password', {
+    method: 'POST',
+    body: { password }
+  });
+}
+
 export async function uploadForm(path, formData, options = {}) {
   const headers = new Headers(options.headers || {});
   const token = getToken();
