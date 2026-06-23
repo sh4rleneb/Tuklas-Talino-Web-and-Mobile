@@ -94,8 +94,11 @@ export async function resetTeacherPassword(teacherId) {
   return api(`/teachers/${teacherId}/reset-password`, { method: 'POST' });
 }
 
-export async function archiveTeacher(teacherId) {
-  return api(`/teachers/${teacherId}/archive`, { method: 'POST' });
+export async function archiveTeacher(teacherId, body = {}) {
+  return api(`/teachers/${teacherId}/archive`, {
+    method: 'POST',
+    body,
+  });
 }
 
 export async function reactivateTeacher(teacherId, body = {}) {

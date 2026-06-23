@@ -459,7 +459,7 @@ async function executeVerifiedAction() {
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`student-pin-${student.id}`, () => resetStudentPassword(student.id), (data) => `Temporary PIN: ${data.temporaryPin}`)}>Reset Password</Button>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'RESET',
-                action: () => run(
+                action: (reason) => run(
                       `student-progress-${student.id}`,
                       () => resetStudentProgress(student.id, {
                         reason
@@ -480,7 +480,7 @@ async function executeVerifiedAction() {
               }}>Login Credentials</Button>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'ARCHIVE',
-                action: () => run(
+                action: (reason) => run(
                       `student-archive-${student.id}`,
                       () => archiveStudent(student.id, {
                         reason
@@ -492,7 +492,7 @@ async function executeVerifiedAction() {
             <View style={styles.choiceRow}>
               {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                     keyword: 'PROMOTE',
-                    action: () => run(
+                    action: (reason) => run(
                       `grade-${student.id}`,
                       () => updateStudentEnrollment(student.id, {
                         gradeLevel: Number(grade),
@@ -524,7 +524,7 @@ async function executeVerifiedAction() {
               <View style={styles.choiceRow}>
                 <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                   keyword: 'TEACHERPIN',
-                  action: () => run(
+                  action: (reason) => run(
                     `teacher-pin-${teacher.id}`,
                     () => resetTeacherPassword(teacher.id, {
                       reason
@@ -545,7 +545,7 @@ async function executeVerifiedAction() {
                 }}>Login Credentials</Button>
                 <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                   keyword: 'TEACHERARCHIVE',
-                  action: () => run(
+                  action: (reason) => run(
                     `teacher-archive-${teacher.id}`,
                     () => archiveTeacher(teacher.id, {
                       reason
@@ -570,7 +570,7 @@ async function executeVerifiedAction() {
             <View style={styles.flex}><Text style={styles.rowTitle}>{student.name}</Text><Text style={styles.muted}>Student • {student.studentCode}</Text></View>
             <Button tone="green" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
               keyword: 'REACTIVATE',
-              action: () => run(
+              action: (reason) => run(
                 `student-reactivate-${student.id}`,
                 () => reactivateStudent(student.id, {
                   reason
@@ -585,7 +585,7 @@ async function executeVerifiedAction() {
             <View style={styles.flex}><Text style={styles.rowTitle}>{teacher.name}</Text><Text style={styles.muted}>Teacher • {teacher.employeeCode}</Text></View>
             <Button tone="green" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
               keyword: 'REACTIVATE',
-              action: () => run(
+              action: (reason) => run(
                 `teacher-reactivate-${teacher.id}`,
                 () => reactivateTeacher(teacher.id, {
                   reason
