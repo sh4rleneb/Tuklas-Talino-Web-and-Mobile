@@ -1038,30 +1038,34 @@ You will be required to change this PIN after first login.`
             </Text>
 
             <Text style={styles.workspaceLogoutBody}>
-              Please provide a valid administrative reason.
+              This action requires a reason and confirmation.
+            </Text>
 
-              Examples:
-              • Student completed all lessons for current grade
-              • Correcting an enrollment record
-              • Progress reset requested by teacher
-              • Account reactivation after review
+            <Text style={styles.workspaceLogoutBody}>
+              The reason will be recorded in the audit log.
+            </Text>
 
-              This reason will be recorded in the audit log.
+            <Text style={styles.workspaceLogoutCancelText}>
+              Reason *
             </Text>
 
             <TextInput
               style={styles.input}
               value={adminActionReason}
               onChangeText={setAdminActionReason}
-              placeholder="Reason"
+              placeholder="e.g. Student transferred to another school"
               placeholderTextColor="#94A3B8"
             />
+
+            <Text style={styles.workspaceLogoutCancelText}>
+              Confirmation *
+            </Text>
 
             <TextInput
               style={styles.input}
               value={adminActionKeyword}
               onChangeText={setAdminActionKeyword}
-              placeholder={`Type ${pendingAdminAction?.keyword || ''}`}
+              placeholder={`Type ${pendingAdminAction?.keyword || ''} to continue`}
               placeholderTextColor="#94A3B8"
             />
 
