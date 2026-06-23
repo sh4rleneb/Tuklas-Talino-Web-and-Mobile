@@ -126,9 +126,25 @@ const filteredLogs = logs.filter(log => {
   const [passwordInput, setPasswordInput] = useState('');
   const [pendingVaultUser, setPendingVaultUser] = useState(null);
 
+  const [verificationExpiresAt, setVerificationExpiresAt] = useState(null);
+
+
 
   async function openVault(userType, user) {
     try {
+
+      if (hasActiveVerificationSession()) {
+        setGeneratedPin('');
+
+        setVaultUser({
+          ...user,
+          type: userType
+        });
+
+        setVaultOpen(true);
+        return;
+      }
+
       setPasswordInput('');
 
       setPendingVaultUser({
@@ -146,9 +162,21 @@ const filteredLogs = logs.filter(log => {
   }
 
   
-  async function executeVerifiedOpenVault() {
+  
+  function hasActiveVerificationSession() {
+    return (
+      verificationExpiresAt &&
+      Date.now() < verificationExpiresAt
+    );
+  }
+
+async function executeVerifiedOpenVault() {
     try {
       await verifyPassword(passwordInput);
+
+      setVerificationExpiresAt(
+        Date.now() + (5 * 60 * 1000)
+      );
 
       setGeneratedPin('');
 
