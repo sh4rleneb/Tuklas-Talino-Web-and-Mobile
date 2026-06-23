@@ -192,6 +192,44 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
       });
     }
 
+    if (gradeLevel != Number(student.gradeLevel)) {
+
+      const promotionReason = String(
+        req.body.promotionReason || ''
+      ).trim();
+
+      if (!promotionReason) {
+        return res.status(422).json({
+          message: 'Promotion reason is required.'
+        });
+      }
+
+      const currentGrade = Number(student.gradeLevel);
+
+      if (gradeLevel !== currentGrade + 1) {
+        return res.status(422).json({
+          message: 'Students may only advance one grade level at a time.'
+        });
+      }
+
+      const completed = await CompletedLesson.count({
+        where: { studentId: student.id }
+      });
+
+      const total = await Lesson.count({
+        where: {
+          gradeLevel: currentGrade,
+          status: 'published'
+        }
+      });
+
+      if (total > 0 && completed < total) {
+        return res.status(422).json({
+          message: 'Student must complete all lessons before promotion.'
+        });
+      }
+    }
+
     student.gradeLevel = gradeLevel;
     student.section = section;
 

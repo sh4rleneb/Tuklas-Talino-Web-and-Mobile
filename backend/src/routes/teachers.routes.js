@@ -349,6 +349,14 @@ router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const teacher = await Teacher.findByPk(req.params.id, { include: [User] });
     if (!teacher) return res.status(404).json({ message: 'Teacher not found.' });
+
+    const reason = String(req.body.reason || '').trim();
+
+    if (!reason) {
+      return res.status(422).json({
+        message: 'Archive reason is required.'
+      });
+    }
     assertSafeContentPayload({ name: req.body.name, employeeCode: req.body.employeeCode }, 'teacher profile');
 
     for (const key of ['name','employeeCode','status']) if (req.body[key] !== undefined) teacher[key] = req.body[key];
@@ -377,6 +385,14 @@ router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) 
       });
     }
 
+    const reason = String(req.body.reason || '').trim();
+
+    if (!reason) {
+      return res.status(422).json({
+        message: 'Reset reason is required.'
+      });
+    }
+
     const temporaryPin = req.body.temporaryPin?.trim() || generateTemporaryPin();
 
     if (!/^[2-9]{4}$/.test(temporaryPin)) {
@@ -391,7 +407,8 @@ router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) 
     await teacher.User.save();
 
     await audit(req.user.id, 'teacher.reset_password', 'teacher', teacher.id, {
-      forcedPasswordChange: true
+      forcedPasswordChange: true,
+      reason
     });
 
     res.json({
@@ -410,7 +427,13 @@ router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
     teacher.status = 'archived';
     await teacher.save();
     if (teacher.User) { teacher.User.status = 'archived'; await teacher.User.save(); }
-    await audit(req.user.id, 'teacher.archive', 'teacher', teacher.id);
+    await audit(
+      req.user.id,
+      'teacher.archive',
+      'teacher',
+      teacher.id,
+      { reason }
+    );
     res.json({ teacher });
   } catch (err) { next(err); }
 });
@@ -419,10 +442,25 @@ router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
   try {
     const teacher = await Teacher.findByPk(req.params.id, { include: [User] });
     if (!teacher) return res.status(404).json({ message: 'Teacher not found.' });
+
+    const reason = String(req.body.reason || '').trim();
+
+    if (!reason) {
+      return res.status(422).json({
+        message: 'Reactivation reason is required.'
+      });
+    }
+
     teacher.status = 'active';
     await teacher.save();
     if (teacher.User) { teacher.User.status = 'active'; await teacher.User.save(); }
-    await audit(req.user.id, 'teacher.reactivate', 'teacher', teacher.id);
+    await audit(
+      req.user.id,
+      'teacher.reactivate',
+      'teacher',
+      teacher.id,
+      { reason }
+    );
     res.json({ teacher });
   } catch (err) { next(err); }
 });

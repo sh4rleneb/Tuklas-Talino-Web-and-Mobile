@@ -520,7 +520,16 @@ async function executeVerifiedAction() {
               <Text style={styles.muted}>{teacher.User?.username || teacher.employeeCode}</Text>
               <Text style={styles.muted}>{teacherAssignments.map((assignment) => `G${assignment.gradeLevel} ${assignment.section}`).join(' • ') || 'No assigned classes'}</Text>
               <View style={styles.choiceRow}>
-                <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`teacher-pin-${teacher.id}`, () => resetTeacherPassword(teacher.id), (data) => `Temporary PIN: ${data.temporaryPin}`)}>Reset Password</Button>
+                <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
+                  keyword: 'TEACHERPIN',
+                  action: () => run(
+                    `teacher-pin-${teacher.id}`,
+                    () => resetTeacherPassword(teacher.id, {
+                      reason: adminActionReason
+                    }),
+                    (data) => `Temporary PIN: ${data.temporaryPin}`
+                  )
+                })}>Reset Password</Button>
                 <Button tone="slate" onPress={() => {
                   setGeneratedPin('');
                   setVaultUser({
@@ -532,7 +541,16 @@ async function executeVerifiedAction() {
                   });
                   setVaultVisible(true);
                 }}>Login Credentials</Button>
-                <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`teacher-archive-${teacher.id}`, () => archiveTeacher(teacher.id), 'Teacher archived.')}>Archive</Button>
+                <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
+                  keyword: 'TEACHERARCHIVE',
+                  action: () => run(
+                    `teacher-archive-${teacher.id}`,
+                    () => archiveTeacher(teacher.id, {
+                      reason: adminActionReason
+                    }),
+                    'Teacher archived.'
+                  )
+                })}>Archive</Button>
               </View>
             </View>
           );
@@ -548,13 +566,31 @@ async function executeVerifiedAction() {
         {archivedStudents.map((student) => (
           <View key={`student-${student.id}`} style={styles.actionRow}>
             <View style={styles.flex}><Text style={styles.rowTitle}>{student.name}</Text><Text style={styles.muted}>Student • {student.studentCode}</Text></View>
-            <Button tone="green" disabled={Boolean(busy)} onPress={() => run(`student-reactivate-${student.id}`, () => reactivateStudent(student.id), 'Student reactivated.')}>Reactivate</Button>
+            <Button tone="green" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
+              keyword: 'REACTIVATE',
+              action: () => run(
+                `student-reactivate-${student.id}`,
+                () => reactivateStudent(student.id, {
+                  reason: adminActionReason
+                }),
+                'Student reactivated.'
+              )
+            })}>Reactivate</Button>
           </View>
         ))}
         {archivedTeachers.map((teacher) => (
           <View key={`teacher-${teacher.id}`} style={styles.actionRow}>
             <View style={styles.flex}><Text style={styles.rowTitle}>{teacher.name}</Text><Text style={styles.muted}>Teacher • {teacher.employeeCode}</Text></View>
-            <Button tone="green" disabled={Boolean(busy)} onPress={() => run(`teacher-reactivate-${teacher.id}`, () => reactivateTeacher(teacher.id), 'Teacher reactivated.')}>Reactivate</Button>
+            <Button tone="green" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
+              keyword: 'REACTIVATE',
+              action: () => run(
+                `teacher-reactivate-${teacher.id}`,
+                () => reactivateTeacher(teacher.id, {
+                  reason: adminActionReason
+                }),
+                'Teacher reactivated.'
+              )
+            })}>Reactivate</Button>
           </View>
         ))}
         {!archivedStudents.length && !archivedTeachers.length && <Text style={styles.muted}>No archived student or teacher accounts.</Text>}
@@ -683,6 +719,12 @@ function renderLogs() {
             <Text style={styles.auditRecord}>
               Record #{log.entityId ?? '—'}
             </Text>
+
+            {log.metadata?.reason ? (
+              <Text style={styles.muted}>
+                Reason: {log.metadata.reason}
+              </Text>
+            ) : null}
 
             <Text style={styles.auditDate}>
               {new Date(log.createdAt).toLocaleString()}

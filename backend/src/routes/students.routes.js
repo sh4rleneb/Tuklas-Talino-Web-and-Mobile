@@ -633,10 +633,25 @@ router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
+
+    const reason = String(req.body.reason || '').trim();
+
+    if (!reason) {
+      return res.status(422).json({
+        message: 'Reactivation reason is required.'
+      });
+    }
+
     student.status = 'active';
     await student.save();
     if (student.User) { student.User.status = 'active'; await student.User.save(); }
-    await audit(req.user.id, 'student.reactivate', 'student', student.id);
+    await audit(
+      req.user.id,
+      'student.reactivate',
+      'student',
+      student.id,
+      { reason }
+    );
     res.json({ student });
   } catch (err) { next(err); }
 });

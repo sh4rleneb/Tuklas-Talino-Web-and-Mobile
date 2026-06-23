@@ -83,8 +83,11 @@ export async function archiveStudent(studentId, body = {}) {
   });
 }
 
-export async function reactivateStudent(studentId) {
-  return api(`/students/${studentId}/reactivate`, { method: 'POST' });
+export async function reactivateStudent(studentId, body = {}) {
+  return api(`/students/${studentId}/reactivate`, {
+    method: 'POST',
+    body,
+  });
 }
 
 export async function resetTeacherPassword(teacherId) {
@@ -95,8 +98,11 @@ export async function archiveTeacher(teacherId) {
   return api(`/teachers/${teacherId}/archive`, { method: 'POST' });
 }
 
-export async function reactivateTeacher(teacherId) {
-  return api(`/teachers/${teacherId}/reactivate`, { method: 'POST' });
+export async function reactivateTeacher(teacherId, body = {}) {
+  return api(`/teachers/${teacherId}/reactivate`, {
+    method: 'POST',
+    body,
+  });
 }
 
 export async function getReportSummary() {
