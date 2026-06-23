@@ -114,6 +114,37 @@ router.get('/me', authenticate, async (req, res) => {
   return res.json({ user: publicUser(req.user) });
 });
 
+
+router.post('/verify-password', authenticate, async (req, res, next) => {
+  try {
+    const password = String(req.body.password || '');
+
+    const valid = await bcrypt.compare(
+      password,
+      req.user.passwordHash
+    );
+
+    if (!valid) {
+      return res.status(401).json({
+        message: 'Password verification failed.'
+      });
+    }
+
+    await audit(
+      req.user.id,
+      'auth.verify_password',
+      'user',
+      req.user.id
+    );
+
+    return res.json({
+      verified: true
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/change-password', authenticate, async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;

@@ -1018,8 +1018,22 @@ export function Grade46ReferenceStyles() {
       }
 
       .vault-row {
-        padding: 12px 0;
+        padding: 14px 0;
         border-bottom: 1px solid #E2E8F0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .vault-row strong {
+        color: #0F172A;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .vault-row span {
+        color: #334155;
+        font-size: 16px;
       }
 
       .vault-actions {

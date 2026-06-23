@@ -25,7 +25,7 @@ import { audit } from '../services/audit.service.js';
 
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
 function generateTemporaryPin() {
-  return Array.from({ length: 6 }, () => crypto.randomInt(2, 10)).join('');
+  return Array.from({ length: 4 }, () => crypto.randomInt(2, 10)).join('');
 }
 
 async function getTeacherAssignments(req) {
@@ -116,17 +116,20 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
     const body = validate(teacherSchema, req.body);
     assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher account');
     const role = await Role.findOne({ where: { name: 'teacher' } });
+
+    const temporaryPin = generateTemporaryPin();
+
     const user = await User.create({
   roleId: role.id,
   username: body.username,
   email: body.email,
   displayName: body.name,
-  passwordHash: await bcrypt.hash(body.password || process.env.DEMO_TEACHER_PASSWORD || 'teach123', 12),
+  passwordHash: await bcrypt.hash(temporaryPin, 12),
   mustChangePassword: true
 });
     const teacher = await Teacher.create({ userId: user.id, employeeCode: body.employeeCode, name: body.name });
     await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
-    res.status(201).json({ teacher });
+    res.status(201).json({ teacher, temporaryPin });
   } catch (err) { next(err); }
 });
 
@@ -376,9 +379,9 @@ router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) 
 
     const temporaryPin = req.body.temporaryPin?.trim() || generateTemporaryPin();
 
-    if (!/^[2-9]{6}$/.test(temporaryPin)) {
+    if (!/^[2-9]{4}$/.test(temporaryPin)) {
       return res.status(422).json({
-        message: 'Temporary PIN must be exactly 6 digits using numbers 2-9.'
+        message: 'Temporary PIN must be exactly 4 digits using numbers 2-9.'
       });
     }
 
