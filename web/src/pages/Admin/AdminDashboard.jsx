@@ -125,17 +125,11 @@ const filteredLogs = logs.filter(log => {
     try {
       setGeneratedPin('');
 
-      const pin =
-        userType === 'Student'
-          ? await resetStudentPassword(user.id, user.name, true)
-          : await resetTeacherPassword(user.id, user.name, true);
-
       setVaultUser({
         ...user,
         type: userType
       });
 
-      setGeneratedPin(pin || '');
       setVaultOpen(true);
     } catch (err) {
       window.alert(
@@ -808,6 +802,23 @@ const filteredLogs = logs.filter(log => {
             <div className="vault-actions">
               <button
                 className="btn btn-primary"
+                onClick={async () => {
+                  if (!vaultUser) return;
+
+                  const pin =
+                    vaultUser.type === 'Student'
+                      ? await resetStudentPassword(vaultUser.id, vaultUser.name, true)
+                      : await resetTeacherPassword(vaultUser.id, vaultUser.name, true);
+
+                  setGeneratedPin(pin || '');
+                }}
+              >
+                Generate New PIN
+              </button>
+
+              <button
+                className="btn btn-primary"
+                disabled={!generatedPin}
                 onClick={() => navigator.clipboard.writeText(generatedPin)}
               >
                 Copy Temporary PIN
