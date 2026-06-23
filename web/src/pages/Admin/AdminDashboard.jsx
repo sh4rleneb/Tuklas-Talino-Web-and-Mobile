@@ -465,7 +465,7 @@ const filteredLogs = logs.filter(log => {
                       </span>
 
                       <span className="admin-clean-actions">
-                        <button className="btn btn-outline btn-sm" onClick={() => openVault('Student', s)}>Credential Vault</button>
+                        <button className="btn btn-outline btn-sm" onClick={() => openVault('Student', s)}>Login Credentials</button>
                         <button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset Progress</button>
                         <button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button>
                       </span>
@@ -509,7 +509,7 @@ const filteredLogs = logs.filter(log => {
                         </div>
 
                         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                          <button className="btn btn-outline btn-sm" onClick={() => openVault('Teacher', t)}>Credential Vault</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => openVault('Teacher', t)}>Login Credentials</button>
                           <button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button>
                         </div>
                       </div>
@@ -778,7 +778,11 @@ const filteredLogs = logs.filter(log => {
             className="vault-card"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2>Credential Vault</h2>
+            <h2>🔑 Login Credentials</h2>
+
+            <div className="vault-note">
+              View login information and generate a temporary PIN for password resets.
+            </div>
 
             <div className="vault-row">
               <strong>Name</strong>
@@ -806,7 +810,7 @@ const filteredLogs = logs.filter(log => {
                 className="btn btn-primary"
                 onClick={() => navigator.clipboard.writeText(generatedPin)}
               >
-                Copy PIN
+                Copy Temporary PIN
               </button>
 
               <button

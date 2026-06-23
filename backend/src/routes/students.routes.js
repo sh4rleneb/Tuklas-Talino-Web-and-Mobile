@@ -35,7 +35,7 @@ import { studentSchema, validate } from '../validators/common.js';
 
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
 function generateTemporaryPin() {
-  return Array.from({ length: 6 }, () => crypto.randomInt(2, 10)).join('');
+  return Array.from({ length: 4 }, () => crypto.randomInt(2, 10)).join('');
 }
 
 const router = Router();
@@ -424,16 +424,19 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
     const body = validate(studentSchema, req.body);
     assertSafeContentPayload({ name: body.name, section: body.section }, 'student account');
     const role = await Role.findOne({ where: { name: 'student' } });
+
+    const temporaryPin = generateTemporaryPin();
+
     const user = await User.create({
   roleId: role.id,
   username: body.studentCode,
   displayName: body.name,
-  passwordHash: await bcrypt.hash(body.password || process.env.DEMO_STUDENT_PASSWORD || 'student123', 12),
+  passwordHash: await bcrypt.hash(temporaryPin, 12),
   mustChangePassword: true
 });
     const student = await Student.create({ userId: user.id, ...body });
     await audit(req.user.id, 'student.create', 'student', student.id);
-    res.status(201).json({ student });
+    res.status(201).json({ student, temporaryPin });
   } catch (err) { next(err); }
 });
 
@@ -603,9 +606,9 @@ router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) 
 
     const temporaryPin = req.body.temporaryPin?.trim() || generateTemporaryPin();
 
-    if (!/^[2-9]{6}$/.test(temporaryPin)) {
+    if (!/^[2-9]{4}$/.test(temporaryPin)) {
       return res.status(422).json({
-        message: 'Temporary PIN must be exactly 6 digits using numbers 2-9.'
+        message: 'Temporary PIN must be exactly 4 digits using numbers 2-9.'
       });
     }
 
