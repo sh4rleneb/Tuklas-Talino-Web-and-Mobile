@@ -103,6 +103,12 @@ export default function AdminHome({ navigation }) {
 
   const [verificationExpiresAt, setVerificationExpiresAt] = useState(null);
 
+  const [adminActionVisible, setAdminActionVisible] = useState(false);
+  const [adminActionReason, setAdminActionReason] = useState('');
+  const [adminActionKeyword, setAdminActionKeyword] = useState('');
+  const [pendingAdminAction, setPendingAdminAction] = useState(null);
+
+
 
   useEffect(() => {
     if (!recentCredentials.length) {
@@ -221,7 +227,45 @@ async function handleLogout() {
     setPasswordVerifyVisible(true);
   }
 
-  async function executeVerifiedAction() {
+  
+  function requestProtectedAdminAction(config) {
+    setAdminActionReason('');
+    setAdminActionKeyword('');
+    setPendingAdminAction(config);
+    setAdminActionVisible(true);
+  }
+
+  async function executeProtectedAdminAction() {
+    if (!pendingAdminAction) return;
+
+    if (!adminActionReason.trim()) {
+      Alert.alert(
+        'Reason Required',
+        'Please provide a reason before continuing.'
+      );
+      return;
+    }
+
+    if (
+      pendingAdminAction.keyword &&
+      adminActionKeyword.trim().toUpperCase() !==
+      pendingAdminAction.keyword.toUpperCase()
+    ) {
+      Alert.alert(
+        'Confirmation Required',
+        `Type ${pendingAdminAction.keyword} to continue.`
+      );
+      return;
+    }
+
+    setAdminActionVisible(false);
+
+    runProtectedAction(async () => {
+      await pendingAdminAction.action();
+    });
+  }
+
+async function executeVerifiedAction() {
     try {
       await verifyPassword(passwordVerifyInput);
 
@@ -411,7 +455,10 @@ async function handleLogout() {
             <Text style={styles.muted}>{student.studentCode} • Grade {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
             <View style={styles.choiceRow}>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`student-pin-${student.id}`, () => resetStudentPassword(student.id), (data) => `Temporary PIN: ${data.temporaryPin}`)}>Reset Password</Button>
-              <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`student-progress-${student.id}`, () => resetStudentProgress(student.id), 'Progress reset.')}>Reset Progress</Button>
+              <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
+                keyword: 'RESET',
+                action: () => run(`student-progress-${student.id}`, () => resetStudentProgress(student.id), 'Progress reset.')
+              })}>Reset Progress</Button>
               <Button tone="slate" onPress={() => {
                 setGeneratedPin('');
                 setVaultUser({
@@ -423,10 +470,16 @@ async function handleLogout() {
                 });
                 setVaultVisible(true);
               }}>Login Credentials</Button>
-              <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`student-archive-${student.id}`, () => archiveStudent(student.id), 'Student archived.')}>Archive</Button>
+              <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
+                keyword: 'ARCHIVE',
+                action: () => run(`student-archive-${student.id}`, () => archiveStudent(student.id), 'Student archived.')
+              })}>Archive</Button>
             </View>
             <View style={styles.choiceRow}>
-              {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => run(`grade-${student.id}`, () => updateStudentEnrollment(student.id, { gradeLevel: Number(grade), section: student.section }), 'Enrollment updated.')}>G{grade}</Button>)}
+              {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
+                    keyword: 'PROMOTE',
+                    action: () => run(`grade-${student.id}`, () => updateStudentEnrollment(student.id, { gradeLevel: Number(grade), section: student.section }), 'Enrollment updated.')
+                  })}>G{grade}</Button>)}
             </View>
           </View>
         ))}
@@ -887,6 +940,64 @@ You will be required to change this PIN after first login.`
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={adminActionVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAdminActionVisible(false)}
+      >
+        <View style={styles.workspaceLogoutModalBackdrop}>
+          <View style={styles.workspaceLogoutModalCard}>
+
+            <Text style={styles.workspaceLogoutTitle}>
+              Administrative Confirmation
+            </Text>
+
+            <Text style={styles.workspaceLogoutBody}>
+              Please provide a reason before continuing.
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              value={adminActionReason}
+              onChangeText={setAdminActionReason}
+              placeholder="Reason"
+              placeholderTextColor="#94A3B8"
+            />
+
+            <TextInput
+              style={styles.input}
+              value={adminActionKeyword}
+              onChangeText={setAdminActionKeyword}
+              placeholder={`Type ${pendingAdminAction?.keyword || ''}`}
+              placeholderTextColor="#94A3B8"
+            />
+
+            <View style={styles.workspaceLogoutActions}>
+              <TouchableOpacity
+                style={styles.workspaceLogoutCancel}
+                onPress={() => setAdminActionVisible(false)}
+              >
+                <Text style={styles.workspaceLogoutCancelText}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.workspaceLogoutConfirm}
+                onPress={executeProtectedAdminAction}
+              >
+                <Text style={styles.workspaceLogoutConfirmText}>
+                  Continue
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+          </View>
+        </View>
+      </Modal>
+
 
       <Modal
         visible={passwordVerifyVisible}
