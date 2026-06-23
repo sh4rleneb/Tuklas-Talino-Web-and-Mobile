@@ -397,7 +397,7 @@ async function handleLogout() {
                   status: student?.status || 'active'
                 });
                 setVaultVisible(true);
-              }}>Login Credentials</Button>
+              }}>Credential Vault</Button>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`student-archive-${student.id}`, () => archiveStudent(student.id), 'Student archived.')}>Archive</Button>
             </View>
             <View style={styles.choiceRow}>
@@ -433,7 +433,7 @@ async function handleLogout() {
                     status: teacher?.status || 'active'
                   });
                   setVaultVisible(true);
-                }}>Login Credentials</Button>
+                }}>Credential Vault</Button>
                 <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`teacher-archive-${teacher.id}`, () => archiveTeacher(teacher.id), 'Teacher archived.')}>Archive</Button>
               </View>
             </View>
@@ -668,7 +668,7 @@ function renderLogs() {
 
         {recentCredentials.length > 0 ? (
           <Card>
-            <Text style={styles.cardTitle}>🔑 New Account Login Details</Text>
+            <Text style={styles.cardTitle}>🔐 Recent Credentials</Text>
 
             {recentCredentials.map((credential, index) => (
               <View
@@ -767,11 +767,7 @@ You will be required to change this PIN after first login.`
       >
         <View style={styles.workspaceLogoutModalBackdrop}>
           <View style={styles.workspaceLogoutModalCard}>
-            <Text style={styles.vaultTitle}>🔑 Login Credentials</Text>
-
-            <Text style={styles.vaultSubtitle}>
-              View login information and generate a temporary PIN for password resets.
-            </Text>
+            <Text style={styles.vaultTitle}>🔐 Credential Vault</Text>
 
             <View style={styles.vaultRow}>
               <Text style={styles.fieldLabel}>Role</Text>
@@ -857,7 +853,7 @@ You will be required to change this PIN after first login.`
                   adjustsFontSizeToFit
                   style={styles.vaultGenerateText}
                 >
-                  Generate New PIN
+                  Generate / Reset PIN
                 </Text>
               </TouchableOpacity>
 
@@ -1081,16 +1077,6 @@ const styles = StyleSheet.create({
     padding: 22,
     borderWidth: 1,
     borderColor: '#DBEAFE',
-  },
-
-
-  vaultSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginTop: 6,
-    marginBottom: 16,
   },
 
   vaultTitle: {

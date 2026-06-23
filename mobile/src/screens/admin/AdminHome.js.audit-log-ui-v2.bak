@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
@@ -41,7 +41,7 @@ import {
   resetTeacherPassword,
   updateStudentEnrollment,
 } from '../../api/admin';
-import { logout, verifyPassword } from '../../api/auth';
+import { logout } from '../../api/auth';
 
 const NAV_ITEMS = [
   ['overview', '🏠', 'Overview'],
@@ -94,26 +94,6 @@ export default function AdminHome({ navigation }) {
   const [enrollments, setEnrollments] = useState({ students: [], teachers: [], teacherAssignments: [], classOptions: [] });
   const [accounts, setAccounts] = useState([]);
   const [workspaceNotice, setWorkspaceNotice] = useState(null);
-  const [recentCredentials, setRecentCredentials] = useState([]);
-  const [revealedPins, setRevealedPins] = useState({});
-
-  const [passwordVerifyVisible, setPasswordVerifyVisible] = useState(false);
-  const [passwordVerifyInput, setPasswordVerifyInput] = useState('');
-  const [pendingAction, setPendingAction] = useState(null);
-
-
-  useEffect(() => {
-    if (!recentCredentials.length) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setRecentCredentials([]);
-    }, 5 * 60 * 1000);
-
-    return () => clearTimeout(timer);
-  }, [recentCredentials]);
-
   const [students, setStudents] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [archivedStudents, setArchivedStudents] = useState([]);
@@ -122,6 +102,8 @@ export default function AdminHome({ navigation }) {
   
 const [auditSearch, setAuditSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
+  const [entityFilter, setEntityFilter] = useState('all');
+  const [userFilter, setUserFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('newest');
 
   const [reportSummary, setReportSummary] = useState(null);
@@ -129,8 +111,8 @@ const [auditSearch, setAuditSearch] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [accountType, setAccountType] = useState('student');
-  const [studentForm, setStudentForm] = useState({ studentCode: '', name: '', gradeLevel: '1', section: '' });
-  const [teacherForm, setTeacherForm] = useState({ username: '', employeeCode: '', name: '' });
+  const [studentForm, setStudentForm] = useState({ studentCode: '', name: '', gradeLevel: '1', section: '', password: '' });
+  const [teacherForm, setTeacherForm] = useState({ username: '', employeeCode: '', name: '', password: '' });
   const [assignmentForm, setAssignmentForm] = useState({ teacherId: '', gradeLevel: '1', section: '' });
 
   const load = useCallback(async () => {
@@ -189,36 +171,8 @@ const [auditSearch, setAuditSearch] = useState('');
   }
 
 async function handleLogout() {
-    setRecentCredentials([]);
-    setGeneratedPin('');
-    setVaultUser(null);
-    setVaultVisible(false);
-
     await logout();
-
     navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
-  }
-
-
-  async function executeVerifiedAction() {
-    try {
-      await verifyPassword(passwordVerifyInput);
-
-      const action = pendingAction;
-
-      setPasswordVerifyVisible(false);
-      setPasswordVerifyInput('');
-      setPendingAction(null);
-
-      if (action) {
-        await action();
-      }
-    } catch (err) {
-      Alert.alert(
-        'Verification Failed',
-        err?.message || 'Incorrect password.'
-      );
-    }
   }
 
   async function shareReport(title, loader) {
@@ -295,26 +249,10 @@ async function handleLogout() {
             <Field label="Name" value={studentForm.name} onChangeText={(name) => setStudentForm((current) => ({ ...current, name }))} />
             <Field label="Grade" value={studentForm.gradeLevel} keyboardType="numeric" onChangeText={(gradeLevel) => setStudentForm((current) => ({ ...current, gradeLevel }))} />
             <Field label="Section" value={studentForm.section} onChangeText={(section) => setStudentForm((current) => ({ ...current, section }))} />
+            <Field label="Password" value={studentForm.password} secureTextEntry onChangeText={(password) => setStudentForm((current) => ({ ...current, password }))} />
             <Button disabled={Boolean(busy)} onPress={async () => {
               const saved = await run('create-student', () => createStudentAccount({ ...studentForm, gradeLevel: Number(studentForm.gradeLevel), avatar: '🧒' }), 'Student account created.');
-
-              if (saved) {
-                setRecentCredentials(current => [
-                  {
-                    type: 'Student',
-                    username: studentForm.studentCode,
-                    pin: saved.temporaryPin
-                  },
-                  ...current
-                ].slice(0, 10));
-
-                Alert.alert(
-                  'Student Account Created',
-                  `Temporary PIN\n\n${saved.temporaryPin}\n\nStudent must change this PIN on first login.`
-                );
-
-                setStudentForm({ studentCode: '', name: '', gradeLevel: '1', section: '' });
-              }
+              if (saved) setStudentForm({ studentCode: '', name: '', gradeLevel: '1', section: '', password: '' });
             }}>Create Student</Button>
           </>
         ) : (
@@ -322,26 +260,10 @@ async function handleLogout() {
             <Field label="Username" value={teacherForm.username} onChangeText={(username) => setTeacherForm((current) => ({ ...current, username }))} />
             <Field label="Employee Code" value={teacherForm.employeeCode} onChangeText={(employeeCode) => setTeacherForm((current) => ({ ...current, employeeCode }))} />
             <Field label="Name" value={teacherForm.name} onChangeText={(name) => setTeacherForm((current) => ({ ...current, name }))} />
+            <Field label="Password" value={teacherForm.password} secureTextEntry onChangeText={(password) => setTeacherForm((current) => ({ ...current, password }))} />
             <Button disabled={Boolean(busy)} onPress={async () => {
               const saved = await run('create-teacher', () => createTeacherAccount(teacherForm), 'Teacher account created.');
-
-              if (saved) {
-                setRecentCredentials(current => [
-                  {
-                    type: 'Teacher',
-                    username: teacherForm.username,
-                    pin: saved.temporaryPin
-                  },
-                  ...current
-                ].slice(0, 10));
-
-                Alert.alert(
-                  'Teacher Account Created',
-                  `Temporary PIN\n\n${saved.temporaryPin}\n\nTeacher must change this PIN on first login.`
-                );
-
-                setTeacherForm({ username: '', employeeCode: '', name: '' });
-              }
+              if (saved) setTeacherForm({ username: '', employeeCode: '', name: '', password: '' });
             }}>Create Teacher</Button>
           </>
         )}
@@ -397,7 +319,7 @@ async function handleLogout() {
                   status: student?.status || 'active'
                 });
                 setVaultVisible(true);
-              }}>Login Credentials</Button>
+              }}>Credential Vault</Button>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`student-archive-${student.id}`, () => archiveStudent(student.id), 'Student archived.')}>Archive</Button>
             </View>
             <View style={styles.choiceRow}>
@@ -433,7 +355,7 @@ async function handleLogout() {
                     status: teacher?.status || 'active'
                   });
                   setVaultVisible(true);
-                }}>Login Credentials</Button>
+                }}>Credential Vault</Button>
                 <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`teacher-archive-${teacher.id}`, () => archiveTeacher(teacher.id), 'Teacher archived.')}>Archive</Button>
               </View>
             </View>
@@ -467,6 +389,8 @@ async function handleLogout() {
   
 function renderLogs() {
     const actionOptions = [...new Set(logs.map(l => l.action).filter(Boolean))];
+    const entityOptions = [...new Set(logs.map(l => l.entityType).filter(Boolean))];
+    const userOptions = [...new Set(logs.map(l => l.actorUserId).filter(Boolean))];
 
     const filteredLogs = logs
       .filter((log) => {
@@ -479,9 +403,19 @@ function renderLogs() {
           actionFilter === 'all' ||
           log.action === actionFilter;
 
+        const matchesEntity =
+          entityFilter === 'all' ||
+          log.entityType === entityFilter;
+
+        const matchesUser =
+          userFilter === 'all' ||
+          String(log.actorUserId) === String(userFilter);
+
         return (
           matchesSearch &&
-          matchesAction
+          matchesAction &&
+          matchesEntity &&
+          matchesUser
         );
       })
       .sort((a, b) =>
@@ -510,85 +444,56 @@ function renderLogs() {
         />
 
         <Text style={styles.muted}>
-          Logs: {filteredLogs.length} • Actions: {actionOptions.length}
+          Logs: {filteredLogs.length} • Actions: {actionOptions.length} • Users: {userOptions.length}
         </Text>
 
-        <Text style={styles.fieldLabel}>Action</Text>
-
-        <View style={styles.choiceRow}>
-          <TouchableOpacity
-            style={[styles.navChip, actionFilter === 'all' && styles.navChipActive]}
-            onPress={() => setActionFilter('all')}
-          >
-            <Text style={[styles.navLabel, actionFilter === 'all' && styles.navLabelActive]}>
-              All
-            </Text>
-          </TouchableOpacity>
-
-          {actionOptions.map(action => (
-            <TouchableOpacity
-              key={action}
-              style={[styles.navChip, actionFilter === action && styles.navChipActive]}
-              onPress={() => setActionFilter(action)}
-            >
-              <Text style={[styles.navLabel, actionFilter === action && styles.navLabelActive]}>
-                {action}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.fieldLabel}>Sort</Text>
-
-        <View style={styles.choiceRow}>
-          <TouchableOpacity
-            style={[styles.navChip, sortOrder === 'newest' && styles.navChipActive]}
-            onPress={() => setSortOrder('newest')}
-          >
-            <Text style={[styles.navLabel, sortOrder === 'newest' && styles.navLabelActive]}>
-              Newest
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.navChip, sortOrder === 'oldest' && styles.navChipActive]}
-            onPress={() => setSortOrder('oldest')}
-          >
-            <Text style={[styles.navLabel, sortOrder === 'oldest' && styles.navLabelActive]}>
-              Oldest
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <Button
-          tone="slate"
-          onPress={() => {
-            setAuditSearch('');
-            setActionFilter('all');
-            setSortOrder('newest');
+        <TextInput
+          value={actionFilter}
+          onChangeText={setActionFilter}
+          placeholder="Action filter (or all)"
+          style={{
+            borderWidth: 1,
+            borderColor: '#ddd',
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginTop: 10,
+            marginBottom: 10,
           }}
-        >
-          Reset Filters
-        </Button>
+        />
+
+        <TextInput
+          value={entityFilter}
+          onChangeText={setEntityFilter}
+          placeholder="Entity filter (or all)"
+          style={{
+            borderWidth: 1,
+            borderColor: '#ddd',
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginBottom: 10,
+          }}
+        />
+
+        <TextInput
+          value={userFilter}
+          onChangeText={setUserFilter}
+          placeholder="User ID filter (or all)"
+          style={{
+            borderWidth: 1,
+            borderColor: '#ddd',
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginBottom: 10,
+          }}
+        />
         {filteredLogs.map((log) => (
           <View key={log.id} style={styles.timelineItem}>
-            <View style={styles.auditHeader}>
-              <Text style={styles.auditAction}>
-                {log.action}
-              </Text>
-
-              <Text style={styles.auditEntity}>
-                {log.entityType || 'record'}
-              </Text>
-            </View>
-
-            <Text style={styles.auditRecord}>
-              Record #{log.entityId ?? '—'}
-            </Text>
-
-            <Text style={styles.auditDate}>
-              {new Date(log.createdAt).toLocaleString()}
-            </Text>
+            <Text style={styles.rowTitle}>{log.action}</Text>
+            <Text style={styles.muted}>{log.entityType || 'record'} #{log.entityId ?? '—'}</Text>
+            <Text style={styles.muted}>{new Date(log.createdAt).toLocaleString()}</Text>
           </View>
         ))}
         {!logs.length && <Text style={styles.muted}>No audit logs available.</Text>}
@@ -665,89 +570,6 @@ function renderLogs() {
           </Pressable>
         ) : null}
 
-
-        {recentCredentials.length > 0 ? (
-          <Card>
-            <Text style={styles.cardTitle}>🔑 New Account Login Details</Text>
-
-            {recentCredentials.map((credential, index) => (
-              <View
-                key={`${credential.username}-${index}`}
-                style={styles.recordCard}
-              >
-                <Text style={styles.rowTitle}>
-                  {credential.type}
-                </Text>
-
-                <Text style={styles.muted}>
-                  Username: {credential.username}
-                </Text>
-
-                <Text style={styles.rowTitle}>
-                  PIN: {revealedPins[credential.username]
-                    ? credential.pin
-                    : '••••••'}
-                </Text>
-
-                <Button
-                  tone="slate"
-                  onPress={() => {
-                    setPendingAction(() => async () => {
-                      setRevealedPins(current => ({
-                        ...current,
-                        [credential.username]: true
-                      }));
-
-                      setTimeout(() => {
-                        setRevealedPins(current => ({
-                          ...current,
-                          [credential.username]: false
-                        }));
-                      }, 10000);
-                    });
-
-                    setPasswordVerifyInput('');
-                    setPasswordVerifyVisible(true);
-                  }}
-                >
-                  Reveal PIN
-                </Button>
-
-                <Button
-                  tone="slate"
-                  onPress={() => {
-                    setPendingAction(() => async () => {
-                      await Share.share({
-                        title: 'Tuklas Talino Credentials',
-                      message:
-`Tuklas Talino Account
-
-Role: ${credential.type}
-Username: ${credential.username}
-Temporary PIN: ${credential.pin}
-
-You will be required to change this PIN after first login.`
-                      });
-                    });
-
-                    setPasswordVerifyInput('');
-                    setPasswordVerifyVisible(true);
-                  }}
-                >
-                  Share Credential
-                </Button>
-              </View>
-            ))}
-
-            <Button
-              tone="red"
-              onPress={() => setRecentCredentials([])}
-            >
-              Clear Vault
-            </Button>
-          </Card>
-        ) : null}
-
         {error ? <Card><Text style={styles.error}>{error}</Text><Button onPress={load}>Try Again</Button></Card> : null}
         {section === 'overview' && renderOverview()}
         {section === 'accounts' && renderAccounts()}
@@ -767,11 +589,7 @@ You will be required to change this PIN after first login.`
       >
         <View style={styles.workspaceLogoutModalBackdrop}>
           <View style={styles.workspaceLogoutModalCard}>
-            <Text style={styles.vaultTitle}>🔑 Login Credentials</Text>
-
-            <Text style={styles.vaultSubtitle}>
-              View login information and generate a temporary PIN for password resets.
-            </Text>
+            <Text style={styles.vaultTitle}>🔐 Credential Vault</Text>
 
             <View style={styles.vaultRow}>
               <Text style={styles.fieldLabel}>Role</Text>
@@ -829,27 +647,22 @@ You will be required to change this PIN after first login.`
             <View style={styles.workspaceLogoutActions}>
               <TouchableOpacity
                 style={styles.vaultGenerateButton}
-                onPress={() => {
+                onPress={async () => {
                   if (!vaultUser?.id) return;
 
-                  setPendingAction(() => async () => {
-                    try {
-                      const result =
-                        vaultUser.type === 'Student'
-                          ? await resetStudentPassword(vaultUser.id)
-                          : await resetTeacherPassword(vaultUser.id);
+                  try {
+                    const result =
+                      vaultUser.type === 'Student'
+                        ? await resetStudentPassword(vaultUser.id)
+                        : await resetTeacherPassword(vaultUser.id);
 
-                      setGeneratedPin(result?.temporaryPin || '');
-                    } catch (err) {
-                      Alert.alert(
-                        'Unable to Reset PIN',
-                        err?.message || 'Please try again.'
-                      );
-                    }
-                  });
-
-                  setPasswordVerifyInput('');
-                  setPasswordVerifyVisible(true);
+                    setGeneratedPin(result?.temporaryPin || '');
+                  } catch (err) {
+                    Alert.alert(
+                      'Unable to Reset PIN',
+                      err?.message || 'Please try again.'
+                    );
+                  }
                 }}
               >
                 <Text
@@ -857,7 +670,7 @@ You will be required to change this PIN after first login.`
                   adjustsFontSizeToFit
                   style={styles.vaultGenerateText}
                 >
-                  Generate New PIN
+                  Generate / Reset PIN
                 </Text>
               </TouchableOpacity>
 
@@ -871,61 +684,6 @@ You will be required to change this PIN after first login.`
           </View>
         </View>
       </Modal>
-
-      <Modal
-        visible={passwordVerifyVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPasswordVerifyVisible(false)}
-      >
-        <View style={styles.workspaceLogoutModalBackdrop}>
-          <View style={styles.workspaceLogoutModalCard}>
-
-            <Text style={styles.workspaceLogoutTitle}>
-              Verify Password
-            </Text>
-
-            <Text style={styles.workspaceLogoutBody}>
-              Re-enter your admin password to continue.
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              secureTextEntry
-              value={passwordVerifyInput}
-              onChangeText={setPasswordVerifyInput}
-              placeholder="Admin password"
-              placeholderTextColor="#94A3B8"
-            />
-
-            <View style={styles.workspaceLogoutActions}>
-              <TouchableOpacity
-                style={styles.workspaceLogoutCancel}
-                onPress={() => {
-                  setPasswordVerifyVisible(false);
-                  setPasswordVerifyInput('');
-                  setPendingAction(null);
-                }}
-              >
-                <Text style={styles.workspaceLogoutCancelText}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.workspaceLogoutConfirm}
-                onPress={executeVerifiedAction}
-              >
-                <Text style={styles.workspaceLogoutConfirmText}>
-                  Verify
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-          </View>
-        </View>
-      </Modal>
-
 
       <Modal
         visible={logoutVisible}
@@ -1083,16 +841,6 @@ const styles = StyleSheet.create({
     borderColor: '#DBEAFE',
   },
 
-
-  vaultSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginTop: 6,
-    marginBottom: 16,
-  },
-
   vaultTitle: {
     fontSize: 26,
     fontWeight: '900',
@@ -1210,48 +958,7 @@ const styles = StyleSheet.create({
   muted: { color: '#64748B', marginTop: 4 },
   body: { color: '#475569', marginTop: 7, lineHeight: 20 },
   rowTitle: { color: '#0F172A', fontWeight: '800' },
-
-  auditHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  auditAction: {
-    color: '#0F172A',
-    fontWeight: '900',
-    flex: 1,
-  },
-
-  auditEntity: {
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-
-  auditRecord: {
-    color: '#475569',
-    marginTop: 8,
-  },
-
-  auditDate: {
-    color: '#94A3B8',
-    marginTop: 6,
-    fontSize: 12,
-  },
-
-  timelineItem: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
+  timelineItem: { borderLeftWidth: 3, borderLeftColor: '#93C5FD', paddingLeft: 12, marginTop: 12 },
   field: { marginTop: 12 },
   fieldLabel: { color: '#334155', fontWeight: '800', marginTop: 8, marginBottom: 5 },
   input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, color: '#0F172A', backgroundColor: '#FFF' },

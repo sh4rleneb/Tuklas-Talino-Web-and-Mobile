@@ -41,7 +41,7 @@ import {
   resetTeacherPassword,
   updateStudentEnrollment,
 } from '../../api/admin';
-import { logout, verifyPassword } from '../../api/auth';
+import { logout } from '../../api/auth';
 
 const NAV_ITEMS = [
   ['overview', '🏠', 'Overview'],
@@ -95,12 +95,6 @@ export default function AdminHome({ navigation }) {
   const [accounts, setAccounts] = useState([]);
   const [workspaceNotice, setWorkspaceNotice] = useState(null);
   const [recentCredentials, setRecentCredentials] = useState([]);
-  const [revealedPins, setRevealedPins] = useState({});
-
-  const [passwordVerifyVisible, setPasswordVerifyVisible] = useState(false);
-  const [passwordVerifyInput, setPasswordVerifyInput] = useState('');
-  const [pendingAction, setPendingAction] = useState(null);
-
 
   useEffect(() => {
     if (!recentCredentials.length) {
@@ -197,28 +191,6 @@ async function handleLogout() {
     await logout();
 
     navigation.reset({ index: 0, routes: [{ name: 'Landing' }] });
-  }
-
-
-  async function executeVerifiedAction() {
-    try {
-      await verifyPassword(passwordVerifyInput);
-
-      const action = pendingAction;
-
-      setPasswordVerifyVisible(false);
-      setPasswordVerifyInput('');
-      setPendingAction(null);
-
-      if (action) {
-        await action();
-      }
-    } catch (err) {
-      Alert.alert(
-        'Verification Failed',
-        err?.message || 'Incorrect password.'
-      );
-    }
   }
 
   async function shareReport(title, loader) {
@@ -397,7 +369,7 @@ async function handleLogout() {
                   status: student?.status || 'active'
                 });
                 setVaultVisible(true);
-              }}>Login Credentials</Button>
+              }}>Credential Vault</Button>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`student-archive-${student.id}`, () => archiveStudent(student.id), 'Student archived.')}>Archive</Button>
             </View>
             <View style={styles.choiceRow}>
@@ -433,7 +405,7 @@ async function handleLogout() {
                     status: teacher?.status || 'active'
                   });
                   setVaultVisible(true);
-                }}>Login Credentials</Button>
+                }}>Credential Vault</Button>
                 <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`teacher-archive-${teacher.id}`, () => archiveTeacher(teacher.id), 'Teacher archived.')}>Archive</Button>
               </View>
             </View>
@@ -668,7 +640,7 @@ function renderLogs() {
 
         {recentCredentials.length > 0 ? (
           <Card>
-            <Text style={styles.cardTitle}>🔑 New Account Login Details</Text>
+            <Text style={styles.cardTitle}>🔐 Recent Credentials</Text>
 
             {recentCredentials.map((credential, index) => (
               <View
@@ -684,58 +656,8 @@ function renderLogs() {
                 </Text>
 
                 <Text style={styles.rowTitle}>
-                  PIN: {revealedPins[credential.username]
-                    ? credential.pin
-                    : '••••••'}
+                  PIN: {credential.pin}
                 </Text>
-
-                <Button
-                  tone="slate"
-                  onPress={() => {
-                    setPendingAction(() => async () => {
-                      setRevealedPins(current => ({
-                        ...current,
-                        [credential.username]: true
-                      }));
-
-                      setTimeout(() => {
-                        setRevealedPins(current => ({
-                          ...current,
-                          [credential.username]: false
-                        }));
-                      }, 10000);
-                    });
-
-                    setPasswordVerifyInput('');
-                    setPasswordVerifyVisible(true);
-                  }}
-                >
-                  Reveal PIN
-                </Button>
-
-                <Button
-                  tone="slate"
-                  onPress={() => {
-                    setPendingAction(() => async () => {
-                      await Share.share({
-                        title: 'Tuklas Talino Credentials',
-                      message:
-`Tuklas Talino Account
-
-Role: ${credential.type}
-Username: ${credential.username}
-Temporary PIN: ${credential.pin}
-
-You will be required to change this PIN after first login.`
-                      });
-                    });
-
-                    setPasswordVerifyInput('');
-                    setPasswordVerifyVisible(true);
-                  }}
-                >
-                  Share Credential
-                </Button>
               </View>
             ))}
 
@@ -767,11 +689,7 @@ You will be required to change this PIN after first login.`
       >
         <View style={styles.workspaceLogoutModalBackdrop}>
           <View style={styles.workspaceLogoutModalCard}>
-            <Text style={styles.vaultTitle}>🔑 Login Credentials</Text>
-
-            <Text style={styles.vaultSubtitle}>
-              View login information and generate a temporary PIN for password resets.
-            </Text>
+            <Text style={styles.vaultTitle}>🔐 Credential Vault</Text>
 
             <View style={styles.vaultRow}>
               <Text style={styles.fieldLabel}>Role</Text>
@@ -829,27 +747,22 @@ You will be required to change this PIN after first login.`
             <View style={styles.workspaceLogoutActions}>
               <TouchableOpacity
                 style={styles.vaultGenerateButton}
-                onPress={() => {
+                onPress={async () => {
                   if (!vaultUser?.id) return;
 
-                  setPendingAction(() => async () => {
-                    try {
-                      const result =
-                        vaultUser.type === 'Student'
-                          ? await resetStudentPassword(vaultUser.id)
-                          : await resetTeacherPassword(vaultUser.id);
+                  try {
+                    const result =
+                      vaultUser.type === 'Student'
+                        ? await resetStudentPassword(vaultUser.id)
+                        : await resetTeacherPassword(vaultUser.id);
 
-                      setGeneratedPin(result?.temporaryPin || '');
-                    } catch (err) {
-                      Alert.alert(
-                        'Unable to Reset PIN',
-                        err?.message || 'Please try again.'
-                      );
-                    }
-                  });
-
-                  setPasswordVerifyInput('');
-                  setPasswordVerifyVisible(true);
+                    setGeneratedPin(result?.temporaryPin || '');
+                  } catch (err) {
+                    Alert.alert(
+                      'Unable to Reset PIN',
+                      err?.message || 'Please try again.'
+                    );
+                  }
                 }}
               >
                 <Text
@@ -857,7 +770,7 @@ You will be required to change this PIN after first login.`
                   adjustsFontSizeToFit
                   style={styles.vaultGenerateText}
                 >
-                  Generate New PIN
+                  Generate / Reset PIN
                 </Text>
               </TouchableOpacity>
 
@@ -871,61 +784,6 @@ You will be required to change this PIN after first login.`
           </View>
         </View>
       </Modal>
-
-      <Modal
-        visible={passwordVerifyVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPasswordVerifyVisible(false)}
-      >
-        <View style={styles.workspaceLogoutModalBackdrop}>
-          <View style={styles.workspaceLogoutModalCard}>
-
-            <Text style={styles.workspaceLogoutTitle}>
-              Verify Password
-            </Text>
-
-            <Text style={styles.workspaceLogoutBody}>
-              Re-enter your admin password to continue.
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              secureTextEntry
-              value={passwordVerifyInput}
-              onChangeText={setPasswordVerifyInput}
-              placeholder="Admin password"
-              placeholderTextColor="#94A3B8"
-            />
-
-            <View style={styles.workspaceLogoutActions}>
-              <TouchableOpacity
-                style={styles.workspaceLogoutCancel}
-                onPress={() => {
-                  setPasswordVerifyVisible(false);
-                  setPasswordVerifyInput('');
-                  setPendingAction(null);
-                }}
-              >
-                <Text style={styles.workspaceLogoutCancelText}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.workspaceLogoutConfirm}
-                onPress={executeVerifiedAction}
-              >
-                <Text style={styles.workspaceLogoutConfirmText}>
-                  Verify
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-          </View>
-        </View>
-      </Modal>
-
 
       <Modal
         visible={logoutVisible}
@@ -1081,16 +939,6 @@ const styles = StyleSheet.create({
     padding: 22,
     borderWidth: 1,
     borderColor: '#DBEAFE',
-  },
-
-
-  vaultSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginTop: 6,
-    marginBottom: 16,
   },
 
   vaultTitle: {
