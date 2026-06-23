@@ -1260,6 +1260,7 @@ const styles = StyleSheet.create({
   workspaceLogoutActions: {
     flexDirection: 'row',
     width: '100%',
+    marginTop: 10,
   },
   workspaceLogoutCancel: {
     flex: 1,
@@ -1476,7 +1477,7 @@ const styles = StyleSheet.create({
   },
   field: { marginTop: 12 },
   fieldLabel: { color: '#334155', fontWeight: '800', marginTop: 8, marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, color: '#0F172A', backgroundColor: '#FFF' },
+  input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, color: '#0F172A', backgroundColor: '#FFF', marginBottom: 18 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 8 },
   button: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, alignSelf: 'flex-start', marginTop: 8 },
   darkButton: { backgroundColor: '#0F172A' },
