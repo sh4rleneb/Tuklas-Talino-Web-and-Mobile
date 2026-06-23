@@ -230,10 +230,31 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
       }
     }
 
+    const previousGrade = Number(student.gradeLevel);
+
     student.gradeLevel = gradeLevel;
     student.section = section;
 
     await student.save();
+
+    if (previousGrade !== gradeLevel) {
+
+      await audit(
+        req.user.id,
+        'student.promote',
+        'student',
+        student.id,
+        {
+          studentName: student.name,
+          studentCode: student.studentCode,
+          oldGrade: previousGrade,
+          newGrade: gradeLevel,
+          section,
+          reason: req.body.promotionReason
+        }
+      );
+
+    }
 
     res.json({
       message: 'Student enrollment updated successfully.',

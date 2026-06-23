@@ -258,10 +258,12 @@ async function handleLogout() {
       return;
     }
 
+    const reason = adminActionReason.trim();
+
     setAdminActionVisible(false);
 
     runProtectedAction(async () => {
-      await pendingAdminAction.action();
+      await pendingAdminAction.action(reason);
     });
   }
 
@@ -460,7 +462,7 @@ async function executeVerifiedAction() {
                 action: () => run(
                       `student-progress-${student.id}`,
                       () => resetStudentProgress(student.id, {
-                        reason: adminActionReason
+                        reason
                       }),
                       'Progress reset.'
                     )
@@ -481,7 +483,7 @@ async function executeVerifiedAction() {
                 action: () => run(
                       `student-archive-${student.id}`,
                       () => archiveStudent(student.id, {
-                        reason: adminActionReason
+                        reason
                       }),
                       'Student archived.'
                     )
@@ -495,7 +497,7 @@ async function executeVerifiedAction() {
                       () => updateStudentEnrollment(student.id, {
                         gradeLevel: Number(grade),
                         section: student.section,
-                        promotionReason: adminActionReason
+                        promotionReason: reason
                       }),
                       'Enrollment updated.'
                     )
@@ -525,7 +527,7 @@ async function executeVerifiedAction() {
                   action: () => run(
                     `teacher-pin-${teacher.id}`,
                     () => resetTeacherPassword(teacher.id, {
-                      reason: adminActionReason
+                      reason
                     }),
                     (data) => `Temporary PIN: ${data.temporaryPin}`
                   )
@@ -546,7 +548,7 @@ async function executeVerifiedAction() {
                   action: () => run(
                     `teacher-archive-${teacher.id}`,
                     () => archiveTeacher(teacher.id, {
-                      reason: adminActionReason
+                      reason
                     }),
                     'Teacher archived.'
                   )
@@ -571,7 +573,7 @@ async function executeVerifiedAction() {
               action: () => run(
                 `student-reactivate-${student.id}`,
                 () => reactivateStudent(student.id, {
-                  reason: adminActionReason
+                  reason
                 }),
                 'Student reactivated.'
               )
@@ -586,7 +588,7 @@ async function executeVerifiedAction() {
               action: () => run(
                 `teacher-reactivate-${teacher.id}`,
                 () => reactivateTeacher(teacher.id, {
-                  reason: adminActionReason
+                  reason
                 }),
                 'Teacher reactivated.'
               )
@@ -719,6 +721,25 @@ function renderLogs() {
             <Text style={styles.auditRecord}>
               Record #{log.entityId ?? '—'}
             </Text>
+
+            {log.action === 'student.promote' &&
+             log.metadata ? (
+              <>
+                <Text style={styles.muted}>
+                  {log.metadata.studentName || 'Unknown Student'}
+                </Text>
+
+                <Text style={styles.muted}>
+                  {log.metadata.studentCode || ''}
+                </Text>
+
+                <Text style={styles.muted}>
+                  Grade {log.metadata.oldGrade}
+                  {' → '}
+                  Grade {log.metadata.newGrade}
+                </Text>
+              </>
+            ) : null}
 
             {log.metadata?.reason ? (
               <Text style={styles.muted}>
@@ -1017,7 +1038,15 @@ You will be required to change this PIN after first login.`
             </Text>
 
             <Text style={styles.workspaceLogoutBody}>
-              Please provide a reason before continuing.
+              Please provide a valid administrative reason.
+
+              Examples:
+              • Student completed all lessons for current grade
+              • Correcting an enrollment record
+              • Progress reset requested by teacher
+              • Account reactivation after review
+
+              This reason will be recorded in the audit log.
             </Text>
 
             <TextInput

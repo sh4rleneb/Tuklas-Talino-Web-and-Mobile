@@ -534,13 +534,6 @@ router.patch('/:id', requireRole('admin'), async (req, res, next) => {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
 
-    const reason = String(req.body.reason || '').trim();
-
-    if (!reason) {
-      return res.status(422).json({
-        message: 'Archive reason is required.'
-      });
-    }
     assertSafeContentPayload({ name: req.body.name, section: req.body.section }, 'student profile');
 
     if (
@@ -615,6 +608,15 @@ router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
+
+    const reason = String(req.body.reason || '').trim();
+
+    if (!reason) {
+      return res.status(422).json({
+        message: 'Archive reason is required.'
+      });
+    }
+
     student.status = 'archived';
     await student.save();
     if (student.User) { student.User.status = 'archived'; await student.User.save(); }
