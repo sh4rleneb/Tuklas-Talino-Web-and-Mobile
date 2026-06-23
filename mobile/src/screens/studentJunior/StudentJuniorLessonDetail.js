@@ -183,6 +183,22 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
   const currentActivity = activities[step - 1];
   const littleLearnerGame = Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 2;
 
+
+  useEffect(() => {
+    setWritingAnswer('');
+    setSpeechTranscript('');
+    setRecordingUri('');
+    setSpeechStatus('');
+
+    setSelectedWords([]);
+    setSelectedMatch(null);
+    setMatchedPairs({});
+    setBalloonProgress({});
+
+    setActivityNotice(null);
+  }, [lessonId, currentActivity?.id]);
+
+
   const getGameMeta = activity => {
     const type = String(activity?.type || activity?.activityType || activity?.kind || '').toLowerCase();
 
