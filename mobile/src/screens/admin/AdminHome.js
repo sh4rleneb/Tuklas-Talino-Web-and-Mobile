@@ -457,7 +457,13 @@ async function executeVerifiedAction() {
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`student-pin-${student.id}`, () => resetStudentPassword(student.id), (data) => `Temporary PIN: ${data.temporaryPin}`)}>Reset Password</Button>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'RESET',
-                action: () => run(`student-progress-${student.id}`, () => resetStudentProgress(student.id), 'Progress reset.')
+                action: () => run(
+                      `student-progress-${student.id}`,
+                      () => resetStudentProgress(student.id, {
+                        reason: adminActionReason
+                      }),
+                      'Progress reset.'
+                    )
               })}>Reset Progress</Button>
               <Button tone="slate" onPress={() => {
                 setGeneratedPin('');
@@ -472,13 +478,27 @@ async function executeVerifiedAction() {
               }}>Login Credentials</Button>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'ARCHIVE',
-                action: () => run(`student-archive-${student.id}`, () => archiveStudent(student.id), 'Student archived.')
+                action: () => run(
+                      `student-archive-${student.id}`,
+                      () => archiveStudent(student.id, {
+                        reason: adminActionReason
+                      }),
+                      'Student archived.'
+                    )
               })}>Archive</Button>
             </View>
             <View style={styles.choiceRow}>
               {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                     keyword: 'PROMOTE',
-                    action: () => run(`grade-${student.id}`, () => updateStudentEnrollment(student.id, { gradeLevel: Number(grade), section: student.section }), 'Enrollment updated.')
+                    action: () => run(
+                      `grade-${student.id}`,
+                      () => updateStudentEnrollment(student.id, {
+                        gradeLevel: Number(grade),
+                        section: student.section,
+                        promotionReason: adminActionReason
+                      }),
+                      'Enrollment updated.'
+                    )
                   })}>G{grade}</Button>)}
             </View>
           </View>

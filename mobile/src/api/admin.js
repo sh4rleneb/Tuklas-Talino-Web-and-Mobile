@@ -69,12 +69,18 @@ export async function resetStudentPassword(studentId) {
   return api(`/students/${studentId}/reset-password`, { method: 'POST' });
 }
 
-export async function resetStudentProgress(studentId) {
-  return api(`/students/${studentId}/reset-progress`, { method: 'POST' });
+export async function resetStudentProgress(studentId, body = {}) {
+  return api(`/students/${studentId}/reset-progress`, {
+    method: 'POST',
+    body,
+  });
 }
 
-export async function archiveStudent(studentId) {
-  return api(`/students/${studentId}/archive`, { method: 'POST' });
+export async function archiveStudent(studentId, body = {}) {
+  return api(`/students/${studentId}/archive`, {
+    method: 'POST',
+    body,
+  });
 }
 
 export async function reactivateStudent(studentId) {

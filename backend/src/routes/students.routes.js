@@ -533,7 +533,56 @@ router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, { include: [User] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
+
+    const reason = String(req.body.reason || '').trim();
+
+    if (!reason) {
+      return res.status(422).json({
+        message: 'Archive reason is required.'
+      });
+    }
     assertSafeContentPayload({ name: req.body.name, section: req.body.section }, 'student profile');
+
+    if (
+      req.body.gradeLevel !== undefined &&
+      Number(req.body.gradeLevel) !== Number(student.gradeLevel)
+    ) {
+      const promotionReason = String(
+        req.body.promotionReason || ''
+      ).trim();
+
+      if (!promotionReason) {
+        return res.status(422).json({
+          message: 'Promotion reason is required.'
+        });
+      }
+
+      const currentGrade = Number(student.gradeLevel);
+      const requestedGrade = Number(req.body.gradeLevel);
+
+      if (requestedGrade !== currentGrade + 1) {
+        return res.status(422).json({
+          message: 'Students may only advance one grade level at a time.'
+        });
+      }
+
+      const completed = await CompletedLesson.count({
+        where: { studentId: student.id }
+      });
+
+      const total = await Lesson.count({
+        where: {
+          gradeLevel: currentGrade,
+          status: 'published'
+        }
+      });
+
+      if (total > 0 && completed < total) {
+        return res.status(422).json({
+          message: 'Student must complete all lessons before promotion.'
+        });
+      }
+    }
 
     const allowed = ['name','gradeLevel','section','avatar','status'];
     for (const key of allowed) if (req.body[key] !== undefined) student[key] = req.body[key];
@@ -569,7 +618,13 @@ router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
     student.status = 'archived';
     await student.save();
     if (student.User) { student.User.status = 'archived'; await student.User.save(); }
-    await audit(req.user.id, 'student.archive', 'student', student.id);
+    await audit(
+      req.user.id,
+      'student.archive',
+      'student',
+      student.id,
+      { reason }
+    );
     res.json({ student });
   } catch (err) { next(err); }
 });
@@ -634,6 +689,14 @@ router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) 
   try {
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
+
+    const reason = String(req.body.reason || '').trim();
+
+    if (!reason) {
+      return res.status(422).json({
+        message: 'Reset reason is required.'
+      });
+    }
     await Promise.all([
       CompletedLesson.destroy({ where: { studentId: student.id } }),
       LessonProgress.destroy({ where: { studentId: student.id } }),
@@ -648,7 +711,13 @@ router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) 
     ]);
     student.xp = 0;
     await student.save();
-    await audit(req.user.id, 'student.reset_progress', 'student', student.id);
+    await audit(
+      req.user.id,
+      'student.reset_progress',
+      'student',
+      student.id,
+      { reason }
+    );
     res.json({ message: 'Progress reset.', student });
   } catch (err) { next(err); }
 });
