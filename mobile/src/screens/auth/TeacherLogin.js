@@ -418,8 +418,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
 
     color: '#0F172A',
-
-    fontFamily: 'Nunito_700Bold',
   },
 
   loginButton: {
