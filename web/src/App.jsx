@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api, downloadFile, uploadForm } from './api/client';
+import { speakText, stopSpeech } from './services/tts.service';
 import { useAuth } from './contexts/AuthContext';
 import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
@@ -7649,15 +7650,13 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     setActivityFeedbackKey('');
     setReflectionChoice('');
 
-    if (window?.speechSynthesis) {
-      speechSynthesis.cancel();
-    }
+    stopSpeech();
   }, [lesson?.id]);
 
-  function speakLesson() {
+  async function speakLesson() {
     const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+
+    await speakText(text);
   }
 
   const materialActivities = activities.filter(activity => activity?.type === 'material');
@@ -8093,7 +8092,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
               🔊 Listen
             </button>
 
-            <button className="btn btn-outline" onClick={() => speechSynthesis.cancel()}>
+            <button className="btn btn-outline" onClick={() => stopSpeech()}>
               ⏹ Stop
             </button>
           </div>
@@ -8566,7 +8565,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     const xpEarned = Number(result.xpAwarded ?? lesson?.xpReward ?? 0);
     setRewardClaimed(true);
     setMissionStep(missionSteps.length - 1);
-    speechSynthesis.cancel();
+    stopSpeech();
     setRewardModal({ xp: xpEarned, badges: uniqueBadgesForDisplay(result?.newBadges || []) });
   }
 
@@ -8588,26 +8587,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
   }
 
   function speakFilipinoText(text) {
-    const cleanText = String(text || '').trim();
-
-    if (!cleanText) return;
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    const voices = speechSynthesis.getVoices();
-    const filipinoVoice = voices.find(voice =>
-      /fil|tagalog|philippines|filipino/i.test(`${voice.lang} ${voice.name}`)
-    );
-
-    utterance.lang = 'fil-PH';
-    utterance.rate = 0.86;
-    utterance.pitch = 1.05;
-
-    if (filipinoVoice) {
-      utterance.voice = filipinoVoice;
-    }
-
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
+    speakText(text);
   }
 
   if (lesson?.completed && !rewardModal) {
@@ -9652,7 +9632,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn" onClick={() => speakFilipinoText(lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
-                  <button className="g12-mission-btn secondary" onClick={() => speechSynthesis.cancel()}>⏹ Stop</button>
+                  <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Stop</button>
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>Susunod →</button>
@@ -10734,8 +10714,7 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
   const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
 
   function speakTarget() {
-    speechSynthesis.cancel();
-    speechSynthesis.speak(new SpeechSynthesisUtterance(target));
+    speakText(target);
   }
 
   function startSpeechRecognition() {
@@ -10827,7 +10806,7 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
             : (isEarlyGrade ? '🎙️ Magsalita' : '🎙️ Start Speaking')}
         </button>
 
-        <button className="btn btn-outline" onClick={() => speechSynthesis.cancel()}>
+        <button className="btn btn-outline" onClick={() => stopSpeech()}>
           {isEarlyGrade ? '⏹ Stop' : '⏹ Stop Audio'}
         </button>
       </div>
@@ -12970,36 +12949,15 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setWordMatchPictures(shuffleWordMatchItems(nextItems));
   };
 
-  function speakSoundAndSayTarget() {
+  async function speakSoundAndSayTarget() {
     try {
-      if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-        setSoundAndSayError('Hindi supported ng browser ang text-to-speech.');
-        return;
-      }
+      setSoundAndSaySpeaking(true);
+      setSoundAndSayError('');
+      setSoundAndSayToast({ type: 'info', message: 'Pakinggan muna ang salita.' });
 
-      window.speechSynthesis.cancel();
+      await speakText(soundAndSayTarget);
 
-      const utterance = new window.SpeechSynthesisUtterance(soundAndSayTarget);
-      utterance.lang = 'fil-PH';
-      utterance.rate = early ? 0.82 : 0.9;
-      utterance.pitch = 1.05;
-
-      utterance.onstart = () => {
-        setSoundAndSaySpeaking(true);
-        setSoundAndSayError('');
-        setSoundAndSayToast({ type: 'info', message: 'Pakinggan muna ang salita.' });
-      };
-
-      utterance.onend = () => {
-        setSoundAndSaySpeaking(false);
-      };
-
-      utterance.onerror = () => {
-        setSoundAndSaySpeaking(false);
-        setSoundAndSayError('Hindi ma-play ang boses. Subukan muli.');
-      };
-
-      window.speechSynthesis.speak(utterance);
+      setSoundAndSaySpeaking(false);
     } catch (_) {
       setSoundAndSaySpeaking(false);
       setSoundAndSayError('Hindi ma-play ang boses. Subukan muli.');
@@ -13067,9 +13025,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
     setSoundAndSayError('');
     setSoundAndSayToast(null);
 
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    stopSpeech();
   }
 
   const completeStoryQuestMission = async ({ force = false, challenge = demo } = {}) => {

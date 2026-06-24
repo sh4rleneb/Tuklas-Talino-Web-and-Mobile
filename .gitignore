@@ -7,3 +7,4 @@ build/
 
 # Local patch backups
 *.bak
+secrets/

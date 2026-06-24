@@ -28,6 +28,7 @@ import lessonRoutes from './lessons.routes.js';
 import groupRoutes from './groups.routes.js';
 import adminRoutes from './admin.routes.js';
 import reportRoutes from './reports.routes.js';
+import ttsRoutes from './tts.routes.js';
 
 const router = Router();
 
@@ -115,5 +116,6 @@ router.use('/groups', groupRoutes);
 router.use('/admin', adminRoutes);
 router.use('/reports', reportRoutes);
 router.use('/missions', missionsRoutes);
+router.use('/tts', ttsRoutes);
 
 export default router;
