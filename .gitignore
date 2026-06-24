@@ -11,3 +11,7 @@ secrets/
 
 # Google TTS cache
 backend/tts-cache/
+
+# Runtime uploads
+backend/uploads/**
+!backend/uploads/.gitkeep
