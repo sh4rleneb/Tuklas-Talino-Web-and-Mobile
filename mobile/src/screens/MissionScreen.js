@@ -5,10 +5,73 @@ import StudentScreenHeader from '../components/StudentScreenHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import Card from '../components/Card';
-import { colors } from '../styles/theme';
+
+
+const colors = {
+  primary: '#22C55E',
+  green: '#22C55E',
+  ink: '#0F172A',
+  muted: '#64748B',
+};
+
+const MISSION_GAMES = [
+  {
+    id: 'word-match',
+    title: 'Word Match',
+    icon: '🧩',
+    module: 'Bokabularyo',
+    xp: 15,
+    instruction: 'Hanapin ang tamang pares.',
+    sample: 'aso → larawan ng aso'
+  },
+  {
+    id: 'letter-pop',
+    title: 'Letter Pop',
+    icon: '🎈',
+    module: 'Pagbasa',
+    xp: 12,
+    instruction: 'Piliin ang nawawalang titik o pantig.',
+    sample: 'ba + ___ = bata'
+  },
+  {
+    id: 'picture-guess',
+    title: 'Picture Guess',
+    icon: '🖼️',
+    module: 'Bokabularyo',
+    xp: 12,
+    instruction: 'Piliin ang salitang tumutukoy sa larawan.',
+    sample: 'pusa → pusa'
+  },
+  {
+    id: 'sentence-builder',
+    title: 'Sentence Builder',
+    icon: '🧱',
+    module: 'Pagsulat',
+    xp: 18,
+    instruction: 'Ayusin ang mga salita para makabuo ng pangungusap.',
+    sample: 'Ako / ay / bata'
+  },
+  {
+    id: 'story-quest',
+    title: 'Story Quest',
+    icon: '📖',
+    module: 'Panitikan',
+    xp: 20,
+    instruction: 'Basahin ang story at sagutin ang tanong.'
+  },
+  {
+    id: 'sound-and-say',
+    title: 'Sound and Say',
+    icon: '🎙️',
+    module: 'Oral Comm',
+    xp: 15,
+    instruction: 'Pakinggan at bigkasin ang salita.'
+  }
+];
+
 
 export default function MissionScreen({ navigation }) {
-  const [missions, setMissions] = useState([]);
+  const [missions, setMissions] = useState(MISSION_GAMES);
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState(null);
@@ -18,11 +81,9 @@ export default function MissionScreen({ navigation }) {
     setLoading(true);
     setError('');
     try {
-      const [missionData, dashboard] = await Promise.all([
-        api('/missions'),
-        api('/dashboard'),
-      ]);
-      setMissions(missionData.missions || []);
+      const dashboard = await api('/dashboard');
+
+      setMissions(MISSION_GAMES);
       setStudent(dashboard.student || null);
     } catch (err) {
       setError(err.message || 'Unable to load missions.');
@@ -109,39 +170,44 @@ export default function MissionScreen({ navigation }) {
         <Text style={styles.error}>{error}</Text>
       ) : (
         missions.map((mission) => (
-          <Card key={mission.missionId} style={styles.card}>
+          <Card key={mission.id} style={styles.card}>
             <View style={styles.row}>
+              <Text style={{ fontSize: 32 }}>
+                {mission.icon}
+              </Text>
+
               <View style={styles.cardText}>
-                <Text style={styles.missionTitle}>{mission.title}</Text>
-                <Text style={styles.missionMeta}>{mission.xp} XP</Text>
-              </View>
-              <View style={styles.statusPill(mission.state)}>
-                <Text style={styles.statusText}>{statusLabel(mission.state)}</Text>
+                <Text style={styles.missionTitle}>
+                  {mission.title}
+                </Text>
+
+                <Text style={styles.missionMeta}>
+                  {mission.module} • {mission.xp} XP
+                </Text>
               </View>
             </View>
+
             <Text style={styles.description}>
-              Complete {mission.requirement?.target || 0} lessons to unlock this reward.
+              {mission.instruction}
             </Text>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${mission.requirement?.percent || 0}%` },
-                ]}
-              />
-            </View>
-            <Text style={styles.progressText}>
-              {mission.requirement?.current || 0}/{mission.requirement?.target || 0} lessons completed
-            </Text>
+
+            {mission.sample ? (
+              <Text style={styles.progressText}>
+                Example: {mission.sample}
+              </Text>
+            ) : null}
+
             <TouchableOpacity
-              style={[
-                styles.button,
-                mission.state !== 'ready_to_claim' && styles.buttonDisabled,
-              ]}
-              disabled={mission.state !== 'ready_to_claim' || Boolean(submittingId)}
-              onPress={() => claimMission(mission.missionId)}
+              style={styles.button}
+              onPress={() =>
+                navigation.navigate('MissionGame', {
+                  missionId: mission.id,
+                })
+              }
             >
-              <Text style={styles.buttonText}>{buttonLabel(mission)}</Text>
+              <Text style={styles.buttonText}>
+                Start Mission
+              </Text>
             </TouchableOpacity>
           </Card>
         ))

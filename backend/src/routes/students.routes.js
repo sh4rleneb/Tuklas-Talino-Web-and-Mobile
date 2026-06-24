@@ -707,13 +707,9 @@ router.post('/:id/reset-progress', requireRole('admin'), async (req, res, next) 
     const student = await Student.findByPk(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
 
-    const reason = String(req.body.reason || '').trim();
-
-    if (!reason) {
-      return res.status(422).json({
-        message: 'Reset reason is required.'
-      });
-    }
+    const reason =
+      String(req.body.reason || '').trim() ||
+      'Admin reset student progress';
     await Promise.all([
       CompletedLesson.destroy({ where: { studentId: student.id } }),
       LessonProgress.destroy({ where: { studentId: student.id } }),

@@ -1187,7 +1187,21 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
 
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={stopSpeech}
+              onPress={async () => {
+                await stopSpeech();
+
+                if (soundRef.current) {
+                  try {
+                    await soundRef.current.stopAsync();
+                    await soundRef.current.unloadAsync();
+                  } catch {}
+
+                  soundRef.current = null;
+                }
+
+                setPlaying(false);
+                setSpeechStatus('Audio stopped.');
+              }}
             >
               <Text style={styles.secondaryText}>
                 ⏹ Stop Audio

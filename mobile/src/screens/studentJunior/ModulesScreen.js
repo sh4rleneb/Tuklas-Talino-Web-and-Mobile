@@ -13,6 +13,52 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/client';
 
+
+function lessonTheme(subject) {
+  const value = String(subject || '').toLowerCase();
+
+  if (value.includes('bokabularyo')) {
+    return {
+      card: '#EEF6FF',
+      icon: '🔠',
+    };
+  }
+
+  if (value.includes('oral')) {
+    return {
+      card: '#FFF8E7',
+      icon: '🎙️',
+    };
+  }
+
+  if (value.includes('panitikan')) {
+    return {
+      card: '#FFF2E8',
+      icon: '🪶',
+    };
+  }
+
+  if (value.includes('pagsulat')) {
+    return {
+      card: '#F3F0FF',
+      icon: '✍️',
+    };
+  }
+
+  if (value.includes('pagbasa')) {
+    return {
+      card: '#F0FFF4',
+      icon: '📖',
+    };
+  }
+
+  return {
+    card: '#F6FFF5',
+    icon: '📚',
+  };
+}
+
+
 export default function ModulesScreen({ navigation }) {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,10 +122,15 @@ export default function ModulesScreen({ navigation }) {
   }
 
   function renderLessonCard(lesson) {
+    const theme = lessonTheme(lesson.subject);
+
     return (
       <TouchableOpacity
         key={String(lesson.id)}
-        style={styles.lessonCard}
+        style={[
+          styles.lessonCard,
+          { backgroundColor: theme.card }
+        ]}
         activeOpacity={0.9}
         onPress={() =>
           navigation.navigate('Lessons', {
@@ -90,21 +141,32 @@ export default function ModulesScreen({ navigation }) {
           })
         }
       >
-        <View style={styles.lessonIconContainer}>
-          <Text style={styles.lessonIcon}>📘</Text>
-        </View>
+        <View style={styles.lessonTopRow}>
+          <View style={styles.lessonIconContainer}>
+            <Text style={styles.lessonIcon}>
+              {theme.icon}
+            </Text>
+          </View>
 
-        <View style={styles.lessonInfo}>
-          <Text style={styles.lessonTitle}>{lesson.title}</Text>
-          <Text style={styles.lessonSubtitle}>{lesson.subject || 'General'}</Text>
-          <View style={styles.lessonMetaRow}>
-            <Text style={styles.lessonMeta}>Grade {lesson.gradeLevel}</Text>
-            <Text style={styles.lessonMeta}>⏱ {lesson.duration || 10} mins</Text>
+          <View style={styles.arrowButton}>
+            <Text style={styles.arrowText}>›</Text>
           </View>
         </View>
 
+        <Text style={styles.lessonTitle}>
+          {lesson.title}
+        </Text>
+
         <View style={styles.xpBadge}>
-          <Text style={styles.xpText}>+{lesson.xpReward || 0} XP</Text>
+          <Text style={styles.xpText}>
+            ⭐ {lesson.xpReward || 0} XP
+          </Text>
+        </View>
+
+        <View style={styles.summaryBadge}>
+          <Text style={styles.summaryText}>
+            ✅ Summary
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -252,16 +314,35 @@ const styles = StyleSheet.create({
   lessonList: {
   },
   lessonCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 30,
     padding: 22,
-    marginBottom: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 4,
+  },
+
+  lessonTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+
+  arrowButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  arrowText: {
+    fontSize: 28,
+    color: '#16A34A',
+    fontWeight: '900',
   },
   lessonIconContainer: {
     width: 64,
@@ -311,6 +392,22 @@ const styles = StyleSheet.create({
     color: '#92400E',
     fontFamily: 'Fredoka_600SemiBold',
   },
+
+  summaryBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  summaryText: {
+    color: '#16A34A',
+    fontFamily: 'Nunito_800ExtraBold',
+    fontSize: 12,
+  },
+
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',

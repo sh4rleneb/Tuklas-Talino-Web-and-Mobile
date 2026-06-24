@@ -138,7 +138,7 @@ const [auditSearch, setAuditSearch] = useState('');
   const [error, setError] = useState('');
   const [accountType, setAccountType] = useState('student');
   const [studentForm, setStudentForm] = useState({ studentCode: '', name: '', gradeLevel: '1', section: '' });
-  const [teacherForm, setTeacherForm] = useState({ username: '', employeeCode: '', name: '' });
+  const [teacherForm, setTeacherForm] = useState({ username: '', name: '' });
   const [assignmentForm, setAssignmentForm] = useState({ teacherId: '', gradeLevel: '1', section: '' });
 
   const load = useCallback(async () => {
@@ -339,6 +339,39 @@ async function executeVerifiedAction() {
           ))}
         </View>
         <Card>
+          <Text style={styles.cardTitle}>👑 Administrators</Text>
+
+          {accounts
+            .filter((account) => account.Role?.name === 'admin')
+            .map((account) => (
+              <View
+                key={account.id}
+                style={styles.recordCard}
+              >
+                <Text style={styles.rowTitle}>
+                  {account.displayName || account.username}
+                </Text>
+
+                <Text style={styles.muted}>
+                  {account.username}
+                </Text>
+
+                <Text style={styles.muted}>
+                  {account.status || 'active'}
+                </Text>
+              </View>
+            ))}
+
+          {!accounts.filter(
+            (account) => account.Role?.name === 'admin'
+          ).length && (
+            <Text style={styles.muted}>
+              No administrator accounts found.
+            </Text>
+          )}
+        </Card>
+
+        <Card>
           <Text style={styles.cardTitle}>Recent System Activity</Text>
           {logs.slice(0, 6).map((log) => (
             <View key={log.id} style={styles.timelineItem}>
@@ -390,9 +423,32 @@ async function executeVerifiedAction() {
           </>
         ) : (
           <>
-            <Field label="Username" value={teacherForm.username} onChangeText={(username) => setTeacherForm((current) => ({ ...current, username }))} />
-            <Field label="Employee Code" value={teacherForm.employeeCode} onChangeText={(employeeCode) => setTeacherForm((current) => ({ ...current, employeeCode }))} />
-            <Field label="Name" value={teacherForm.name} onChangeText={(name) => setTeacherForm((current) => ({ ...current, name }))} />
+            <Text style={styles.sectionEyebrow}>TEACHER ACCOUNT</Text>
+            <Text style={styles.formHeroTitle}>Add Teacher</Text>
+            <Text style={styles.formHeroSubtitle}>
+              Create a teacher login, then assign handled classes in the next section.
+            </Text>
+
+            <Field
+              label="Username (unique)"
+              value={teacherForm.username}
+              onChangeText={(username) =>
+                setTeacherForm((current) => ({ ...current, username }))
+              }
+            />
+
+            <Field
+              label="Teacher Name"
+              value={teacherForm.name}
+              onChangeText={(name) =>
+                setTeacherForm((current) => ({ ...current, name }))
+              }
+            />
+
+            <Text style={styles.helperText}>
+              Employee code will be generated automatically from the username.
+            </Text>
+
             <Button disabled={Boolean(busy)} onPress={async () => {
               const saved = await run('create-teacher', () => createTeacherAccount(teacherForm), 'Teacher account created.');
 
@@ -411,9 +467,9 @@ async function executeVerifiedAction() {
                   `Temporary PIN\n\n${saved.temporaryPin}\n\nTeacher must change this PIN on first login.`
                 );
 
-                setTeacherForm({ username: '', employeeCode: '', name: '' });
+                setTeacherForm({ username: '', name: '' });
               }
-            }}>Create Teacher</Button>
+            }}>Add Teacher</Button>
           </>
         )}
       </Card>
@@ -1474,6 +1530,35 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+
+  sectionEyebrow: {
+    color: '#16A34A',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+
+  formHeroTitle: {
+    color: '#0F172A',
+    fontSize: 30,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  formHeroSubtitle: {
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+
+  helperText: {
+    color: '#64748B',
+    fontSize: 13,
+    marginTop: -4,
+    marginBottom: 16,
   },
   field: { marginTop: 12 },
   fieldLabel: { color: '#334155', fontWeight: '800', marginTop: 8, marginBottom: 5 },

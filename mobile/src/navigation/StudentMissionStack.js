@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import MissionScreen from '../screens/MissionScreen';
+import MissionGameScreen from '../screens/missions/MissionGameScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -11,6 +12,11 @@ export default function StudentMissionStack() {
       <Stack.Screen
         name="MissionHome"
         component={MissionScreen}
+      />
+
+      <Stack.Screen
+        name="MissionGame"
+        component={MissionGameScreen}
       />
     </Stack.Navigator>
   );

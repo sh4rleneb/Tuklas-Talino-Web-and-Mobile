@@ -378,13 +378,9 @@ router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) 
       });
     }
 
-    const reason = String(req.body.reason || '').trim();
-
-    if (!reason) {
-      return res.status(422).json({
-        message: 'Reset reason is required.'
-      });
-    }
+    const reason =
+      String(req.body.reason || '').trim() ||
+      'Admin reset teacher password';
 
     const temporaryPin = req.body.temporaryPin?.trim() || generateTemporaryPin();
 
@@ -470,7 +466,11 @@ router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
 
 router.get('/reviews/writing-speech', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
-    const assignedStudentIds = await getAssignedStudentIds(req);
+    const assignments = await getTeacherAssignments(req);
+    const assignedStudentIds =
+      assignments === null
+        ? null
+        : await getAssignedStudentIds(assignments);
 
     if (Array.isArray(assignedStudentIds) && assignedStudentIds.length === 0) {
       return res.json({
