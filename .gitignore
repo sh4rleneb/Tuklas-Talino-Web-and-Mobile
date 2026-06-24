@@ -8,3 +8,6 @@ build/
 # Local patch backups
 *.bak
 secrets/
+
+# Google TTS cache
+backend/tts-cache/
