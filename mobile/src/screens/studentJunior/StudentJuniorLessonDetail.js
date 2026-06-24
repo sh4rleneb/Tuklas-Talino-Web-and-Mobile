@@ -19,6 +19,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 
 import { api } from '../../api/client';
+import {
+  speakText,
+  stopSpeech,
+} from '../../services/tts.service';
 
 function optionalProgressRequest(request, fallback) {
   return request.catch((err) => {
@@ -1136,14 +1140,59 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
           {littleLearnerGame ? null : renderActivityGuide(currentActivity)}
           {renderActivityVisual(currentActivity)}
           <View style={styles.speechButtons}>
-            <TouchableOpacity style={[styles.secondaryButton, recording && styles.recordingButton]} onPress={recording ? stopRecording : startRecording}>
-              <Text style={styles.secondaryText}>{recording ? '⏹ Stop Recording' : littleLearnerGame ? '🎮 Start Voice Quest' : '🎙 Start Recording'}</Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() =>
+                speakText(
+                  currentActivity.speechTask?.targetText ||
+                  currentActivity.instructions ||
+                  ''
+                )
+              }
+            >
+              <Text style={styles.secondaryText}>
+                🔊 Listen Target
+              </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.secondaryButton,
+                recording && styles.recordingButton
+              ]}
+              onPress={recording ? stopRecording : startRecording}
+            >
+              <Text style={styles.secondaryText}>
+                {recording
+                  ? '⏹ Stop Recording'
+                  : littleLearnerGame
+                    ? '🎮 Start Voice Quest'
+                    : '🎙 Start Recording'}
+              </Text>
+            </TouchableOpacity>
+
             {recordingUri ? (
-              <TouchableOpacity style={styles.secondaryButton} onPress={playRecording} disabled={playing}>
-                <Text style={styles.secondaryText}>{playing ? '▶ Playing...' : '▶ Play Recording'}</Text>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={playRecording}
+                disabled={playing}
+              >
+                <Text style={styles.secondaryText}>
+                  {playing
+                    ? '▶ Playing...'
+                    : '▶ Replay My Voice'}
+                </Text>
               </TouchableOpacity>
             ) : null}
+
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={stopSpeech}
+            >
+              <Text style={styles.secondaryText}>
+                ⏹ Stop Audio
+              </Text>
+            </TouchableOpacity>
           </View>
           {speechStatus ? <Text style={styles.statusMessage}>{speechStatus}</Text> : null}
           {littleLearnerGame ? null : (

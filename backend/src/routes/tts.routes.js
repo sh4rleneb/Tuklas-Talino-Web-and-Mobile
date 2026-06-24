@@ -20,7 +20,7 @@ router.post('/speak', async (req, res, next) => {
       await synthesizeFilipinoSpeech(text);
 
     res.json({
-      audioContent
+      audioContent: audioContent.toString('base64')
     });
   } catch (err) {
     next(err);

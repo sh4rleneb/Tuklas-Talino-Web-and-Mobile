@@ -17,10 +17,16 @@ export async function speakText(text) {
       }
     });
 
-    const audioData =
-      response?.audioContent?.data || [];
+    const base64Audio =
+      response?.audioContent || '';
 
-    const bytes = new Uint8Array(audioData);
+    const binaryString =
+      atob(base64Audio);
+
+    const bytes = Uint8Array.from(
+      binaryString,
+      char => char.charCodeAt(0)
+    );
 
     const blob = new Blob(
       [bytes],
