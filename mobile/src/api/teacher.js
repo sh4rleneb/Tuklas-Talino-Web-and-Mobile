@@ -79,6 +79,21 @@ export async function uploadLessonMaterial(asset) {
   return api('/lessons/materials/upload', { method: 'POST', body });
 }
 
+export async function uploadSpeechRecording(uri) {
+  const body = new FormData();
+
+  body.append('audio', {
+    uri,
+    name: 'speech-recording.m4a',
+    type: 'audio/m4a',
+  });
+
+  return api('/lessons/speech/upload', {
+    method: 'POST',
+    body,
+  });
+}
+
 export async function getReportSummary() {
   return api('/reports/summary');
 }

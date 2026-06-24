@@ -107,7 +107,7 @@ export const studentSchema = z.object({
 
 export const teacherSchema = z.object({
   username: z.string().min(3),
-  employeeCode: z.string().min(3),
+  employeeCode: z.string().min(3).optional(),
   name: z.string().min(2),
   email: z.string().email().optional().nullable(),
   password: z.string().min(6).optional()

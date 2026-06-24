@@ -841,7 +841,12 @@ function renderLogs() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+
+      <ScrollView
+        contentContainerStyle={styles.page}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <View style={styles.flex}>
             <Text style={styles.title}>Admin Workspace</Text>
@@ -1241,6 +1246,7 @@ You will be required to change this PIN after first login.`
         </View>
       </Modal>
       </ScrollView>
+
     </SafeAreaView>
   );
 }

@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 
 import { api } from '../../api/client';
+import { uploadSpeechRecording } from '../../api/teacher';
 import {
   speakText,
   stopSpeech,
@@ -905,13 +906,18 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
 
     setSubmitting(true);
     try {
+      const uploadedAudio =
+        await uploadSpeechRecording(recordingUri);
+
       const data = await api(`/lessons/${lessonId}/speech`, {
         method: 'POST',
         body: {
           taskId: task.id,
           transcript:
-          speechTranscript ||
-          '[VOICE_RECORDING_SUBMITTED]',
+            speechTranscript ||
+            '[VOICE_RECORDING_SUBMITTED]',
+          audioUrl:
+            uploadedAudio?.audioUrl || null,
         },
       });
       Alert.alert('Speech', data.message || 'Speech attempt saved.');

@@ -113,11 +113,16 @@ router.get('/', requireRole('admin'), async (req, res, next) => {
 
 router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
+    console.log('[DEBUG] CREATE TEACHER BODY:', JSON.stringify(req.body));
     const body = validate(teacherSchema, req.body);
     assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher account');
     const role = await Role.findOne({ where: { name: 'teacher' } });
 
     const temporaryPin = generateTemporaryPin();
+
+    const generatedEmployeeCode =
+      body.employeeCode ||
+      `EMP-${body.username.toUpperCase()}`;
 
     const user = await User.create({
   roleId: role.id,
@@ -127,7 +132,7 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
   passwordHash: await bcrypt.hash(temporaryPin, 12),
   mustChangePassword: true
 });
-    const teacher = await Teacher.create({ userId: user.id, employeeCode: body.employeeCode, name: body.name });
+    const teacher = await Teacher.create({ userId: user.id, employeeCode: generatedEmployeeCode, name: body.name });
     await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
     res.status(201).json({ teacher, temporaryPin });
   } catch (err) { next(err); }
@@ -590,6 +595,7 @@ router.get('/reviews/writing-speech', requireRole('teacher', 'admin'), async (re
           id: row.id,
           type: 'speech',
           transcript: row.transcript || '',
+          audioUrl: row.audioUrl || null,
           score: row.score ?? null,
           submittedAt: formatDate(row.createdAt || row.submittedAt),
           student: formatStudent(studentById.get(Number(row.studentId))),

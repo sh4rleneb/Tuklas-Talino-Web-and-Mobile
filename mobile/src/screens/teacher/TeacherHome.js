@@ -4,6 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -640,6 +641,17 @@ async function handleLogout() {
             ? item.content || 'No answer text.'
             : item.transcript || 'No transcript text.'}
         </Text>
+
+        {!isWriting && item.audioUrl ? (
+          <TouchableOpacity
+            style={styles.smallButton}
+            onPress={() => Linking.openURL(item.audioUrl)}
+          >
+            <Text style={styles.smallButtonText}>
+              ▶ Play Recording
+            </Text>
+          </TouchableOpacity>
+        ) : null}
 
         {isWriting && item.feedback ? (
           <Text style={styles.statusText}>{item.feedback}</Text>

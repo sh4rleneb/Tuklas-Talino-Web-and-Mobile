@@ -255,6 +255,7 @@ export const SpeechAttempt = sequelize.define('SpeechAttempt', {
   lessonId: { type: DataTypes.INTEGER, allowNull: false },
   taskId: { type: DataTypes.INTEGER, allowNull: false },
   transcript: { type: DataTypes.TEXT, allowNull: true },
+  audioUrl: { type: DataTypes.STRING(500), allowNull: true },
   score: { type: DataTypes.INTEGER, allowNull: true },
   submittedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, { tableName: 'speech_attempts' });

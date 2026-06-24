@@ -143,6 +143,45 @@ const lessonMaterialUploadDir = path.join(__dirname, '../../uploads/lesson-mater
 
 fs.mkdirSync(lessonMaterialUploadDir, { recursive: true });
 
+
+const speechUploadDir = path.join(__dirname, '../../uploads/speech-recordings');
+
+fs.mkdirSync(speechUploadDir, { recursive: true });
+
+const speechUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, speechUploadDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+
+      cb(
+        null,
+        `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`
+      );
+    }
+  }),
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+
+    const allowed = new Set([
+      '.m4a',
+      '.mp3',
+      '.wav',
+      '.caf'
+    ]);
+
+    if (allowed.has(ext)) {
+      cb(null, true);
+      return;
+    }
+
+    cb(new Error('Only audio recordings are allowed.'));
+  },
+  limits: {
+    fileSize: 15 * 1024 * 1024
+  }
+});
+
 const lessonMaterialUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, lessonMaterialUploadDir),
@@ -388,6 +427,33 @@ router.post('/materials/upload', requireRole('admin', 'teacher'), lessonMaterial
     next(err);
   }
 });
+
+
+router.post(
+  '/speech/upload',
+  requireRole('student'),
+  speechUpload.single('audio'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          message: 'Audio file is required.'
+        });
+      }
+
+      const baseUrl =
+        `${req.protocol}://${req.get('host')}`;
+
+      return res.status(201).json({
+        audioUrl:
+          `${baseUrl}/uploads/speech-recordings/${req.file.filename}`
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 
 router.get('/:id', async (req, res, next) => {
   try {
@@ -1232,6 +1298,7 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
       lessonId: req.params.id,
       taskId: req.body.taskId,
       transcript: req.body.transcript || '',
+      audioUrl: req.body.audioUrl || null,
       score: req.body.score || null,
     });
 
