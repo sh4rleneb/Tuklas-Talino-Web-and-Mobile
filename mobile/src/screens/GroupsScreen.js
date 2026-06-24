@@ -103,6 +103,38 @@ export default function GroupsScreen({ navigation }) {
   const [notice, setNotice] = useState(null);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const [missionStep, setMissionStep] = useState('choose');
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [completedTaskId, setCompletedTaskId] = useState(null);
+
+  const TEAM_ROLES = [
+    {
+      key: 'reader',
+      icon: '📖',
+      title: 'Reader',
+      description: 'Basahin ang salita o kuwento.',
+    },
+    {
+      key: 'speaker',
+      icon: '🎤',
+      title: 'Speaker',
+      description: 'Bigkasin ang sagot nang malinaw.',
+    },
+    {
+      key: 'helper',
+      icon: '⭐',
+      title: 'Helper',
+      description: 'Tumulong sa kaklase.',
+    },
+    {
+      key: 'checker',
+      icon: '✅',
+      title: 'Checker',
+      description: 'Tingnan kung tapos na ang gawain.',
+    },
+  ];
+
 
   const load = useCallback(async ({ quiet = false } = {}) => {
     if (!quiet) setLoading(true);
@@ -139,6 +171,10 @@ export default function GroupsScreen({ navigation }) {
         tone: 'success',
         message: data.message || 'Submitted for teacher review.',
       });
+
+      setCompletedTaskId(taskId);
+      setMissionStep('done');
+
       await load({ quiet: true });
     } catch (err) {
       setNotice({
@@ -196,6 +232,11 @@ export default function GroupsScreen({ navigation }) {
 
   const hasFilters = Boolean(query.trim()) || statusFilter !== 'all';
 
+  const selectedGroup =
+    filteredGroups.find(
+      (group) => Number(group.id) === Number(selectedGroupId)
+    ) || null;
+
   function clearFilters() {
     setQuery('');
     setStatusFilter('all');
@@ -251,9 +292,79 @@ export default function GroupsScreen({ navigation }) {
 
         {canSubmit && (
           <PrimaryButton variant="secondary" onPress={() => complete(task.id)}>
-            {isBusy ? 'Submitting...' : task.returnedByTeacher ? 'Resubmit for Review' : 'Submit for Review'}
+            {isBusy ? 'Submitting...' : task.returnedByTeacher ? 'I helped my team!' : 'I helped my team!'}
           </PrimaryButton>
         )}
+      </Card>
+    );
+  }
+
+
+  function renderJobSelection(group) {
+    return (
+      <Card style={styles.jobScreen}>
+        <Text style={styles.jobTitle}>
+          Choose your job
+        </Text>
+
+        <Text style={styles.jobSubtitle}>
+          Every teammate has a special role.
+        </Text>
+
+        <View style={styles.jobGrid}>
+          {TEAM_ROLES.map((role) => (
+            <TouchableOpacity
+              key={role.key}
+              style={styles.jobCard}
+              onPress={() => {
+                setSelectedRole(role);
+                setMissionStep('task');
+              }}
+            >
+              <Text style={styles.jobIcon}>
+                {role.icon}
+              </Text>
+
+              <Text style={styles.jobCardTitle}>
+                {role.title}
+              </Text>
+
+              <Text style={styles.jobCardDescription}>
+                {role.description}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Card>
+    );
+  }
+
+
+  function renderWaitingForTeacher() {
+    return (
+      <Card style={styles.waitingCard}>
+        <Text style={styles.waitingIcon}>
+          🎉
+        </Text>
+
+        <Text style={styles.waitingTitle}>
+          Waiting for Teacher
+        </Text>
+
+        <Text style={styles.waitingSubtitle}>
+          Your teacher will check your team's work.
+        </Text>
+
+        <PrimaryButton
+          onPress={() => {
+            setMissionStep('choose');
+            setSelectedRole(null);
+            setSelectedGroupId(null);
+            setCompletedTaskId(null);
+          }}
+        >
+          Back to Teams
+        </PrimaryButton>
       </Card>
     );
   }
@@ -399,7 +510,74 @@ export default function GroupsScreen({ navigation }) {
             </PrimaryButton>
           </Card>
         ) : filteredGroups.length ? (
-          filteredGroups.map(renderGroup)
+          <>
+            <Card style={styles.teamMissionCard}>
+              <Text style={styles.teamMissionTitle}>
+                👥 Team Mission
+              </Text>
+
+              <Text style={styles.teamMissionSubtitle}>
+                Choose. Help. Done.
+              </Text>
+
+              <View style={styles.stepRow}>
+                <View style={styles.stepPill}>
+                  <Text style={styles.stepText}>Choose</Text>
+                </View>
+
+                <View style={styles.stepPill}>
+                  <Text style={styles.stepText}>Job</Text>
+                </View>
+
+                <View style={styles.stepPill}>
+                  <Text style={styles.stepText}>Task</Text>
+                </View>
+
+                <View style={styles.stepDone}>
+                  <Text style={styles.stepDoneText}>
+                    Done ({summary.done})
+                  </Text>
+                </View>
+              </View>
+
+              {filteredGroups.map((group) => (
+                <TouchableOpacity
+                  key={group.id}
+                  style={styles.teamCard}
+                  onPress={() => {
+                    setSelectedGroupId(group.id);
+                    setMissionStep('job');
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.group}>
+                      👥 {group.name}
+                    </Text>
+
+                    <Text style={styles.muted}>
+                      {(group.tasks || []).filter(
+                        (task) => !task.completed
+                      ).length} missions left
+                    </Text>
+                  </View>
+
+                  <Text style={styles.teamArrow}>→</Text>
+                </TouchableOpacity>
+              ))}
+            </Card>
+
+            {missionStep === 'job' && selectedGroup
+              ? renderJobSelection(selectedGroup)
+              : null}
+
+            {missionStep === 'task' && selectedGroup
+              ? renderGroup(selectedGroup)
+              : null}
+
+            {missionStep === 'done'
+              ? renderWaitingForTeacher()
+              : null}
+          </>
         ) : (
           <Card style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>🔎</Text>
@@ -687,4 +865,141 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '900',
   },
+
+
+  jobScreen: {
+    marginBottom: 14,
+  },
+
+  jobTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.ink,
+    marginBottom: 6,
+  },
+
+  jobSubtitle: {
+    color: colors.muted,
+    marginBottom: 18,
+  },
+
+  jobGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+
+  jobCard: {
+    width: '48%',
+    backgroundColor: '#F8FFFA',
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+
+  jobIcon: {
+    fontSize: 34,
+    marginBottom: 10,
+  },
+
+  jobCardTitle: {
+    color: colors.ink,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+
+  jobCardDescription: {
+    color: colors.muted,
+    textAlign: 'center',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+
+  waitingCard: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    marginBottom: 14,
+  },
+
+  waitingIcon: {
+    fontSize: 60,
+    marginBottom: 12,
+  },
+
+  waitingTitle: {
+    color: colors.ink,
+    fontSize: 26,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  waitingSubtitle: {
+    color: colors.muted,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+
+  teamMissionCard: {
+    marginBottom: 14,
+  },
+
+  teamMissionTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.ink,
+  },
+
+  teamMissionSubtitle: {
+    color: colors.muted,
+    marginBottom: 16,
+  },
+
+  stepRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 18,
+  },
+
+  stepPill: {
+    flex: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#DDE7D8',
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+
+  stepText: {
+    fontWeight: '900',
+    color: colors.ink,
+  },
+
+  stepDone: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+
+  stepDoneText: {
+    fontWeight: '900',
+    color: '#166534',
+  },
+
+  teamCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FFFA',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 10,
+  },
+
+  teamArrow: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
 });
