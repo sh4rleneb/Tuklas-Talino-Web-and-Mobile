@@ -83,7 +83,20 @@ export default function MissionScreen({ navigation }) {
     try {
       const dashboard = await api('/dashboard');
 
-      setMissions(MISSION_GAMES);
+      const backendMissions = dashboard.missions || [];
+
+      const merged = MISSION_GAMES.map((mission) => {
+        const backend = backendMissions.find(
+          (m) => m.missionId === mission.id
+        );
+
+        return {
+          ...mission,
+          ...(backend || {}),
+        };
+      });
+
+      setMissions(merged);
       setStudent(dashboard.student || null);
     } catch (err) {
       setError(err.message || 'Unable to load missions.');
@@ -198,7 +211,11 @@ export default function MissionScreen({ navigation }) {
             ) : null}
 
             <TouchableOpacity
-              style={styles.button}
+              style={[
+                styles.button,
+                mission.state === 'claimed' && styles.buttonDisabled,
+              ]}
+              disabled={mission.state === 'claimed'}
               onPress={() =>
                 navigation.navigate('MissionGame', {
                   missionId: mission.id,
@@ -206,7 +223,9 @@ export default function MissionScreen({ navigation }) {
               }
             >
               <Text style={styles.buttonText}>
-                Start Mission
+                {mission.state === 'claimed'
+                  ? '✓ Completed'
+                  : 'Start Mission'}
               </Text>
             </TouchableOpacity>
           </Card>
