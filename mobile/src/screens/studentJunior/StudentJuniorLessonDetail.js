@@ -25,6 +25,9 @@ import {
   stopSpeech,
 } from '../../services/tts.service';
 
+import ReadingPassageCard from '../../components/lesson/ReadingPassageCard';
+import ActivityVisualCard from '../../components/lesson/ActivityVisualCard';
+
 function optionalProgressRequest(request, fallback) {
   return request.catch((err) => {
     if (err.status === 404 || err.message === 'Route not found.') {
@@ -604,118 +607,6 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
     );
   };
 
-  const getActivityVisual = activity => {
-    const imageUri =
-      activity?.imageUrl ||
-      activity?.illustrationUrl ||
-      activity?.visualUrl ||
-      activity?.dataJson?.imageUrl ||
-      activity?.dataJson?.illustrationUrl ||
-      activity?.dataJson?.visualUrl ||
-      activity?.dataJson?.coverImage ||
-      lesson?.imageUrl ||
-      lesson?.illustrationUrl ||
-      lesson?.dataJson?.imageUrl ||
-      lesson?.dataJson?.illustrationUrl;
-
-    if (!imageUri) return null;
-
-    return {
-      imageUri,
-      emoji: '🖼️',
-      title: 'Tingnan ang larawan',
-      body: 'Gamitin ang larawan bilang gabay bago sagutin ang gawain.',
-    };
-  };
-
-  const renderActivityVisual = activity => {
-    if (!activity) return null;
-
-    const visual = getActivityVisual(activity);
-
-    if (!visual) return null;
-
-    return (
-      <View style={styles.visualCard}>
-        <View style={styles.visualImageWrap}>
-          {visual.imageUri ? (
-            <Image
-              source={{ uri: visual.imageUri }}
-              style={styles.visualImage}
-              resizeMode="cover"
-            />
-          ) : (
-            <Text style={styles.visualEmoji}>{visual.emoji}</Text>
-          )}
-        </View>
-
-        <View style={styles.visualCopy}>
-          <Text style={styles.visualTitle}>{visual.title}</Text>
-          <Text style={styles.visualBody}>{visual.body}</Text>
-        </View>
-      </View>
-    );
-  };
-
-  const getActivityPassage = activity => {
-    const candidates = [
-      activity?.passage,
-      activity?.readingPassage,
-      activity?.story,
-      activity?.content,
-      activity?.instructions,
-      activity?.dataJson?.passage,
-      activity?.dataJson?.readingPassage,
-      activity?.dataJson?.story,
-      activity?.dataJson?.content,
-      activity?.dataJson?.text,
-      activity?.dataJson?.body,
-      activity?.dataJson?.context,
-      activity?.dataJson?.lessonText,
-      activity?.questions?.[0]?.passage,
-      activity?.questions?.[0]?.context,
-      activity?.questions?.[0]?.readingText,
-      lesson?.passage,
-      lesson?.readingPassage,
-      lesson?.story,
-      lesson?.content,
-      lesson?.description,
-      lesson?.dataJson?.passage,
-      lesson?.dataJson?.readingPassage,
-      lesson?.dataJson?.story,
-      lesson?.dataJson?.content,
-      lesson?.dataJson?.text,
-      lesson?.dataJson?.body,
-      lesson?.dataJson?.context,
-    ];
-
-    const passage = candidates.find(value =>
-      typeof value === 'string' && value.trim().length >= 20
-    );
-
-    return passage?.trim() || '';
-  };
-
-  const renderActivityPassage = activity => {
-    const passage = getActivityPassage(activity);
-
-    if (!passage) return null;
-
-    const passageTitle =
-      activity.type === 'writing'
-        ? '✍️ Gabay sa pagsulat'
-        : activity.type === 'speech'
-          ? '🎤 Basahin at bigkasin'
-          : '📖 Basahin ang teksto';
-
-    return (
-      <View style={styles.passageCard}>
-        <Text style={styles.passageTitle}>{passageTitle}</Text>
-        <Text style={styles.passageBody}>{passage}</Text>
-      </View>
-    );
-  };
-
   const percent = completed ? 100 : Math.round(((Math.max(1, step) - 1) / totalSteps) * 100);
   const nextLesson = useMemo(() => {
     const lessons = dashboard?.lessons || [];
@@ -999,8 +890,14 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🧠 {currentActivity.title}</Text>
           {renderActivityGuide(currentActivity)}
-          {renderActivityVisual(currentActivity)}
-          {renderActivityPassage(currentActivity)}
+          {<ActivityVisualCard
+            activity={currentActivity}
+            lesson={lesson}
+          />}
+          {<ReadingPassageCard
+              activity={currentActivity}
+              lesson={lesson}
+            />}
           {questions.map((question) => (
             <View key={question.id} style={styles.questionBlock}>
               <Text style={styles.question}>{question.question}</Text>
@@ -1075,7 +972,10 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
               : currentActivity.writingTask?.prompt || currentActivity.instructions}
           </Text>
           {littleLearnerGame ? null : renderActivityGuide(currentActivity)}
-          {renderActivityVisual(currentActivity)}
+          {<ActivityVisualCard
+            activity={currentActivity}
+            lesson={lesson}
+          />}
           {littleLearnerGame ? renderPowerUpTray(currentActivity) : null}
           {!littleLearnerGame && suggestions.length ? (
             <View style={styles.choiceRow}>
@@ -1089,7 +989,12 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
               })}
             </View>
           ) : null}
-          {littleLearnerGame ? null : renderActivityPassage(currentActivity)}
+          {littleLearnerGame ? null : (
+            <ReadingPassageCard
+              activity={currentActivity}
+              lesson={lesson}
+            />
+          )}
           <View style={littleLearnerGame ? {
             backgroundColor: '#F8FAFC',
             borderColor: '#BBF7D0',
@@ -1144,7 +1049,10 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
           </Text>
           <Text style={styles.body}>{currentActivity.speechTask?.targetText || currentActivity.instructions}</Text>
           {littleLearnerGame ? null : renderActivityGuide(currentActivity)}
-          {renderActivityVisual(currentActivity)}
+          {<ActivityVisualCard
+            activity={currentActivity}
+            lesson={lesson}
+          />}
           <View style={styles.speechButtons}>
             <TouchableOpacity
               style={styles.secondaryButton}
