@@ -6,7 +6,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
+
+import { api } from '../../api/client';
 
 const DEMOS = {
   'word-match': {
@@ -73,6 +76,30 @@ export default function MissionGameScreen({ navigation, route }) {
 
   const [selected, setSelected] = useState(null);
   const [completed, setCompleted] = useState(false);
+  const [attempts, setAttempts] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [badgePopup, setBadgePopup] = useState(null);
+
+  const stars =
+    attempts <= 1 ? '⭐⭐⭐' :
+    attempts === 2 ? '⭐⭐' :
+    '⭐';
+
+  const achievement =
+    attempts <= 1
+      ? {
+          title: '🏅 Perfect Explorer',
+          message: 'Answered correctly on the first try!',
+        }
+      : attempts === 2
+      ? {
+          title: '🌟 Learning Star',
+          message: 'You learned from a mistake and succeeded.',
+        }
+      : {
+          title: '💪 Never Give Up',
+          message: 'Persistence leads to mastery.',
+        };
 
   if (completed) {
     return (
@@ -88,11 +115,50 @@ export default function MissionGameScreen({ navigation, route }) {
             +{mission.xp} XP
           </Text>
 
+          <Text style={styles.starRating}>
+            {stars}
+          </Text>
+
+          <Text style={styles.attemptText}>
+            Attempts: {attempts}
+          </Text>
+
+          {badgePopup ? (
+            <View style={styles.badgePopup}>
+              <Text style={styles.badgeIcon}>
+                {badgePopup?.icon || '🏅'}
+              </Text>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.badgeLabel}>
+                  Badge Unlocked!
+                </Text>
+
+                <Text style={styles.badgeName}>
+                  {badgePopup?.name || 'New Achievement'}
+                </Text>
+
+                <Text style={styles.badgeDesc}>
+                  Achievement Earned ⭐
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          <Text style={styles.achievementTitle}>
+            {achievement.title}
+          </Text>
+
+          <Text style={styles.achievementMessage}>
+            {achievement.message}
+          </Text>
+
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => {
               setSelected(null);
               setCompleted(false);
+              setAttempts(1);
             }}
           >
             <Text style={styles.primaryButtonText}>
@@ -148,14 +214,47 @@ export default function MissionGameScreen({ navigation, route }) {
             styles.primaryButton,
             !selected && styles.buttonDisabled,
           ]}
-          disabled={!selected}
-          onPress={() => {
+          disabled={!selected || submitting}
+          onPress={async () => {
             if (selected === mission.correct) {
-              setCompleted(true);
+              try {
+                setSubmitting(true);
+
+                const data = await api(`/missions/${missionId}/complete`, {
+                  method: 'POST',
+                  body: {
+                    challengeId: `attempt-${attempts}`,
+                    challengeTitle: `${stars} ${attempts} attempts`,
+                  },
+                });
+
+                if (Array.isArray(data?.newBadges) && data.newBadges.length) {
+                  setBadgePopup(data.newBadges[0]);
+
+                  setTimeout(() => {
+                    setBadgePopup(null);
+                  }, 5500);
+                }
+
+                setCompleted(true);
+              } catch (err) {
+                Alert.alert(
+                  'Mission Error',
+                  err.message || 'Unable to save mission progress.'
+                );
+              } finally {
+                setSubmitting(false);
+              }
+
               return;
             }
 
-            alert('❌ Mali ang sagot. Subukan muli.');
+            setAttempts((a) => a + 1);
+
+            Alert.alert(
+              'Incorrect Answer',
+              `❌ Mali ang sagot.\n\n✅ Tamang sagot: ${mission.correct}`
+            );
           }}
         >
           <Text style={styles.primaryButtonText}>
@@ -219,5 +318,53 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '900',
     marginBottom: 20,
+  },
+  starRating: {
+    fontSize: 36,
+    marginBottom: 10,
+  },
+  attemptText: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+  achievementTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  achievementMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  badgePopup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 2,
+    borderColor: '#FDE68A',
+    marginBottom: 20,
+  },
+  badgeIcon: {
+    fontSize: 36,
+    marginRight: 12,
+  },
+  badgeLabel: {
+    color: '#D97706',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  badgeName: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#92400E',
+  },
+  badgeDesc: {
+    fontSize: 13,
+    color: '#78716C',
   },
 });
