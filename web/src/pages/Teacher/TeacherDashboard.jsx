@@ -3,6 +3,7 @@ import { uploadForm } from '../../api/client';
 import { SUBJECTS } from '../../constants/studentConstants';
 import { asArray, fmtDate, lessonAssessmentProfile } from '../../utils/studentHelpers';
 import { TeacherRedesignStyles } from '../../components/styles/StyleBlocks';
+import TeacherQuizPerformanceMonitor from '../../components/teacher/TeacherQuizPerformanceMonitor';
 
 
 // Local quiz helpers used by TeacherAssessmentCenter.
@@ -76,173 +77,9 @@ function buildQuizQuestionsFromLesson(lesson = {}) {
   return questions.slice(0, 25);
 }
 
-function TeacherQuizPerformanceMonitor({ quizPerformance = {} }) {
-  const summary = quizPerformance.summary || {};
-  const rows = asArray(quizPerformance.rows);
-  const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [showAll, setShowAll] = useState(false);
-
-  const statusOptions = ['All', 'Needs Support', 'Developing', 'Proficient', 'Advanced'];
-  const normalizedQuery = query.trim().toLowerCase();
-
-  const filteredRows = rows.filter(row => {
-    const matchesStatus = statusFilter === 'All' || String(row.status || '') === statusFilter;
-    const haystack = [
-      row.studentName,
-      row.quizTitle,
-      row.quizId,
-      row.section,
-      row.gradeLevel ? `grade ${row.gradeLevel}` : ''
-    ].join(' ').toLowerCase();
-
-    return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery));
-  });
-
-  const visibleRows = showAll ? filteredRows : filteredRows.slice(0, 8);
-  const hiddenCount = Math.max(0, filteredRows.length - visibleRows.length);
-
-  function scoreText(attempt) {
-    if (!attempt) return '—';
-    return `${attempt.percent ?? 0}%`;
-  }
-
-  function statusClass(status = '') {
-    const value = String(status).toLowerCase();
-    if (value.includes('advanced') || value.includes('proficient')) return 'good';
-    if (value.includes('developing')) return 'warn';
-    return 'bad';
-  }
-
-  return (
-    <div className="teacher-workspace-card" style={{ margin: '18px 0', boxShadow: 'none', background: '#fbfffd' }}>
-      <div className="teacher-workspace-heading">
-        <div>
-          <div className="lms-section-label">Quiz Performance Monitor</div>
-          <h2>Student Quiz Attempts</h2>
-          <p>Search, filter, and review quiz scores without making the table too long.</p>
-        </div>
-      </div>
-
-      <div className="teacher-monitor-summary">
-        <div><span>Quiz Records</span><strong>{summary.total || rows.length || 0}</strong></div>
-        <div><span>Average Best</span><strong>{summary.averageBest || 0}%</strong></div>
-        <div><span>Needs Support</span><strong>{summary.needsSupport || 0}</strong></div>
-        <div><span>Proficient+</span><strong>{Number(summary.proficient || 0) + Number(summary.advanced || 0)}</strong></div>
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(220px, 1fr) auto',
-          gap: 12,
-          alignItems: 'center',
-          marginTop: 16
-        }}
-      >
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setShowAll(false);
-          }}
-          placeholder="Search student or quiz..."
-          style={{
-            minHeight: 46,
-            borderRadius: 16,
-            border: '1px solid #dce7df',
-            padding: '0 16px',
-            fontWeight: 800,
-            color: '#14223b'
-          }}
-        />
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
-          {statusOptions.map(option => (
-            <button
-              key={option}
-              type="button"
-              className={statusFilter === option ? 'lms-report-button' : 'quiz-secondary'}
-              onClick={() => {
-                setStatusFilter(option);
-                setShowAll(false);
-              }}
-              style={{ minHeight: 42 }}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ marginTop: 10, color: '#526988', fontWeight: 800 }}>
-        Showing {visibleRows.length} of {filteredRows.length} quiz record{filteredRows.length === 1 ? '' : 's'}
-      </div>
-
-      <div className="teacher-table-wrapper" style={{ marginTop: 16 }}>
-        <table className="teacher-monitor-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Quiz</th>
-              <th>Try 1</th>
-              <th>Try 2</th>
-              <th>Best</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.length ? visibleRows.map(row => (
-              <tr key={row.key || `${row.studentId}-${row.quizId}`}>
-                <td>
-                  <strong>{row.studentName}</strong>
-                  <small>Grade {row.gradeLevel || '—'} • {row.section || 'No section'}</small>
-                </td>
-                <td>
-                  <strong>{row.quizTitle}</strong>
-                  <small>{row.quizId}</small>
-                </td>
-                <td>{scoreText(row.attempt1)}</td>
-                <td>{scoreText(row.attempt2)}</td>
-                <td><strong>{row.bestPercent || 0}%</strong></td>
-                <td>
-                  <span className={`lms-mini-pill ${statusClass(row.status)}`}>
-                    {row.status || 'Needs Support'}
-                  </span>
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan="6">
-                  <div className="teacher-empty-panel" style={{ boxShadow: 'none' }}>
-                    <div>🧠</div>
-                    <strong>No matching quiz records.</strong>
-                    <p>Try another search or filter.</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {filteredRows.length > 8 && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
-          <button
-            type="button"
-            className="lms-report-button"
-            onClick={() => setShowAll(prev => !prev)}
-          >
-            {showAll ? 'Show Less' : `Show More (${hiddenCount} more)`}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function TeacherAssessmentCenter({ lessons = [], rows = [], quizPerformance = {} }) {
+  const [selectedQuizId, setSelectedQuizId] = useState("ALL");
+
   const quizzes = lessons.map(lesson => ({
     lesson,
     questions: buildQuizQuestionsFromLesson(lesson),
@@ -257,65 +94,21 @@ function TeacherAssessmentCenter({ lessons = [], rows = [], quizPerformance = {}
     <section className="teacher-workspace-card" id="teacher-assessment-center">
       <div className="teacher-workspace-heading">
         <div>
-          <div className="lms-section-label">Assessment Hub</div>
-          <h2>Quiz Builder & Effectiveness Preview</h2>
-          <p>Create the lesson first, then use each lesson's Quiz activities as a separate student Quiz tab. Backend saving comes next.</p>
+          <div className="lms-section-label">Assessment Results</div>
+          <h2>Student Assessment Results</h2>
+          <p>Monitor student assessment completion, review quiz scores, and identify learners who need additional support.</p>
         </div>
       </div>
 
-      <div className="teacher-monitor-summary">
-        <div><span>Assessment Coverage</span><strong>{readiness}%</strong></div>
-        <div><span>Quiz-ready Lessons</span><strong>{withQuiz}/{lessons.length}</strong></div>
-        <div><span>Total Questions</span><strong>{questionCount}</strong></div>
-      </div>
 
-      <div className="teacher-monitor-summary" style={{ marginTop: 12 }}>
-        <div><span>Lessons Missing Quiz</span><strong>{missingQuiz}</strong></div>
-        <div><span>Students to Monitor</span><strong>{rows.length}</strong></div>
-        <div><span>Passing Target</span><strong>75%</strong></div>
-      </div>
 
-      <TeacherQuizPerformanceMonitor quizPerformance={quizPerformance} />
+      <TeacherQuizPerformanceMonitor
+        quizPerformance={quizPerformance}
+        selectedQuiz={selectedQuizId}
+        onSelectQuiz={setSelectedQuizId}
+      />
 
-      <div className="teacher-groups-area" style={{ marginTop: 16 }}>
-        <div className="teacher-mini-heading">
-          <div>
-            <h3>Lesson-to-Quiz Checklist</h3>
-            <p>Each lesson should have at least one objective quiz plus writing or speech evidence for stronger effectiveness measurement.</p>
-          </div>
-        </div>
 
-        <div className="teacher-groups-grid">
-          {quizzes.map(({ lesson, questions, profile }) => {
-            const coverage = [profile.hasObjectiveQuiz, profile.hasWriting, profile.hasSpeech].filter(Boolean).length;
-            return (
-              <div className="teacher-group-item" key={lesson.id || lesson.title}>
-                <div className="teacher-group-item-top">
-                  <div>
-                    <strong>{lesson.title || 'Untitled lesson'}</strong>
-                    <p>{lesson.subject || 'Filipino'} • Grade {lesson.gradeLevel || '—'}</p>
-                  </div>
-                  <span className="lms-mini-pill">{questions.length} item{questions.length === 1 ? '' : 's'}</span>
-                </div>
-                <div className="teacher-progress-cell" style={{ marginTop: 12 }}>
-                  <span>{coverage}/3 evidence types</span>
-                  <div className="teacher-progress-track"><div style={{ width: `${Math.max(8, (coverage / 3) * 100)}%` }} /></div>
-                </div>
-                <p style={{ marginTop: 10 }}>
-                  {profile.hasObjectiveQuiz ? '✅ Quiz/Matching' : '⚠️ Add quiz'} • {profile.hasWriting ? '✅ Writing' : 'Add writing'} • {profile.hasSpeech ? '✅ Speech' : 'Add speech'}
-                </p>
-              </div>
-            );
-          })}
-          {!lessons.length && (
-            <div className="teacher-empty-panel">
-              <div>🧠</div>
-              <strong>No lessons yet.</strong>
-              <p>Create lessons first, then the Quiz tab will automatically show assessment cards.</p>
-            </div>
-          )}
-        </div>
-      </div>
     </section>
   );
 }
@@ -1188,7 +981,7 @@ export default function TeacherDashboard({
               onClick={() => openTab('assessments')}
             >
               <span>🧠</span>
-              <strong>Assessments</strong>
+              <strong>Assessment Results</strong>
             </button>
 
             <button
