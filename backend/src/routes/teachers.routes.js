@@ -135,7 +135,23 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
     const teacher = await Teacher.create({ userId: user.id, employeeCode: generatedEmployeeCode, name: body.name });
     await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
     res.status(201).json({ teacher, temporaryPin });
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (err?.name === "SequelizeUniqueConstraintError") {
+      const field = err.errors?.[0]?.path;
+
+      const messages = {
+        username: "Username already exists.",
+        employeeCode: "Employee code already exists.",
+        email: "Email already exists."
+      };
+
+      return res.status(409).json({
+        message: messages[field] || "A record with the same information already exists."
+      });
+    }
+
+    next(err);
+  }
 });
 
 router.get('/dashboard', requireRole('teacher', 'admin'), async (req, res, next) => {
