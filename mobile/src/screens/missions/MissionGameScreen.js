@@ -11,6 +11,9 @@ import {
 
 import { api } from '../../api/client';
 
+import MissionHeader from './components/MissionHeader';
+
+
 const DEMOS = {
   'word-match': {
     title: 'Word Match',
@@ -105,6 +108,7 @@ export default function MissionGameScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.hero}>
+          <View style={styles.completionCard}>
           <Text style={styles.eyebrow}>MISSION COMPLETE</Text>
 
           <Text style={styles.resultTitle}>
@@ -169,13 +173,14 @@ export default function MissionGameScreen({ navigation, route }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={styles.secondaryButton}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.primaryButtonText}>
-              🎮 Missions
+            <Text style={styles.secondaryButtonText}>
+              ← Back to Missions
             </Text>
           </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -184,9 +189,12 @@ export default function MissionGameScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>
-          {mission.title}
-        </Text>
+
+        <MissionHeader
+          icon="🎮"
+          title={mission.title}
+          subtitle="Complete the activity and earn XP."
+        />
 
         <Text style={styles.question}>
           {mission.prompt}
@@ -302,10 +310,44 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     backgroundColor: '#CBD5E1',
   },
+
+  secondaryButton: {
+    width: '100%',
+    marginTop: 14,
+    borderWidth: 2,
+    borderColor: '#22C55E',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+
+  secondaryButtonText: {
+    color: '#22C55E',
+    fontWeight: '900',
+    fontSize: 16,
+  },
   hero: {
     flex: 1,
     justifyContent: 'center',
-    padding: 24,
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 32,
+    backgroundColor: '#F6FFF5',
+  },
+
+  completionCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    paddingVertical: 30,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
     alignItems: 'center',
   },
   eyebrow: {
