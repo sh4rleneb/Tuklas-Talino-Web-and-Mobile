@@ -13,6 +13,7 @@ const MISSION_CATALOG = {
   'word-match': {
     title: 'Word Match',
     xp: 15,
+        perChallenge: true,
     requiredCompletedLessons: 1
   },
   'letter-pop': {

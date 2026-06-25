@@ -1,101 +1,397 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  View,
   Text,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 
+
+import {
+  getWordMatchAttemptItems,
+  shuffleWordMatchItems,
+} from './data/wordMatchData';
+
+import MissionProgressCard from '../components/MissionProgressCard';
+import MissionQuestionCard from '../components/MissionQuestionCard';
+
 export default function WordMatchGame({
   mission,
-  selected,
   submitting,
-  onSelect,
-  onSubmit,
+  onMissionComplete,
 }) {
+
+  const [selectedWordId, setSelectedWordId] = useState('');
+  const [matchedPairs, setMatchedPairs] = useState({});
+  const [pictures, setPictures] = useState([]);
+  const [toast, setToast] = useState(null);
+  const [wrongWordId, setWrongWordId] = useState('');
+  const [wrongPictureId, setWrongPictureId] = useState('');
+
+  const gradeLevel = Number(mission.gradeLevel);
+
+  const [items, setItems] = useState([]);
+
+  const matchedCount = Object.keys(matchedPairs).length;
+  const wordMatchComplete = matchedCount === items.length;
+
+  useEffect(() => {
+    if (!toast) return undefined;
+
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 1400);
+
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    const nextItems = getWordMatchAttemptItems(gradeLevel);
+
+    setItems(nextItems);
+    setPictures(shuffleWordMatchItems(nextItems));
+
+    setSelectedWordId('');
+    setMatchedPairs({});
+    setWrongWordId('');
+    setWrongPictureId('');
+    setToast(null);
+  }, [gradeLevel]);
+
   return (
     <>
-      <Text style={styles.question}>
-        {mission.prompt}
-      </Text>
+      <MissionQuestionCard
+        title="Word Match"
+      >
+        Piliin ang salitang Filipino sa kaliwa, pagkatapos piliin ang tamang larawan sa kanan.
+      </MissionQuestionCard>
 
-      {mission.options.map((option) => {
-        const active = selected === option;
+      <MissionProgressCard
+        label="Matched Pairs"
+        current={matchedCount}
+        total={items.length}
+      />
 
-        return (
-          <TouchableOpacity
-            key={option}
-            style={[
-              styles.option,
-              active && styles.optionSelected,
-            ]}
-            onPress={() => onSelect(option)}
-          >
-            <Text style={styles.optionText}>
-              {option}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+      <View style={styles.boardCard}>
+        <View style={styles.board}>
+
+        <View style={styles.column}>
+          <Text style={styles.columnTitle}>
+            Mga Salita
+          </Text>
+
+          {items.map((item) => {
+            const selected = selectedWordId === item.id;
+            const matched = Boolean(matchedPairs[item.id]);
+            const wrong = wrongWordId === item.id;
+
+            return (
+              <TouchableOpacity
+                key={item.id}
+                disabled={matched || submitting}
+                style={[
+                  styles.option,
+                  selected && styles.optionSelected,
+                  matched && styles.optionMatched,
+                  wrong && styles.optionWrong,
+                ]}
+                onPress={() => {
+                  setSelectedWordId(item.id);
+                  setWrongWordId('');
+                  setWrongPictureId('');
+                  setToast(null);
+                }}
+              >
+                <Text style={styles.optionText}>
+                  {item.word}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <View style={styles.column}>
+          <Text style={styles.columnTitle}>
+            Mga Larawan
+          </Text>
+
+          {pictures.map((item) => {
+            const matched = Boolean(matchedPairs[item.id]);
+            const wrong = wrongPictureId === item.id;
+
+            return (
+              <TouchableOpacity
+                key={item.id}
+                disabled={matched || submitting}
+                style={[
+                  styles.option,
+                  matched && styles.optionMatched,
+                  wrong && styles.optionWrong,
+                ]}
+                onPress={() => {
+                  if (!selectedWordId) {
+                    setToast('Pumili muna ng salita.');
+                    return;
+                  }
+
+                  if (selectedWordId === item.id) {
+                    setMatchedPairs((prev) => ({
+                      ...prev,
+                      [item.id]: true,
+                    }));
+
+                    setSelectedWordId('');
+                    setWrongWordId('');
+                    setWrongPictureId('');
+                    setToast(null);
+
+                    return;
+                  }
+
+                  setWrongWordId(selectedWordId);
+                  setWrongPictureId(item.id);
+                  setToast('Hindi pa tugma. Try ulit!');
+
+                  setTimeout(() => {
+                    setWrongWordId('');
+                    setWrongPictureId('');
+                  }, 650);
+                }}
+              >
+                <View style={styles.pictureIcon}>
+                  <Text style={styles.pictureText}>
+                    {item.picture}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+      </View>
+      </View>
+
+      {wordMatchComplete && (
+        <Text style={styles.complete}>
+          🎉 Lahat ng pares ay tama!
+        </Text>
+      )}
 
       <TouchableOpacity
         style={[
-          styles.primaryButton,
-          !selected && styles.buttonDisabled,
+          styles.completeButton,
+          (!wordMatchComplete || submitting) &&
+            styles.completeButtonDisabled,
         ]}
-        disabled={!selected || submitting}
-        onPress={onSubmit}
+        disabled={!wordMatchComplete || submitting}
+        onPress={() =>
+          onMissionComplete({
+            forceComplete: true,
+          })
+        }
       >
-        <Text style={styles.primaryButtonText}>
-          Submit
+        <Text style={styles.completeButtonText}>
+          ✅ Complete Mission
         </Text>
       </TouchableOpacity>
+
+      {toast && (
+        <View style={styles.toastOverlay}>
+          <View style={styles.toastCard}>
+            <Text style={styles.toast}>
+              {toast}
+            </Text>
+          </View>
+        </View>
+      )}
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  question: {
-    fontSize: 24,
+  progressCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+  },
+
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  progressLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#334155',
+  },
+
+  progressValue: {
+    fontSize: 18,
     fontWeight: '900',
-    marginBottom: 24,
-    textAlign: 'center',
+    color: '#0F172A',
+  },
+
+  progressTrack: {
+    height: 10,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#22C55E',
+    borderRadius: 999,
+  },
+
+  boardCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    padding: 18,
+    marginBottom: 18,
+  },
+
+  board: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+
+  column: {
+    flex: 1,
+  },
+
+  columnTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 12,
   },
 
   option: {
-    backgroundColor: '#FFF',
-    borderRadius: 18,
-    padding: 18,
-    marginBottom: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
+    minHeight: 88,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+
+    elevation: 2,
   },
 
   optionSelected: {
+    borderColor: '#3B82F6',
+    backgroundColor: '#EFF6FF',
+  },
+
+  optionMatched: {
     borderColor: '#22C55E',
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#ECFDF5',
+  },
+
+  optionWrong: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
 
   optionText: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#0F172A',
     textAlign: 'center',
   },
 
-  primaryButton: {
-    marginTop: 18,
-    backgroundColor: '#22C55E',
-    borderRadius: 18,
-    paddingVertical: 18,
+  pictureIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  buttonDisabled: {
+  pictureText: {
+    fontSize: 40,
+  },
+
+  complete: {
+    marginTop: 18,
+    textAlign: 'center',
+    fontWeight: '900',
+    fontSize: 18,
+    color: '#16A34A',
+  },
+
+  completeButton: {
+    marginTop: 16,
+    backgroundColor: '#22C55E',
+    borderRadius: 18,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+
+  completeButtonDisabled: {
     opacity: 0.5,
   },
 
-  primaryButtonText: {
-    textAlign: 'center',
-    color: '#FFF',
+  completeButtonText: {
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '900',
   },
+
+  toastOverlay: {
+    position: 'absolute',
+    top: '40%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 999,
+  },
+
+  toastCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    paddingVertical: 18,
+    paddingHorizontal: 28,
+    borderWidth: 2,
+    borderColor: '#F7D77A',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 6,
+  },
+
+  toast: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontWeight: '700',
+    fontSize: 16,
+  },
 });
+

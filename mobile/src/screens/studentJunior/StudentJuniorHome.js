@@ -1,9 +1,9 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/client';
+import Card from '../../components/Card';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 
 const HIDDEN_GROUP_STATUSES = new Set([
   'archived',
@@ -147,10 +147,10 @@ export default function StudentJuniorHome({ navigation }) {
             <View>
               <Text style={styles.greeting}>Hi {name}! 👋</Text>
               <Text style={styles.subtitle}>Ready ka na ba sa learning adventure today?</Text>
-            </View>
+            </Card>
             <View style={styles.avatarCircle}>
               <Text style={styles.avatar}>{avatar}</Text>
-            </View>
+            </Card>
           </View>
 
           <View style={styles.xpCard}>
@@ -185,15 +185,15 @@ export default function StudentJuniorHome({ navigation }) {
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{totalLessons}</Text>
               <Text style={styles.statLabel}>Lessons</Text>
-            </View>
+            </Card>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{completedLessons}</Text>
               <Text style={styles.statLabel}>Done</Text>
-            </View>
+            </Card>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{completionPct}%</Text>
               <Text style={styles.statLabel}>Progress</Text>
-            </View>
+            </Card>
           </View>
         </View>
 
@@ -208,8 +208,8 @@ export default function StudentJuniorHome({ navigation }) {
           </View>
 
           {nextLesson ? (
-            <TouchableOpacity
-              style={styles.card}
+            <TouchableOpacity>
+              <Card>
               onPress={() => navigation.navigate(
                 'Lessons',
                 {
@@ -255,7 +255,8 @@ export default function StudentJuniorHome({ navigation }) {
               <Text style={styles.continueButtonText}>
                 Continue →
               </Text>
-            </View>
+            </Card>
+              </Card>
             </TouchableOpacity>
 
           ) : (
@@ -263,7 +264,7 @@ export default function StudentJuniorHome({ navigation }) {
               <Text style={styles.emptyEmoji}>📚</Text>
               <Text style={styles.emptyTitle}>No active lessons</Text>
               <Text style={styles.emptyText}>Explore the lesson library to start your next activity.</Text>
-            </View>
+            </Card>
           )}
         </View>
 
@@ -305,17 +306,17 @@ export default function StudentJuniorHome({ navigation }) {
           </View>
 
           {activeGroupTask ? (
-            <View style={styles.taskCard}>
+            <Card style={styles.taskCard}>
               <Text style={styles.taskTitle}>{activeGroupTask.title}</Text>
               <Text style={styles.taskMeta}>{activeGroupTask.description || 'Group activity available'}</Text>
               <Text style={styles.taskXp}>+{activeGroupTask.xpReward || 0} XP</Text>
-            </View>
+            </Card>
           ) : (
             <View style={styles.emptyStateSmall}>
               <Text style={styles.emptyEmoji}>🎉</Text>
               <Text style={styles.emptyTitle}>No group task yet</Text>
               <Text style={styles.emptyText}>Great job! Check back later for group activities.</Text>
-            </View>
+            </Card>
           )}
 
         </View>

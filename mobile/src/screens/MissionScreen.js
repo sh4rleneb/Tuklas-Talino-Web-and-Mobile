@@ -83,6 +83,15 @@ export default function MissionScreen({ navigation }) {
     try {
       const dashboard = await api('/dashboard');
 
+      console.log('[DASHBOARD]', dashboard);
+      console.log('[MISSIONS]', dashboard?.missions);
+
+
+      console.log(
+        '[MISSION SCREEN]',
+        JSON.stringify(dashboard.missions, null, 2)
+      );
+
       const backendMissions = dashboard.missions || [];
 
       const merged = MISSION_GAMES.map((mission) => {
@@ -241,6 +250,7 @@ export default function MissionScreen({ navigation }) {
               onPress={() =>
                 navigation.navigate('MissionGame', {
                   missionId: mission.id,
+                  gradeLevel: student?.gradeLevel,
                 })
               }
             >
