@@ -145,13 +145,15 @@ export default function MissionGameScreen({ navigation, route }) {
             </View>
           ) : null}
 
-          <Text style={styles.achievementTitle}>
-            {achievement.title}
-          </Text>
+          <View style={styles.rewardCard}>
+            <Text style={styles.achievementTitle}>
+              {achievement.title}
+            </Text>
 
-          <Text style={styles.achievementMessage}>
-            {achievement.message}
-          </Text>
+            <Text style={styles.achievementMessage}>
+              {achievement.message}
+            </Text>
+          </View>
 
           <TouchableOpacity
             style={styles.primaryButton}
@@ -286,6 +288,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   primaryButton: {
+    width: '100%',
     backgroundColor: '#22C55E',
     borderRadius: 18,
     paddingVertical: 16,
@@ -337,7 +340,24 @@ const styles = StyleSheet.create({
   achievementMessage: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 20,
+    color: '#64748B',
+    lineHeight: 24,
+  },
+
+  rewardCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 22,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    alignItems: 'center',
   },
   badgePopup: {
     flexDirection: 'row',

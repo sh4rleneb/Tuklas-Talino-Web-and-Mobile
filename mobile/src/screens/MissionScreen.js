@@ -183,11 +183,26 @@ export default function MissionScreen({ navigation }) {
         <Text style={styles.error}>{error}</Text>
       ) : (
         missions.map((mission) => (
-          <Card key={mission.id} style={styles.card}>
-            <View style={styles.row}>
-              <Text style={{ fontSize: 32 }}>
-                {mission.icon}
-              </Text>
+          <Card
+            key={mission.id}
+            style={[
+              styles.card,
+              mission.state === 'claimed'
+                ? styles.cardCompleted
+                : mission.state === 'ready_to_claim'
+                ? styles.cardReady
+                : mission.state === 'locked'
+                ? styles.cardLocked
+                : styles.cardProgress,
+            ]}
+          >
+            <View style={styles.cardHeader}>
+
+              <View style={styles.iconBox}>
+                <Text style={styles.icon}>
+                  {mission.icon}
+                </Text>
+              </View>
 
               <View style={styles.cardText}>
                 <Text style={styles.missionTitle}>
@@ -195,9 +210,16 @@ export default function MissionScreen({ navigation }) {
                 </Text>
 
                 <Text style={styles.missionMeta}>
-                  {mission.module} • {mission.xp} XP
+                  {mission.module} • +{mission.xp} XP
                 </Text>
               </View>
+
+              <View style={styles.statusPill(mission.state)}>
+                <Text style={styles.statusText}>
+                  {statusLabel(mission.state)}
+                </Text>
+              </View>
+
             </View>
 
             <Text style={styles.description}>
@@ -225,9 +247,10 @@ export default function MissionScreen({ navigation }) {
               <Text style={styles.buttonText}>
                 {mission.state === 'claimed'
                   ? '✓ Completed'
-                  : 'Start Mission'}
+                  : '▶ Play'}
               </Text>
             </TouchableOpacity>
+
           </Card>
         ))
       )}
@@ -270,6 +293,40 @@ const styles = StyleSheet.create({
   studentXp: { color: colors.ink, fontWeight: '800', fontSize: 12 },
   card: { marginBottom: 16 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+
+  cardHeader: {
+    flexDirection:'row',
+    alignItems:'center',
+    marginBottom:14,
+  },
+  iconBox:{
+    width:62,
+    height:62,
+    borderRadius:18,
+    backgroundColor:'#F8FAFC',
+    alignItems:'center',
+    justifyContent:'center',
+    marginRight:14,
+  },
+  icon:{
+    fontSize:34,
+  },
+  cardCompleted:{
+    borderWidth:2,
+    borderColor:'#86EFAC',
+  },
+  cardReady:{
+    borderWidth:2,
+    borderColor:'#60A5FA',
+  },
+  cardProgress:{
+    borderWidth:2,
+    borderColor:'#E5E7EB',
+  },
+  cardLocked:{
+    opacity:.75,
+  },
+
   cardText: { flex: 1, paddingRight: 10 },
   missionTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
   missionMeta: { color: colors.muted, marginTop: 4 },
