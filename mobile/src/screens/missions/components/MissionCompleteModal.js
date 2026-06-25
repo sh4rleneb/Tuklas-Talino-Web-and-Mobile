@@ -9,6 +9,10 @@ import {
 export default function MissionCompleteModal({
   title,
   xp,
+  stars,
+  attempts,
+  achievement,
+  badge,
   onReplay,
   onBack,
 }) {
@@ -23,6 +27,48 @@ export default function MissionCompleteModal({
       <Text style={styles.xp}>
         +{xp} XP
       </Text>
+
+      {stars ? (
+        <Text style={styles.stars}>
+          {stars}
+        </Text>
+      ) : null}
+
+      {typeof attempts === 'number' ? (
+        <Text style={styles.attempts}>
+          Attempts: {attempts}
+        </Text>
+      ) : null}
+
+      {badge ? (
+        <View style={styles.badgeCard}>
+          <Text style={styles.badgeIcon}>
+            {badge.icon || '🏅'}
+          </Text>
+
+          <View style={{ flex: 1 }}>
+            <Text style={styles.badgeLabel}>
+              Badge Unlocked!
+            </Text>
+
+            <Text style={styles.badgeName}>
+              {badge.name || 'New Achievement'}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {achievement ? (
+        <View style={styles.achievementCard}>
+          <Text style={styles.achievementTitle}>
+            {achievement.title}
+          </Text>
+
+          <Text style={styles.achievementMessage}>
+            {achievement.message}
+          </Text>
+        </View>
+      ) : null}
 
       <TouchableOpacity
         style={styles.button}
@@ -69,6 +115,68 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#22C55E',
     marginBottom: 24,
+  },
+
+  stars: {
+    fontSize: 30,
+    marginBottom: 8,
+  },
+
+  attempts: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 18,
+  },
+
+  badgeCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FDE68A',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 18,
+  },
+
+  badgeIcon: {
+    fontSize: 34,
+    marginRight: 12,
+  },
+
+  badgeLabel: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#D97706',
+  },
+
+  badgeName: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#92400E',
+  },
+
+  achievementCard: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 22,
+    alignItems: 'center',
+  },
+
+  achievementTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+
+  achievementMessage: {
+    fontSize: 15,
+    textAlign: 'center',
+    color: '#64748B',
+    lineHeight: 22,
   },
 
   button: {

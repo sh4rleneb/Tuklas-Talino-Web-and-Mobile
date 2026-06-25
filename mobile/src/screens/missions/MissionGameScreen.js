@@ -4,7 +4,6 @@ import {
   ScrollView,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Alert,
 } from 'react-native';
@@ -12,6 +11,8 @@ import {
 import { api } from '../../api/client';
 
 import MissionHeader from './components/MissionHeader';
+import MissionCompleteModal from './components/MissionCompleteModal';
+import WordMatchGame from './games/WordMatchGame';
 
 
 const DEMOS = {
@@ -104,84 +105,65 @@ export default function MissionGameScreen({ navigation, route }) {
           message: 'Persistence leads to mastery.',
         };
 
+  const handleSubmit = async () => {
+    if (selected === mission.correct) {
+      try {
+        setSubmitting(true);
+
+        const data = await api(`/missions/${missionId}/complete`, {
+          method: 'POST',
+          body: {
+            challengeId: `attempt-${attempts}`,
+            challengeTitle: `${stars} ${attempts} attempts`,
+          },
+        });
+
+        if (Array.isArray(data?.newBadges) && data.newBadges.length) {
+          setBadgePopup(data.newBadges[0]);
+
+          setTimeout(() => {
+            setBadgePopup(null);
+          }, 5500);
+        }
+
+        setCompleted(true);
+      } catch (err) {
+        Alert.alert(
+          'Mission Error',
+          err.message || 'Unable to save mission progress.'
+        );
+      } finally {
+        setSubmitting(false);
+      }
+
+      return;
+    }
+
+    setAttempts((a) => a + 1);
+
+    Alert.alert(
+      'Incorrect Answer',
+      `❌ Mali ang sagot.\n\n✅ Tamang sagot: ${mission.correct}`
+    );
+  };
+
   if (completed) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.hero}>
-          <View style={styles.completionCard}>
-          <Text style={styles.eyebrow}>MISSION COMPLETE</Text>
-
-          <Text style={styles.resultTitle}>
-            🎉 Mission Complete!
-          </Text>
-
-          <Text style={styles.resultScore}>
-            +{mission.xp} XP
-          </Text>
-
-          <Text style={styles.starRating}>
-            {stars}
-          </Text>
-
-          <Text style={styles.attemptText}>
-            Attempts: {attempts}
-          </Text>
-
-          {badgePopup ? (
-            <View style={styles.badgePopup}>
-              <Text style={styles.badgeIcon}>
-                {badgePopup?.icon || '🏅'}
-              </Text>
-
-              <View style={{ flex: 1 }}>
-                <Text style={styles.badgeLabel}>
-                  Badge Unlocked!
-                </Text>
-
-                <Text style={styles.badgeName}>
-                  {badgePopup?.name || 'New Achievement'}
-                </Text>
-
-                <Text style={styles.badgeDesc}>
-                  Achievement Earned ⭐
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
-          <View style={styles.rewardCard}>
-            <Text style={styles.achievementTitle}>
-              {achievement.title}
-            </Text>
-
-            <Text style={styles.achievementMessage}>
-              {achievement.message}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => {
-              setSelected(null);
-              setCompleted(false);
-              setAttempts(1);
-            }}
-          >
-            <Text style={styles.primaryButtonText}>
-              🔄 Play Again
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.secondaryButtonText}>
-              ← Back to Missions
-            </Text>
-          </TouchableOpacity>
-          </View>
-        </View>
+        <MissionCompleteModal
+          title="🎉 Mission Complete!"
+          xp={mission.xp}
+          stars={stars}
+          attempts={attempts}
+          achievement={achievement}
+          badge={badgePopup}
+          onReplay={() => {
+            setSelected(null);
+            setCompleted(false);
+            setAttempts(1);
+          }}
+          onBack={() => navigation.goBack()}
+        />
       </SafeAreaView>
     );
   }
@@ -196,81 +178,13 @@ export default function MissionGameScreen({ navigation, route }) {
           subtitle="Complete the activity and earn XP."
         />
 
-        <Text style={styles.question}>
-          {mission.prompt}
-        </Text>
-
-        {mission.options.map((option) => {
-          const active = selected === option;
-
-          return (
-            <TouchableOpacity
-              key={option}
-              style={[
-                styles.option,
-                active && styles.optionSelected,
-              ]}
-              onPress={() => setSelected(option)}
-            >
-              <Text style={styles.optionText}>
-                {option}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-
-        <TouchableOpacity
-          style={[
-            styles.primaryButton,
-            !selected && styles.buttonDisabled,
-          ]}
-          disabled={!selected || submitting}
-          onPress={async () => {
-            if (selected === mission.correct) {
-              try {
-                setSubmitting(true);
-
-                const data = await api(`/missions/${missionId}/complete`, {
-                  method: 'POST',
-                  body: {
-                    challengeId: `attempt-${attempts}`,
-                    challengeTitle: `${stars} ${attempts} attempts`,
-                  },
-                });
-
-                if (Array.isArray(data?.newBadges) && data.newBadges.length) {
-                  setBadgePopup(data.newBadges[0]);
-
-                  setTimeout(() => {
-                    setBadgePopup(null);
-                  }, 5500);
-                }
-
-                setCompleted(true);
-              } catch (err) {
-                Alert.alert(
-                  'Mission Error',
-                  err.message || 'Unable to save mission progress.'
-                );
-              } finally {
-                setSubmitting(false);
-              }
-
-              return;
-            }
-
-            setAttempts((a) => a + 1);
-
-            Alert.alert(
-              'Incorrect Answer',
-              `❌ Mali ang sagot.\n\n✅ Tamang sagot: ${mission.correct}`
-            );
-          }}
-        >
-          <Text style={styles.primaryButtonText}>
-            Submit
-          </Text>
-        </TouchableOpacity>
+        <WordMatchGame
+          mission={mission}
+          selected={selected}
+          submitting={submitting}
+          onSelect={setSelected}
+          onSubmit={handleSubmit}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -280,37 +194,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
   content: { padding: 20 },
   title: { fontSize: 24, fontWeight: '900', marginBottom: 16 },
-  question: { fontSize: 20, fontWeight: '700', marginBottom: 20 },
-  option: {
-    borderWidth: 2,
-    borderColor: '#CBD5E1',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-  },
-  optionSelected: {
-    borderColor: '#22C55E',
-    backgroundColor: '#DCFCE7',
-  },
-  optionText: {
-    fontSize: 16,
-  },
-  primaryButton: {
-    width: '100%',
-    backgroundColor: '#22C55E',
-    borderRadius: 18,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  primaryButtonText: {
-    color: '#FFF',
-    fontWeight: '900',
-  },
-  buttonDisabled: {
-    backgroundColor: '#CBD5E1',
-  },
-
   secondaryButton: {
     width: '100%',
     marginTop: 14,
@@ -326,107 +209,5 @@ const styles = StyleSheet.create({
     color: '#22C55E',
     fontWeight: '900',
     fontSize: 16,
-  },
-  hero: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 22,
-    paddingVertical: 32,
-    backgroundColor: '#F6FFF5',
-  },
-
-  completionCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    paddingVertical: 30,
-    paddingHorizontal: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
-    alignItems: 'center',
-  },
-  eyebrow: {
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-  resultTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-  resultScore: {
-    fontSize: 48,
-    fontWeight: '900',
-    marginBottom: 20,
-  },
-  starRating: {
-    fontSize: 36,
-    marginBottom: 10,
-  },
-  attemptText: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 20,
-  },
-  achievementTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  achievementMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#64748B',
-    lineHeight: 24,
-  },
-
-  rewardCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingVertical: 24,
-    paddingHorizontal: 22,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    alignItems: 'center',
-  },
-  badgePopup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 14,
-    borderWidth: 2,
-    borderColor: '#FDE68A',
-    marginBottom: 20,
-  },
-  badgeIcon: {
-    fontSize: 36,
-    marginRight: 12,
-  },
-  badgeLabel: {
-    color: '#D97706',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  badgeName: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#92400E',
-  },
-  badgeDesc: {
-    fontSize: 13,
-    color: '#78716C',
   },
 });
