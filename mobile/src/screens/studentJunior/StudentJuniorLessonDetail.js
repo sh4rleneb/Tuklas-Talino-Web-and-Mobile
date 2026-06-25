@@ -249,40 +249,9 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
     };
   };
 
-  const buildWordPowerUps = activity => {
-    const rawSuggestions = activity?.writingTask?.rubricJson?.choices
-      || activity?.writingTask?.rubricJson?.wordBank
-      || activity?.dataJson?.choices
-      || activity?.dataJson?.wordBank
-      || [];
-
-    const normalized = rawSuggestions
-      .map(item => String(item?.text || item?.word || item || '').trim())
-      .filter(Boolean);
-
-    if (normalized.length) return normalized.slice(0, 8);
-
-    const text = [
-      activity?.writingTask?.prompt,
-      activity?.prompt,
-      activity?.instructions,
-      lesson?.title,
-      lesson?.passage,
-    ].filter(Boolean).join(' ');
-
-    const blocked = new Set([
-      'ang', 'ng', 'sa', 'at', 'ay', 'mga', 'na', 'ka', 'ko', 'mo', 'niya',
-      'ito', 'iyon', 'kung', 'para', 'with', 'your', 'answer', 'here',
-      'type', 'write', 'sumulat', 'isulat', 'gamitin', 'maikling', 'sagot',
-    ]);
-
-    const words = String(text)
-      .replace(/[^A-Za-zÀ-ÿñÑ\s]/g, ' ')
-      .split(/\s+/)
-      .map(word => word.trim())
-      .filter(word => word.length > 2 && !blocked.has(word.toLowerCase()));
-
-    return Array.from(new Set(words)).slice(0, 8);
+  const handlePowerUpSelection = (nextWords) => {
+    setSelectedWords(nextWords);
+    setWritingAnswer(nextWords.join(' '));
   };
 
   const renderGameHeader = activity => {
@@ -355,253 +324,6 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
               <Text style={{ color: '#15803D', fontWeight: '900' }}>{item}</Text>
             </View>
           ))}
-        </View>
-      </View>
-    );
-  };
-
-  const renderPowerUpTray = activity => {
-    if (!littleLearnerGame || !activity) return null;
-
-    const words = buildWordPowerUps(activity);
-    if (!words.length) return null;
-
-    return (
-      <View style={{
-        backgroundColor: '#FFFBEB',
-        borderColor: '#FDE68A',
-        borderWidth: 2,
-        borderRadius: 24,
-        padding: 16,
-        marginBottom: 18,
-      }}>
-        <Text style={{ color: '#92400E', fontSize: 18, fontWeight: '900', marginBottom: 8 }}>
-          ⭐ Word Power-Ups
-        </Text>
-        <Text style={{ color: '#475569', fontSize: 15, lineHeight: 22, marginBottom: 12 }}>
-          Tap a word to drop it into your answer.
-        </Text>
-        
-<View
-  style={{
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 14,
-    borderWidth: 2,
-    borderColor: '#FDE68A',
-  }}
->
-  <Text
-    style={{
-      fontSize: 18,
-      fontWeight: '900',
-      color: '#92400E',
-      marginBottom: 6,
-    }}
-  >
-    🎯 Mission Progress
-  </Text>
-
-  <Text
-    style={{
-      color: '#475569',
-      marginBottom: 10,
-    }}
-  >
-    Collect 3 words to build your answer.
-  </Text>
-
-  <View
-    style={{
-      height: 14,
-      backgroundColor: '#FEF3C7',
-      borderRadius: 999,
-      overflow: 'hidden',
-    }}
-  >
-    <View
-      style={{
-        height: '100%',
-        width: `${Math.min(100, (selectedWords.length / 3) * 100)}%`,
-        backgroundColor: '#22C55E',
-      }}
-    />
-  </View>
-
-  <Text
-    style={{
-      textAlign: 'center',
-      marginTop: 8,
-      fontWeight: '900',
-      color: '#15803D',
-    }}
-  >
-    ⭐ {selectedWords.length}/3 Words Collected
-  </Text>
-</View>
-
-<View style={styles.choiceRow}>
-          {words.map((word, index) => (
-            <TouchableOpacity
-              key={`${word}-${index}`}
-              style={[
-                styles.choiceChip,
-                selectedWords.includes(word) && {
-                  backgroundColor: '#22C55E',
-                  borderColor: '#15803D',
-                },
-              ]}
-              onPress={() => {
-                setSelectedWords(current => {
-                  const exists = current.includes(word);
-
-                  const next = exists
-                    ? current.filter(w => w !== word)
-                    : [...current, word];
-
-                  setWritingAnswer(next.join(' '));
-
-                  return next;
-                });
-              }}
-            >
-              <Text
-                style={[
-                  styles.choiceText,
-                  selectedWords.includes(word) && {
-                    color: '#FFFFFF',
-                  },
-                ]}
-              >
-                ✨ {word}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
-  const getActivityGuide = activity => {
-    const type = String(
-      activity?.type ||
-      activity?.activityType ||
-      activity?.category ||
-      activity?.kind ||
-      ''
-    ).toLowerCase();
-
-    const hasQuestionsWithOptions =
-      Array.isArray(activity?.questions) &&
-      activity.questions.some(question =>
-        Array.isArray(question?.options) ||
-        Array.isArray(question?.choices)
-      );
-
-    const hasChoices =
-      Array.isArray(activity?.choices) ||
-      Array.isArray(activity?.options) ||
-      Array.isArray(activity?.answers) ||
-      hasQuestionsWithOptions;
-
-    const hasAudio =
-      Boolean(activity?.audioUrl) ||
-      Boolean(activity?.audio) ||
-      Boolean(activity?.soundUrl);
-
-    if (
-      hasAudio ||
-      type.includes('listen') ||
-      type.includes('audio') ||
-      type.includes('hearing')
-    ) {
-      return {
-        icon: '👂',
-        title: 'Makinig muna',
-        body: 'Pindutin ang audio kung mayroon, pakinggan nang mabuti, pagkatapos sagutin ang gawain.',
-        steps: ['Makinig', 'Sagutin', 'Continue'],
-      };
-    }
-
-    if (
-      type.includes('write') ||
-      type.includes('writing') ||
-      type.includes('essay') ||
-      type.includes('text')
-    ) {
-      return {
-        icon: '✍️',
-        title: 'Isulat ang maikling sagot',
-        body: 'Gamitin ang kahon sa ibaba. Lalabas ang green button kapag may naisulat ka na.',
-        steps: ['Basahin', 'Magsulat', 'Save'],
-      };
-    }
-
-    if (
-      type.includes('speak') ||
-      type.includes('record') ||
-      type.includes('voice') ||
-      type.includes('oral')
-    ) {
-      return {
-        icon: '🎙️',
-        title: 'I-record ang iyong sagot',
-        body: 'Basahin ang speech target, pindutin ang record, magsalita nang malinaw, at i-save ang sagot.',
-        steps: ['Target', 'Record', 'Save'],
-      };
-    }
-
-    if (
-      type === 'mcq' ||
-      type.includes('mcq') ||
-      hasChoices ||
-      type.includes('quiz') ||
-      type.includes('choice') ||
-      type.includes('question') ||
-      type.includes('multiple')
-    ) {
-      return {
-        icon: '👆',
-        title: littleLearnerGame ? 'Tap the Answer Game' : 'Pumili ng tamang sagot',
-        body: littleLearnerGame
-          ? 'Tap the correct answer tile to move closer to the finish flag.'
-          : 'I-tap ang isang kahon. Kapag napili mo na ang sagot, maaari ka nang magpatuloy.',
-        steps: littleLearnerGame ? ['Read', 'Tap', 'Win'] : ['Basahin', 'Piliin', 'Continue'],
-      };
-    }
-
-    return {
-      icon: '🧭',
-      title: 'Sundin ang gawain',
-      body: 'Basahin muna ang panuto, gawin ang activity, pagkatapos pindutin ang button para magpatuloy.',
-      steps: ['Basahin', 'Gawin', 'Continue'],
-    };
-  };
-
-  const renderActivityGuide = activity => {
-    if (!activity) return null;
-
-    const guide = getActivityGuide(activity);
-
-    return (
-      <View style={styles.guideCard}>
-        <View style={styles.guideIconBubble}>
-          <Text style={styles.guideIcon}>{guide.icon}</Text>
-        </View>
-
-        <View style={styles.guideContent}>
-          <Text style={styles.guideTitle}>{guide.title}</Text>
-          <Text style={styles.guideBody}>{guide.body}</Text>
-
-          <View style={styles.guideSteps}>
-            {guide.steps.map((item, index) => (
-              <View key={`${item}-${index}`} style={styles.guideStepPill}>
-                <Text style={styles.guideStepNumber}>{index + 1}</Text>
-                <Text style={styles.guideStepText}>{item}</Text>
-              </View>
-            ))}
-          </View>
         </View>
       </View>
     );
@@ -889,7 +611,10 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
       return (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🧠 {currentActivity.title}</Text>
-          {renderActivityGuide(currentActivity)}
+          <ActivityGuideCard
+            activity={currentActivity}
+            littleLearnerGame={littleLearnerGame}
+          />
           {<ActivityVisualCard
             activity={currentActivity}
             lesson={lesson}
@@ -971,12 +696,22 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
               ? 'Your mission: build a short answer and claim the finish star.'
               : currentActivity.writingTask?.prompt || currentActivity.instructions}
           </Text>
-          {littleLearnerGame ? null : renderActivityGuide(currentActivity)}
+          {littleLearnerGame ? null : (
+          <ActivityGuideCard
+            activity={currentActivity}
+            littleLearnerGame={littleLearnerGame}
+          />
+        )}
           {<ActivityVisualCard
             activity={currentActivity}
             lesson={lesson}
           />}
-          {littleLearnerGame ? renderPowerUpTray(currentActivity) : null}
+          <PowerUpTray
+            visible={littleLearnerGame}
+            activity={currentActivity}
+            selectedWords={selectedWords}
+            onSelectionChange={handlePowerUpSelection}
+          />
           {!littleLearnerGame && suggestions.length ? (
             <View style={styles.choiceRow}>
               {suggestions.map((suggestion, index) => {
@@ -1048,7 +783,12 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
             {littleLearnerGame ? `${game.icon} ${game.title}` : `🎤 ${currentActivity.title}`}
           </Text>
           <Text style={styles.body}>{currentActivity.speechTask?.targetText || currentActivity.instructions}</Text>
-          {littleLearnerGame ? null : renderActivityGuide(currentActivity)}
+          {littleLearnerGame ? null : (
+          <ActivityGuideCard
+            activity={currentActivity}
+            littleLearnerGame={littleLearnerGame}
+          />
+        )}
           {<ActivityVisualCard
             activity={currentActivity}
             lesson={lesson}
@@ -1155,7 +895,10 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{currentActivity.title || 'Lesson Activity'}</Text>
         <Text style={styles.body}>{currentActivity.instructions || currentActivity.dataJson?.content || 'Review this activity before continuing.'}</Text>
-        {renderActivityGuide(currentActivity)}
+        <ActivityGuideCard
+            activity={currentActivity}
+            littleLearnerGame={littleLearnerGame}
+          />
         {littleLearnerGame && vocabulary.length > 0 ? (
           <View>
             <Text
@@ -1929,79 +1672,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 23,
     color: '#374151',
-  },
-
-  guideCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 20,
-    padding: 14,
-    marginTop: 12,
-    marginBottom: 18,
-  },
-  guideIconBubble: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#DCFCE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  guideIcon: {
-    fontSize: 24,
-  },
-  guideContent: {
-    flex: 1,
-  },
-  guideTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#166534',
-    marginBottom: 4,
-  },
-  guideBody: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#475569',
-  },
-  guideSteps: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 10,
-  },
-  guideStepPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  guideStepNumber: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#16A34A',
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginRight: 6,
-  },
-  guideStepText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#166534',
   },
 
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
