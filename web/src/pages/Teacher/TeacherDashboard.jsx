@@ -4,6 +4,8 @@ import { SUBJECTS } from '../../constants/studentConstants';
 import { asArray, fmtDate, lessonAssessmentProfile } from '../../utils/studentHelpers';
 import { TeacherRedesignStyles } from '../../components/styles/StyleBlocks';
 import TeacherQuizPerformanceMonitor from '../../components/teacher/TeacherQuizPerformanceMonitor';
+import TeacherStudentLessonPreview from '../../components/teacher/TeacherStudentLessonPreview';
+import TeacherQuizTextImporter from '../../components/teacher/TeacherQuizTextImporter';
 
 
 // Local quiz helpers used by TeacherAssessmentCenter.
@@ -159,6 +161,7 @@ export default function TeacherDashboard({
   setGroupLeader,
   deleteGroup,
   approveGroupTaskCompletion,
+  rejectGroupTaskCompletion,
   createLesson,
   deleteLesson,
   exportStudentsCSV,
@@ -177,7 +180,7 @@ export default function TeacherDashboard({
   const stats = data.stats || {};
   const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
   const pendingGroupChecks = data.pendingGroupChecks || { summary: {}, rows: [] };
-  const pendingGroupRows = asArray(pendingGroupChecks.rows);
+  const pendingGroupRows = asArray(pendingGroupChecks.rows).filter(row => Number(row.gradeLevel || 0) >= 3);
   const groupProgressRows = buildGroupProgressRows(groups);
   const teacherName = user?.displayName || 'Teacher 1';
 
@@ -225,25 +228,52 @@ export default function TeacherDashboard({
     for (const group of groupList || []) {
       const members = group.members || group.Members || [];
       const tasks = group.tasks || group.Tasks || [];
+      const memberGradeLevels = members
+        .map(member => Number((member.Student || member.student || member)?.gradeLevel || 0))
+        .filter(Boolean);
+
+      if (memberGradeLevels.length && memberGradeLevels.every(level => level <= 2)) {
+        continue;
+      }
 
       for (const task of tasks) {
         const completions = task.completions || task.Completions || [];
-        const submittedStudentIds = new Set(completions.map(item => Number(item.studentId)));
 
-        const approved = completions.filter(item => item.verificationStatus === 'approved').length;
-        const pending = completions.filter(item => item.verificationStatus === 'pending').length;
-        const returned = completions.filter(item => item.verificationStatus === 'returned').length;
-        const notSubmitted = Math.max(0, members.length - submittedStudentIds.size);
+        const approvedCompletion = completions.find(item => item.verificationStatus === 'approved');
+        const pendingCompletion = completions.find(item => item.verificationStatus === 'pending');
+        const returnedCompletion = completions.find(item => item.verificationStatus === 'returned');
+        const groupCompletion = approvedCompletion || pendingCompletion || returnedCompletion || null;
+        const groupStatus = approvedCompletion
+          ? 'approved'
+          : pendingCompletion
+            ? 'pending'
+            : returnedCompletion
+              ? 'returned'
+              : 'not_submitted';
+
+        const submittedById = groupCompletion?.submittedByStudentId || groupCompletion?.studentId || null;
+        const submittedByMember = members.find(member => {
+          const student = member.Student || member.student || member;
+          return Number(student?.id) === Number(submittedById);
+        });
+        const submittedByStudent = submittedByMember?.Student || submittedByMember?.student || submittedByMember;
+        const submittedByName = submittedByStudent?.name || groupCompletion?.studentName || '';
+
+        const filePath = groupCompletion?.filePath || '';
+        const fileUrl = groupCompletion?.fileUrl || (
+          filePath
+            ? `${typeof window !== 'undefined' ? window.location.origin : ''}${filePath}`
+            : ''
+        );
 
         const details = members.map(member => {
           const student = member.Student || member.student || member;
-          const completion = completions.find(item => Number(item.studentId) === Number(student.id));
-          const status = completion?.verificationStatus || 'not_submitted';
+          const role = member.groupRole || member.role || student?.groupRole || 'member';
 
           return {
-            studentId: student.id,
-            studentName: student.name || 'Student',
-            status
+            studentId: student?.id,
+            studentName: student?.name || 'Student',
+            role
           };
         });
 
@@ -254,11 +284,12 @@ export default function TeacherDashboard({
           taskId: task.id,
           taskTitle: task.title || 'Group task',
           xpReward: task.xpReward || 0,
-          approved,
-          pending,
-          returned,
-          notSubmitted,
-          memberCount: members.length,
+          status: groupStatus,
+          submittedByName,
+          submittedAt: groupCompletion?.submittedAt || groupCompletion?.createdAt || null,
+          teacherFeedback: groupCompletion?.teacherFeedback || '',
+          fileName: groupCompletion?.fileName || '',
+          fileUrl,
           details
         });
       }
@@ -269,8 +300,8 @@ export default function TeacherDashboard({
 
   function groupProgressStatusLabel(status) {
     if (status === 'approved') return 'Approved';
-    if (status === 'pending') return 'Pending Check';
-    if (status === 'returned') return 'Returned';
+    if (status === 'pending') return 'Pending Review';
+    if (status === 'returned') return 'Rejected';
     return 'Not Submitted';
   }
 
@@ -1112,45 +1143,125 @@ export default function TeacherDashboard({
                 <div className="teacher-groups-grid">
                   {pendingGroupRows.map(row => (
                     <div className="teacher-group-item" key={`${row.groupTaskId}-${row.studentId}`}>
-                      <div className="teacher-group-item-top">
-                        <div>
-                          <strong>{row.studentName}</strong>
-                          <p>{row.groupName} • {row.taskTitle}</p>
-                          <p className="g46-ref-muted">
-                            Grade {row.gradeLevel || '-'} {row.section ? `• ${row.section}` : ''} • +{row.taskXp || 0} XP
-                          </p>
-                        </div>
-                        <span className="lms-mini-pill">Waiting</span>
-                      </div>
+                      {(() => {
+                        const feedbackInputId = `group-review-feedback-${row.groupTaskId}-${row.studentId}`;
+                        const submittedDate = row.submittedAt
+                          ? new Date(row.submittedAt).toLocaleString()
+                          : 'No submission date';
 
-                      <div className="teacher-group-submission-evidence">
-                        <div>
-                          <span>Submitted By / Role</span>
-                          <strong>{row.studentName || 'Leader'} • {row.studentRole || 'Leader'}</strong>
-                        </div>
-                        <div>
-                          <span>Submitted File</span>
-                          <strong>{row.fileName || 'No file attached'}</strong>
-                        </div>
-                        {row.fileUrl && (
-                          <a
-                            className="teacher-file-link"
-                            href={row.fileUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Open File
-                          </a>
-                        )}
-                      </div>
+                        return (
+                          <>
+                            <div className="teacher-group-item-top">
+                              <div>
+                                <strong>{row.taskTitle || 'Group Task'}</strong>
+                                <p>{row.groupName || 'Group'} • +{row.taskXp || 0} XP</p>
+                                <p className="g46-ref-muted">
+                                  Grade {row.gradeLevel || '-'} {row.section ? `• ${row.section}` : ''} • Submitted by {row.studentName || 'Leader'} as {row.studentRole || 'Leader'}
+                                </p>
+                              </div>
+                              <span className="lms-mini-pill">Pending Review</span>
+                            </div>
 
-                      <button
-                        type="button"
-                        className="lms-main-action full"
-                        onClick={() => approveGroupTaskCompletion(row)}
-                      >
-                        Approve
-                      </button>
+                            <div className="teacher-group-submission-evidence">
+                              <div>
+                                <span>Task Title</span>
+                                <strong>{row.taskTitle || 'Group Task'}</strong>
+                              </div>
+
+                              <div>
+                                <span>Group Name</span>
+                                <strong>{row.groupName || 'Group'}</strong>
+                              </div>
+
+                              <div>
+                                <span>Submitted Date</span>
+                                <strong>{submittedDate}</strong>
+                              </div>
+
+                              <div>
+                                <span>Current Status</span>
+                                <strong>{groupProgressStatusLabel(row.verificationStatus || 'pending')}</strong>
+                              </div>
+
+                              <div>
+                                <span>Submitted File</span>
+                                <strong>{row.fileName || 'No file attached'}</strong>
+                              </div>
+
+                              {row.fileUrl ? (
+                                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  <a
+                                    className="teacher-file-link"
+                                    href={row.fileUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    View File
+                                  </a>
+
+                                  <a
+                                    className="teacher-file-link"
+                                    href={row.fileUrl}
+                                    download={row.fileName || true}
+                                  >
+                                    Download File
+                                  </a>
+                                </div>
+                              ) : (
+                                <div className="g46-ref-muted">No file or link attached.</div>
+                              )}
+                            </div>
+
+                            <label className="g46-ref-muted" htmlFor={feedbackInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
+                              Teacher Remarks
+                              <textarea
+                                id={feedbackInputId}
+                                className="input-field"
+                                placeholder="Write feedback for the group. Required if rejecting. Optional if approving."
+                                rows="3"
+                                style={{
+                                  width: '100%',
+                                  minHeight: 92,
+                                  resize: 'vertical',
+                                  fontSize: 15,
+                                  lineHeight: 1.45,
+                                  padding: '13px 15px'
+                                }}
+                              />
+                            </label>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+                              <button
+                                type="button"
+                                className="lms-main-action full"
+                                onClick={() => approveGroupTaskCompletion(
+                                  row,
+                                  document.getElementById(feedbackInputId)?.value || ''
+                                )}
+                              >
+                                Approve
+                              </button>
+
+                              <button
+                                type="button"
+                                className="lms-action-secondary"
+                                style={{
+                                  borderColor: '#fca5a5',
+                                  background: '#fef2f2',
+                                  color: '#b91c1c',
+                                  fontWeight: 950
+                                }}
+                                onClick={() => rejectGroupTaskCompletion(
+                                  row,
+                                  document.getElementById(feedbackInputId)?.value || ''
+                                )}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -1166,8 +1277,8 @@ export default function TeacherDashboard({
             <div className="teacher-tool-box teacher-group-progress-container">
               <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
                 <div>
-                  <div className="lms-section-label">Group Task Progress</div>
-                  <h3>Submitted, Approved, and Pending Work</h3>
+                  <div className="lms-section-label">Group Submission Summary</div>
+                  <h3>Track each group’s submitted task and review status.</h3>
                 </div>
                 <span className="lms-mini-pill">📌 {groupProgressRows.length} task{groupProgressRows.length === 1 ? '' : 's'}</span>
               </div>
@@ -1176,6 +1287,10 @@ export default function TeacherDashboard({
                 <div className="teacher-group-progress-list">
                   {groupProgressRows.map(row => {
                     const isOpen = Boolean(openGroupProgress[row.key]);
+                    const submittedDate = row.submittedAt
+                      ? new Date(row.submittedAt).toLocaleString()
+                      : '';
+                    const statusLabel = groupProgressStatusLabel(row.status);
 
                     return (
                       <div className="teacher-group-progress-card" key={row.key}>
@@ -1185,38 +1300,79 @@ export default function TeacherDashboard({
                             <p>{row.taskTitle} • +{row.xpReward} XP</p>
                           </div>
 
-                          <button
-                            type="button"
-                            className="btn btn-outline btn-sm"
-                            onClick={() => toggleGroupProgress(row.key)}
-                          >
-                            {isOpen ? 'Hide Details' : 'View Details'}
-                          </button>
+                          <span className="lms-mini-pill">{statusLabel}</span>
                         </div>
 
-                        <div className="teacher-group-progress-stats">
-                          <div className="teacher-group-progress-stat">
-                            <span>Approved</span>
-                            <strong>{row.approved}</strong>
+                        <div
+                          className="teacher-group-submission-evidence"
+                          style={{ marginTop: 14 }}
+                        >
+                          <div>
+                            <span>Group Name</span>
+                            <strong>{row.groupName || 'Group'}</strong>
                           </div>
 
-                          <div className="teacher-group-progress-stat">
-                            <span>Pending</span>
-                            <strong>{row.pending}</strong>
+                          <div>
+                            <span>Task Title</span>
+                            <strong>{row.taskTitle || 'Group Task'}</strong>
                           </div>
 
-                          <div className="teacher-group-progress-stat">
-                            <span>Not Submitted</span>
-                            <strong>{row.notSubmitted}</strong>
+                          <div>
+                            <span>Current Status</span>
+                            <strong>{statusLabel}</strong>
                           </div>
+
+                          <div>
+                            <span>Submitted By</span>
+                            <strong>{row.submittedByName || 'No submission yet'}</strong>
+                          </div>
+
+                          <div>
+                            <span>Submitted Date</span>
+                            <strong>{submittedDate || 'No submission yet'}</strong>
+                          </div>
+
+                          {row.teacherFeedback && (
+                            <div>
+                              <span>Teacher Remarks</span>
+                              <strong>{row.teacherFeedback}</strong>
+                            </div>
+                          )}
+
+                          <div>
+                            <span>Submitted File</span>
+                            <strong>{row.fileName || 'No file attached'}</strong>
+                          </div>
+
+                          {row.fileUrl && (
+                            <a
+                              className="teacher-file-link"
+                              href={row.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              View File
+                            </a>
+                          )}
                         </div>
+
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          style={{ marginTop: 14 }}
+                          onClick={() => toggleGroupProgress(row.key)}
+                        >
+                          {isOpen ? 'Hide Members' : 'View Details'}
+                        </button>
 
                         {isOpen && (
                           <div className="teacher-group-progress-details">
                             {row.details.length ? row.details.map(detail => (
                               <div className="teacher-group-progress-student" key={`${row.key}-${detail.studentId}`}>
                                 <span>{detail.studentName}</span>
-                                <span className="lms-mini-pill">{groupProgressStatusLabel(detail.status)}</span>
+                                <span className="lms-mini-pill">
+                                  {String(detail.role || 'member').toLowerCase() === 'leader' ? 'Leader' : 'Member'}
+                                </span>
                               </div>
                             )) : (
                               <div className="lms-empty-line">No members in this group yet.</div>
@@ -1230,8 +1386,8 @@ export default function TeacherDashboard({
               ) : (
                 <div className="teacher-empty-panel">
                   <div>📌</div>
-                  <strong>No group task progress yet.</strong>
-                  <p>Add tasks to your groups first. Student submissions will appear here after they complete a group task.</p>
+                  <strong>No group submissions yet.</strong>
+                  <p>Add tasks to your groups first. Group submissions will appear here after the leader submits a task.</p>
                 </div>
               )}
             </div>
@@ -1515,7 +1671,10 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     xpReward: 25,
     duration: '10 minuto',
     instructions: '',
-    passage: ''
+    passage: '',
+    layunin: '',
+    alamin: '',
+    aralin: ''
   });
 
   const assignedGrades = [...new Set((assignedClasses || [])
@@ -1581,12 +1740,16 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       },
       writing: {
         ...base,
-        title: 'Writing Prompt',
-        prompt: ''
+        title: 'Gawain',
+        gawainType: Number(lessonDraft.gradeLevel || 1) <= 3 ? 'complete_sentence' : 'writing_task',
+        prompt: '',
+        template: 'Ang ____ ay ____.',
+        choicesText: '',
+        correctAnswer: ''
       },
       speech: {
         ...base,
-        title: 'Speech Practice',
+        title: 'Bigkas',
         targetText: ''
       },
       matching: {
@@ -1867,8 +2030,8 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       });
 
       setLessonPlanFilePreview('');
-      setLessonPlanFileStatus('Lesson material uploaded. Students will see this file inside the lesson after you publish.');
-      setAiDraftNotice('Slides attached. Add lesson details and activities, then publish the lesson.');
+      setLessonPlanFileStatus('Material uploaded. Students will see this as Materyal inside the lesson after you publish.');
+      setAiDraftNotice('');
     } catch (err) {
       setLessonPlanFile(null);
       setLessonPlanFilePreview('');
@@ -1926,13 +2089,48 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
         }
 
         if (activity.type === 'writing') {
+          const rawGawainType = activity.gawainType || 'writing_task';
+          const gawainType = rawGawainType === 'complete_sentence' ? 'complete_sentence' : 'writing_task';
+
+          if (gawainType === 'complete_sentence') {
+            const template = String(activity.template || activity.prompt || '').trim();
+            const choices = String(activity.choicesText || '')
+              .split(/[\n,]/)
+              .map(choice => choice.trim())
+              .filter(Boolean);
+            const correctAnswer = String(activity.correctAnswer || '').trim();
+
+            if (!template || !correctAnswer) return null;
+
+            return {
+              type: 'writing',
+              title: activity.title || 'Gawain',
+              instructions: activity.instructions || 'Kumpletuhin ang pangungusap.',
+              prompt: template,
+              rubric: {
+                gawainType,
+                template,
+                choices,
+                wordBank: choices,
+                correctAnswer,
+                acceptedAnswers: [correctAnswer],
+                correctWords: [correctAnswer],
+                autoChecked: true
+              }
+            };
+          }
+
           if (!activity.prompt?.trim()) return null;
 
           return {
             type: 'writing',
-            title: activity.title || 'Writing Prompt',
+            title: activity.title || 'Gawain',
             instructions: activity.instructions || null,
-            prompt: activity.prompt.trim()
+            prompt: activity.prompt.trim(),
+            rubric: {
+              gawainType,
+              needsTeacherReview: true
+            }
           };
         }
 
@@ -1941,7 +2139,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
           return {
             type: 'speech',
-            title: activity.title || 'Speech Practice',
+            title: activity.title || 'Bigkas',
             instructions: activity.instructions || null,
             targetText: activity.targetText.trim()
           };
@@ -2117,14 +2315,14 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       {
         id: makeId(),
         type: 'writing',
-        title: 'Writing Prompt',
+        title: 'Gawain',
         instructions: 'Sumulat ng maikling sagot batay sa aralin.',
         prompt: `Ano ang natutuhan mo tungkol sa ${generatedTitle}? Sumulat ng 2 hanggang 3 pangungusap.`
       },
       {
         id: makeId(),
         type: 'speech',
-        title: 'Speech Practice',
+        title: 'Bigkas',
         instructions: 'Basahin nang malinaw ang pangungusap.',
         targetText: firstSentence.slice(0, 180)
       }
@@ -2179,14 +2377,30 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       });
     }
 
+    const hasQuiz = preparedActivities.some(activity => activity.type === 'mcq');
+    const hasGawain = preparedActivities.some(activity => activity.type === 'writing');
+    const hasBigkas = preparedActivities.some(activity => activity.type === 'speech');
+
+    if (!hasQuiz || !hasGawain || !hasBigkas) {
+      window.alert('Please add one Quiz, one Gawain, and one Bigkas before publishing.');
+      setBuilderTab('activities');
+      return;
+    }
+
+    const structuredPassage = [
+      lessonDraft.layunin?.trim() ? `Layunin:\n${lessonDraft.layunin.trim()}` : '',
+      lessonDraft.alamin?.trim() ? `Alamin:\n${lessonDraft.alamin.trim()}` : '',
+      lessonDraft.aralin?.trim() ? `Aralin:\n${lessonDraft.aralin.trim()}` : ''
+    ].filter(Boolean).join('\n\n') || lessonDraft.passage || '';
+
     const payload = {
       gradeLevel: Number(lessonDraft.gradeLevel),
       subject: lessonDraft.subject,
       title: lessonDraft.title.trim(),
       xpReward: Number(lessonDraft.xpReward || 25),
       duration: '10 minuto',
-      instructions: lessonDraft.instructions || null,
-      passage: lessonDraft.passage || null,
+      instructions: lessonDraft.instructions || 'Basahin ang aralin at sagutan ang mga gawain.',
+      passage: structuredPassage || null,
       activities: preparedActivities
     };
 
@@ -2199,7 +2413,10 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       xpReward: 25,
       duration: '10 minuto',
       instructions: '',
-      passage: ''
+      passage: '',
+      layunin: '',
+      alamin: '',
+      aralin: ''
     });
 
     setActivities([]);
@@ -2227,19 +2444,16 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     : allRecentLessons.slice(0, 5);
 
   const activityButtonMeta = [
-    { type: 'infographic', label: 'Info Card', icon: 'i', className: 'choice-infographic' },
-    { type: 'vocabulary', label: 'Vocabulary', icon: 'Aa', className: 'choice-vocabulary' },
-    { type: 'matching', label: 'Matching', icon: '⌘', className: 'choice-matching' },
     { type: 'mcq', label: 'Quiz', icon: '?', className: 'choice-mcq' },
-    { type: 'speech', label: 'Speech Practice', icon: '🎙️', className: 'choice-speech' },
-    { type: 'writing', label: 'Writing Prompt', icon: '✎', className: 'choice-writing' }
+    { type: 'writing', label: 'Gawain', icon: '✎', className: 'choice-writing' },
+    { type: 'speech', label: 'Bigkas', icon: '🎙️', className: 'choice-speech' }
   ];
 
   const assessmentProfile = lessonAssessmentProfile(validActivities);
   const assessmentChecks = [
     { label: 'Content / Info', ok: assessmentProfile.hasContent, note: 'Adds lesson context before assessment.' },
-    { label: 'Quiz or Matching', ok: assessmentProfile.hasObjectiveQuiz, note: 'Measures basic understanding with a score.' },
-    { label: 'Writing Evidence', ok: assessmentProfile.hasWriting, note: 'Shows if students can express ideas in Filipino.' },
+    { label: 'Quiz', ok: assessmentProfile.hasObjectiveQuiz, note: 'Measures basic understanding with a score.' },
+    { label: 'Gawain Evidence', ok: assessmentProfile.hasWriting, note: 'Shows if students can express ideas in Filipino.' },
     { label: 'Speech Evidence', ok: assessmentProfile.hasSpeech, note: 'Supports pronunciation and oral communication.' }
   ];
   const readinessScore = Math.round((assessmentChecks.filter(item => item.ok).length / assessmentChecks.length) * 100);
@@ -2497,6 +2711,86 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             }
             /* === End My Created Lessons compact table polish === */
 
+            .teacher-builder-layout .lms-danger-outline-action {
+              border-color: #FCA5A5 !important;
+              color: #B91C1C !important;
+              background: #FEF2F2 !important;
+              font-weight: 950 !important;
+              box-shadow: none !important;
+              transition: all 0.18s ease !important;
+            }
+
+            .teacher-builder-layout .lms-danger-outline-action:hover {
+              border-color: #DC2626 !important;
+              color: #FFFFFF !important;
+              background: #DC2626 !important;
+              transform: translateY(-1px);
+              box-shadow: 0 10px 22px rgba(220, 38, 38, 0.22) !important;
+            }
+
+            .teacher-builder-layout .teacher-inline-mcq {
+              display: grid;
+              gap: 16px;
+              width: 100%;
+            }
+
+            .teacher-builder-layout .teacher-inline-mcq > .teacher-activity-row-fields {
+              display: grid;
+              gap: 12px;
+              width: 100%;
+            }
+
+            .teacher-builder-layout .teacher-mcq-options-grid {
+              display: grid;
+              grid-template-columns: 1fr;
+              gap: 12px;
+              width: 100%;
+            }
+
+            .teacher-builder-layout .teacher-mcq-option-row {
+              display: grid;
+              grid-template-columns: 28px minmax(0, 1fr);
+              gap: 12px;
+              align-items: start;
+              width: 100%;
+            }
+
+            .teacher-builder-layout .teacher-mcq-option-row input[type="radio"] {
+              margin-top: 24px;
+            }
+
+            .teacher-builder-layout .teacher-mcq-option-row textarea.input-field {
+              width: 100%;
+              min-width: 0;
+              white-space: normal;
+              overflow-wrap: anywhere;
+            }
+
+            .teacher-builder-layout .teacher-mcq-question-actions {
+              display: flex;
+              justify-content: flex-end;
+              margin-top: 10px;
+            }
+
+            .teacher-builder-layout .teacher-mcq-remove-question {
+              border: 1px solid #fca5a5;
+              background: #fef2f2;
+              color: #b91c1c;
+              border-radius: 14px;
+              padding: 9px 12px;
+              font-weight: 950;
+              cursor: pointer;
+              transition: all 0.18s ease;
+            }
+
+            .teacher-builder-layout .teacher-mcq-remove-question:hover {
+              background: #dc2626;
+              border-color: #dc2626;
+              color: #ffffff;
+              transform: translateY(-1px);
+              box-shadow: 0 10px 22px rgba(220, 38, 38, 0.18);
+            }
+
 `}</style>
 
           <div className="teacher-builder-workflow" aria-label="Lesson builder steps">
@@ -2524,13 +2818,13 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             <div className="teacher-design-heading">
               <div className="teacher-design-step">FILE</div>
               <div>
-                <h2>Lesson Material</h2>
+                <h2>Optional Lesson Material</h2>
 
               </div>
             </div>
 
             <div className="teacher-field">
-              <label>Upload Lesson Slides or PDF</label>
+              <label>Upload PPT/PDF Material</label>
               <input
                 id="teacher-lesson-plan-file"
                 className="input-field"
@@ -2548,6 +2842,15 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                 <strong>Uploaded Material:</strong> {lessonPlanFile.name} • {lessonPlanFile.size}
                 <br />
                 <span>{lessonPlanFileStatus}</span>
+                <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-start' }}>
+                  <button
+                    type="button"
+                    className="lms-outline-action lms-danger-outline-action"
+                    onClick={clearLessonPlanSource}
+                  >
+                    Remove Material
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2559,37 +2862,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                   alt="Uploaded lesson plan preview"
                   style={{ width: '100%', maxHeight: 260, objectFit: 'contain', borderRadius: 14, background: '#f8fcf9' }}
                 />
-              </div>
-            )}
-
-            <div className="teacher-field" style={{ marginTop: 16 }}>
-              <label>Optional Teacher Notes</label>
-              <textarea
-                className="input-field"
-                value={lessonPlanText}
-                onChange={(e) => setLessonPlanText(e.target.value)}
-                placeholder={"Upload lesson slides above, or paste short teacher notes here.\n\nExample:\nGrade 1 Filipino\nPaksa: Mga Pangngalan\nLayunin: Natutukoy ang pangngalan sa pangungusap.\nGawain: Basahin ang maikling kwento at sagutan ang tanong."}
-                rows="7"
-                style={{ minHeight: 190, lineHeight: 1.55 }}
-              />
-            </div>
-
-            <div className="row" style={{ marginTop: 14, gap: 10 }}>
-              <button className="lms-main-action" type="button" onClick={generateFromLessonPlan}>
-                Use Notes to Fill Lesson Details
-              </button>
-              <button
-                className="lms-outline-action"
-                type="button"
-                onClick={clearLessonPlanSource}
-              >
-                Clear
-              </button>
-            </div>
-
-            {aiDraftNotice && (
-              <div className="lms-empty-line" style={{ marginTop: 12, background: '#fff8df', color: '#6b4b00' }}>
-                {aiDraftNotice}
               </div>
             )}
           </section>
@@ -2669,39 +2941,148 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
               <div className="teacher-design-step">2</div>
               <div>
                 <h2>Learning Content</h2>
-                <p>Add instructions and the main content for your lesson.</p>
               </div>
             </div>
 
+            {lessonPlanFile ? (
+              <div className="muted" style={{ marginBottom: 12 }}>
+                You uploaded a material. Add a short Layunin, Alamin, and Aralin summary so students still have readable lesson cards.
+              </div>
+            ) : (
+              <div className="muted" style={{ marginBottom: 12 }}>
+                No uploaded material yet. Fill in the Aralin content manually.
+              </div>
+            )}
+
             <div className="teacher-field">
-              <label>Instructions for Students</label>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginBottom: 12,
+                  fontWeight: 950
+                }}
+              >
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 999,
+                    background: '#009A57',
+                    color: '#FFFFFF',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: 17,
+                    fontWeight: 950,
+                    flexShrink: 0
+                  }}
+                >
+                  1
+                </span>
+                <span style={{ color: '#009A57', fontSize: 23, letterSpacing: '-0.03em' }}>Layunin</span>
+                <span style={{ color: '#64748B', fontSize: 16, fontWeight: 850 }}>— Goal ng lesson</span>
+              </label>
               <textarea
                 className="input-field"
-                value={lessonDraft.instructions}
-                onChange={(e) => updateLesson('instructions', e.target.value)}
-                placeholder="Write clear instructions for your students..."
+                value={lessonDraft.layunin || ''}
+                onChange={(e) => updateLesson('layunin', e.target.value)}
+                placeholder={"Ano ang matututuhan ng students?\n\nHalimbawa: Natutukoy ang mga salitang nagsisimula sa letrang M."}
                 rows="4"
+                style={{
+                  minHeight: 132,
+                  fontSize: 16,
+                  lineHeight: 1.55,
+                  padding: '16px 18px'
+                }}
               />
             </div>
 
-            <div className="teacher-field" style={{ marginTop: 16 }}>
-              <label>Main Passage / Story / Lesson Content</label>
-              <div className="lms-editor-toolbar" aria-hidden="true">
-                <button type="button">B</button>
-                <button type="button"><em>I</em></button>
-                <button type="button"><u>U</u></button>
-                <button type="button">☰</button>
-                <button type="button">🔗</button>
-                <button type="button">🖼️</button>
-                <button type="button">↶</button>
-                <button type="button">↷</button>
-              </div>
+            <div className="teacher-field" style={{ marginTop: 20 }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginBottom: 12,
+                  fontWeight: 950
+                }}
+              >
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 999,
+                    background: '#009A57',
+                    color: '#FFFFFF',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: 17,
+                    fontWeight: 950,
+                    flexShrink: 0
+                  }}
+                >
+                  2
+                </span>
+                <span style={{ color: '#009A57', fontSize: 23, letterSpacing: '-0.03em' }}>Alamin</span>
+                <span style={{ color: '#64748B', fontSize: 16, fontWeight: 850 }}>— Short topic explanation</span>
+              </label>
+              <textarea
+                className="input-field"
+                value={lessonDraft.alamin || ''}
+                onChange={(e) => updateLesson('alamin', e.target.value)}
+                placeholder={"Ano ang kailangang malaman muna ng students tungkol sa topic?\n\nHalimbawa: Ang letrang M ay may tunog na /m/. May mga salita na nagsisimula sa M."}
+                rows="4"
+                style={{
+                  minHeight: 144,
+                  fontSize: 16,
+                  lineHeight: 1.55,
+                  padding: '16px 18px'
+                }}
+              />
+            </div>
+
+            <div className="teacher-field" style={{ marginTop: 20 }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginBottom: 12,
+                  fontWeight: 950
+                }}
+              >
+                <span
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 999,
+                    background: '#009A57',
+                    color: '#FFFFFF',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: 17,
+                    fontWeight: 950,
+                    flexShrink: 0
+                  }}
+                >
+                  3
+                </span>
+                <span style={{ color: '#009A57', fontSize: 23, letterSpacing: '-0.03em' }}>Aralin</span>
+                <span style={{ color: '#64748B', fontSize: 16, fontWeight: 850 }}>— Main lesson content</span>
+              </label>
               <textarea
                 className="input-field lms-editor-area"
-                value={lessonDraft.passage}
-                onChange={(e) => updateLesson('passage', e.target.value)}
-                placeholder="Write or paste your lesson content here..."
-                rows="7"
+                value={lessonDraft.aralin || ''}
+                onChange={(e) => updateLesson('aralin', e.target.value)}
+                placeholder={"Ano ang babasahin o aaralin ng students?\n\nHalimbawa: May mga salitang nagsisimula sa M tulad ng mata, mesa, at maya."}
+                rows="8"
+                style={{
+                  minHeight: 190,
+                  fontSize: 16,
+                  lineHeight: 1.6,
+                  padding: '16px 18px'
+                }}
               />
             </div>
           </section>
@@ -2754,10 +3135,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                   <p>Use the buttons above to add activities to your lesson.</p>
                 </div>
               )}
-
-              <button className="lms-add-block-btn" type="button" onClick={() => addActivity('infographic')}>
-                ＋ Add Activity Block
-              </button>
             </div>
           </section>
 
@@ -2838,130 +3215,12 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
         </div>
 
         <aside className="teacher-builder-side">
-          <section className="teacher-side-card lms-live-preview builder-side-preview">
-            <div className="teacher-design-heading">
-              <div className="teacher-design-step">👁</div>
-              <div>
-                <h2>Student Preview</h2>
-                <p>Check the flow students will follow before publishing.</p>
-              </div>
-            </div>
-
-            <div className="lms-preview-card-inner" style={{ display: 'grid', gap: 14 }}>
-              <div className="lms-preview-badges">
-                <span className="lms-preview-badge">{subjectMeta?.icon || '📘'} {lessonDraft.subject}</span>
-                <span className="lms-preview-badge">Grade {lessonDraft.gradeLevel}</span>
-                <span className="lms-preview-badge">⭐ {lessonDraft.xpReward || 0} XP</span>
-              </div>
-
-              <div>
-                <div className="lms-preview-title">
-                  {lessonDraft.title || 'Untitled Lesson'}
-                </div>
-                <div className="g46-ref-muted" style={{ marginTop: 6 }}>
-                  Students will move through this lesson step by step.
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gap: 12 }}>
-                {[
-                  {
-                    step: '1',
-                    icon: '📎',
-                    title: 'Lesson Material',
-                    value: draftMaterialInfo
-                      ? `${draftMaterialInfo.fileType} • ${draftMaterialInfo.fileName}`
-                      : 'No material attached yet',
-                    note: draftMaterialInfo
-                      ? 'Students see this first in the Lesson Material step.'
-                      : 'Upload a PPT, PPTX, or PDF in the Lesson Material tab.'
-                  },
-                  {
-                    step: '2',
-                    icon: '📖',
-                    title: 'Read Lesson',
-                    value: lessonDraft.instructions ? 'Instructions ready' : 'No instructions yet',
-                    note: lessonDraft.passage
-                      ? `${String(lessonDraft.passage).slice(0, 120)}${String(lessonDraft.passage).length > 120 ? '...' : ''}`
-                      : 'Add a passage or short reading text in Lesson Details.'
-                  },
-                  {
-                    step: '3',
-                    icon: '🧩',
-                    title: 'Practice Activities',
-                    value: `${validActivities.length} activity block${validActivities.length === 1 ? '' : 's'}`,
-                    note: `Mini Quiz: ${draftMiniQuizCount ? '1 question inside lesson' : 'not added'} • Quiz Time: ${formatQuizItemCount(draftQuizItemCount)}`
-                  },
-                  {
-                    step: '4',
-                    icon: '✍️',
-                    title: 'Evidence Tasks',
-                    value: `${draftWritingCount} writing • ${draftSpeechCount} speech`,
-                    note: draftOtherActivityCount
-                      ? `${draftOtherActivityCount} other activity block${draftOtherActivityCount === 1 ? '' : 's'} included.`
-                      : 'Add writing, speech, vocabulary, matching, or info cards as needed.'
-                  },
-                  {
-                    step: '5',
-                    icon: '✅',
-                    title: 'Complete Lesson',
-                    value: 'Student submits progress',
-                    note: 'After completing required activities, the student can finish the lesson.'
-                  }
-                ].map(item => (
-                  <div
-                    key={item.title}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '44px 1fr',
-                      gap: 12,
-                      padding: 14,
-                      borderRadius: 18,
-                      background: '#FFFFFF',
-                      border: '1px solid #DCEFE2'
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: 14,
-                        display: 'grid',
-                        placeItems: 'center',
-                        background: '#F0FDF4',
-                        color: '#166534',
-                        fontWeight: 950
-                      }}
-                    >
-                      {item.icon}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span className="g46-ref-tag">Step {item.step}</span>
-                        <strong style={{ color: '#17324D' }}>{item.title}</strong>
-                      </div>
-                      <div style={{ marginTop: 6, fontWeight: 900, color: '#315241' }}>{item.value}</div>
-                      <div className="g46-ref-muted" style={{ marginTop: 4, lineHeight: 1.45 }}>{item.note}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 18,
-                  background: '#FFF8DF',
-                  border: '1px solid #F4E7AA',
-                  color: '#6B4B00',
-                  fontWeight: 850,
-                  lineHeight: 1.45
-                }}
-              >
-                Preview note: Grade 3-6 students see this as a guided flow. Grade 1-2 keeps its original child-friendly lesson UI.
-              </div>
-            </div>
-          </section>
+          <TeacherStudentLessonPreview
+            lessonDraft={lessonDraft}
+            activities={validActivities}
+            materialInfo={draftMaterialInfo}
+            subjectMeta={subjectMeta}
+          />
 
           <section className="teacher-side-card builder-side-activities">
             <div className="teacher-design-heading">
@@ -3085,13 +3344,13 @@ function TeacherActivityBlock({
       color: '#ec407a'
     },
     writing: {
-      label: 'Writing Prompt',
-      desc: 'Encourage creative writing.',
+      label: 'Gawain',
+      desc: 'Choose the best activity for the lesson.',
       icon: '✎',
       color: '#16a9b7'
     },
     speech: {
-      label: 'Speech Practice',
+      label: 'Bigkas',
       desc: 'Practice speaking and pronunciation.',
       icon: '🎙️',
       color: '#f47c20'
@@ -3138,19 +3397,28 @@ function TeacherActivityBlock({
           <small>Block {activityIndex + 1}</small>
         </div>
 
-        <div className="teacher-activity-row-fields grid2">
+        <div
+          className="teacher-activity-row-fields grid2"
+          style={{
+            gridTemplateColumns: 'minmax(240px, 0.9fr) minmax(320px, 1.25fr)',
+            gap: 14,
+            alignItems: 'stretch'
+          }}
+        >
           <input
             className="input-field"
             value={activity.title}
             onChange={(e) => updateActivity(activity.id, { title: e.target.value })}
-            placeholder="Activity title"
+            placeholder="Halimbawa: Gawain"
+            style={{ minHeight: 56, fontSize: 16, padding: '14px 18px' }}
           />
 
           <input
             className="input-field"
             value={activity.instructions}
             onChange={(e) => updateActivity(activity.id, { instructions: e.target.value })}
-            placeholder="Activity instructions"
+            placeholder="Halimbawa: Basahin ang tanong at sagutin nang maayos."
+            style={{ minHeight: 56, fontSize: 16, padding: '14px 18px' }}
           />
         </div>
 
@@ -3158,32 +3426,74 @@ function TeacherActivityBlock({
 
         {activity.type === 'mcq' && (
           <div className="teacher-inline-mcq">
+            <TeacherQuizTextImporter
+              currentQuestionCount={(activity.questions || []).length}
+              onImportQuestions={(questions) => updateActivity(activity.id, { questions })}
+            />
+
             {activity.questions.map((question, qIndex) => (
               <div key={question.id} className="teacher-activity-row-fields">
-                <input
+                <textarea
                   className="input-field"
                   value={question.question}
                   onChange={(e) => updateMcqQuestion(activity.id, question.id, { question: e.target.value })}
                   placeholder={`Question ${qIndex + 1}`}
+                  rows="2"
+                  style={{
+                    minHeight: 76,
+                    width: '100%',
+                    resize: 'vertical',
+                    fontSize: 16,
+                    lineHeight: 1.45,
+                    padding: '14px 18px'
+                  }}
                 />
 
-                <div className="teacher-activity-row-fields grid2">
+                <div className="teacher-mcq-options-grid">
                   {question.options.map((option, oIndex) => (
-                    <div key={option.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div key={option.id} className="teacher-mcq-option-row">
                       <input
                         type="radio"
                         name={`correct-${activity.id}-${question.id}`}
                         checked={option.isCorrect}
                         onChange={() => updateMcqOption(activity.id, question.id, option.id, { isCorrect: true })}
                       />
-                      <input
+                      <textarea
                         className="input-field"
                         value={option.text}
                         onChange={(e) => updateMcqOption(activity.id, question.id, option.id, { text: e.target.value })}
                         placeholder={`Choice ${String.fromCharCode(65 + oIndex)}`}
+                        rows="2"
+                        style={{
+                          minHeight: 72,
+                          width: '100%',
+                          resize: 'vertical',
+                          fontSize: 15,
+                          lineHeight: 1.4,
+                          padding: '13px 16px'
+                        }}
                       />
                     </div>
                   ))}
+                </div>
+
+                <div className="teacher-mcq-question-actions">
+                  <button
+                    type="button"
+                    className="teacher-mcq-remove-question"
+                    onClick={() => {
+                      if ((activity.questions || []).length <= 1) {
+                        window.alert('At least one quiz question is required.');
+                        return;
+                      }
+
+                      updateActivity(activity.id, {
+                        questions: activity.questions.filter(item => item.id !== question.id)
+                      });
+                    }}
+                  >
+                    Remove Question
+                  </button>
                 </div>
               </div>
             ))}
@@ -3195,13 +3505,105 @@ function TeacherActivityBlock({
         )}
 
         {activity.type === 'writing' && (
-          <textarea
-            className="input-field"
-            value={activity.prompt}
-            onChange={(e) => updateActivity(activity.id, { prompt: e.target.value })}
-            placeholder="Writing prompt, e.g. Sumulat ng dalawang pangungusap tungkol sa iyong pamilya."
-            rows="3"
-          />
+          <div className="teacher-inline-gawain" style={{ display: 'grid', gap: 12 }}>
+            <div
+              className="teacher-activity-row-fields"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(280px, 340px) minmax(280px, 1fr)',
+                gap: 18,
+                alignItems: 'end'
+              }}
+            >
+              <label style={{ display: 'grid', gap: 8, fontWeight: 900, fontSize: 16 }}>
+                Gawain Type
+                <select
+                  className="input-field"
+                  value={(activity.gawainType || 'writing_task') === 'complete_sentence' ? 'complete_sentence' : 'writing_task'}
+                  onChange={(e) => updateActivity(activity.id, { gawainType: e.target.value })}
+                  style={{
+                    minWidth: 280,
+                    minHeight: 58,
+                    fontSize: 16,
+                    padding: '14px 18px'
+                  }}
+                >
+                  <option value="complete_sentence">Complete the Sentence</option>
+                  <option value="writing_task">Writing Task</option>
+                </select>
+              </label>
+
+              <div
+                className="muted"
+                style={{
+                  alignSelf: 'center',
+                  fontSize: 16,
+                  lineHeight: 1.45,
+                  maxWidth: 380
+                }}
+              >
+                Choose the activity that best fits the lesson.
+              </div>
+            </div>
+
+            {(activity.gawainType || 'writing_task') === 'complete_sentence' ? (
+              <>
+                <textarea
+                  className="input-field"
+                  value={activity.template || ''}
+                  onChange={(e) => updateActivity(activity.id, { template: e.target.value })}
+                  placeholder={"Sentence Template\nHalimbawa: Ang ____ ay maganda."}
+                  rows="3"
+                  style={{
+                    minHeight: 116,
+                    fontSize: 16,
+                    lineHeight: 1.55,
+                    padding: '16px 18px'
+                  }}
+                />
+
+                <textarea
+                  className="input-field"
+                  value={activity.choicesText || ''}
+                  onChange={(e) => updateActivity(activity.id, { choicesText: e.target.value })}
+                  placeholder={"Choices / Word Bank\nHalimbawa, one per line:\nbahay\npaaralan"}
+                  rows="4"
+                  style={{
+                    minHeight: 140,
+                    fontSize: 16,
+                    lineHeight: 1.55,
+                    padding: '16px 18px'
+                  }}
+                />
+
+                <input
+                  className="input-field"
+                  value={activity.correctAnswer || ''}
+                  onChange={(e) => updateActivity(activity.id, { correctAnswer: e.target.value })}
+                  placeholder="Correct Answer — Halimbawa: bahay"
+                  style={{
+                    minHeight: 58,
+                    fontSize: 16,
+                    padding: '14px 18px'
+                  }}
+                />
+              </>
+            ) : (
+              <textarea
+                className="input-field"
+                value={activity.prompt}
+                onChange={(e) => updateActivity(activity.id, { prompt: e.target.value })}
+                placeholder={"Writing Task\nHalimbawa: Sumulat ng 2 pangungusap tungkol sa aral ng kuwento."}
+                rows="4"
+                style={{
+                  minHeight: 140,
+                  fontSize: 16,
+                  lineHeight: 1.55,
+                  padding: '16px 18px'
+                }}
+              />
+            )}
+          </div>
         )}
 
         {activity.type === 'speech' && (

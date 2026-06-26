@@ -5,6 +5,7 @@ import { useAuth } from './contexts/AuthContext';
 import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
 import QuizResults from './components/student/quizzes/QuizResults';
+import StructuredLessonFlow, { StructuredLessonKnowCard, getStructuredLessonAralinAudioText, getStructuredLessonKnowAudioText, getStructuredLessonSectionText } from './components/student/StructuredLessonFlow';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
 import { asArray, displayDue, effectivenessBand, fmtDate, getBestQuizAttempt, lessonAssessmentProfile, lessonXp, levelForXp, levelTitleForXp, shortLevelTitleForXp, masteryFromPercent, rolesForGradeLevel, subjectTheme, taskCompletionPercent, xpPercent } from './utils/studentHelpers';
 import { EarlyStudentSubpageStyles, Grade46ReferenceStyles, MissionStyles } from './components/styles/StyleBlocks';
@@ -14,6 +15,7 @@ import { ChangePasswordScreen, HomeScreen, LandingScreen } from './pages/Home/Ho
 import TeacherDashboard from './pages/Teacher/TeacherDashboard';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import StartupLoader from './components/common/StartupLoader';
+import StudentGroupSubmissionReview from './components/student/StudentGroupSubmissionReview';
 
 
 function subjectIconSrc(subject = "") {
@@ -603,6 +605,14 @@ if (role === 'admin') {
       const first = notifications[0];
       const extraCount = Math.max(0, notifications.length - 1);
 
+      const notificationBadges = uniqueBadgesForDisplay(
+        notifications.flatMap(item => asArray(item?.metadata?.newBadges))
+      );
+
+      if (notificationBadges.length) {
+        showBadgeUnlockPopup(notificationBadges);
+      }
+
       notify(extraCount
         ? `${first.message} +${extraCount} more update${extraCount === 1 ? '' : 's'}`
         : first.message
@@ -983,7 +993,7 @@ if (role === 'admin') {
     });
   }
 
-  async function teacherApproveGroupTaskCompletion(row) {
+  async function teacherApproveGroupTaskCompletion(row, teacherFeedback = '') {
     if (!row?.groupTaskId || !row?.studentId) {
       notify('Missing group task approval details.');
       return;
@@ -992,14 +1002,37 @@ if (role === 'admin') {
     await safeRun(async () => {
       const data = await api(`/groups/tasks/${row.groupTaskId}/completions/${row.studentId}/approve`, {
         method: 'POST',
-        body: {}
+        body: { teacherFeedback: String(teacherFeedback || '').trim() }
       });
 
       notify(data.xpAwarded
         ? `${row.studentName || 'Student'} earned +${data.xpAwarded} XP after teacher approval.`
         : `${row.studentName || 'Student'} was already approved.`
       );
-      showBadgeUnlockPopup(data?.newBadges);
+      await loadTeacherDashboard();
+    });
+  }
+
+  async function teacherReturnGroupTaskCompletion(row, teacherFeedback = '') {
+    if (!row?.groupTaskId || !row?.studentId) {
+      notify('Missing group task review details.');
+      return;
+    }
+
+    const cleanFeedback = String(teacherFeedback || '').trim();
+
+    if (!cleanFeedback) {
+      notify('Please add teacher remarks before rejecting the group task.');
+      return;
+    }
+
+    await safeRun(async () => {
+      await api(`/groups/tasks/${row.groupTaskId}/completions/${row.studentId}/return`, {
+        method: 'POST',
+        body: { teacherFeedback: cleanFeedback }
+      });
+
+      notify(`${row.groupName || 'Group'} task was rejected and returned for revision.`);
       await loadTeacherDashboard();
     });
   }
@@ -3574,6 +3607,7 @@ async function archiveTeacher(id) {
           setGroupLeader={teacherSetGroupLeader}
           deleteGroup={teacherDeleteGroup}
           approveGroupTaskCompletion={teacherApproveGroupTaskCompletion}
+          rejectGroupTaskCompletion={teacherReturnGroupTaskCompletion}
           createLesson={teacherCreateLesson}
           deleteLesson={teacherDeleteLesson}
           exportStudentsCSV={exportStudentsCSV}
@@ -7224,6 +7258,14 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
       };
     });
 
+  const groupTaskFilterOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending Review' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'returned', label: 'Rejected' },
+    { value: 'not_submitted', label: 'Not Submitted' }
+  ];
+
   return (
     <Grade46StudentChrome
       data={{ ...data, student: { ...s, avatar: studentAvatar } }}
@@ -8486,7 +8528,7 @@ function activityMissionMeta(activity, index = 0) {
     matching: { icon: '🧩', label: 'Pares' },
     mcq: { icon: '🎮', label: 'Quiz' },
     speech: { icon: '🎤', label: 'Bigkas' },
-    writing: { icon: '🧩', label: 'Patlang' }
+    writing: { icon: '🧩', label: 'Gawain' }
   };
 
   return map[activity?.type] || { icon: ['⭐', '🌟', '✨'][index % 3], label: 'Gawain' };
@@ -8494,6 +8536,11 @@ function activityMissionMeta(activity, index = 0) {
 
 function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data, openLesson }) {
   const activities = lesson?.activities || [];
+  const materialActivities = activities.filter(activity => activity?.type === 'material');
+  const practiceActivities = activities.filter(activity => activity?.type !== 'material');
+  const corePracticeActivities = practiceActivities.filter(activity =>
+    ['mcq', 'writing', 'speech'].includes(activity?.type)
+  );
   const theme = subjectTheme(lesson?.subject);
   const [missionStep, setMissionStep] = useState(0);
   const [rewardModal, setRewardModal] = useState(null);
@@ -8508,9 +8555,11 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
   const kidPassage = makeStudentFriendlyPassage(lesson);
   const isReviewMode = Boolean(lesson?.completed || rewardClaimed);
   const missionSteps = [
-    { type: 'listen', icon: '👂', label: 'Makinig' },
-    { type: 'read', icon: '📖', label: 'Basahin' },
-    ...activities.map((activity, index) => ({
+    { type: 'listen', icon: '👂', label: 'Layunin' },
+    { type: 'know', icon: '💡', label: 'Alamin' },
+    ...(materialActivities.length ? [{ type: 'material', icon: '📎', label: 'Materyal' }] : []),
+    { type: 'read', icon: '📖', label: 'Aralin' },
+    ...corePracticeActivities.map((activity, index) => ({
       type: 'activity',
       activity,
       activityIndex: index,
@@ -9621,21 +9670,81 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-step-head">
                 <div className="g12-mission-big-icon">👂</div>
                 <div>
-                  <h3>Makinig</h3>
+                  <h3>Layunin</h3>
                 </div>
               </div>
 
               <div className="g12-mission-text-card">
-                {lesson?.title || 'Handa ka na bang matuto?'}
+                {getStructuredLessonSectionText(kidPassage, 'layunin') || lesson?.title || 'Handa ka na bang matuto?'}
               </div>
 
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
-                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(getStructuredLessonSectionText(kidPassage, 'layunin') || lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
                   <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Stop</button>
                 </div>
                 <div className="g12-mission-actions-right">
-                  <button className="g12-mission-btn purple" onClick={goNext}>Susunod →</button>
+                  <button className="g12-mission-btn purple" onClick={goNext}>Alamin →</button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep.type === 'know' && (
+            <>
+              <div className="g12-mission-step-head">
+                <div className="g12-mission-big-icon">💡</div>
+                <div>
+                  <h3>Alamin</h3>
+                </div>
+              </div>
+
+              <StructuredLessonKnowCard lesson={lesson} text={kidPassage} />
+
+              <div className="g12-mission-actions">
+                <div className="g12-mission-actions-left">
+                  <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
+                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(getStructuredLessonKnowAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Stop</button>
+                </div>
+                <div className="g12-mission-actions-right">
+                  <button className="g12-mission-btn purple" onClick={goNext}>{materialActivities.length ? 'Materyal →' : 'Aralin →'}</button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep.type === 'material' && (
+            <>
+              <div className="g12-mission-step-head">
+                <div className="g12-mission-big-icon">📎</div>
+                <div>
+                  <h3>Materyal</h3>
+                  <p>Buksan ang PPT o PDF na in-upload ng teacher bago basahin ang aralin.</p>
+                </div>
+              </div>
+
+              <div className="g12-mission-activity">
+                {materialActivities.map((activity, materialIndex) => (
+                  <ActivityCard
+                    key={activity.id || activity.fileUrl || materialIndex}
+                    activity={activity}
+                    index={materialIndex}
+                    total={materialActivities.length}
+                    isEarlyGrade={true}
+                    submitMcq={submitMcq}
+                    submitWriting={submitWriting}
+                    submitSpeech={submitSpeech}
+                  />
+                ))}
+              </div>
+
+              <div className="g12-mission-actions">
+                <div className="g12-mission-actions-left">
+                  <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
+                </div>
+                <div className="g12-mission-actions-right">
+                  <button className="g12-mission-btn purple" onClick={goNext}>Aralin →</button>
                 </div>
               </div>
             </>
@@ -9646,23 +9755,20 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-step-head">
                 <div className="g12-mission-big-icon">📖</div>
                 <div>
-                  <h3>Basahin at sabayan</h3>
-                  <p>Basahin nang dahan-dahan. Pwede mong pindutin ang speaker kung kailangan ng gabay.</p>
+                  <h3>Aralin</h3>
                 </div>
               </div>
 
-              <div className="g12-mission-text-card">
-                {kidPassage}
-              </div>
+              <StructuredLessonFlow lesson={lesson} text={kidPassage} />
 
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
-                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(kidPassage)}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(getStructuredLessonAralinAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>
-                    Gawin ang Activity →
+                    Gawin ang Quiz →
                   </button>
                 </div>
               </div>
@@ -9680,7 +9786,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                     currentStep.activity?.template ||
                     currentStep.activity?.fillBlank ||
                     currentStep.activity?.sentence
-                      ? 'Punan ang Patlang'
+                      ? 'Gawain'
                       : currentStep.label
                   }</h3>
                   {activityGuideText(currentStep) ? <p>{activityGuideText(currentStep)}</p> : null}
@@ -9697,7 +9803,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                 <ActivityCard
                   activity={currentStep.activity}
                   index={currentStep.activityIndex}
-                  total={activities.length}
+                  total={corePracticeActivities.length}
                   isEarlyGrade={true}
                   submitMcq={submitMcq}
                   submitWriting={submitWriting}
@@ -10325,8 +10431,16 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
 
   const earlyFallback = earlyFallbackSets[earlyFallbackIndex];
 
+  const writingRubric =
+    activity.writingTask?.rubricJson ||
+    activity.rubricJson ||
+    activity.rubric ||
+    {};
+
   const prompt = activity.writingTask?.prompt || activity.prompt || 'Isulat ang iyong sagot.';
   const rawTemplate =
+    writingRubric.template ||
+    writingRubric.sentence ||
     activity.writingTask?.template ||
     activity.template ||
     activity.fillBlank ||
@@ -10337,6 +10451,11 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
   const defaultEarlyWordBank = earlyFallback.words;
 
   const activityWordBank = asArray(
+    writingRubric.wordBank ||
+    writingRubric.words ||
+    writingRubric.choices ||
+    writingRubric.options ||
+    writingRubric.correctWords ||
     activity.wordBank ||
     activity.words ||
     activity.choices ||
@@ -14565,10 +14684,42 @@ function StudentGroups({ data, go, completeGroupTask }) {
   const [taskRoles, setTaskRoles] = useState({});
   const [taskFiles, setTaskFiles] = useState({});
   const [submittedTasks, setSubmittedTasks] = useState({});
+  const [groupTaskFilter, setGroupTaskFilter] = useState('all');
 
   if (early) {
     return <EarlyGroupsScreen data={data} go={go} completeGroupTask={completeGroupTask} />;
   }
+
+  const groupTaskFilterOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending Review' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'returned', label: 'Rejected' },
+    { value: 'not_submitted', label: 'Not Submitted' }
+  ];
+
+  function getGroupTaskFilterStatus(task) {
+    const completion = task.completion || task.completions?.[0] || null;
+    const isApproved = completion?.verificationStatus === 'approved';
+    const isReturned = completion?.verificationStatus === 'returned';
+    const isPending = !isReturned && (completion?.verificationStatus === 'pending' || submittedTasks[task.id]);
+
+    if (isApproved) return 'approved';
+    if (isReturned) return 'returned';
+    if (isPending) return 'pending';
+    return 'not_submitted';
+  }
+
+  const visibleGroups = groups
+    .map(group => ({
+      ...group,
+      tasks: (group.tasks || []).filter(task =>
+        groupTaskFilter === 'all' || getGroupTaskFilterStatus(task) === groupTaskFilter
+      )
+    }))
+    .filter(group => (group.tasks || []).length);
+
+  const selectedGroupTaskFilterLabel = groupTaskFilterOptions.find(option => option.value === groupTaskFilter)?.label || 'tasks';
 
   async function submitGroupTask(taskId) {
     const studentRole = String(taskRoles[taskId] || 'Leader').trim();
@@ -14605,7 +14756,26 @@ function StudentGroups({ data, go, completeGroupTask }) {
           </div>
         </div>
 
-        {groups.map(group => (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          {groupTaskFilterOptions.map(option => (
+            <button
+              key={option.value}
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setGroupTaskFilter(option.value)}
+              style={{
+                borderColor: groupTaskFilter === option.value ? '#009a57' : '#d9eadf',
+                background: groupTaskFilter === option.value ? '#ecfdf5' : '#ffffff',
+                color: groupTaskFilter === option.value ? '#00864c' : '#17324d',
+                fontWeight: 950
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {visibleGroups.map(group => (
           <div className="g46-ref-panel g46-group-card" key={group.id}>
             <div className="g46-ref-panel-head">
               <div>
@@ -14618,38 +14788,52 @@ function StudentGroups({ data, go, completeGroupTask }) {
             {(group.tasks || []).map(task => {
               const completion = task.completion || task.completions?.[0] || null;
               const isApproved = completion?.verificationStatus === 'approved';
-              const isPending = completion?.verificationStatus === 'pending' || submittedTasks[task.id];
               const isReturned = completion?.verificationStatus === 'returned';
+              const isPending = !isReturned && (completion?.verificationStatus === 'pending' || submittedTasks[task.id]);
               const isLocked = isApproved || isPending;
-              const statusLabel = isApproved ? 'Approved' : isPending ? 'Waiting for teacher check' : isReturned ? 'Returned for revision' : 'Not submitted';
+              const statusLabel = isApproved ? 'Approved' : isReturned ? 'Rejected' : isPending ? 'Pending Review' : 'Not submitted';
               const isGroupLeader = group.currentStudentIsLeader || group.currentStudentGroupRole === 'leader';
               const submittedRole = taskRoles[task.id] || completion?.studentRole || (isGroupLeader ? 'Leader' : '');
               const submittedFileName = taskFiles[task.id]?.name || completion?.fileName || '';
-              const pct = taskCompletionPercent(task, submittedTasks[task.id] || isApproved);
+              const pct = taskCompletionPercent(task, isApproved || isPending);
               return (
                 <div className="g46-ref-task-row" key={task.id} style={{ gridTemplateColumns: '58px minmax(0, 1fr)', alignItems: 'start' }}>
-                  <span className="g46-ref-card-icon">{isApproved ? '🏆' : isPending ? '⏳' : '📝'}</span>
+                  <span className="g46-ref-card-icon">{isApproved ? '🏆' : isReturned ? '↩️' : isPending ? '⏳' : '📝'}</span>
                   <div>
                     <div className="g46-group-task-head">
                       <div>
                         <h3>{task.title}</h3>
                         <p className="g46-ref-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
                       </div>
-                      <span className={`g46-group-status ${isApproved ? 'approved' : isPending ? 'pending' : isReturned ? 'returned' : 'open'}`}>
+                      <span className={`g46-group-status ${isApproved ? 'approved' : isReturned ? 'returned' : isPending ? 'pending' : 'open'}`}>
                         {statusLabel}
                       </span>
                     </div>
 
                     <div className="g46-ref-mini-track" style={{ marginTop: 12 }}><span style={{ width: `${pct}%` }} /></div>
-                    <div className={`g46-submit-box ${isLocked ? 'submitted' : ''}`}>
+                    <div className={`g46-submit-box ${isLocked ? 'submitted' : isReturned ? 'returned' : ''}`}>
+                      {isReturned && (
+                        <StudentGroupSubmissionReview
+                          completion={completion}
+                          task={task}
+                          submittedRole={submittedRole}
+                          submittedFileName={submittedFileName}
+                          isReturned={isReturned}
+                        />
+                      )}
+
                       {!isLocked ? (
                         isGroupLeader ? (
                         <>
                           <div className="g46-submit-box-head">
                             <span className="g46-submit-icon">📤</span>
                             <div>
-                              <strong>Submit your task here</strong>
-                              <p className="g46-ref-muted">Type your role, upload your group output, then submit it for teacher checking.</p>
+                              <strong>{isReturned ? 'Submit your revised output' : 'Submit your task here'}</strong>
+                              <p className="g46-ref-muted">
+                                {isReturned
+                                  ? 'Upload a revised group output after checking your teacher remarks.'
+                                  : 'Type your role, upload your group output, then submit it for teacher checking.'}
+                              </p>
                             </div>
                           </div>
 
@@ -14682,7 +14866,7 @@ function StudentGroups({ data, go, completeGroupTask }) {
                           </div>
 
                           <button type="button" className="g46-ref-primary-btn g46-submit-action" onClick={() => submitGroupTask(task.id)}>
-                            Submit Group Output
+                            {isReturned ? 'Submit Again' : 'Submit Group Output'}
                           </button>
                         </>
                         ) : (
@@ -14690,35 +14874,25 @@ function StudentGroups({ data, go, completeGroupTask }) {
                             <div className="g46-submit-box-head">
                               <span className="g46-submit-icon">👥</span>
                               <div>
-                                <strong>Your group leader will submit the output.</strong>
-                                <p className="g46-ref-muted">You can view this task here. Once your leader submits, your teacher will review it for the whole group.</p>
+                                <strong>{isReturned ? 'Your group leader will submit the revised output.' : 'Your group leader will submit the output.'}</strong>
+                                <p className="g46-ref-muted">
+                                  {isReturned
+                                    ? 'Please check the teacher remarks with your group and wait for your leader to resubmit.'
+                                    : 'You can view this task here. Once your leader submits, your teacher will review it for the whole group.'}
+                                </p>
                               </div>
                             </div>
                           </div>
                         )
                       ) : (
-                        <div className="g46-submitted-summary">
-                          <div className="g46-submit-box-head">
-                            <span className="g46-submit-icon">{isApproved ? '🏆' : '⏳'}</span>
-                            <div>
-                              <strong>{isApproved ? 'Group output approved' : 'Group output submitted'}</strong>
-                              <p className="g46-ref-muted">
-                                {isApproved ? 'Your teacher approved this task and XP has been awarded.' : 'Waiting for your teacher to review your group output.'}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="g46-submitted-list">
-                            <div>
-                              <span>Role</span>
-                              <strong>{submittedRole || '—'}</strong>
-                            </div>
-                            <div>
-                              <span>File</span>
-                              <strong>{submittedFileName || 'Uploaded group output'}</strong>
-                            </div>
-                          </div>
-                        </div>
+                        <StudentGroupSubmissionReview
+                          completion={completion}
+                          task={task}
+                          submittedRole={submittedRole}
+                          submittedFileName={submittedFileName}
+                          isApproved={isApproved}
+                          isPending={isPending}
+                        />
                       )}
                     </div>
                   </div>
@@ -14729,6 +14903,12 @@ function StudentGroups({ data, go, completeGroupTask }) {
             {!(group.tasks || []).length && <div className="g46-ref-empty">No tasks yet for this group.</div>}
           </div>
         ))}
+
+        {groups.length > 0 && !visibleGroups.length && (
+          <div className="g46-ref-empty">
+            No {selectedGroupTaskFilterLabel.toLowerCase()} tasks yet.
+          </div>
+        )}
 
         {!groups.length && <div className="g46-ref-empty">No group tasks yet.</div>}
       </section>
@@ -14755,7 +14935,7 @@ function badgeDisplayDescription(badge = {}) {
   const name = String(badge.name || '').trim();
 
   if (code === 'writing_3' || /manunulat|writer|sagot/i.test(name)) {
-    return 'Completed 3 Punan ang Patlang or writing activities.';
+    return 'Completed 3 Gawain activities.';
   }
 
   if (code === 'reader_3' || /mambabasa|reader/i.test(name)) {
@@ -14780,7 +14960,7 @@ function badgeAchievementReason(badge = {}) {
   const value = `${code} ${name}`.toLowerCase();
 
   if (normalizedCode === 'writing_3' || value.includes('manunulat') || value.includes('writer') || value.includes('sagot')) {
-    return 'Completed 3 Punan ang Patlang or writing activities.';
+    return 'Completed 3 Gawain activities.';
   }
 
   if (normalizedCode === 'reader_3' || value.includes('reader') || value.includes('mambabasa')) {
@@ -14843,7 +15023,7 @@ const GRADE12_BADGE_GOALS = [
     code: 'writing_3',
     icon: '✍️',
     name: 'Sagot Star',
-    howToUnlock: 'Complete 3 Punan ang Patlang or writing activities.'
+    howToUnlock: 'Complete 3 Gawain activities.'
   },
   {
     code: 'speech_3',
