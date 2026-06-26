@@ -29,6 +29,7 @@ import ReadingPassageCard from '../../components/lesson/ReadingPassageCard';
 import ActivityVisualCard from '../../components/lesson/ActivityVisualCard';
 import PowerUpTray from '../../components/lesson/PowerUpTray';
 import ActivityGuideCard from '../../components/lesson/ActivityGuideCard';
+import FillInBlankGame from '../../components/lesson/FillInBlankGame';
 
 function optionalProgressRequest(request, fallback) {
   return request.catch((err) => {
@@ -189,8 +190,35 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
     () => Array.isArray(lesson?.activities) ? lesson.activities : [],
     [lesson]
   );
-  const totalSteps = Math.max(1, activities.length + 1);
-  const currentActivity = activities[step - 1];
+
+  const missionSteps = useMemo(() => [
+    {
+      type: 'listen',
+      title: 'Listen',
+    },
+    {
+      type: 'read',
+      title: 'Read',
+    },
+    ...activities.map(activity => ({
+      type: 'activity',
+      activity,
+    })),
+    {
+      type: 'finish',
+      title: 'Finish',
+    },
+  ], [activities]);
+
+  const totalSteps = missionSteps.length;
+
+  const currentStep =
+    missionSteps[Math.min(step - 1, missionSteps.length - 1)];
+
+  const currentActivity =
+    currentStep?.type === 'activity'
+      ? currentStep.activity
+      : null;
   const littleLearnerGame = Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 2;
 
 
@@ -207,6 +235,17 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
 
     setActivityNotice(null);
   }, [lessonId, currentActivity?.id]);
+
+  useEffect(() => {
+    console.log('[STEP_DEBUG]', {
+      step,
+      totalSteps,
+      currentStepType: currentStep?.type,
+      currentActivityId: currentActivity?.id,
+      currentActivityType: currentActivity?.type,
+      currentActivityTitle: currentActivity?.title,
+    });
+  }, [step, totalSteps, currentStep, currentActivity]);
 
 
   const getGameMeta = activity => {
@@ -405,7 +444,14 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
 
 
   async function saveNextStep(activityType) {
-    const nextStep = Math.min(step + 1, totalSteps);
+    let nextStep = Math.min(step + 1, totalSteps);
+
+    if (
+      currentStep?.type === 'activity' &&
+      step >= totalSteps - 1
+    ) {
+      nextStep = totalSteps;
+    }
     await optionalProgressRequest(
       api(`/lessons/${lessonId}/progress`, {
         method: 'PATCH',
@@ -474,13 +520,21 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
     }
   }
 
-  async function submitWriting() {
+  async function submitWriting(answerOverride = null) {
     const task = currentActivity?.writingTask;
     if (!task?.id) {
       Alert.alert('Writing', 'This activity has no writing task yet.');
       return;
     }
-    if (writingAnswer.trim().length < 2) {
+    const answer = answerOverride ?? writingAnswer;
+
+    console.log('[SUBMIT_WRITING]', {
+      answerOverride,
+      writingAnswer,
+      answer,
+    });
+
+    if (answer.trim().length < 2) {
       Alert.alert('Writing', 'Please write your answer before continuing.');
       return;
     }
@@ -491,12 +545,19 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
         method: 'POST',
         body: {
           taskId: task.id,
-          content: writingAnswer,
+          content: answer,
           autoChecked: Boolean(task.rubricJson?.autoChecked),
         },
       });
-      Alert.alert('Writing', data.message || 'Writing answer saved.');
-      if (data.correct === false) return;
+
+      console.log('[WRITING_RESPONSE]', JSON.stringify(data, null, 2));
+      // Success feedback is already shown in the Fill-in-the-Blank UI.
+      if (data.correct === false) {
+        console.log('[WRITING] Incorrect answer.');
+        return;
+      }
+
+      console.log('[WRITING] Advancing to next step.');
       await saveNextStep('writing');
     } catch (err) {
       Alert.alert('Writing', err.message || 'Unable to save your writing answer.');
@@ -595,19 +656,69 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
   }
 
   function renderActivity() {
-    if (!currentActivity) {
+
+    if (currentStep?.type === 'listen') {
       return (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🎉 Ready to finish</Text>
-          <Text style={styles.body}>You completed every activity in this lesson.</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={finishLesson} disabled={submitting}>
-            <Text style={styles.primaryText}>{submitting ? 'Saving...' : 'Finish Lesson'}</Text>
+          <Text style={styles.title}>👂 Listen</Text>
+
+          <Text style={styles.body}>
+            Press the button below to listen to today's lesson before continuing.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() =>
+              speakText(
+                `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`
+              )
+            }
+          >
+            <Text style={styles.secondaryText}>
+              🔊 Listen to Lesson
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => advance('listen')}
+          >
+            <Text style={styles.primaryText}>Continue</Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    if (currentActivity.type === 'mcq') {
+    if (currentStep?.type === 'read') {
+      return (
+        <View style={styles.card}>
+          <Text style={styles.title}>📖 Read</Text>
+
+          {!!lesson?.instructions && (
+            <Text style={styles.body}>
+              {lesson.instructions}
+            </Text>
+          )}
+
+          {!!lesson?.passage && (
+            <ReadingPassageCard
+              title={lesson.title}
+              passage={lesson.passage}
+            />
+          )}
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => advance('read')}
+          >
+            <Text style={styles.primaryText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
+ {
       const questions = currentActivity.questions || [];
       const allAnswered = questions.length > 0 && questions.every((question) => mcqAnswers[question.id]);
       return (
@@ -674,11 +785,15 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
       );
     }
 
-    if (currentActivity.type === 'writing') {
+    if (currentStep?.type === 'activity' && currentActivity?.type === 'writing') {
       const suggestions = currentActivity.writingTask?.rubricJson?.choices
         || currentActivity.writingTask?.rubricJson?.wordBank
         || [];
       const game = getGameMeta(currentActivity);
+
+      const isFillInBlank =
+        currentActivity?.writingTask?.rubricJson?.gawainType ===
+        'complete_sentence';
 
       return (
         <View style={[
@@ -708,12 +823,24 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
             activity={currentActivity}
             lesson={lesson}
           />}
-          <PowerUpTray
-            visible={littleLearnerGame}
-            activity={currentActivity}
-            selectedWords={selectedWords}
-            onSelectionChange={handlePowerUpSelection}
-          />
+          {isFillInBlank ? (
+            <FillInBlankGame
+              rubric={currentActivity.writingTask?.rubricJson}
+              submitting={submitting}
+              onSubmit={(answer) => {
+                console.log('[FILL_IN_BLANK] answer =', answer);
+                setWritingAnswer(answer);
+                submitWriting(answer);
+              }}
+            />
+          ) : (
+            <>
+              <PowerUpTray
+                visible={littleLearnerGame}
+                activity={currentActivity}
+                selectedWords={selectedWords}
+                onSelectionChange={handlePowerUpSelection}
+              />
           {!littleLearnerGame && suggestions.length ? (
             <View style={styles.choiceRow}>
               {suggestions.map((suggestion, index) => {
@@ -761,14 +888,49 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
               placeholder={littleLearnerGame ? 'Tap power-ups or type your answer here...' : 'Type your answer here...'}
             />
           </View>
-          <TouchableOpacity style={styles.primaryButton} onPress={submitWriting} disabled={submitting}>
-            <Text style={styles.primaryText}>{submitting ? 'Saving...' : littleLearnerGame ? game.button : 'Save and Continue'}</Text>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={submitWriting}
+            disabled={submitting}
+          >
+            <Text style={styles.primaryText}>
+              {submitting
+                ? 'Saving...'
+                : littleLearnerGame
+                  ? game.button
+                  : 'Save and Continue'}
+            </Text>
+          </TouchableOpacity>
+            </>
+          )}
+        </View>
+      );
+    }
+
+
+    if (currentStep?.type === 'finish') {
+      return (
+        <View style={styles.card}>
+          <Text style={styles.title}>🏁 Finish Mission</Text>
+
+          <Text style={styles.body}>
+            Great job! You finished every challenge in this lesson.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            disabled={submitting}
+            onPress={finishLesson}
+          >
+            <Text style={styles.primaryText}>
+              ⭐ Complete Lesson
+            </Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    if (currentActivity.type === 'speech') {
+    if (currentStep?.type === 'activity' && currentActivity?.type === 'speech') {
       const game = getGameMeta(currentActivity);
 
       return (

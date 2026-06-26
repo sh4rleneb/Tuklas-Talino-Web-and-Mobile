@@ -76,7 +76,6 @@ export default function StudentJuniorHome({ navigation }) {
   const badges = dashboard?.badges || [];
   const completedLessons = lessons.filter((lesson) => lesson?.completed).length;
   const totalLessons = lessons.length;
-  const completionPct = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
   const nextLesson = lessons.find((lesson) => !lesson?.completed) || lessons[0];
   const badgePreview = badges.slice(-2).reverse();
   const activeGroupTask = groups.flatMap((group) => group.tasks || []).find((task) => !task.completed) || groups.flatMap((group) => group.tasks || [])[0];
@@ -87,7 +86,6 @@ export default function StudentJuniorHome({ navigation }) {
   const name = student?.name || 'Student';
   const grade = student?.gradeLevel || 1;
 
-  const showProgress = completionPct > 0;
 
   if (loading && !dashboard) {
     return (
@@ -157,8 +155,8 @@ export default function StudentJuniorHome({ navigation }) {
           <View style={styles.xpCard}>
             <View style={styles.xpRow}>
               <View>
-                <Text style={styles.xpLabel}>XP points</Text>
-                <Text style={styles.xpValue}>{xp} XP</Text>
+                <Text style={styles.xpLabel}>⭐ XP</Text>
+                <Text style={styles.xpValue}>{xp}</Text>
               </View>
               <View style={styles.levelBadge}>
                 <Text style={styles.levelText}>Level {level}</Text>
@@ -172,14 +170,14 @@ export default function StudentJuniorHome({ navigation }) {
 
               <View style={styles.levelBadge}>
                 <Text style={styles.levelText}>
-                  🏆 {student?.longestStreak || 0}
+                  🏅 {badges.length}
                 </Text>
               </View>
             </View>
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${Math.min((xp % 100), 100)}%` }]} />
             </View>
-            <Text style={styles.progressInfo}>{100 - (xp % 100)} XP until next level</Text>
+            <Text style={styles.progressInfo}>🌟 {100 - (xp % 100)} XP to Level {level + 1}</Text>
           </View>
 
           <View style={styles.quickStatsRow}>
@@ -189,11 +187,11 @@ export default function StudentJuniorHome({ navigation }) {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{completedLessons}</Text>
-              <Text style={styles.statLabel}>Done</Text>
+              <Text style={styles.statLabel}>Finished</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{completionPct}%</Text>
-              <Text style={styles.statLabel}>Progress</Text>
+              <Text style={styles.statValue}>{badges.length}</Text>
+              <Text style={styles.statLabel}>Badges</Text>
             </View>
           </View>
         </View>

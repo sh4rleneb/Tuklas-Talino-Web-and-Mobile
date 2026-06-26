@@ -283,7 +283,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
             {playful ? 'GAME QUEST MAP' : 'FILIPINO LEARNING HUB'}
           </Text>
           <Text style={styles.title}>
-            {playful ? '🎮 Game Quest Map' : '📚 Lesson Library'}
+            📚 Lesson Library
           </Text>
           <Text style={styles.subtitle}>
             {playful
@@ -304,11 +304,10 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
             {progress.completedLessons || 0}/{progress.totalLessons || lessons.length} lessons completed
           </Text>
         </View>
-
-        <Text style={styles.sectionTitle}>Browse Categories</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
           {CATEGORIES.map((category) => {
             const active = category.key === selectedCategory;
+
             return (
               <TouchableOpacity
                 key={category.key}
@@ -322,8 +321,14 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                 onPress={() => setSelectedCategory(category.key)}
               >
                 <Text>{category.icon}</Text>
-                <Text style={[styles.filterText, active && { color: category.accent }]}>
-                  {playful && category.key === 'ALL' ? 'All Games' : playful ? gameQuestMeta(category.key).element : category.label}
+
+                <Text
+                  style={[
+                    styles.filterText,
+                    active && { color: category.accent },
+                  ]}
+                >
+                  {category.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -362,103 +367,112 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
             return (
               <TouchableOpacity
                 key={lesson.id}
-                activeOpacity={lesson.unlocked ? 0.84 : 1}
+                activeOpacity={lesson.unlocked ? 0.8 : 1}
                 disabled={!lesson.unlocked}
                 style={[
                   styles.lessonCard,
-                  littleQuest && styles.questCard,
                   !lesson.unlocked && styles.lockedCard,
                 ]}
                 onPress={() => openLesson(lesson)}
               >
                 <View style={styles.lessonTop}>
-                  <View style={[
-                    styles.thumbnail,
-                    littleQuest && styles.questThumbnail,
-                    { backgroundColor: meta.soft },
-                  ]}>
-                    <Text style={[styles.thumbnailIcon, littleQuest && styles.questThumbnailIcon]}>
-                      {meta.icon}
+                  <View
+                    style={[
+                      littleQuest
+                        ? styles.questThumbnail
+                        : styles.thumbnail,
+                      { backgroundColor: meta.soft },
+                    ]}
+                  >
+                    <Text
+                      style={
+                        littleQuest
+                          ? styles.questThumbnailIcon
+                          : styles.thumbnailIcon
+                      }
+                    >
+                      {lesson.completed ? '✅' : meta.icon}
                     </Text>
                   </View>
 
-                  <View style={styles.statusStack}>
-                    <Text style={[styles.status, { color: lesson.unlocked ? meta.accent : '#94A3B8' }]}>
-                      {action}
+                  <View style={{ flex: 1, marginLeft: 14 }}>
+                    <Text style={styles.lessonTitle}>
+                      {lesson.title}
                     </Text>
-                    <View style={[
-                      styles.difficultyPill,
-                      {
-                        backgroundColor: difficulty.soft,
-                        borderColor: difficulty.color,
-                      },
-                    ]}>
-                      <Text style={[styles.difficultyText, { color: difficulty.color }]}>
-                        {difficulty.icon} {difficulty.label}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
 
-                <Text style={[styles.subject, { color: meta.accent }]}>
-                  {littleQuest ? game.element : meta.label}
-                </Text>
+                    <Text style={styles.lessonMeta}>
+                      {meta.label} • Grade {lesson.gradeLevel || student.gradeLevel || '—'} • {lesson.xpReward || 0} XP
+                    </Text>
 
-                <Text style={styles.lessonTitle}>{lesson.title}</Text>
+                    <View style={styles.metaRow}>
+                      <View
+                        style={[
+                          styles.difficultyPill,
+                          {
+                            backgroundColor: difficulty.soft,
+                            borderColor: difficulty.color,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.difficultyText,
+                            { color: difficulty.color },
+                          ]}
+                        >
+                          {difficulty.icon} {difficulty.label}
+                        </Text>
+                      </View>
 
-                {littleQuest ? (
-                  <View style={styles.questBanner}>
-                    <View style={styles.questBannerTop}>
-                      <Text style={styles.questLabel}>{game.title}</Text>
                       <View style={styles.starRow}>
-                        {Array.from({ length: 3 }).map((_, index) => (
+                        {[0,1,2].map(i => (
                           <Text
-                            key={index}
+                            key={i}
                             style={[
                               styles.starIcon,
-                              index >= stars && styles.starEmpty,
+                              i >= stars && styles.starEmpty,
                             ]}
                           >
-                            {index < stars ? '⭐' : '☆'}
+                            ⭐
                           </Text>
                         ))}
                       </View>
                     </View>
-                    <Text style={styles.questHelp}>
+
+                    <Text style={styles.difficultyHelp}>
+                      {game.title}
+                    </Text>
+
+                    <Text style={styles.lessonMeta}>
                       {game.mission}
                     </Text>
-                  </View>
-                ) : (
-                  <Text style={styles.difficultyHelp}>{difficulty.helper}</Text>
-                )}
 
-                <View style={styles.metaRow}>
-                  <View style={styles.metaMini}>
-                    <Text style={styles.metaMiniText}>⏱ {lesson.duration || '10 minuto'}</Text>
-                  </View>
-                  <View style={styles.metaMini}>
-                    <Text style={styles.metaMiniText}>🎒 Grade {lesson.gradeLevel || student.gradeLevel || '—'}</Text>
-                  </View>
-                  <View style={styles.metaMini}>
-                    <Text style={styles.xpChip}>⭐ +{lesson.xpReward || 0} XP</Text>
-                  </View>
-                </View>
+                    <View style={styles.lessonTrack}>
+                      <View
+                        style={[
+                          styles.lessonFill,
+                          {
+                            width: `${lesson.progressPercent}%`,
+                            backgroundColor: meta.accent,
+                          },
+                        ]}
+                      />
+                    </View>
 
-                <View style={styles.lessonProgressRow}>
-                  <Text style={styles.muted}>
-                    {littleQuest ? 'Game progress' : 'Lesson progress'}
+                    <View style={styles.lessonProgressRow}>
+                      <Text style={styles.progressValue}>
+                        {lesson.progressPercent}%
+                      </Text>
+
+                      <Text style={styles.xpChip}>
+                        {action}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.lessonArrow}>
+                    {lesson.unlocked ? '›' : '🔒'}
                   </Text>
-                  <Text style={styles.progressValue}>{lesson.progressPercent}%</Text>
-                </View>
-
-                <View style={styles.lessonTrack}>
-                  <View style={[
-                    styles.lessonFill,
-                    {
-                      backgroundColor: littleQuest ? '#F59E0B' : meta.accent,
-                      width: `${lesson.progressPercent}%`,
-                    },
-                  ]} />
                 </View>
               </TouchableOpacity>
             );
@@ -580,6 +594,18 @@ const styles = StyleSheet.create({
     fontSize: 21,
     fontWeight: '900',
     marginTop: 4,
+  },
+
+  lessonMeta: {
+    color: '#64748B',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  lessonArrow: {
+    fontSize: 28,
+    color: '#94A3B8',
+    fontWeight: '700',
+    alignSelf: 'center',
   },
   difficultyHelp: {
     color: '#64748B',
