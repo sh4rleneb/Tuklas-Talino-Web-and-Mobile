@@ -113,7 +113,6 @@ router.get('/', requireRole('admin'), async (req, res, next) => {
 
 router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
-    console.log('[DEBUG] CREATE TEACHER BODY:', JSON.stringify(req.body));
     const body = validate(teacherSchema, req.body);
     assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher account');
     const role = await Role.findOne({ where: { name: 'teacher' } });
