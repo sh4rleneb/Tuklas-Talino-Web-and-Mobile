@@ -147,10 +147,11 @@ export default function StudentJuniorHome({ navigation }) {
             <View>
               <Text style={styles.greeting}>Hi {name}! 👋</Text>
               <Text style={styles.subtitle}>Ready ka na ba sa learning adventure today?</Text>
-            </Card>
+            </View>
+
             <View style={styles.avatarCircle}>
               <Text style={styles.avatar}>{avatar}</Text>
-            </Card>
+            </View>
           </View>
 
           <View style={styles.xpCard}>
@@ -185,15 +186,15 @@ export default function StudentJuniorHome({ navigation }) {
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{totalLessons}</Text>
               <Text style={styles.statLabel}>Lessons</Text>
-            </Card>
+            </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{completedLessons}</Text>
               <Text style={styles.statLabel}>Done</Text>
-            </Card>
+            </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{completionPct}%</Text>
               <Text style={styles.statLabel}>Progress</Text>
-            </Card>
+            </View>
           </View>
         </View>
 
@@ -208,64 +209,59 @@ export default function StudentJuniorHome({ navigation }) {
           </View>
 
           {nextLesson ? (
-            <TouchableOpacity>
-              <Card>
-              onPress={() => navigation.navigate(
-                'Lessons',
-                {
-                  screen: 'StudentJuniorLessonDetail',
-                  params: {
-                    lessonId: nextLesson.id
-                  }
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate('Lessons', {
+                    screen: 'StudentJuniorLessonDetail',
+                    params: {
+                      lessonId: nextLesson.id,
+                    },
+                  })
                 }
-              )}
-            >
-              <View style={styles.lessonCardContent}>
-              <View style={styles.lessonIconWrap}>
-                <Text style={styles.lessonIcon}>
-                  📚
+              >
+                <View style={styles.lessonCard}>
+                  <View style={styles.lessonCardContent}>
+                    <View style={styles.lessonIconWrap}>
+                      <Text style={styles.lessonIcon}>📚</Text>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardTag}>
+                        {nextLesson.subject || 'Lesson'}
+                      </Text>
+
+                      <Text style={styles.cardTitle}>
+                        {nextLesson.title}
+                      </Text>
+
+                      <Text style={styles.cardMeta}>
+                        Grade {nextLesson.gradeLevel || '—'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.lessonXpBadge}>
+                      <Text style={styles.lessonXpText}>
+                        +{nextLesson.xpReward || 0} XP
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.continueButton}>
+                    <Text style={styles.continueButtonText}>
+                      Continue →
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>📚</Text>
+                <Text style={styles.emptyTitle}>No active lessons</Text>
+                <Text style={styles.emptyText}>
+                  Explore the lesson library to start your next activity.
                 </Text>
               </View>
-
-              <View style={{ flex: 1 }}>
-
-                <Text style={styles.cardTag}>
-                  {nextLesson.subject || 'Lesson'}
-                </Text>
-
-                <Text style={styles.cardTitle}>
-                  {nextLesson.title}
-                </Text>
-
-                <Text style={styles.cardMeta}>
-                  Grade {nextLesson.gradeLevel || '—'}
-                </Text>
-
-              </View>
-
-              <View style={styles.lessonXpBadge}>
-                <Text style={styles.lessonXpText}>
-                  +{nextLesson.xpReward || 0} XP
-                </Text>
-              </View>
-
-            </View>
-
-            <View style={styles.continueButton}>
-              <Text style={styles.continueButtonText}>
-                Continue →
-              </Text>
-            </Card>
-              </Card>
-            </TouchableOpacity>
-
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📚</Text>
-              <Text style={styles.emptyTitle}>No active lessons</Text>
-              <Text style={styles.emptyText}>Explore the lesson library to start your next activity.</Text>
-            </Card>
-          )}
+            )}
         </View>
 
         <View style={styles.section}>
@@ -316,7 +312,7 @@ export default function StudentJuniorHome({ navigation }) {
               <Text style={styles.emptyEmoji}>🎉</Text>
               <Text style={styles.emptyTitle}>No group task yet</Text>
               <Text style={styles.emptyText}>Great job! Check back later for group activities.</Text>
-            </Card>
+            </View>
           )}
 
         </View>

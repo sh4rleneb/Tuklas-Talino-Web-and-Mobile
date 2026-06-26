@@ -27,6 +27,8 @@ import {
 
 import ReadingPassageCard from '../../components/lesson/ReadingPassageCard';
 import ActivityVisualCard from '../../components/lesson/ActivityVisualCard';
+import PowerUpTray from '../../components/lesson/PowerUpTray';
+import ActivityGuideCard from '../../components/lesson/ActivityGuideCard';
 
 function optionalProgressRequest(request, fallback) {
   return request.catch((err) => {
