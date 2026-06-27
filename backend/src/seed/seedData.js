@@ -5,6 +5,7 @@ import {
   Group, GroupMember, GroupTask, AuditLog
 } from '../models/index.js';
 import { questionsForSeedLesson } from './lessonMcqBank.js';
+import { ensureSeedLessonMaterialFiles, materialForSeedLesson } from './lessonMaterialBank.js';
 
 const subjects = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Oral Comm', 'Pagsulat'];
 
@@ -662,6 +663,8 @@ export async function seedData() {
     };
   }
 
+  ensureSeedLessonMaterialFiles();
+
   for (let grade = 1; grade <= 6; grade++) {
     for (const subject of subjects) {
       const body = lessonBody(subject, grade);
@@ -679,7 +682,21 @@ export async function seedData() {
         status: 'published'
       });
 
-      const mcqActivity = await LessonActivity.create({ lessonId: lesson.id, type: 'mcq', title: 'Pagsusulit', sortOrder: 1 });
+      const material = materialForSeedLesson(body);
+      const hasMaterial = Boolean(material);
+
+      if (material) {
+        await LessonActivity.create({
+          lessonId: lesson.id,
+          type: 'material',
+          title: 'Materyal',
+          instructions: 'Buksan ang demo PDF material bago magpatuloy sa aralin.',
+          dataJson: material,
+          sortOrder: 1
+        });
+      }
+
+      const mcqActivity = await LessonActivity.create({ lessonId: lesson.id, type: 'mcq', title: 'Pagsusulit', sortOrder: hasMaterial ? 2 : 1 });
       const mcqQuestions = questionsForSeedLesson(body);
 
       for (let questionIndex = 0; questionIndex < mcqQuestions.length; questionIndex++) {
@@ -703,11 +720,11 @@ export async function seedData() {
         }
       }
 
-      const writingActivity = await LessonActivity.create({ lessonId: lesson.id, type: 'writing', title: 'Gawain', sortOrder: 2 });
+      const writingActivity = await LessonActivity.create({ lessonId: lesson.id, type: 'writing', title: 'Gawain', sortOrder: hasMaterial ? 3 : 2 });
       const gawain = defaultGawainForLesson(`G${grade}-${codeFor(subject)}-01`, body, grade);
       await WritingTask.create({ activityId: writingActivity.id, prompt: gawain.prompt, rubricJson: gawain.rubric });
 
-      const speechActivity = await LessonActivity.create({ lessonId: lesson.id, type: 'speech', title: 'Pagsasanay sa Pagbigkas', sortOrder: 3 });
+      const speechActivity = await LessonActivity.create({ lessonId: lesson.id, type: 'speech', title: 'Pagsasanay sa Pagbigkas', sortOrder: hasMaterial ? 4 : 3 });
       await SpeechTask.create({ activityId: speechActivity.id, targetText: body.speechTarget, promptJson: ['Basahin nang malinaw.', 'Ulitin kung kailangan.', 'I-save ang transcript.'] });
     }
   }
