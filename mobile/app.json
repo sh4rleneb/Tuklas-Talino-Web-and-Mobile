@@ -9,7 +9,10 @@
       "**/*"
     ],
     "extra": {
-      "apiUrl": "http://47.131.121.7:4000/api"
+      "apiUrl": "http://47.131.121.7:4000/api",
+      "eas": {
+        "projectId": "93a4e1d3-a8a3-4b2d-a66d-ed1c618dba56"
+      }
     },
     "plugins": [
       "expo-secure-store",

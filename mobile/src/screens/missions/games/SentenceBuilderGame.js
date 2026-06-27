@@ -89,6 +89,13 @@ export default function SentenceBuilderGame({
     setSelectedWords([]);
   };
 
+  const normalizeSentence = (text = '') =>
+    String(text)
+      .trim()
+      .replace(/[.!?]+$/,'')
+      .replace(/\s+/g,' ')
+      .toLowerCase();
+
   const handleCheck = () => {
     if (locked || submitting) {
       return;
@@ -97,7 +104,8 @@ export default function SentenceBuilderGame({
     setLocked(true);
 
     if (
-      `${builtSentence}.` === question.answer
+      normalizeSentence(builtSentence) ===
+      normalizeSentence(question.answer)
     ) {
       setToast('🎉 Tama!');
 

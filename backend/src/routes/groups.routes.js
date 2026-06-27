@@ -718,6 +718,7 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
             groupName: group?.name || null,
             taskTitle: task.title,
             xpAwarded: memberXpAwarded,
+            newBadges: memberNewBadges,
           },
         });
       }

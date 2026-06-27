@@ -727,10 +727,6 @@ router.post('/:id/complete', requireRole('student'), async (req, res, next) => {
         `Completed ${lesson.title}`
       );
 
-      if (xpResult) {
-        await awardThresholdBadges(xpResult);
-      }
-
       newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
 
       notifyTeacherAndLeaderboard({
@@ -1193,9 +1189,32 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
         'Ang paaralan ay malinis.'
       ].filter(Boolean);
 
-      const normalizedContent = normalizeWritingAnswer(content);
+      function keywordScore(expected, actual) {
+        const expectedWords = normalizeWritingAnswer(expected)
+          .split(' ')
+          .filter(Boolean);
+
+        const actualWords = new Set(
+          normalizeWritingAnswer(actual)
+            .split(' ')
+            .filter(Boolean)
+        );
+
+        let matched = 0;
+
+        for (const word of expectedWords) {
+          if (actualWords.has(word)) {
+            matched++;
+          }
+        }
+
+        return expectedWords.length
+          ? matched / expectedWords.length
+          : 0;
+      }
+
       const isCorrect = expectedAnswers.some(answer =>
-        normalizeWritingAnswer(answer) === normalizedContent
+        keywordScore(answer, content) >= 0.8
       );
 
       if (!isCorrect) {

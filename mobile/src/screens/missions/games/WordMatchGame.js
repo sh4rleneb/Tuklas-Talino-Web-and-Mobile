@@ -35,6 +35,19 @@ export default function WordMatchGame({
   const matchedCount = Object.keys(matchedPairs).length;
   const wordMatchComplete = matchedCount === items.length;
 
+  const challengeId = useMemo(() => {
+    return items
+      .map(item => item.id)
+      .sort()
+      .join('-');
+  }, [items]);
+
+  const challengeTitle = useMemo(() => {
+    return items
+      .map(item => item.label)
+      .join(', ');
+  }, [items]);
+
   useEffect(() => {
     if (!toast) return undefined;
 
@@ -187,6 +200,8 @@ export default function WordMatchGame({
         onPress={() =>
           onMissionComplete({
             forceComplete: true,
+            challengeId,
+            challengeTitle,
           })
         }
       >

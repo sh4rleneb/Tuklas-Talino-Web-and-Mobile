@@ -55,11 +55,7 @@ function missionPayload(missionId, mission, completions, completedLessons) {
   const current = Math.min(Number(completedLessons || 0), target);
   const state = completed
     ? 'claimed'
-    : current >= target
-      ? 'ready_to_claim'
-      : current > 0
-        ? 'in_progress'
-        : 'locked';
+    : 'available';
 
   return {
     missionId,
@@ -157,7 +153,15 @@ async function completeMission(req, res, next, options = {}) {
     let updatedStudent = await Student.findByPk(student.id);
     let xpAwarded = 0;
 
+    console.log('[MISSION]', {
+      missionId,
+      completionMissionId,
+      created,
+      completionId: completion.id
+    });
+
     if (created) {
+      console.log('[MISSION] Calling awardXp...');
       updatedStudent = await awardXp(
         student.id,
         mission.xp,
@@ -170,6 +174,15 @@ async function completeMission(req, res, next, options = {}) {
     }
 
     const freshStudent = updatedStudent || await Student.findByPk(student.id);
+    const dbStudent = await Student.findByPk(student.id);
+
+    console.log('[MISSION DEBUG]', {
+      savedXp: updatedStudent?.xp,
+      dbXp: dbStudent?.xp,
+      returnedXp: freshStudent?.xp,
+      xpAwarded,
+    });
+
     const newBadges = updatedStudent?.getDataValue?.('newBadges') || updatedStudent?.newBadges || [];
 
     res.json({

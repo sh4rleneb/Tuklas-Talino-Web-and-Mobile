@@ -16,6 +16,7 @@ import WordMatchGame from './games/WordMatchGame';
 import LetterPopGame from './games/LetterPopGame';
 import PictureGuessGame from './games/PictureGuessGame';
 import SentenceBuilderGame from './games/SentenceBuilderGame';
+import StoryQuestGame from './games/StoryQuestGame';
 
 
 const DEMOS = {
@@ -117,7 +118,11 @@ export default function MissionGameScreen({ navigation, route }) {
           message: 'Persistence leads to mastery.',
         };
 
-  const handleSubmit = async ({ forceComplete = false } = {}) => {
+  const handleSubmit = async ({
+    forceComplete = false,
+    challengeId = `attempt-${attempts}`,
+    challengeTitle = `${stars} ${attempts} attempts`,
+  } = {}) => {
     const success =
       forceComplete || selected === mission.correct;
 
@@ -134,8 +139,8 @@ export default function MissionGameScreen({ navigation, route }) {
         const data = await api(`/missions/${missionId}/complete`, {
           method: 'POST',
           body: {
-            challengeId: `attempt-${attempts}`,
-            challengeTitle: `${stars} ${attempts} attempts`,
+            challengeId,
+            challengeTitle,
           },
         });
 
@@ -232,6 +237,15 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'sentence-builder' && (
           <SentenceBuilderGame
+            mission={mission}
+            submitting={submitting}
+            onMissionComplete={handleSubmit}
+          />
+        )}
+
+
+        {missionId === 'story-quest' && (
+          <StoryQuestGame
             mission={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}

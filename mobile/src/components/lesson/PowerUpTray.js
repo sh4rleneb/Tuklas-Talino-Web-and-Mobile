@@ -4,6 +4,35 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 function buildWordPowerUps(activity = {}) {
   const words = new Set();
 
+  const rubric = activity.writingTask?.rubricJson || {};
+
+  [
+    rubric.correctAnswer,
+    ...(rubric.correctAnswers || []),
+    ...(rubric.acceptedAnswers || []),
+    ...(rubric.correctWords || []),
+    ...(rubric.wordBank || []),
+    ...(rubric.choices || []),
+  ].forEach((value) => {
+    if (!value) return;
+
+    if (typeof value === "string") {
+      words.add(value.trim());
+      return;
+    }
+
+    if (typeof value === "object") {
+      words.add(
+        String(
+          value.text ??
+          value.word ??
+          value.label ??
+          ""
+        ).trim()
+      );
+    }
+  });
+
   const collect = (value) => {
     if (!value) return;
 
@@ -20,6 +49,10 @@ function buildWordPowerUps(activity = {}) {
         .forEach((word) => words.add(word));
     }
   };
+
+  if (words.size) {
+    return [...words];
+  }
 
   collect(activity.instructions);
   collect(activity.content);
@@ -43,17 +76,17 @@ export default function PowerUpTray({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>⭐ Word Power-Ups</Text>
+      <Text style={styles.title}>📝 Word Bank</Text>
 
       <Text style={styles.subtitle}>
         Tap a word to drop it into your answer.
       </Text>
 
       <View style={styles.progressCard}>
-        <Text style={styles.progressTitle}>🎯 Mission Progress</Text>
+        <Text style={styles.progressTitle}>📈 Your Progress</Text>
 
         <Text style={styles.progressSubtitle}>
-          Collect 3 words to build your answer.
+          Choose 3 words to complete the sentence.
         </Text>
 
         <View style={styles.progressBar}>
@@ -71,7 +104,7 @@ export default function PowerUpTray({
         </View>
 
         <Text style={styles.progressText}>
-          ⭐ {selectedWords.length}/3 Words Collected
+          📝 {selectedWords.length}/3 Words Chosen
         </Text>
       </View>
 

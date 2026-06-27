@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -213,6 +214,10 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
   const [error, setError] = useState('');
   const playful = variant === 'junior';
 
+  const cardScale = React.useRef(
+    new Animated.Value(1)
+  ).current;
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -309,6 +314,15 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
             const active = category.key === selectedCategory;
 
             return (
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      scale: cardScale,
+                    },
+                  ],
+                }}
+              >
               <TouchableOpacity
                 key={category.key}
                 style={[
@@ -331,6 +345,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                   {category.label}
                 </Text>
               </TouchableOpacity>
+              </Animated.View>
             );
           })}
         </ScrollView>
@@ -367,7 +382,22 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
             return (
               <TouchableOpacity
                 key={lesson.id}
-                activeOpacity={lesson.unlocked ? 0.8 : 1}
+                activeOpacity={1}
+
+                onPressIn={() => {
+                  Animated.spring(cardScale,{
+                    toValue:0.97,
+                    useNativeDriver:true,
+                  }).start();
+                }}
+
+                onPressOut={() => {
+                  Animated.spring(cardScale,{
+                    toValue:1,
+                    friction:4,
+                    useNativeDriver:true,
+                  }).start();
+                }}
                 disabled={!lesson.unlocked}
                 style={[
                   styles.lessonCard,

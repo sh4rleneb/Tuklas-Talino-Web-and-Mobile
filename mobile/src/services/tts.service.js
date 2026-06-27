@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { api } from '../api/client';
 
-let currentSound = null;
+let currentSound = null, isRequestInProgress = false;
 
 export async function speakText(text) {
   const cleanText = String(text || '').trim();
@@ -11,6 +11,13 @@ export async function speakText(text) {
   if (!cleanText) {
     return;
   }
+    if (isRequestInProgress) {
+      return;
+    }
+
+    
+
+    isRequestInProgress = true;
 
   try {
     console.log('[TTS] Requesting audio');
@@ -60,6 +67,7 @@ export async function speakText(text) {
       );
 
     currentSound = result.sound;
+    // FRAMEWORK TEST
     console.log('[TTS] Playback started');
   } catch (err) {
     console.error(

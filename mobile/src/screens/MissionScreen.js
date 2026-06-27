@@ -105,6 +105,11 @@ export default function MissionScreen({ navigation }) {
         };
       });
 
+      console.log(
+        '[MERGED MISSIONS]',
+        JSON.stringify(merged, null, 2)
+      );
+
       setMissions(merged);
       setStudent(dashboard.student || null);
     } catch (err) {
@@ -136,11 +141,9 @@ export default function MissionScreen({ navigation }) {
   }
 
   function statusLabel(state) {
-    if (state === 'claimed') return 'Claimed';
-    if (state === 'ready_to_claim') return 'Ready';
-    if (state === 'in_progress') return 'In Progress';
-    return 'Locked';
-  }
+    if (state === 'claimed') return 'Completed';
+    return 'Available';
+}
 
   function buttonLabel(mission) {
     if (submittingId === mission.missionId) return 'Claiming...';
@@ -160,9 +163,9 @@ export default function MissionScreen({ navigation }) {
 
       <View style={styles.header}>
         <View style={styles.heroCard}>
-          <Text style={styles.heading}>🎯 Daily Quests</Text>
+          <Text style={styles.heading}>🎮 Available Learning Games</Text>
           <Text style={styles.subtitle}>
-            Complete quests, earn XP, maintain streaks, and unlock badges.
+            Tap Play and Earn XP points!
           </Text>
 
           {!!student && (
@@ -198,11 +201,7 @@ export default function MissionScreen({ navigation }) {
               styles.card,
               mission.state === 'claimed'
                 ? styles.cardCompleted
-                : mission.state === 'ready_to_claim'
-                ? styles.cardReady
-                : mission.state === 'locked'
-                ? styles.cardLocked
-                : styles.cardProgress,
+                : styles.cardReady,
             ]}
           >
             <View style={styles.cardHeader}>
@@ -257,7 +256,7 @@ export default function MissionScreen({ navigation }) {
               <Text style={styles.buttonText}>
                 {mission.state === 'claimed'
                   ? '✓ Completed'
-                  : '▶ Play'}
+                  : '▶ Play Now'}
               </Text>
             </TouchableOpacity>
 
@@ -341,11 +340,10 @@ const styles = StyleSheet.create({
   missionTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
   missionMeta: { color: colors.muted, marginTop: 4 },
   statusPill: (state) => ({
-    backgroundColor: state === 'claimed'
-      ? '#DCFCE7'
-      : state === 'ready_to_claim'
-        ? '#E0F2FE'
-        : '#E2E8F0',
+    backgroundColor:
+      state === 'claimed'
+        ? '#DCFCE7'
+        : '#DBEAFE',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 999,

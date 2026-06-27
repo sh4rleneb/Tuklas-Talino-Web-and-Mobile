@@ -1,3 +1,4 @@
+import { listMissionsForStudent } from './missions.routes.js';
 import {
   Router } from 'express'; import bcrypt from 'bcryptjs'; import crypto from 'crypto'; import { Op } from 'sequelize'; import { authenticate,
   requireRole,
@@ -191,7 +192,8 @@ async function buildBadgeProgress(studentId, xp = 0) {
     const target = definition.target || 1;
     const percent = Math.min(100, Math.round((Math.min(current, target) / target) * 100));
 
-    return {
+    
+return {
       code: definition.code,
       name: definition.name,
       icon: definition.icon,
@@ -273,9 +275,91 @@ async function dashboardPayload(student) {
       [{ model: LessonActivity, as: 'activities' }, { model: MCQQuestion, as: 'questions' }, { model: MCQOption, as: 'options' }, 'sortOrder', 'ASC']
     ]
   });
-  const completed = await CompletedLesson.findAll({ where: { studentId: student.id } });
+  const [
+    completed,
+    lessonProgressRows,
+    allBadges,
+    badges,
+    badgeProgress,
+    xpLogs,
+    quizAttemptRows,
+    groupTaskCompletions,
+    memberships,
+    missionResult
+  ] = await Promise.all([
+    CompletedLesson.findAll({ where: { studentId: student.id } }),
+    LessonProgress.findAll({ where: { studentId: student.id } }),
+    ensureCoreBadges(),
+    StudentBadge.findAll({
+      where: { studentId: student.id },
+      include: [Badge]
+    }),
+    buildBadgeProgress(student.id, student.xp),
+    XpLog.findAll({
+      where: { studentId: student.id },
+      order: [['createdAt', 'DESC']],
+      limit: 10
+    }),
+    QuizAttempt.findAll({
+      where: { studentId: student.id },
+      order: [['submittedAt', 'ASC'], ['id', 'ASC']]
+    }),
+    GroupTaskCompletion.findAll({
+      where: { studentId: student.id }
+    }),
+    GroupMember.findAll({
+      where: { studentId: student.id },
+      include: [{
+        model: Group,
+        include: [{ model: GroupTask, as: 'tasks' }]
+      }]
+    }),
+    listMissionsForStudent(student)
+  ]);
+
   const completedIds = new Set(completed.map(c => c.lessonId));
-  const lessonProgressRows = await LessonProgress.findAll({ where: { studentId: student.id } });
+  const { missions } = missionResult;
+
+  const quizAttempts = quizAttemptRows.reduce((map, attempt) => {
+    const row = attempt.toJSON();
+    const quizId = row.quizId || `lesson-${row.lessonId}`;
+
+    if (!map[quizId]) {
+      map[quizId] = [];
+    }
+
+    map[quizId].push({
+      id: row.id,
+      quizId,
+      quizTitle: row.quizTitle,
+      lessonId: row.lessonId,
+      score: row.score,
+      total: row.total,
+      percent: row.percent,
+      mastery: row.masteryLabel
+        ? { label: row.masteryLabel }
+        : undefined,
+      masteryLabel: row.masteryLabel,
+      attemptNo: row.attemptNo,
+      xpAwarded: row.xpAwarded,
+      xpPossible: row.xpPossible,
+      review: row.reviewJson || [],
+      submittedAt: row.submittedAt,
+      backendSaved: true,
+    });
+
+    return map;
+  }, {});
+
+  const groupTaskCompletionMap = new Map(
+    groupTaskCompletions.map(completion => [
+      Number(completion.groupTaskId),
+      completion.toJSON
+        ? completion.toJSON()
+        : completion,
+    ])
+  );
+
   const lessonProgressMap = new Map(lessonProgressRows.map(progress => {
     const row = progress.toJSON();
     const totalSteps = Math.max(1, Number(row.totalSteps || 1));
@@ -293,51 +377,8 @@ async function dashboardPayload(student) {
       }
     ];
   }));
-  const allBadges = await ensureCoreBadges();
-  const badges = await StudentBadge.findAll({ where: { studentId: student.id }, include: [Badge] });
-  const badgeProgress = await buildBadgeProgress(student.id, student.xp);
-  const xpLogs = await XpLog.findAll({ where: { studentId: student.id }, order: [['createdAt', 'DESC']], limit: 10 });
-  const quizAttemptRows = await QuizAttempt.findAll({
-    where: { studentId: student.id },
-    order: [['submittedAt', 'ASC'], ['id', 'ASC']]
-  });
 
-  const quizAttempts = quizAttemptRows.reduce((map, attempt) => {
-    const row = attempt.toJSON();
-    const quizId = row.quizId || `lesson-${row.lessonId}`;
 
-    if (!map[quizId]) map[quizId] = [];
-
-    map[quizId].push({
-      id: row.id,
-      quizId,
-      quizTitle: row.quizTitle,
-      lessonId: row.lessonId,
-      score: row.score,
-      total: row.total,
-      percent: row.percent,
-      mastery: row.masteryLabel ? { label: row.masteryLabel } : undefined,
-      masteryLabel: row.masteryLabel,
-      attemptNo: row.attemptNo,
-      xpAwarded: row.xpAwarded,
-      xpPossible: row.xpPossible,
-      review: row.reviewJson || [],
-      submittedAt: row.submittedAt,
-      backendSaved: true,
-    });
-
-    return map;
-  }, {});
-
-  const groupTaskCompletions = await GroupTaskCompletion.findAll({
-    where: { studentId: student.id }
-  });
-  const groupTaskCompletionMap = new Map(
-    groupTaskCompletions.map(completion => [
-      Number(completion.groupTaskId),
-      completion.toJSON ? completion.toJSON() : completion
-    ])
-  );
 
   const completedGroupTaskIds = new Set(
     groupTaskCompletions
@@ -345,10 +386,18 @@ async function dashboardPayload(student) {
       .map(completion => Number(completion.groupTaskId))
   );
 
-  const memberships = await GroupMember.findAll({ where: { studentId: student.id }, include: [{ model: Group, include: [{ model: GroupTask, as: 'tasks' }] }] });
+
+
+
+  console.log('[DASHBOARD DEBUG]', {
+    studentId: student.id,
+    xp: student.xp,
+    level: calculateLevel(student.xp)
+  });
 
   return {
     student,
+    missions,
     level: calculateLevel(student.xp),
     levelTitle: levelTitleForXp(student.xp),
     nextLevelXp: nextLevelXp(student.xp),

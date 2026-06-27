@@ -25,7 +25,11 @@ function getActivityVisual(activity, lesson) {
   };
 }
 
-export default function ActivityVisualCard({ activity, lesson }) {
+export default function ActivityVisualCard({
+  activity,
+  lesson,
+  littleLearnerGame = false,
+}) {
   if (!activity) return null;
 
   const visual = getActivityVisual(activity, lesson);
@@ -38,7 +42,13 @@ export default function ActivityVisualCard({ activity, lesson }) {
         {visual.imageUri ? (
           <Image
             source={{ uri: visual.imageUri }}
-            style={styles.image}
+            style={[
+              styles.image,
+              littleLearnerGame && {
+                height: 280,
+                borderRadius: 24,
+              },
+            ]}
             resizeMode="cover"
           />
         ) : (
@@ -46,10 +56,12 @@ export default function ActivityVisualCard({ activity, lesson }) {
         )}
       </View>
 
-      <View style={styles.copy}>
-        <Text style={styles.title}>{visual.title}</Text>
-        <Text style={styles.body}>{visual.body}</Text>
-      </View>
+      {!littleLearnerGame && (
+        <View style={styles.copy}>
+          <Text style={styles.title}>{visual.title}</Text>
+          <Text style={styles.body}>{visual.body}</Text>
+        </View>
+      )}
     </View>
   );
 }

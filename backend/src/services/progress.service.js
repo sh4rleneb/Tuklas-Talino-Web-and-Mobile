@@ -158,19 +158,38 @@ async function ensureCoreBadges() {
 async function buildBadgeStats(student) {
   const studentId = student.id;
 
-  const [
-    completedLessons,
-    perfectQuizzes,
-    writingSubmissions,
-    speechAttempts,
-    approvedGroupTasks
-  ] = await Promise.all([
-    CompletedLesson.count({ where: { studentId } }),
-    QuizAttempt.count({ where: { studentId, percent: 100 } }),
-    WritingSubmission.count({ where: { studentId } }),
-    SpeechAttempt.count({ where: { studentId } }),
-    GroupTaskCompletion.count({ where: { studentId, verificationStatus: 'approved' } })
-  ]);
+  const timer = (label, start) =>
+    console.log(`[BADGE STATS] ${label}: ${Date.now() - start} ms`);
+
+  let t = Date.now();
+  const completedLessons =
+    await CompletedLesson.count({ where: { studentId } });
+  timer('CompletedLesson.count', t);
+
+  t = Date.now();
+  const perfectQuizzes =
+    await QuizAttempt.count({ where: { studentId, percent: 100 } });
+  timer('QuizAttempt.count', t);
+
+  t = Date.now();
+  const writingSubmissions =
+    await WritingSubmission.count({ where: { studentId } });
+  timer('WritingSubmission.count', t);
+
+  t = Date.now();
+  const speechAttempts =
+    await SpeechAttempt.count({ where: { studentId } });
+  timer('SpeechAttempt.count', t);
+
+  t = Date.now();
+  const approvedGroupTasks =
+    await GroupTaskCompletion.count({
+      where: {
+        studentId,
+        verificationStatus: 'approved'
+      }
+    });
+  timer('GroupTaskCompletion.count', t);
 
   return {
     completedLessons,
@@ -291,7 +310,14 @@ function uniqueBadgeResponses(badges = []) {
 
 
 export async function awardXp(studentId, points, sourceType, sourceId = null, note = '') {
+  const profileStart = Date.now();
+
+  const profile = (label) => {
+    console.log(`[XP PROFILE] ${label}: ${Date.now() - profileStart} ms`);
+  };
+
   const student = await Student.findByPk(studentId);
+  profile('Student.findByPk');
   if (!student) return null;
 
   const safePoints = Math.max(0, Number(points || 0));
@@ -328,9 +354,12 @@ export async function awardXp(studentId, points, sourceType, sourceId = null, no
   student.lastActivityDate = today;
 
   await student.save();
+  profile('student.save');
   await XpLog.create({ studentId, sourceType, sourceId, points: safePoints, note });
+  profile('XpLog.create');
 
   const newBadges = await awardThresholdBadges(student);
+  profile('awardThresholdBadges');
 
   student.newBadges = newBadges;
 
@@ -338,17 +367,23 @@ export async function awardXp(studentId, points, sourceType, sourceId = null, no
     student.setDataValue('newBadges', newBadges);
   }
 
+  profile('awardXp complete');
   return student;
 }
 
 export async function awardThresholdBadges(student) {
-  await ensureCoreBadges();
+  const badgeStart = Date.now();
+  const profile = (label) =>
+    console.log(`[BADGE PROFILE] ${label}: ${Date.now() - badgeStart} ms`);
 
   const badges = await Badge.findAll();
+  profile('Badge.findAll');
   const stats = await buildBadgeStats(student);
+  profile('buildBadgeStats');
   const newBadges = [];
 
   for (const badge of badges) {
+    const badgeTimer = Date.now();
     const definition = badgeDefinitionForCode(badge.code);
     let isEligible = false;
 
@@ -374,8 +409,14 @@ export async function awardThresholdBadges(student) {
         newBadges.push(plainBadge(badge));
       }
     }
+
+    console.log(
+      `[BADGE LOOP] ${badge.code}: ${Date.now() - badgeTimer} ms`
+    );
   }
 
+  profile('badge loop');
+  profile('awardThresholdBadges complete');
   return uniqueBadgeResponses(newBadges);
 }
 

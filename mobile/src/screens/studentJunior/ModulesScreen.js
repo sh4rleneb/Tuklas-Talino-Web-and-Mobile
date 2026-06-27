@@ -148,8 +148,17 @@ export default function ModulesScreen({ navigation }) {
             </Text>
           </View>
 
-          <View style={styles.arrowButton}>
-            <Text style={styles.arrowText}>›</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              lesson.completed
+                ? styles.statusDone
+                : styles.statusStart,
+            ]}
+          >
+            <Text style={styles.statusText}>
+              {lesson.completed ? '✅ Done' : '▶ Start'}
+            </Text>
           </View>
         </View>
 
@@ -160,12 +169,6 @@ export default function ModulesScreen({ navigation }) {
         <View style={styles.xpBadge}>
           <Text style={styles.xpText}>
             ⭐ {lesson.xpReward || 0} XP
-          </Text>
-        </View>
-
-        <View style={styles.summaryBadge}>
-          <Text style={styles.summaryText}>
-            ✅ Summary
           </Text>
         </View>
       </TouchableOpacity>
@@ -188,7 +191,7 @@ export default function ModulesScreen({ navigation }) {
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>📚 Modules</Text>
+        <Text style={styles.title}>Mga Aralin</Text>
 
         <View style={styles.spacer} />
       </View>
@@ -207,7 +210,7 @@ export default function ModulesScreen({ navigation }) {
           contentContainerStyle={styles.container}
           ListHeaderComponent={
             <View style={styles.listHeader}>
-              <Text style={styles.subtitle}>{filteredModules.length} lessons available</Text>
+              <Text style={styles.subtitle}>📚 Lesson Library</Text>
               <FlatList
                 data={subjects}
                 horizontal
@@ -329,21 +332,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
-
-  arrowButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  arrowText: {
-    fontSize: 28,
-    color: '#16A34A',
-    fontWeight: '900',
-  },
   lessonIconContainer: {
     width: 64,
     height: 64,
@@ -356,6 +344,27 @@ const styles = StyleSheet.create({
   lessonIcon: {
     fontSize: 28,
   },
+
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+
+  statusStart: {
+    backgroundColor: '#DCFCE7',
+  },
+
+  statusDone: {
+    backgroundColor: '#DBEAFE',
+  },
+
+  statusText: {
+    fontSize: 12,
+    color: '#166534',
+    fontFamily: 'Nunito_800ExtraBold',
+  },
+
   lessonInfo: {
     flex: 1,
   },
@@ -391,21 +400,6 @@ const styles = StyleSheet.create({
   xpText: {
     color: '#92400E',
     fontFamily: 'Fredoka_600SemiBold',
-  },
-
-  summaryBadge: {
-    alignSelf: 'flex-start',
-    marginTop: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-
-  summaryText: {
-    color: '#16A34A',
-    fontFamily: 'Nunito_800ExtraBold',
-    fontSize: 12,
   },
 
   loaderContainer: {

@@ -69,13 +69,51 @@ const [matchedPairs, setMatchedPairs] = useState({});
 const [selectedWords, setSelectedWords] = useState([]);
 
 const [badgePopup, setBadgePopup] = useState(null);
+const [animatedXp, setAnimatedXp] = useState(0);
+
 const badgeScale = useRef(new Animated.Value(0.6)).current;
+
+const xpCounter = useRef(new Animated.Value(0)).current;
+const trophyScale = useRef(new Animated.Value(0.4)).current;
+const starBurstScale = useRef(new Animated.Value(0.2)).current;
+const continueButtonAnim = useRef(new Animated.Value(0)).current;
+
+const confettiAnim = useRef(new Animated.Value(0)).current;
+const correctAnswerScale = useRef(new Animated.Value(1)).current;
+
+
 
 
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
   const celebrationScale = useRef(new Animated.Value(0.92)).current;
-  const celebrationRotate = useRef(new Animated.Value(0)).current;
+  
+const trackerPulse = useRef(new Animated.Value(1)).current;
+
+useEffect(() => {
+  if (!littleLearnerGame) return;
+
+  const loop = Animated.loop(
+    Animated.sequence([
+      Animated.timing(trackerPulse, {
+        toValue: 1.08,
+        duration: 550,
+        useNativeDriver: true,
+      }),
+      Animated.timing(trackerPulse, {
+        toValue: 1,
+        duration: 550,
+        useNativeDriver: true,
+      }),
+    ])
+  );
+
+  loop.start();
+
+  return () => loop.stop();
+}, [littleLearnerGame]);
+
+const celebrationRotate = useRef(new Animated.Value(0)).current;
 
 
   useEffect(() => {
@@ -186,6 +224,17 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
     };
   }, [completed, celebrationRotate, celebrationScale]);
 
+  useEffect(() => {
+    const id = xpCounter.addListener(({ value }) => {
+      setAnimatedXp(Math.round(value));
+    });
+
+    return () => {
+      xpCounter.removeListener(id);
+    };
+  }, [xpCounter]);
+
+
   const activities = useMemo(
     () => Array.isArray(lesson?.activities) ? lesson.activities : [],
     [lesson]
@@ -295,6 +344,46 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
     setWritingAnswer(nextWords.join(' '));
   };
 
+
+  const getOptionEmoji = (text = '') => {
+    const value = String(text).trim().toLowerCase();
+
+    const emojiMap = {
+      dog: '🐶',
+      cat: '🐱',
+      bird: '🐦',
+      fish: '🐟',
+      apple: '🍎',
+      banana: '🍌',
+      mango: '🥭',
+      orange: '🍊',
+      grapes: '🍇',
+      pineapple: '🍍',
+      car: '🚗',
+      bus: '🚌',
+      bicycle: '🚲',
+      bike: '🚲',
+      train: '🚂',
+      airplane: '✈️',
+      boat: '⛵',
+      tree: '🌳',
+      flower: '🌸',
+      sun: '☀️',
+      moon: '🌙',
+      star: '⭐',
+      ball: '⚽',
+      book: '📚',
+      pencil: '✏️',
+      school: '🏫',
+      house: '🏠',
+      teacher: '👩‍🏫',
+      boy: '👦',
+      girl: '👧',
+    };
+
+    return emojiMap[value] || '🎈';
+  };
+
   const renderGameHeader = activity => {
     if (!littleLearnerGame || !activity) return null;
 
@@ -322,50 +411,13 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
             <Text style={{ fontSize: 30 }}>{game.icon}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#15803D', fontSize: 13, fontWeight: '900', letterSpacing: 1 }}>
-              MINI GAME
-            </Text>
             <Text style={{ color: '#0F172A', fontSize: 24, fontWeight: '900' }}>
               {game.title}
             </Text>
           </View>
         </View>
 
-        <Text style={{ color: '#334155', fontSize: 17, lineHeight: 25, marginBottom: 14 }}>
-          {game.mission}
-        </Text>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-          {game.steps.map((item, index) => (
-            <View
-              key={`${item}-${index}`}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#FFFFFF',
-                borderColor: '#BBF7D0',
-                borderWidth: 1,
-                borderRadius: 999,
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-              }}
-            >
-              <Text style={{
-                backgroundColor: '#16A34A',
-                color: '#FFFFFF',
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                textAlign: 'center',
-                fontWeight: '900',
-                marginRight: 8,
-              }}>
-                {index + 1}
-              </Text>
-              <Text style={{ color: '#15803D', fontWeight: '900' }}>{item}</Text>
-            </View>
-          ))}
-        </View>
       </View>
     );
   };
@@ -492,6 +544,23 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
           correct: Boolean(data.correct),
         },
       }));
+      if (data.correct) {
+        correctAnswerScale.setValue(1);
+
+        Animated.sequence([
+          Animated.spring(correctAnswerScale, {
+            toValue: 1.18,
+            friction: 4,
+            useNativeDriver: true,
+          }),
+          Animated.spring(correctAnswerScale, {
+            toValue: 1,
+            friction: 5,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+
       setActivityNotice({
         type: data.correct ? 'success' : 'warning',
         title: data.correct
@@ -644,6 +713,45 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
         }, 5500);
       }
 
+      trophyScale.setValue(0.4);
+      starBurstScale.setValue(0.2);
+      xpCounter.setValue(0);
+      continueButtonAnim.setValue(0);
+      confettiAnim.setValue(0);
+
+      Animated.sequence([
+        Animated.spring(trophyScale, {
+          toValue: 1,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+
+        Animated.parallel([
+          Animated.spring(starBurstScale, {
+            toValue: 1,
+            friction: 6,
+            useNativeDriver: true,
+          }),
+          Animated.timing(confettiAnim, {
+            toValue: 1,
+            duration: 700,
+            useNativeDriver: true,
+          }),
+        ]),
+
+        Animated.timing(xpCounter, {
+          toValue: Number(data?.xpAwarded || 0),
+          duration: 900,
+          useNativeDriver: false,
+        }),
+
+        Animated.timing(continueButtonAnim, {
+          toValue: 1,
+          duration: 450,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
       setCompleted(true);
       setStudent((current) => current
         ? { ...current, xp: Number(current.xp || 0) + Number(data.xpAwarded || 0) }
@@ -667,7 +775,7 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
           </Text>
 
           <TouchableOpacity
-            style={styles.secondaryButton}
+            style={[styles.secondaryButton, littleLearnerGame && styles.kidSpeechButton]}
             onPress={() =>
               speakText(
                 `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`
@@ -724,54 +832,139 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
       return (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🧠 {currentActivity.title}</Text>
-          <ActivityGuideCard
-            activity={currentActivity}
-            littleLearnerGame={littleLearnerGame}
-          />
-          {<ActivityVisualCard
+          {littleLearnerGame ? null : (
+            <ActivityGuideCard
+              activity={currentActivity}
+              littleLearnerGame={littleLearnerGame}
+            />
+          )}
+
+          <ActivityVisualCard
             activity={currentActivity}
             lesson={lesson}
-          />}
-          {<ReadingPassageCard
+          />
+
+          {littleLearnerGame ? null : (
+            <ReadingPassageCard
               activity={currentActivity}
               lesson={lesson}
-            />}
+            />
+          )}
           {questions.map((question) => (
             <View key={question.id} style={styles.questionBlock}>
-              <Text style={styles.question}>{question.question}</Text>
+              {!littleLearnerGame && (
+                <Text style={styles.question}>
+                  {question.question}
+                </Text>
+              )}
               {(question.options || []).map((option) => {
                 const answer = mcqAnswers[question.id];
                 const selected = answer?.selectedOptionId === option.id;
                 return (
+                  <Animated.View
+                    style={
+                      selected && answer?.correct
+                        ? {
+                            transform: [{ scale: correctAnswerScale }],
+                          }
+                        : null
+                    }
+                  >
                   <TouchableOpacity
                     key={option.id}
                     style={[
                       styles.option,
+                      littleLearnerGame && {
+                        minHeight: 110,
+                        borderRadius: 28,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: '#F0FDF4',
+                        borderColor: '#86EFAC',
+                        marginBottom: 14,
+                      },
                       selected && (answer.correct ? styles.optionCorrect : styles.optionIncorrect),
                     ]}
                     onPress={() => answerQuestion(question, option)}
                     disabled={submitting}
                   >
-                    <Text style={styles.optionText}>
-                      {littleLearnerGame ? `🎈 ${option.optionText}` : option.optionText}
-                    </Text>
+                    {littleLearnerGame ? (
+                      <>
+                        <Text style={styles.optionEmoji}>
+                          {getOptionEmoji(option.optionText)}
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.optionText,
+                            {
+                              fontSize: 28,
+                              textAlign: 'center',
+                              lineHeight: 34,
+                            },
+                          ]}
+                        >
+                          {option.optionText}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.optionText}>
+                        {option.optionText}
+                      </Text>
+                    )}
                   </TouchableOpacity>
+                  </Animated.View>
                 );
               })}
             </View>
           ))}
           {activityNotice ? (
-            <View
-              style={[
-                styles.feedbackCard,
-                activityNotice.type === 'success' && styles.feedbackSuccess,
-                activityNotice.type === 'warning' && styles.feedbackWarning,
-                activityNotice.type === 'error' && styles.feedbackError,
-              ]}
-            >
-              <Text style={styles.feedbackTitle}>{activityNotice.title}</Text>
-              <Text style={styles.feedbackMessage}>{activityNotice.message}</Text>
-            </View>
+            littleLearnerGame ? (
+              <View
+                style={[
+                  styles.feedbackCard,
+                  activityNotice.type === 'success'
+                    ? styles.feedbackSuccess
+                    : styles.feedbackWarning,
+                  {
+                    alignItems:'center',
+                    paddingVertical:24,
+                  },
+                ]}
+              >
+                <Text style={{ fontSize:64 }}>
+                  {activityNotice.type === 'success' ? '⭐😊' : '❌😅'}
+                </Text>
+
+                <Text
+                  style={{
+                    fontSize:26,
+                    fontWeight:'900',
+                    marginTop:12,
+                  }}
+                >
+                  {activityNotice.type === 'success'
+                    ? 'Great Job!'
+                    : 'Try Again!'}
+                </Text>
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.feedbackCard,
+                  activityNotice.type === 'success' && styles.feedbackSuccess,
+                  activityNotice.type === 'warning' && styles.feedbackWarning,
+                  activityNotice.type === 'error' && styles.feedbackError,
+                ]}
+              >
+                <Text style={styles.feedbackTitle}>
+                  {activityNotice.title}
+                </Text>
+                <Text style={styles.feedbackMessage}>
+                  {activityNotice.message}
+                </Text>
+              </View>
+            )
           ) : null}
           {!questions.length && <Text style={styles.body}>No quiz questions are published for this activity yet.</Text>}
           <TouchableOpacity
@@ -799,20 +992,42 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
         <View style={[
           styles.card,
           littleLearnerGame && {
-            borderWidth: 2,
-            borderColor: '#BBF7D0',
-            backgroundColor: '#FFFFFF',
+            borderWidth: 3,
+            borderColor: '#A7F3D0',
+            backgroundColor: '#F0FDF4',
+            shadowColor: '#22C55E',
+            shadowOpacity: 0.12,
+            shadowRadius: 12,
+            shadowOffset: {
+              width: 0,
+              height: 6,
+            },
+            elevation: 5,
           },
         ]}>
           {renderGameHeader(currentActivity)}
-          <Text style={styles.cardTitle}>
-            {littleLearnerGame ? `${game.icon} ${game.title}` : `✍️ ${currentActivity.title}`}
-          </Text>
-          <Text style={styles.body}>
-            {littleLearnerGame
-              ? 'Your mission: build a short answer and claim the finish star.'
-              : currentActivity.writingTask?.prompt || currentActivity.instructions}
-          </Text>
+          {littleLearnerGame && (
+            <Text
+              style={{
+                textAlign: 'center',
+                fontSize: 26,
+                marginBottom: 10,
+              }}
+            >
+              🌈 ⭐ 🎈 ⭐ 🌈
+            </Text>
+          )}
+
+          {!littleLearnerGame && (
+            <Text style={styles.cardTitle}>
+              ✍️ {currentActivity.title}
+            </Text>
+          )}
+          {!littleLearnerGame && (
+            <Text style={styles.body}>
+              {currentActivity.writingTask?.prompt || currentActivity.instructions}
+            </Text>
+          )}
           {littleLearnerGame ? null : (
           <ActivityGuideCard
             activity={currentActivity}
@@ -937,16 +1152,42 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
         <View style={[
           styles.card,
           littleLearnerGame && {
-            borderWidth: 2,
+            borderWidth: 3,
             borderColor: '#FDE68A',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: '#F0FDF4',
+            shadowColor: '#22C55E',
+            shadowOpacity: 0.12,
+            shadowRadius: 12,
+            shadowOffset: {
+              width: 0,
+              height: 6,
+            },
+            elevation: 5,
           },
         ]}>
           {renderGameHeader(currentActivity)}
-          <Text style={styles.cardTitle}>
-            {littleLearnerGame ? `${game.icon} ${game.title}` : `🎤 ${currentActivity.title}`}
-          </Text>
-          <Text style={styles.body}>{currentActivity.speechTask?.targetText || currentActivity.instructions}</Text>
+          {littleLearnerGame && (
+            <Text
+              style={{
+                textAlign: 'center',
+                fontSize: 26,
+                marginBottom: 10,
+              }}
+            >
+              🌈 ⭐ 🎈 ⭐ 🌈
+            </Text>
+          )}
+
+          {!littleLearnerGame && (
+            <Text style={styles.cardTitle}>
+              🎤 {currentActivity.title}
+            </Text>
+          )}
+          {!littleLearnerGame && (
+            <Text style={styles.body}>
+              {currentActivity.speechTask?.targetText || currentActivity.instructions}
+            </Text>
+          )}
           {littleLearnerGame ? null : (
           <ActivityGuideCard
             activity={currentActivity}
@@ -957,9 +1198,23 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
             activity={currentActivity}
             lesson={lesson}
           />}
-          <View style={styles.speechButtons}>
+          <View
+            style={[
+              styles.speechButtons,
+              littleLearnerGame && {
+                flexDirection:'row',
+                justifyContent:'space-evenly',
+                alignItems:'flex-start',
+                flexWrap:'wrap',
+                marginTop:12,
+              },
+            ]}
+          >
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={[
+                styles.secondaryButton,
+                littleLearnerGame && styles.kidSpeechButton,
+              ]}
               onPress={() =>
                 speakText(
                   currentActivity.speechTask?.targetText ||
@@ -968,43 +1223,67 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
                 )
               }
             >
-              <Text style={styles.secondaryText}>
-                🔊 Listen Target
+              <Text style={littleLearnerGame ? styles.kidSpeechIcon : styles.secondaryText}>
+                🔊
               </Text>
+              {littleLearnerGame ? (
+                <Text style={styles.kidSpeechLabel}>Listen</Text>
+              ) : (
+                <Text style={styles.secondaryText}>Listen Target</Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.secondaryButton,
-                recording && styles.recordingButton
+                littleLearnerGame && styles.kidSpeechButton,
+                recording && styles.recordingButton,
               ]}
               onPress={recording ? stopRecording : startRecording}
             >
-              <Text style={styles.secondaryText}>
-                {recording
-                  ? '⏹ Stop Recording'
-                  : littleLearnerGame
-                    ? '🎮 Start Voice Quest'
-                    : '🎙 Start Recording'}
-              </Text>
+              {littleLearnerGame ? (
+                <>
+                  <Text style={styles.kidSpeechIcon}>
+                    {recording ? '⏹' : '🎤'}
+                  </Text>
+                  <Text style={styles.kidSpeechLabel}>
+                    {recording ? 'Stop' : 'Record'}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.secondaryText}>
+                  {recording ? '⏹ Stop Recording' : '🎙 Start Recording'}
+                </Text>
+              )}
             </TouchableOpacity>
 
             {recordingUri ? (
               <TouchableOpacity
-                style={styles.secondaryButton}
+                style={[
+                  styles.secondaryButton,
+                  littleLearnerGame && styles.kidSpeechButton,
+                ]}
                 onPress={playRecording}
                 disabled={playing}
               >
-                <Text style={styles.secondaryText}>
-                  {playing
-                    ? '▶ Playing...'
-                    : '▶ Replay My Voice'}
-                </Text>
+                {littleLearnerGame ? (
+                  <>
+                    <Text style={styles.kidSpeechIcon}>▶️</Text>
+                    <Text style={styles.kidSpeechLabel}>Play</Text>
+                  </>
+                ) : (
+                  <Text style={styles.secondaryText}>
+                    {playing ? '▶ Playing...' : '▶ Replay My Voice'}
+                  </Text>
+                )}
               </TouchableOpacity>
             ) : null}
 
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={[
+                styles.secondaryButton,
+                littleLearnerGame && styles.kidSpeechButton,
+              ]}
               onPress={async () => {
                 await stopSpeech();
 
@@ -1021,9 +1300,14 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
                 setSpeechStatus('Audio stopped.');
               }}
             >
-              <Text style={styles.secondaryText}>
-                ⏹ Stop Audio
-              </Text>
+              {littleLearnerGame ? (
+                <>
+                  <Text style={styles.kidSpeechIcon}>⏹</Text>
+                  <Text style={styles.kidSpeechLabel}>Stop</Text>
+                </>
+              ) : (
+                <Text style={styles.secondaryText}>⏹ Stop Audio</Text>
+              )}
             </TouchableOpacity>
           </View>
           {speechStatus ? <Text style={styles.statusMessage}>{speechStatus}</Text> : null}
@@ -1484,7 +1768,60 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
                   borderColor:'#FDE68A',
                 }}
               >
-                <Text style={{fontSize:72}}>🏆</Text>
+                <View
+                  style={{
+                    alignItems:'center',
+                    justifyContent:'center',
+                  }}
+                >
+
+                  <Animated.Text
+                    style={{
+                      position:'absolute',
+                      fontSize:42,
+                      opacity: confettiAnim,
+                      transform:[
+                        {
+                          translateY: confettiAnim.interpolate({
+                            inputRange:[0,1],
+                            outputRange:[30,-20],
+                          }),
+                        },
+                        {
+                          scale: confettiAnim.interpolate({
+                            inputRange:[0,1],
+                            outputRange:[0.6,1.2],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    🎊 🎉 ✨ ⭐ 🌟 ✨ 🎉 🎊
+                  </Animated.Text>
+
+                  <Animated.Text
+                    style={{
+                      position:'absolute',
+                      fontSize:34,
+                      opacity:0.75,
+                      transform:[
+                        { scale:starBurstScale },
+                      ],
+                    }}
+                  >
+                    ⭐ 🌟 ✨
+                  </Animated.Text>
+
+                  <Animated.View
+                    style={{
+                      transform:[
+                        { scale:trophyScale },
+                      ],
+                    }}
+                  >
+                    <Text style={{fontSize:72}}>🏆</Text>
+                  </Animated.View>
+                </View>
 
                 <Text
                   style={{
@@ -1531,7 +1868,7 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
                       marginTop:4,
                     }}
                   >
-                    +{completionResult?.xpAwarded || 0}
+                    +{animatedXp}
                   </Text>
                 </View>
 
@@ -1614,6 +1951,19 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
                 </View>
               ))}
 
+              <Animated.View
+                style={{
+                  opacity: continueButtonAnim,
+                  transform: [
+                    {
+                      translateY: continueButtonAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [24, 0],
+                      }),
+                    },
+                  ],
+                }}
+              >
               {nextLesson ? (
                 <TouchableOpacity
                   style={styles.primaryButton}
@@ -1645,6 +1995,8 @@ const badgeScale = useRef(new Animated.Value(0.6)).current;
                 }>
                 <Text style={styles.secondaryText}>🏠 Return Home</Text>
               </TouchableOpacity>
+
+              </Animated.View>
             </View>
           ) : renderActivity()}
       </ScrollView>
@@ -1879,6 +2231,11 @@ const styles = StyleSheet.create({
   },
   optionCorrect: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
   optionIncorrect: { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
+  optionEmoji: {
+    fontSize: 54,
+    marginBottom: 8,
+  },
+
   optionText: {
     color: '#0F172A',
     fontSize: 20,
@@ -1922,6 +2279,28 @@ const styles = StyleSheet.create({
   secondaryButton: { backgroundColor: '#E0F2FE', borderRadius: 16, alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14, marginTop: 12 },
   recordingButton: { backgroundColor: '#FEE2E2' },
   secondaryText: { color: '#0F172A', fontWeight: '900' },
+
+  kidSpeechButton: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 2,
+    borderColor: '#BBF7D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  kidSpeechIcon: {
+    fontSize: 34,
+  },
+  kidSpeechLabel: {
+    marginTop: 6,
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#15803D',
+  },
+
   speechButtons: { marginTop: 4 },
   speechPassageWrap: { marginTop: 16 },
   statusMessage: { color: '#0369A1', fontWeight: '800', marginTop: 10 },
