@@ -19,6 +19,7 @@ export default function QuizPlayer({
   getBestQuizAttempt,
   EarlyStudentChrome,
   Grade46StudentChrome,
+  logout,
 }) {
   const [started, setStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -248,6 +249,7 @@ export default function QuizPlayer({
         data={data}
         activeTab="quizzes"
         go={go}
+        logout={logout}
         icon="🧠"
         title={quiz?.title || "Quiz"}
         subtitle="" 

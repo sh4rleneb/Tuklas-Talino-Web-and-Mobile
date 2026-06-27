@@ -36,6 +36,7 @@ export default function QuizzesPage({
   getBestQuizAttempt,
   EarlyStudentChrome,
   Grade46StudentChrome,
+  logout,
 }) {
   const student = data?.student || {};
   const early = Number(student?.gradeLevel || 4) <= 2;
@@ -361,6 +362,7 @@ export default function QuizzesPage({
         data={data}
         activeTab="quizzes"
         go={go}
+        logout={logout}
         icon="🧠"
         title="Quizzes"
         subtitle=""

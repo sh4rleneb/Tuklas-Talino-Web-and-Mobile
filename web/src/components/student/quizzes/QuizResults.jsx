@@ -14,6 +14,7 @@ export default function QuizResults({
   buildStudentQuizzes,
   EarlyStudentChrome,
   Grade46StudentChrome,
+  logout,
 }) {
   const student = data?.student || {};
   const early = Number(student?.gradeLevel || 4) <= 2;
@@ -205,6 +206,7 @@ export default function QuizResults({
         data={data}
         activeTab="quizzes"
         go={go}
+        logout={logout}
         icon={mastery.icon || "🏆"}
         title="Quiz Result"
         subtitle={`${mastery.label} • ${result.score}/${result.total}`}

@@ -3486,6 +3486,7 @@ async function archiveTeacher(id) {
           subjectFilter={subjectFilter}
           setSubjectFilter={setSubjectFilter}
           go={go}
+          logout={doLogout}
           openLesson={openLesson}
           data={studentDash}
         />
@@ -3495,6 +3496,7 @@ async function archiveTeacher(id) {
   <QuizzesPage
     data={studentDash}
     go={go}
+    logout={doLogout}
     openQuiz={openQuiz}
     openQuizResult={openQuizResult}
     quizAttempts={quizAttempts}
@@ -3512,6 +3514,7 @@ async function archiveTeacher(id) {
       data={studentDash}
       quiz={selectedQuiz}
       go={go}
+      logout={doLogout}
       submitQuiz={submitQuiz}
       quizAttempts={quizAttempts}
       getBestQuizAttempt={getBestQuizAttempt}
@@ -3527,6 +3530,7 @@ async function archiveTeacher(id) {
       data={studentDash}
       result={quizResult}
       go={go}
+      logout={doLogout}
       openQuiz={openQuiz}
       buildStudentQuizzes={buildStudentQuizzes}
       EarlyStudentChrome={EarlyStudentChrome}
@@ -3541,6 +3545,7 @@ async function archiveTeacher(id) {
             lesson={selectedLesson}
             feedback={lessonFeedback}
             go={go}
+            logout={doLogout}
             completeLesson={completeLesson}
             submitMcq={submitMcq}
             submitWriting={submitWriting}
@@ -3555,6 +3560,7 @@ async function archiveTeacher(id) {
         <StudentMissions
           data={studentDash}
           go={go}
+          logout={doLogout}
           onPlayMission={(gameId) => {
             setSelectedMissionGameId(gameId);
             go('screen-stu-mission-play');
@@ -3566,6 +3572,7 @@ async function archiveTeacher(id) {
         <StudentMissionPlay
           data={studentDash}
           go={go}
+          logout={doLogout}
           selectedGameId={selectedMissionGameId}
           onBack={() => go('screen-stu-missions')}
           refresh={loadStudentDashboard}
@@ -3576,6 +3583,7 @@ async function archiveTeacher(id) {
         <StudentGroups
           data={studentDash}
           go={go}
+          logout={doLogout}
           completeGroupTask={completeGroupTask}
         />
       </Screen>
@@ -3584,6 +3592,7 @@ async function archiveTeacher(id) {
         <StudentBadges
           data={studentDash}
           go={go}
+          logout={doLogout}
         />
       </Screen>
 
@@ -3593,6 +3602,7 @@ async function archiveTeacher(id) {
           selectedAvatar={selectedAvatar}
           updateAvatar={updateAvatar}
           go={go}
+          logout={doLogout}
         />
       </Screen>
 
@@ -7531,7 +7541,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
   );
 }
 
-function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesson, data }) {
+function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesson, data, logout}) {
   const early = Number(data?.student?.gradeLevel || lessons?.[0]?.gradeLevel || 4) <= 2;
 
   if (early) {
@@ -7552,6 +7562,7 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
       data={data}
       activeTab="lessons"
       go={go}
+      logout={logout}
       icon="📚"
       title="Mga Aralin"
       subtitle="Pumili ng Filipino lesson o module para magpatuloy."
@@ -7663,7 +7674,7 @@ function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
-function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data, openLesson }) {
+function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data, openLesson, logout}) {
   const activities = lesson?.activities || [];
   const theme = subjectTheme(lesson?.subject);
   const isEarlyGrade = Number(lesson?.gradeLevel || 4) <= 2;
@@ -7897,6 +7908,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
         data={data}
         activeTab="lessons"
         go={go}
+        logout={logout}
         icon="✅"
         title={lesson?.title || "Lesson Summary"}
         subtitle={`Completed • Grade ${lesson?.gradeLevel || '—'} • ${lesson?.subject || 'Filipino'}`}
@@ -8288,6 +8300,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
       data={data}
       activeTab="lessons"
       go={go}
+      logout={logout}
       icon={theme.icon || "📘"}
       title={lesson?.title || "Lesson"}
       subtitle={`Grade ${lesson?.gradeLevel || '—'} • ${lesson?.subject || 'Filipino'} • +${lesson?.xpReward || 0} XP`}
@@ -12389,7 +12402,7 @@ function missionGamesForStudent(data) {
   });
 }
 
-function StudentMissions({ data, go, onPlayMission }) {
+function StudentMissions({ data, go, onPlayMission, logout}) {
   const student = data?.student || {};
   const gradeLevel = Number(student?.gradeLevel || 4);
   const early = gradeLevel <= 2;
@@ -12593,6 +12606,7 @@ function StudentMissions({ data, go, onPlayMission }) {
       data={data}
       activeTab="missions"
       go={go}
+      logout={logout}
       icon="🎮"
       title="Tuklas Missions"
       subtitle="Play Filipino learning games connected to vocabulary, reading, writing, comprehension, and oral communication."
@@ -12602,7 +12616,7 @@ function StudentMissions({ data, go, onPlayMission }) {
   );
 }
 
-function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, refresh }) {
+function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, refresh, logout}) {
   const [missionChoice, setMissionChoice] = useState('');
   const [missionResult, setMissionResult] = useState('');
   const [letterPopStage, setLetterPopStage] = useState('');
@@ -14295,6 +14309,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       data={data}
       activeTab="missions"
       go={go}
+      logout={logout}
       icon={selectedGame?.icon || '🎮'}
       title={selectedGame?.title || 'Mission'}
       subtitle={`${selectedGame?.module || 'Filipino'} mission • +${selectedGame?.xp || 0} XP preview`}
@@ -14685,7 +14700,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
   );
 }
 
-function StudentGroups({ data, go, completeGroupTask }) {
+function StudentGroups({ data, go, completeGroupTask, logout}) {
   const early = Number(data?.student?.gradeLevel || 4) <= 2;
   const groups = (data?.groups || []).filter(group => String(group?.status || 'active').toLowerCase() !== 'archived');
   const [taskRoles, setTaskRoles] = useState({});
@@ -14751,6 +14766,7 @@ function StudentGroups({ data, go, completeGroupTask }) {
       data={data}
       activeTab="groups"
       go={go}
+      logout={logout}
       icon="👥"
       title="Group Collaboration"
       subtitle="Submit your group output and role for teacher review."
@@ -15222,7 +15238,7 @@ function EarlyBadgesScreen({ data, go }) {
   );
 }
 
-function StudentBadges({ data, go }) {
+function StudentBadges({ data, go, logout}) {
   const early = Number(data?.student?.gradeLevel || 4) <= 2;
 
   if (early) {
@@ -15238,6 +15254,7 @@ function StudentBadges({ data, go }) {
       data={data}
       activeTab="badges"
       go={go}
+      logout={logout}
       icon="🏅"
       title="Badges"
       subtitle="Rewards and achievements from lessons, missions, and activities."
@@ -15372,7 +15389,7 @@ function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
   );
 }
 
-function StudentProfile({ data, selectedAvatar, updateAvatar, go }) {
+function StudentProfile({ data, selectedAvatar, updateAvatar, go, logout}) {
   const early = Number(data?.student?.gradeLevel || 4) <= 2;
 
   if (early) {
@@ -15386,6 +15403,7 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go }) {
       data={data}
       activeTab="profile"
       go={go}
+      logout={logout}
       icon="👤"
       title="Profile"
       subtitle="Piliin ang avatar mo at tingnan ang learning summary."
