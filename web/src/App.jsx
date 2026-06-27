@@ -1511,6 +1511,31 @@ async function archiveTeacher(id) {
           background: #fffbeb !important;
         }
 
+        .g12-gate-notif-wrap {
+          position: fixed !important;
+          inset: 0 !important;
+          z-index: 5000 !important;
+          display: grid !important;
+          place-items: center !important;
+          padding: 24px !important;
+          pointer-events: none !important;
+          background: transparent !important;
+        }
+
+        .g12-gate-notif {
+          pointer-events: auto !important;
+          max-width: min(560px, calc(100vw - 40px)) !important;
+          min-width: min(420px, calc(100vw - 40px)) !important;
+          text-align: center !important;
+          padding: 22px 28px !important;
+          border-left-width: 0 !important;
+          border: 3px solid rgba(245, 158, 11, 0.62) !important;
+          border-radius: 28px !important;
+          font-size: clamp(20px, 2.4vw, 28px) !important;
+          line-height: 1.35 !important;
+          box-shadow: 0 24px 70px rgba(20, 34, 59, 0.22) !important;
+        }
+
         .notif.rewards {
           display: inline-flex !important;
           align-items: center !important;
@@ -7704,6 +7729,8 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   const [completedPracticeKeys, setCompletedPracticeKeys] = useState([]);
   const [activityFeedbackKey, setActivityFeedbackKey] = useState('');
   const [reflectionChoice, setReflectionChoice] = useState('');
+  const [lessonGateToast, setLessonGateToast] = useState('');
+  const [readStepListened, setReadStepListened] = useState(false);
 
   useEffect(() => {
     setLessonStep(0);
@@ -7712,12 +7739,23 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     setCompletedPracticeKeys([]);
     setActivityFeedbackKey('');
     setReflectionChoice('');
+    setLessonGateToast('');
+    setReadStepListened(false);
 
     stopSpeech();
   }, [lesson?.id]);
 
   async function speakLesson() {
-    const text = `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`;
+    setReadStepListened(true);
+
+    const lessonPassage = lesson?.passage || '';
+    const listenSections = ['layunin', 'panimula', 'aralin']
+      .map(section => getStructuredLessonSectionText(lessonPassage, section))
+      .filter(Boolean);
+    const aralinAudio = getStructuredLessonAralinAudioText(lessonPassage);
+    const text = listenSections.length
+      ? listenSections.join(' ')
+      : aralinAudio || lessonPassage || 'Basahin nang malinaw.';
 
     await speakText(text);
   }
@@ -7808,14 +7846,8 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
         : 'No practice activities yet for this lesson.'
     },
     {
-      key: 'reflection',
-      eyebrow: `Step ${materialActivities.length ? 5 : 4}`,
-      title: 'Reflection',
-      subtitle: 'Rate your confidence before finishing.'
-    },
-    {
       key: 'complete',
-      eyebrow: `Step ${materialActivities.length ? 6 : 5}`,
+      eyebrow: `Step ${materialActivities.length ? 5 : 4}`,
       title: 'Complete Lesson',
       subtitle: 'Submit your lesson progress when you are ready.'
     }
@@ -7826,11 +7858,35 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   const canGoBack = safeStep > 0 || (currentStep?.key === 'activities' && currentPracticeIndex > 0);
   const canGoNext = safeStep < lessonSteps.length - 1;
 
+  function showLessonGateToast(message) {
+    if (!message) return;
+
+    setLessonGateToast(message);
+    window.setTimeout(() => {
+      setLessonGateToast(current => current === message ? '' : current);
+    }, 2600);
+  }
+
+  function practiceActivityGateMessage(activity = currentPracticeActivity) {
+    const type = String(activity?.type || '').toLowerCase();
+
+    if (type === 'mcq') return 'Sagutan muna ang quiz.';
+    if (type === 'writing') return 'Ipasa muna ang gawain.';
+    if (type === 'speech') return 'Ipasa muna ang bigkas.';
+
+    return 'Please submit this activity before continuing.';
+  }
+
   function goStep(delta) {
     const targetStep = Math.max(0, Math.min(lessonSteps.length - 1, safeStep + delta));
 
+    if (delta > 0 && currentStep?.key === 'read' && !readStepListened) {
+      showLessonGateToast('Pakinggan muna ang aralin.');
+      return;
+    }
+
     if (delta > 0 && currentStep?.key === 'activities' && !allRequiredPracticeComplete) {
-      window.alert('Please submit the required activity before continuing.');
+      showLessonGateToast('Please submit the required activity before continuing.');
       return;
     }
 
@@ -7856,7 +7912,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   function handleNext() {
     if (currentStep?.key === 'activities' && activityTotal) {
       if (!currentPracticeComplete) {
-        window.alert('Please submit this activity before moving to the next one.');
+        showLessonGateToast(practiceActivityGateMessage(currentPracticeActivity));
         return;
       }
 
@@ -7868,7 +7924,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
       }
 
       if (!allRequiredPracticeComplete) {
-        window.alert('Please submit all required activities before continuing.');
+        showLessonGateToast('Please submit all required activities before continuing.');
         return;
       }
     }
@@ -8115,43 +8171,87 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     }
 
     if (currentStep.key === 'read') {
-      return (
-        <div className="g46-ref-panel">
-          {lesson?.instructions && (
-            <div
-              style={{
-                padding: 14,
-                borderRadius: 16,
-                background: '#F8FAFF',
-                marginBottom: 12,
-                lineHeight: 1.6,
-                fontSize: 15,
-              }}
-            >
-              <b>Instructions:</b> {lesson.instructions}
-            </div>
-          )}
+      const lessonPassage = lesson?.passage || '';
+      const structuredSections = [
+        { key: 'layunin', label: 'Layunin', icon: '🎯' },
+        { key: 'panimula', label: 'Panimula', icon: '💡' },
+        { key: 'aralin', label: 'Aralin', icon: '📖' },
+      ];
+      const hasStructuredText = structuredSections.some(section =>
+        Boolean(getStructuredLessonSectionText(lessonPassage, section.key))
+      );
 
-          {lesson?.passage ? (
-            <div
-              style={{
-                padding: 18,
-                borderRadius: 18,
-                background: '#FFFFFF',
-                border: '1px solid #E1E7FF',
-                lineHeight: 1.75,
-                fontSize: 16,
-              }}
-            >
-              {lesson.passage}
-            </div>
+      return (
+        <div className="g46-ref-panel" style={{ display: 'grid', gap: 14 }}>
+          {lessonPassage ? (
+            hasStructuredText ? (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {structuredSections.map(section => {
+                  const sectionText = getStructuredLessonSectionText(lessonPassage, section.key);
+                  if (!sectionText) return null;
+
+                  return (
+                    <div
+                      key={section.key}
+                      style={{
+                        padding: 18,
+                        borderRadius: 20,
+                        background: '#FFFFFF',
+                        border: '1px solid #DDE8FF',
+                        boxShadow: '0 10px 24px rgba(15, 23, 42, 0.05)'
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          marginBottom: 8,
+                          color: '#0F8F57',
+                          fontWeight: 1000,
+                          fontSize: 18
+                        }}
+                      >
+                        <span>{section.icon}</span>
+                        <span>{section.label}</span>
+                      </div>
+
+                      <div
+                        style={{
+                          lineHeight: 1.75,
+                          fontSize: 16,
+                          color: '#17324D',
+                          fontWeight: 800
+                        }}
+                      >
+                        {sectionText}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: 18,
+                  borderRadius: 18,
+                  background: '#FFFFFF',
+                  border: '1px solid #E1E7FF',
+                  lineHeight: 1.75,
+                  fontSize: 16,
+                  whiteSpace: 'pre-wrap'
+                }}
+              >
+                {lessonPassage}
+              </div>
+            )
           ) : (
             <div className="muted">No passage added for this lesson yet.</div>
           )}
 
           <div className="divider" />
 
-          <div className="row">
+          <div className="row" style={{ alignItems: 'center', gap: 12 }}>
             <button className="btn btn-blue" onClick={speakLesson}>
               🔊 Listen
             </button>
@@ -8159,6 +8259,8 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
             <button className="btn btn-outline" onClick={() => stopSpeech()}>
               ⏹ Stop
             </button>
+
+
           </div>
         </div>
       );
@@ -8178,20 +8280,33 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
                 isEarlyGrade={false}
                 submitMcq={async (...args) => {
                   const result = await submitMcq(...args);
-                  markPracticeComplete(currentActivity, currentPracticeIndex);
-                  setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+
+                  if (result) {
+                    markPracticeComplete(currentActivity, currentPracticeIndex);
+                    setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+                  }
+
                   return result;
                 }}
                 submitWriting={async (...args) => {
                   const result = await submitWriting(...args);
-                  markPracticeComplete(currentActivity, currentPracticeIndex);
-                  setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+
+                  if (result) {
+                    markPracticeComplete(currentActivity, currentPracticeIndex);
+                    setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+                  }
+
                   return result;
                 }}
                 submitSpeech={async (...args) => {
+                  const transcript = String(args?.[1] || '').trim();
                   const result = await submitSpeech(...args);
-                  markPracticeComplete(currentActivity, currentPracticeIndex);
-                  setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+
+                  if (transcript.length >= 2) {
+                    markPracticeComplete(currentActivity, currentPracticeIndex);
+                    setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
+                  }
+
                   return result;
                 }}
               />
@@ -8205,62 +8320,6 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
               </p>
             </div>
           )}
-        </div>
-      );
-    }
-
-    if (currentStep.key === 'reflection') {
-      const reflectionOptions = [
-        'Kayang-kaya ko na',
-        'Kailangan ko pang mag-review',
-        'Magtatanong ako sa teacher'
-      ];
-
-      return (
-        <div className="g46-ref-panel">
-          <div style={{ display: 'grid', gap: 14 }}>
-            <div>
-              <h3 style={{ margin: '0 0 6px', color: '#17324D' }}>Kumusta ang aralin?</h3>
-              <p className="g46-ref-muted" style={{ margin: 0 }}>
-                Piliin ang pinakaakmang reflection bago tapusin ang lesson.
-              </p>
-            </div>
-
-            <div style={{ display: 'grid', gap: 10 }}>
-              {reflectionOptions.map(option => (
-                <button
-                  key={option}
-                  type="button"
-                  className={reflectionChoice === option ? 'g46-ref-primary-btn' : 'g46-ref-soft-btn'}
-                  onClick={() => setReflectionChoice(option)}
-                  style={{
-                    justifyContent: 'flex-start',
-                    textAlign: 'left',
-                    width: '100%',
-                    borderRadius: 18,
-                    padding: '14px 16px'
-                  }}
-                >
-                  {reflectionChoice === option ? '✅ ' : '○ '} {option}
-                </button>
-              ))}
-            </div>
-
-            {reflectionChoice && (
-              <div
-                style={{
-                  borderRadius: 18,
-                  padding: 14,
-                  background: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
-                  color: '#166534',
-                  fontWeight: 900
-                }}
-              >
-                Reflection saved for this session: {reflectionChoice}
-              </div>
-            )}
-          </div>
         </div>
       );
     }
@@ -8359,6 +8418,14 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
             ))}
           </div>
         </section>
+
+        {lessonGateToast && (
+          <div className="g12-gate-notif-wrap" role="status">
+            <div className="notif warn g12-gate-notif">
+              <span>{lessonGateToast}</span>
+            </div>
+          </div>
+        )}
 
         {renderStepContent()}
 
@@ -8512,7 +8579,9 @@ function shortEarlyLessonTitle(lesson = {}) {
 }
 
 function makeStudentFriendlyPassage(lesson) {
-  const raw = cleanLessonTextForKids(lesson?.passage || lesson?.instructions || lesson?.title || '');
+  const rawInput = String(lesson?.passage || lesson?.instructions || lesson?.title || '');
+  const raw = cleanLessonTextForKids(rawInput);
+
   if (!raw) return 'Makinig, magbasa, at sagutin ang gawain. Kaya mo ito!';
 
   const extracted = extractSectionFromLessonPlan(
@@ -8521,7 +8590,7 @@ function makeStudentFriendlyPassage(lesson) {
     ['Vocabulary Words', 'Mini Quiz', 'Matching Activity', 'Writing Activity', 'Speech Practice', 'Teacher Notes']
   );
 
-  const source = extracted || raw
+  const source = String(extracted || rawInput)
     .replace(/TUKLAS TALINO SAMPLE LESSON PLAN/gi, '')
     .replace(/Subject:\s*[^.\n]+/gi, '')
     .replace(/Grade Level:\s*[^.\n]+/gi, '')
@@ -8531,17 +8600,23 @@ function makeStudentFriendlyPassage(lesson) {
     .replace(/XP Reward:\s*[^.\n]+/gi, '')
     .replace(/Learning Objectives:\s*/gi, '');
 
-  const sentences = cleanLessonTextForKids(source)
-    .replace(/\n+/g, ' ')
-    .split(/(?<=[.!?])\s+/)
-    .map(item => item.trim())
+  const withReadableSections = source
+    .replace(/\r/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*(Layunin|Panimula|Aralin|Gawain|Mga salita|Mga Salita)\s*:\s*/g, '\n$1: ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  const lines = withReadableSections
+    .split(/\n+/)
+    .map(line => cleanLessonTextForKids(line))
     .filter(Boolean)
-    .filter(item => !/^(pagkatapos|teacher notes|correct answer|question\s*\d+)/i.test(item));
+    .filter(line => !/^(pagkatapos|teacher notes|correct answer|question\s*\d+|mini quiz)/i.test(line));
 
-  const shortText = sentences.slice(0, 4).join(' ');
-  const fallback = cleanLessonTextForKids(source).split('\n').slice(0, 4).join(' ');
+  const fullText = lines.join('\n\n').trim();
+  const fallback = cleanLessonTextForKids(source);
 
-  return cleanLessonTextForKids(shortText || fallback || source).slice(0, 520);
+  return (fullText || fallback || raw).slice(0, 1800);
 }
 
 function activityMissionMeta(activity, index = 0) {
@@ -8568,11 +8643,17 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
   const [missionStep, setMissionStep] = useState(0);
   const [rewardModal, setRewardModal] = useState(null);
   const [rewardClaimed, setRewardClaimed] = useState(Boolean(lesson?.completed));
+  const [lessonGateToast, setLessonGateToast] = useState('');
+  const [listenedSteps, setListenedSteps] = useState({});
+  const [earlyActivityDone, setEarlyActivityDone] = useState({});
 
   useEffect(() => {
     setMissionStep(0);
     setRewardModal(null);
     setRewardClaimed(Boolean(lesson?.completed));
+    setLessonGateToast('');
+    setListenedSteps({});
+    setEarlyActivityDone({});
   }, [lesson?.id, lesson?.completed]);
 
   const kidPassage = makeStudentFriendlyPassage(lesson);
@@ -8595,6 +8676,140 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
   const currentStep = missionSteps[safeStep];
   const progress = Math.round(((safeStep + 1) / Math.max(1, missionSteps.length)) * 100);
 
+  function showLessonGateToast(message) {
+    if (!message) return;
+
+    setLessonGateToast(message);
+    window.setTimeout(() => {
+      setLessonGateToast(current => current === message ? '' : current);
+    }, 2600);
+  }
+
+  function earlyActivityKey(activity = {}, fallbackIndex = 0) {
+    const firstQuestion = asArray(activity.questions)[0];
+
+    return [
+      activity?.type || 'activity',
+      activity?.id ||
+        activity?.writingTask?.id ||
+        activity?.speechTask?.id ||
+        firstQuestion?.id ||
+        fallbackIndex ||
+        'current'
+    ].join(':');
+  }
+
+  function markEarlyActivityDone(activity = currentStep?.activity) {
+    if (!activity) return;
+
+    const key = earlyActivityKey(activity, currentStep?.activityIndex || 0);
+    setEarlyActivityDone(previous => ({
+      ...previous,
+      [key]: true
+    }));
+  }
+
+  function isEarlyLessonActivitySubmitted(activity = {}, fallbackIndex = 0) {
+    const type = String(activity?.type || '').toLowerCase();
+    const key = earlyActivityKey(activity, fallbackIndex);
+
+    if (earlyActivityDone[key]) return true;
+
+    if (type === 'mcq') {
+      const questions = asArray(activity.questions);
+      return Boolean(questions.length) && questions.every(question => Boolean(question.mcqAttempt));
+    }
+
+    if (type === 'writing') {
+      return Boolean(
+        activity.writingSubmission ||
+        activity.submission ||
+        activity.completed ||
+        activity.writingTask?.writingSubmission ||
+        activity.writingTask?.submission ||
+        activity.writingTask?.latestSubmission ||
+        activity.writingTask?.answer ||
+        activity.writingTask?.completed
+      );
+    }
+
+    if (type === 'speech') {
+      return Boolean(
+        activity.speechAttempt ||
+        activity.completed ||
+        activity.speechTask?.speechAttempt ||
+        activity.speechTask?.latestAttempt ||
+        activity.speechTask?.transcript ||
+        activity.speechTask?.completed
+      );
+    }
+
+    return true;
+  }
+
+  function earlyActivityGateMessage(activity = {}) {
+    const type = String(activity?.type || '').toLowerCase();
+
+    if (type === 'mcq') return 'Sagutan muna ang quiz.';
+    if (type === 'writing') return 'Ipasa muna ang gawain.';
+    if (type === 'speech') return 'Ipasa muna ang bigkas.';
+
+    return 'Tapusin muna ang gawain.';
+  }
+
+  function currentStepGateMessage() {
+    if (isReviewMode) return '';
+
+    if (currentStep?.type === 'listen' && !listenedSteps.listen) {
+      return 'Pakinggan muna ang layunin.';
+    }
+
+    if (currentStep?.type === 'know' && !listenedSteps.know) {
+      return 'Pakinggan muna ang alamin.';
+    }
+
+    if (currentStep?.type === 'read' && !listenedSteps.read) {
+      return 'Pakinggan muna ang aralin.';
+    }
+
+    if (
+      currentStep?.type === 'activity' &&
+      !isEarlyLessonActivitySubmitted(currentStep.activity, currentStep.activityIndex)
+    ) {
+      return earlyActivityGateMessage(currentStep.activity);
+    }
+
+    return '';
+  }
+
+  function markStepListened(key, text) {
+    setListenedSteps(previous => ({
+      ...previous,
+      [key]: true
+    }));
+
+    speakFilipinoText(text);
+  }
+
+  async function handleEarlySubmitMcq(...args) {
+    const result = await submitMcq(...args);
+    markEarlyActivityDone(currentStep?.activity);
+    return result;
+  }
+
+  async function handleEarlySubmitWriting(...args) {
+    const result = await submitWriting(...args);
+    markEarlyActivityDone(currentStep?.activity);
+    return result;
+  }
+
+  async function handleEarlySubmitSpeech(...args) {
+    const result = await submitSpeech(...args);
+    markEarlyActivityDone(currentStep?.activity);
+    return result;
+  }
+
+
   function activityGuideText(step) {
     const activity = step?.activity || {};
 
@@ -8611,6 +8826,14 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
   function goNext() {
     if (rewardModal) return;
+
+    const gateMessage = currentStepGateMessage();
+
+    if (gateMessage) {
+      showLessonGateToast(gateMessage);
+      return;
+    }
+
     setMissionStep(step => Math.min(step + 1, missionSteps.length - 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -9687,6 +9910,14 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           </div>
         </section>
 
+        {lessonGateToast && (
+          <div className="g12-gate-notif-wrap" role="status">
+            <div className="notif warn g12-gate-notif">
+              <span>{lessonGateToast}</span>
+            </div>
+          </div>
+        )}
+
         <section className="g12-mission-card">
           {currentStep.type === 'listen' && (
             <>
@@ -9703,7 +9934,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
-                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(getStructuredLessonSectionText(kidPassage, 'layunin') || lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn" onClick={() => markStepListened('listen', getStructuredLessonSectionText(kidPassage, 'layunin') || lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
                   <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Stop</button>
                 </div>
                 <div className="g12-mission-actions-right">
@@ -9727,7 +9958,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
-                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(getStructuredLessonKnowAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn" onClick={() => markStepListened('know', getStructuredLessonKnowAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
                   <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Stop</button>
                 </div>
                 <div className="g12-mission-actions-right">
@@ -9787,7 +10018,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
-                  <button className="g12-mission-btn" onClick={() => speakFilipinoText(getStructuredLessonAralinAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn" onClick={() => markStepListened('read', getStructuredLessonAralinAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>
@@ -9828,9 +10059,9 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                   index={currentStep.activityIndex}
                   total={corePracticeActivities.length}
                   isEarlyGrade={true}
-                  submitMcq={submitMcq}
-                  submitWriting={submitWriting}
-                  submitSpeech={submitSpeech}
+                  submitMcq={handleEarlySubmitMcq}
+                  submitWriting={handleEarlySubmitWriting}
+                  submitSpeech={handleEarlySubmitSpeech}
                 />
               </div>
 
