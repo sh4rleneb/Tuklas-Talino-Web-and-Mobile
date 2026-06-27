@@ -4,6 +4,7 @@ import {
   MCQQuestion, MCQOption, WritingTask, SpeechTask, Badge, StudentBadge,
   Group, GroupMember, GroupTask, AuditLog
 } from '../models/index.js';
+import { questionsForSeedLesson } from './lessonMcqBank.js';
 
 const subjects = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Oral Comm', 'Pagsulat'];
 
@@ -679,9 +680,27 @@ export async function seedData() {
       });
 
       const mcqActivity = await LessonActivity.create({ lessonId: lesson.id, type: 'mcq', title: 'Pagsusulit', sortOrder: 1 });
-      const q = await MCQQuestion.create({ activityId: mcqActivity.id, question: body.question, sortOrder: 1 });
-      for (let i = 0; i < body.options.length; i++) {
-        await MCQOption.create({ questionId: q.id, optionText: body.options[i], isCorrect: i === body.correct, sortOrder: i + 1 });
+      const mcqQuestions = questionsForSeedLesson(body);
+
+      for (let questionIndex = 0; questionIndex < mcqQuestions.length; questionIndex++) {
+        const item = mcqQuestions[questionIndex];
+        const q = await MCQQuestion.create({
+          activityId: mcqActivity.id,
+          question: item.question,
+          sortOrder: questionIndex + 1
+        });
+
+        const options = Array.isArray(item.options) ? item.options : [];
+        const correct = Number(item.correct || 0);
+
+        for (let i = 0; i < options.length; i++) {
+          await MCQOption.create({
+            questionId: q.id,
+            optionText: options[i],
+            isCorrect: i === correct,
+            sortOrder: i + 1
+          });
+        }
       }
 
       const writingActivity = await LessonActivity.create({ lessonId: lesson.id, type: 'writing', title: 'Gawain', sortOrder: 2 });
