@@ -16,6 +16,7 @@ import TeacherDashboard from './pages/Teacher/TeacherDashboard';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import StartupLoader from './components/common/StartupLoader';
 import StudentGroupSubmissionReview from './components/student/StudentGroupSubmissionReview';
+import Grade46MobileNav from './components/student/Grade46MobileNav';
 
 
 function subjectIconSrc(subject = "") {
@@ -7157,6 +7158,12 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
               {children}
             </div>
           </main>
+          <Grade46MobileNav
+            navItems={navItems}
+            activeTab={activeTab}
+            openTab={openTab}
+            logout={logout}
+          />
         </div>
       </div>
     </>

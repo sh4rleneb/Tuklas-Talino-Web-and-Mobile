@@ -1,0 +1,952 @@
+/* Mobile browser responsive overrides.
+   Loaded after legacy-theme.css, gamification.css, and app.css.
+   CSS-only. Desktop layout is preserved by mobile media queries. */
+
+@media (max-width: 900px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+
+  textarea {
+    min-height: 96px;
+  }
+
+  .screen,
+  .page,
+  .panel,
+  .card,
+  .section-card,
+  .modal,
+  .login-box,
+  .student-scroll,
+  .teacher-dashboard,
+  .teacher-page,
+  .teacher-panel,
+  .teacher-card,
+  .admin-panel {
+    max-width: 100%;
+  }
+
+  .modal {
+    width: min(100% - 24px, 900px) !important;
+    max-height: calc(100vh - 24px) !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+    overflow: auto !important;
+  }
+
+  .btn,
+  button.btn,
+  .g12-primary-btn,
+  .g12-soft-link,
+  .g12-action-btn,
+  .g46-wide {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .actions,
+  .top-actions,
+  .form-actions,
+  .button-row,
+  .filter-row,
+  .lesson-actions,
+  .teacher-actions,
+  .teacher-filter-row,
+  .teacher-button-row,
+  .lesson-builder-actions,
+  .quiz-actions,
+  .group-actions,
+  .g12-top-actions,
+  .g12-primary-actions,
+  .g46-lesson-actions,
+  .g46-lite-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .actions > *,
+  .top-actions > *,
+  .form-actions > *,
+  .button-row > *,
+  .filter-row > *,
+  .teacher-actions > *,
+  .teacher-filter-row > *,
+  .teacher-button-row > *,
+  .lesson-builder-actions > *,
+  .quiz-actions > *,
+  .group-actions > * {
+    min-width: 0;
+  }
+
+  .grid-2,
+  .grid-3,
+  .premium-grid,
+  .modules-grid,
+  .teacher-grid,
+  .teacher-stats-grid,
+  .teacher-card-grid,
+  .teacher-form-grid,
+  .lesson-builder-grid,
+  .lesson-editor-grid,
+  .quiz-editor-grid,
+  .group-summary-grid,
+  .group-review-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .thead,
+  .trow {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    align-items: start !important;
+  }
+
+  .thead {
+    display: none !important;
+  }
+
+  .trow {
+    border-radius: 14px;
+    padding: 12px !important;
+    margin-bottom: 10px;
+  }
+
+  .trow > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Grade 1-2 student safety */
+  .g12-page,
+  .g12-shell,
+  .g12-hero,
+  .g12-section-card,
+  .g12-subject-card {
+    max-width: 100%;
+  }
+
+  .g12-shell,
+  .g12-hero,
+  .g12-subject-grid,
+  .g12-subject-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .g12-nav {
+    overflow-x: auto;
+    display: flex !important;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  .g12-nav button {
+    min-width: 86px;
+  }
+
+  .g12-subject-card {
+    text-align: left;
+  }
+
+  .g12-subject-illustration {
+    max-width: 120px;
+  }
+
+  /* Grade 3-6 student shell fix */
+  body[data-role="student"][data-grade-band="grade46"] .student-scroll {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 10px !important;
+    overflow-x: hidden !important;
+    display: block !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] #student-standard-sections {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 auto !important;
+  }
+
+  .g46-shell,
+  .g46-lite-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+    padding: 12px !important;
+    border-radius: 20px !important;
+    overflow: visible !important;
+  }
+
+  .g46-sidebar,
+  .g46-lite-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+    overflow: visible !important;
+  }
+
+  .g46-main,
+  .g46-lite-main,
+  .g46-rightbar,
+  .g46-lite-right {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    grid-column: auto !important;
+  }
+
+  .g46-menu,
+  .g46-lite-menu {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .g46-menu button,
+  .g46-lite-menu button,
+  .g46-sidebar-logout,
+  .g46-lite-logout {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: flex-start !important;
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .g46-brand,
+  .g46-lite-brand {
+    margin-bottom: 10px !important;
+  }
+
+  .g46-topbar-modern,
+  .g46-lite-topbar,
+  .g46-hero-modern,
+  .g46-lite-hero,
+  .g46-lesson-strip,
+  .g46-lite-focus,
+  .g46-ai-open,
+  .g46-group-card,
+  .g46-group-row,
+  .g46-task-row,
+  .g46-upcoming-row,
+  .g46-lite-table-row,
+  .g46-lite-task-list button,
+  .g46-lite-center-grid,
+  .g46-lite-group-side {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .g46-hero-stats,
+  .g46-lite-hero-stats {
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-column: auto !important;
+    justify-self: stretch !important;
+    overflow-x: auto !important;
+  }
+
+  .g46-path-row,
+  .g46-lite-path,
+  .g46-lite-module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .g46-path-row::before,
+  .g46-lite-path::before {
+    display: none !important;
+  }
+
+  .g46-section-head,
+  .g46-lite-section-head {
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+  }
+
+  .g46-section-head > div,
+  .g46-lite-section-head {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .g46-submitted-summary,
+  .g46-submit-card,
+  .g46-lite-side-block,
+  .student-group-review,
+  .lesson-flow-card,
+  .lesson-step-card,
+  .structured-lesson-flow {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere;
+  }
+
+  /* Teacher and admin dashboard mobile shell fix */
+  .teacher-main-header,
+  .teacher-main-header-clean {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .teacher-main-header-clean .teacher-brand-area,
+  .teacher-main-header-clean .teacher-nav-links {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .teacher-main-header-clean .teacher-nav-links {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  .teacher-main-header-clean .teacher-nav-links button {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+
+  .teacher-main-content,
+  .teacher-main-content-clean {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 12px !important;
+    overflow-x: hidden !important;
+  }
+
+  .teacher-sidebar-layout {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+
+  .teacher-main-workarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .teacher-sidebar-layout > aside,
+  .teacher-sidebar-layout > nav,
+  .teacher-sidebar-layout > section:first-child {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .teacher-sidebar-button {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+  }
+
+  .teacher-sidebar-layout aside,
+  .teacher-sidebar-layout nav {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    align-content: start !important;
+  }
+
+  .teacher-main-workarea .section-card,
+  .teacher-main-workarea .card,
+  .teacher-main-workarea .panel,
+  .teacher-main-workarea form,
+  .teacher-main-workarea table {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .lesson-builder-tabs,
+  .teacher-tabs,
+  .tab-row {
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  .lesson-builder-tabs button,
+  .teacher-tabs button,
+  .tab-row button {
+    flex: 0 0 auto !important;
+  }
+
+  .teacher-preview-card,
+  .quiz-importer,
+  .quiz-question-card {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .quiz-option-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .modal {
+    width: calc(100% - 16px) !important;
+    padding: 12px !important;
+  }
+
+  .btn,
+  button.btn,
+  .g12-primary-btn,
+  .g12-soft-link,
+  .g12-action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .g46-menu,
+  .g46-lite-menu,
+  .teacher-sidebar-layout aside,
+  .teacher-sidebar-layout nav {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .g46-path-row,
+  .g46-lite-path,
+  .g46-lite-module-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .g12-welcome-copy h1,
+  .g46-hero-copy h1,
+  .g46-lite-hero-copy h1 {
+    font-size: clamp(24px, 8vw, 34px) !important;
+  }
+}
+
+
+/* === Grade 3-6 reference dashboard mobile fix: Phase 2B === */
+/* Targets the active .g46-ref-* student dashboard layout only. */
+@media (max-width: 900px) {
+  body[data-role="student"][data-grade-band="grade46"] {
+    overflow-x: hidden !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] #screen-student,
+  body[data-role="student"][data-grade-band="grade46"] .student-scroll,
+  body[data-role="student"][data-grade-band="grade46"] #student-standard-sections,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-page {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .student-scroll,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-page {
+    display: block !important;
+    padding: 10px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-frame {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    padding: 10px !important;
+    border-radius: 20px !important;
+    overflow: visible !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 12px !important;
+    border-radius: 18px !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-brand {
+    display: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-logout {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+    justify-content: flex-start !important;
+    padding: 10px 11px !important;
+    font-size: 12px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-logout {
+    display: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-content,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-column,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main {
+    padding: 12px !important;
+    overflow-x: hidden !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-topbar {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-student-pill,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-top-actions {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-top-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-pill,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-soft-btn,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-primary-btn {
+    max-width: 100% !important;
+    white-space: normal !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-card,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-dashboard-grid,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-plan-grid,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-card-grid,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-stat-row,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-badge-grid,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-avatar-grid {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-card {
+    padding: 16px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-left,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-side {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-card h1 {
+    font-size: clamp(24px, 8vw, 34px) !important;
+    line-height: 1.1 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-task-row,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-list-row,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-card,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-plan-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-filter-row,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-action-row {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-filter-row button,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-action-row button,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-choice {
+    flex: 0 0 auto !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-panel img,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-panel svg {
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 520px) {
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-page {
+    padding: 8px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-frame {
+    padding: 8px !important;
+    gap: 10px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar {
+    padding: 10px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main {
+    padding: 10px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-card,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-panel {
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-primary-btn,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-soft-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+}
+/* === End Grade 3-6 reference dashboard mobile fix: Phase 2B === */
+
+
+/* === Grade 3-6 mobile navigation polish: Phase 2C === */
+/* Keeps the fixed mobile layout, but makes all Grade 3-6 nav actions usable. */
+@media (max-width: 900px) {
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px !important;
+    align-content: start !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    padding: 8px 10px !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 7px !important;
+    white-space: normal !important;
+    line-height: 1.15 !important;
+    font-size: 11px !important;
+    text-align: left !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button span {
+    flex: 0 0 auto !important;
+    width: 18px !important;
+    text-align: center !important;
+    font-size: 13px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button.active {
+    transform: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-logout {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    margin-top: 2px !important;
+    padding: 8px 10px !important;
+    border-radius: 14px !important;
+    justify-content: center !important;
+    white-space: normal !important;
+    font-size: 11px !important;
+    line-height: 1.15 !important;
+    background: rgba(255, 255, 255, 0.16) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini {
+    display: none !important;
+  }
+}
+
+@media (max-width: 520px) {
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar {
+    padding: 9px !important;
+    gap: 8px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-logout {
+    min-height: 34px !important;
+    padding: 7px 8px !important;
+    font-size: 10px !important;
+    border-radius: 13px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button span {
+    width: 16px !important;
+    font-size: 12px !important;
+  }
+}
+/* === End Grade 3-6 mobile navigation polish: Phase 2C === */
+
+
+/* === Grade 3-6 dedicated mobile nav component: Phase 2E === */
+/* Uses Grade46MobileNav.jsx for a clean mobile-only nav. Desktop keeps the original sidebar. */
+.g46-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-page {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar {
+    display: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav {
+    position: fixed;
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    z-index: 10000;
+    display: block;
+    width: auto;
+    max-width: 520px;
+    margin: 0 auto;
+    pointer-events: none;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav-bar,
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-more {
+    pointer-events: auto;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav-bar {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 7px;
+    padding: 8px;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 2px solid rgba(21, 150, 90, 0.18);
+    box-shadow: 0 14px 38px rgba(15, 90, 56, 0.22);
+    backdrop-filter: blur(14px);
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav button {
+    border: 0;
+    min-width: 0;
+    min-height: 48px;
+    border-radius: 17px;
+    padding: 7px 4px;
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 1000;
+    color: #31536b;
+    background: transparent;
+    cursor: pointer;
+    line-height: 1.05;
+    text-align: center;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav button span {
+    display: block;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav button b {
+    display: block;
+    font-size: 9.5px;
+    white-space: nowrap;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav button.active {
+    color: #0f7d49;
+    background: #fff5cf;
+    box-shadow: 0 8px 18px rgba(15, 125, 73, 0.14);
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-more {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 10px);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.97);
+    border: 2px solid rgba(21, 150, 90, 0.16);
+    box-shadow: 0 16px 42px rgba(15, 90, 56, 0.22);
+    backdrop-filter: blur(14px);
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-more button {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 9px;
+    padding: 9px 12px;
+    border-radius: 15px;
+    background: #f6fbf8;
+    text-align: left;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-more button b {
+    font-size: 12px;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-more button.danger {
+    color: #c0392b;
+    background: #fff3f1;
+  }
+}
+
+@media (max-width: 420px) {
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav {
+    left: max(7px, env(safe-area-inset-left));
+    right: max(7px, env(safe-area-inset-right));
+    bottom: calc(7px + env(safe-area-inset-bottom));
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav-bar {
+    gap: 5px;
+    padding: 7px;
+    border-radius: 22px;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav button {
+    min-height: 44px;
+    border-radius: 15px;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav button span {
+    font-size: 15px;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav button b {
+    font-size: 8.5px;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-more {
+    gap: 7px;
+    padding: 9px;
+  }
+}
+/* === End Grade 3-6 dedicated mobile nav component: Phase 2E === */
+
