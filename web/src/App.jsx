@@ -6439,6 +6439,9 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
               const iconSrc = item.iconSrc || subjectInfo.iconSrc || subjectIconSrc(item.subj || item.meta || item.title);
               const desc = subjectInfo.desc || '';
               const pct = Math.max(0, Math.min(100, item.pct || 0));
+              const subjectLessons = asArray(item.lessons);
+              const previewLesson = subjectLessons.find(lesson => !lesson.completed) || subjectLessons[0] || null;
+              const previewTitle = previewLesson ? getEarlyLessonTopicTitle(previewLesson) : item.subj;
 
               return (
                 <button
@@ -6459,12 +6462,12 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
                     {pct > 0 && (
                       <span className="g12-subject-chip">{`${pct}% progress`}</span>
                     )}
-                    <h3>{item.subj}</h3>
+                    <h3>{previewTitle}</h3>
                     <p>
-                      <b>{item.done || 0}/{item.total || 0} tapos</b>
-                      {desc ? ` • ${desc}` : ''}
+                      <b>{item.subj}</b>
+                      {` • ${item.done || 0}/${item.total || 0} tapos`}
                     </p>
-                    <div className="g12-module-progress" aria-label={`${item.subj} progress`}>
+                    <div className="g12-module-progress" aria-label={`${previewTitle} progress`}>
                       <span style={{ width: `${pct}%` }} />
                     </div>
                   </div>
@@ -7522,7 +7525,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
                 </div>
                 <div className="g12-lesson-tile-body">
                   <h3>{shortEarlyLessonTitle(lesson)}</h3>
-                  <p>⭐ {lesson.xpReward || 0} XP</p>
+                  <p>{lesson.subject || 'Filipino'} • ⭐ {lesson.xpReward || 0} XP</p>
                   {lesson.completed && (
                     <span className="g12-status-pill">✅ Summary</span>
                   )}
@@ -8452,60 +8455,60 @@ function extractSectionFromLessonPlan(raw = '', startLabels = [], endLabels = []
   return cleanLessonTextForKids(text.slice(contentStart, endIndex));
 }
 
-function shortEarlyLessonTitle(lesson = {}) {
-  const subject = String(lesson.subject || "").trim();
-  const title = String(lesson.title || "").trim();
-
-  const withoutExtra = title
-    .replace(/\s*lesson\s*$/i, "")
-    .replace(/\s*quiz\s*$/i, "")
+function compactKidTitle(text = "", maxLength = 44) {
+  const clean = String(text || "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([:;,.!?])/g, "$1")
     .trim();
 
-  if (/^gawa$/i.test(withoutExtra)) return "Gawa";
-  if (/^gawa\b/i.test(withoutExtra)) return "Gawa";
+  if (clean.length <= maxLength) return clean;
 
-  const prefix = withoutExtra
-    .replace(/^([^:]+)\s*:\s*.+$/, "$1")
+  const words = clean.split(" ");
+  let out = "";
+
+  for (const word of words) {
+    const next = out ? `${out} ${word}` : word;
+    if (next.length > maxLength) break;
+    out = next;
+  }
+
+  return out || clean.slice(0, maxLength).trim();
+}
+
+function getEarlyLessonTopicTitle(lesson = {}) {
+  const subject = String(lesson.subject || "").trim();
+  const rawTitle = String(lesson.title || "").trim();
+
+  if (!rawTitle) return compactKidTitle(subject || "Aralin");
+
+  const withoutExtra = rawTitle
+    .replace(/\s*lesson\s*$/i, "")
+    .replace(/\s*quiz\s*$/i, "")
     .replace(/\s+/g, " ")
     .trim();
 
-  if (prefix && prefix.length <= 24) {
-    if (/oral|bigkas|speech|komunikasyon/i.test(prefix)) {
-      const number = prefix.match(/\d+/)?.[0];
-      return number ? `Bigkas ${number}` : "Bigkas";
-    }
+  const afterColon = withoutExtra.includes(":")
+    ? withoutExtra.split(":").slice(1).join(":").trim()
+    : "";
 
-    if (/pagsulat|sulatin|patlang|writing/i.test(prefix)) {
-      const number = prefix.match(/\d+/)?.[0];
-      return number ? `Patlang ${number}` : "Patlang";
-    }
+  let topic = afterColon || withoutExtra;
 
-    return prefix;
+  topic = topic
+    .replace(/^(pagbasa|pagbabasa|bokabularyo|panitikan|oral\s*comm(?:unication)?|bigkas|pagsulat|patlang|sulatin|writing|speech)\s*\d*\s*[-–—:]?\s*/i, "")
+    .replace(/^grade\s*\d+\s*[-–—:]?\s*/i, "")
+    .replace(/^\d+\s*[-–—:]?\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!topic || /^[\d\s-–—:]+$/.test(topic)) {
+    topic = subject || withoutExtra || "Aralin";
   }
 
-  const number = title.match(/\b\d+\b/)?.[0];
+  return compactKidTitle(topic, 44);
+}
 
-  if (/bokabularyo/i.test(subject) || /bokabularyo/i.test(title)) {
-    return number ? `Bokabularyo ${number}` : "Bokabularyo";
-  }
-
-  if (/pagbasa/i.test(subject) || /pagbasa/i.test(title)) {
-    return number ? `Pagbasa ${number}` : "Pagbasa";
-  }
-
-  if (/panitikan/i.test(subject) || /panitikan/i.test(title)) {
-    return number ? `Panitikan ${number}` : "Panitikan";
-  }
-
-  if (/oral|bigkas|speech|komunikasyon/i.test(subject) || /oral|bigkas|speech|komunikasyon/i.test(title)) {
-    return number ? `Bigkas ${number}` : "Bigkas";
-  }
-
-  if (/pagsulat|sulatin|patlang|writing/i.test(subject) || /pagsulat|sulatin|patlang|writing/i.test(title)) {
-    return number ? `Patlang ${number}` : "Patlang";
-  }
-
-  return prefix || subject || "Aralin";
+function shortEarlyLessonTitle(lesson = {}) {
+  return getEarlyLessonTopicTitle(lesson);
 }
 
 function makeStudentFriendlyPassage(lesson) {
