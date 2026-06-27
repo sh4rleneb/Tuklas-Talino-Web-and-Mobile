@@ -1,0 +1,551 @@
+/* === Grade 3-6 desktop visual polish: Phase 3A === */
+/* Desktop-only polish. Keeps mobile bottom nav and all student features untouched. */
+
+@media (min-width: 901px) {
+  body[data-role="student"][data-grade-band="grade46"],
+  body:has(.g46-ref-page) {
+    background:
+      radial-gradient(circle at top left, rgba(255, 224, 122, 0.18), transparent 34%),
+      radial-gradient(circle at top right, rgba(119, 210, 158, 0.16), transparent 32%),
+      #f7fbf8 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-page,
+  body:has(.g46-ref-page) .g46-ref-page {
+    background: transparent !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-frame,
+  body:has(.g46-ref-page) .g46-ref-frame {
+    grid-template-columns: 238px minmax(0, 1fr) !important;
+    background: transparent !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar,
+  body:has(.g46-ref-page) .g46-ref-sidebar {
+    width: 238px !important;
+    margin: 18px 0 18px 18px !important;
+    min-height: calc(100vh - 36px) !important;
+    padding: 20px 16px 18px !important;
+    border-radius: 30px !important;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(239, 255, 246, 0.84)),
+      linear-gradient(160deg, rgba(25, 148, 88, 0.18), rgba(255, 222, 105, 0.13)) !important;
+    border: 1px solid rgba(24, 139, 82, 0.16) !important;
+    box-shadow: 0 18px 45px rgba(25, 87, 55, 0.15) !important;
+    backdrop-filter: blur(16px) !important;
+    overflow: hidden !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-brand,
+  body:has(.g46-ref-page) .g46-ref-brand {
+    margin: 0 0 24px !important;
+    padding: 10px 10px 12px !important;
+    border-radius: 22px !important;
+    background: rgba(255, 255, 255, 0.66) !important;
+    border: 1px solid rgba(24, 139, 82, 0.10) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-brand img,
+  body:has(.g46-ref-page) .g46-ref-brand img {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 18px rgba(23, 119, 75, 0.16) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-brand strong,
+  body:has(.g46-ref-page) .g46-ref-brand strong {
+    color: #164d36 !important;
+    font-size: 16px !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-brand small,
+  body:has(.g46-ref-page) .g46-ref-brand small {
+    color: #5f7d6e !important;
+    font-weight: 800 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu,
+  body:has(.g46-ref-page) .g46-ref-menu {
+    gap: 9px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button,
+  body:has(.g46-ref-page) .g46-ref-menu button {
+    min-height: 49px !important;
+    padding: 0 14px !important;
+    border-radius: 20px !important;
+    color: #285641 !important;
+    background: rgba(255, 255, 255, 0.58) !important;
+    border: 1px solid rgba(24, 139, 82, 0.10) !important;
+    box-shadow: 0 8px 18px rgba(35, 99, 65, 0.05) !important;
+    font-weight: 1000 !important;
+    transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button:hover,
+  body:has(.g46-ref-page) .g46-ref-menu button:hover {
+    transform: translateY(-1px) !important;
+    background: rgba(255, 255, 255, 0.88) !important;
+    box-shadow: 0 12px 24px rgba(35, 99, 65, 0.10) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button.active,
+  body:has(.g46-ref-page) .g46-ref-menu button.active {
+    color: #0f7d49 !important;
+    background: linear-gradient(135deg, #fff5cf, #ffffff) !important;
+    border-color: rgba(255, 198, 58, 0.58) !important;
+    box-shadow: 0 13px 26px rgba(15, 125, 73, 0.14) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button span,
+  body:has(.g46-ref-page) .g46-ref-menu button span {
+    width: 24px !important;
+    min-width: 24px !important;
+    display: inline-grid !important;
+    place-items: center !important;
+    font-size: 18px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini,
+  body:has(.g46-ref-page) .g46-ref-progress-mini {
+    margin-top: 18px !important;
+    padding: 16px !important;
+    border-radius: 24px !important;
+    background: linear-gradient(135deg, rgba(255, 245, 207, 0.94), rgba(255, 255, 255, 0.90)) !important;
+    border: 1px solid rgba(255, 197, 48, 0.34) !important;
+    box-shadow: 0 12px 26px rgba(149, 100, 0, 0.08) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini strong,
+  body:has(.g46-ref-page) .g46-ref-progress-mini strong {
+    color: #164d36 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-logout,
+  body:has(.g46-ref-page) .g46-ref-logout {
+    margin-top: auto !important;
+    min-height: 46px !important;
+    border-radius: 18px !important;
+    color: #b23b2f !important;
+    background: rgba(255, 243, 241, 0.92) !important;
+    border: 1px solid rgba(225, 97, 79, 0.16) !important;
+    box-shadow: none !important;
+    font-weight: 1000 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main,
+  body:has(.g46-ref-page) .g46-ref-main {
+    padding: 30px clamp(30px, 3vw, 54px) 40px 34px !important;
+    background: transparent !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-topbar,
+  body:has(.g46-ref-page) .g46-ref-topbar {
+    margin-bottom: 18px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-student-pill,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-pill,
+  body:has(.g46-ref-page) .g46-ref-student-pill,
+  body:has(.g46-ref-page) .g46-ref-pill {
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    border: 1px solid rgba(24, 139, 82, 0.12) !important;
+    box-shadow: 0 10px 22px rgba(35, 99, 65, 0.06) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-card,
+  body:has(.g46-ref-page) .g46-ref-title-card {
+    border-radius: 32px !important;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(241, 255, 248, 0.90)),
+      radial-gradient(circle at 92% 10%, rgba(255, 219, 91, 0.30), transparent 32%) !important;
+    border: 1px solid rgba(24, 139, 82, 0.13) !important;
+    box-shadow: 0 18px 42px rgba(26, 95, 61, 0.10) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-card::after,
+  body:has(.g46-ref-page) .g46-ref-title-card::after {
+    opacity: 0.55 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-icon,
+  body:has(.g46-ref-page) .g46-ref-title-icon {
+    border-radius: 24px !important;
+    box-shadow: 0 12px 25px rgba(15, 125, 73, 0.12) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-card h1,
+  body:has(.g46-ref-page) .g46-ref-title-card h1 {
+    letter-spacing: -0.04em !important;
+    color: #123f31 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-title-card p,
+  body:has(.g46-ref-page) .g46-ref-title-card p {
+    color: #557566 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-panel,
+  body:has(.g46-ref-page) .g46-ref-panel {
+    border-radius: 30px !important;
+    background: rgba(255, 255, 255, 0.90) !important;
+    border: 1px solid rgba(24, 139, 82, 0.11) !important;
+    box-shadow: 0 16px 36px rgba(33, 93, 61, 0.08) !important;
+    backdrop-filter: blur(10px) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-panel-head h3,
+  body:has(.g46-ref-page) .g46-ref-panel-head h3 {
+    color: #123f31 !important;
+    letter-spacing: -0.025em !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-panel-head p,
+  body:has(.g46-ref-page) .g46-ref-panel-head p {
+    color: #638174 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-panel-link,
+  body:has(.g46-ref-page) .g46-ref-panel-link {
+    border-radius: 999px !important;
+    background: #fff5cf !important;
+    color: #0f7d49 !important;
+    border: 1px solid rgba(255, 198, 58, 0.40) !important;
+    font-weight: 1000 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-card,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-plan-card,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-task-row,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-list-row,
+  body:has(.g46-ref-page) .g46-ref-card,
+  body:has(.g46-ref-page) .g46-ref-plan-card,
+  body:has(.g46-ref-page) .g46-ref-task-row,
+  body:has(.g46-ref-page) .g46-ref-list-row {
+    border-radius: 24px !important;
+    border: 1px solid rgba(24, 139, 82, 0.10) !important;
+    box-shadow: 0 10px 24px rgba(31, 90, 60, 0.06) !important;
+    transition: transform 160ms ease, box-shadow 160ms ease !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-card:hover,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-plan-card:hover,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-task-row:hover,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-list-row:hover,
+  body:has(.g46-ref-page) .g46-ref-card:hover,
+  body:has(.g46-ref-page) .g46-ref-plan-card:hover,
+  body:has(.g46-ref-page) .g46-ref-task-row:hover,
+  body:has(.g46-ref-page) .g46-ref-list-row:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 16px 30px rgba(31, 90, 60, 0.10) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-card-icon,
+  body:has(.g46-ref-page) .g46-ref-card-icon {
+    border-radius: 20px !important;
+    box-shadow: 0 9px 18px rgba(20, 107, 68, 0.10) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-primary-btn,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-soft-btn,
+  body:has(.g46-ref-page) .g46-ref-primary-btn,
+  body:has(.g46-ref-page) .g46-ref-soft-btn {
+    border-radius: 999px !important;
+    font-weight: 1000 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-mobile-nav,
+  body:has(.g46-ref-page) .g46-mobile-nav {
+    display: none !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-frame,
+  body:has(.g46-ref-page) .g46-ref-frame {
+    grid-template-columns: 218px minmax(0, 1fr) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar,
+  body:has(.g46-ref-page) .g46-ref-sidebar {
+    width: 218px !important;
+    margin-left: 12px !important;
+    padding-left: 13px !important;
+    padding-right: 13px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button,
+  body:has(.g46-ref-page) .g46-ref-menu button {
+    padding: 0 12px !important;
+    font-size: 14px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main,
+  body:has(.g46-ref-page) .g46-ref-main {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+}
+/* === End Grade 3-6 desktop visual polish: Phase 3A === */
+
+/* === Grade 3-6 desktop consistency fixes: Phase 3B === */
+/* Fixes home background, top student pill clipping, and sidebar XP card readability. */
+
+@media (min-width: 901px) {
+  body[data-role="student"][data-grade-band="grade46"],
+  body:has(.g46-ref-page) {
+    background:
+      radial-gradient(circle at 8% 0%, rgba(255, 237, 170, 0.32), transparent 32%),
+      radial-gradient(circle at 78% 3%, rgba(189, 238, 207, 0.34), transparent 34%),
+      linear-gradient(135deg, #fbfff8 0%, #effaf2 48%, #fffaf0 100%) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-page,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-frame,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-content,
+  body:has(.g46-ref-page) .g46-ref-page,
+  body:has(.g46-ref-page) .g46-ref-frame,
+  body:has(.g46-ref-page) .g46-ref-main,
+  body:has(.g46-ref-page) .g46-ref-content {
+    background: transparent !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main::before,
+  body:has(.g46-ref-page) .g46-ref-main::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255, 235, 157, 0.20), transparent 34%),
+      radial-gradient(circle at 74% 10%, rgba(162, 229, 190, 0.24), transparent 36%),
+      linear-gradient(135deg, #fbfff8 0%, #effaf2 48%, #fffaf0 100%);
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-topbar,
+  body:has(.g46-ref-page) .g46-ref-topbar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-student-pill,
+  body:has(.g46-ref-page) .g46-ref-student-pill {
+    width: auto !important;
+    min-width: 235px !important;
+    max-width: 360px !important;
+    flex: 0 0 auto !important;
+    padding: 9px 16px 9px 10px !important;
+    gap: 10px !important;
+    overflow: visible !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-student-pill > span:first-child,
+  body:has(.g46-ref-page) .g46-ref-student-pill > span:first-child {
+    flex: 0 0 auto !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-student-pill strong,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-student-pill small,
+  body:has(.g46-ref-page) .g46-ref-student-pill strong,
+  body:has(.g46-ref-page) .g46-ref-student-pill small {
+    display: block !important;
+    max-width: none !important;
+    overflow: visible !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-top-actions,
+  body:has(.g46-ref-page) .g46-ref-top-actions {
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini,
+  body:has(.g46-ref-page) .g46-ref-progress-mini {
+    margin-top: 20px !important;
+    padding: 15px 14px !important;
+    min-height: auto !important;
+    max-height: none !important;
+    border-radius: 24px !important;
+    overflow: visible !important;
+    color: #164d36 !important;
+    background:
+      radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.94), transparent 34%),
+      linear-gradient(135deg, #fff7d6 0%, #fffef7 100%) !important;
+    border: 1px solid rgba(255, 198, 58, 0.42) !important;
+    box-shadow: 0 12px 26px rgba(149, 100, 0, 0.08) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini *,
+  body:has(.g46-ref-page) .g46-ref-progress-mini * {
+    color: #164d36 !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini strong,
+  body:has(.g46-ref-page) .g46-ref-progress-mini strong {
+    font-size: 14px !important;
+    line-height: 1.25 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini small,
+  body:has(.g46-ref-page) .g46-ref-progress-mini small {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    color: #5d7569 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini .g46-ref-xp-animate,
+  body:has(.g46-ref-page) .g46-ref-progress-mini .g46-ref-xp-animate {
+    margin-top: 8px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini i,
+  body:has(.g46-ref-page) .g46-ref-progress-mini i {
+    background: rgba(19, 125, 73, 0.12) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini i span,
+  body:has(.g46-ref-page) .g46-ref-progress-mini i span {
+    background: linear-gradient(90deg, #14945a, #8fd16a) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar,
+  body:has(.g46-ref-page) .g46-ref-sidebar {
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar::-webkit-scrollbar,
+  body:has(.g46-ref-page) .g46-ref-sidebar::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 760px) {
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-brand,
+  body:has(.g46-ref-page) .g46-ref-brand {
+    margin-bottom: 14px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu,
+  body:has(.g46-ref-page) .g46-ref-menu {
+    gap: 6px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu button,
+  body:has(.g46-ref-page) .g46-ref-menu button {
+    min-height: 43px !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini,
+  body:has(.g46-ref-page) .g46-ref-progress-mini {
+    margin-top: 12px !important;
+    padding: 12px !important;
+  }
+}
+/* === End Grade 3-6 desktop consistency fixes: Phase 3B === */
+
+/* === Grade 3-6 desktop background and sidebar XP cleanup: Phase 3C === */
+/* Strong override for the active Grade 3-6 desktop wrapper layers. */
+
+@media (min-width: 901px) {
+  html:has(body[data-role="student"][data-grade-band="grade46"]),
+  body[data-role="student"][data-grade-band="grade46"],
+  body:has(.g46-ref-page) {
+    background: #f5fbf4 !important;
+    background-image:
+      radial-gradient(circle at 6% 0%, rgba(255, 235, 156, 0.28), transparent 30%),
+      radial-gradient(circle at 82% 4%, rgba(166, 231, 192, 0.32), transparent 34%),
+      linear-gradient(135deg, #fbfff8 0%, #eef9f1 52%, #fffaf0 100%) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] #root,
+  body[data-role="student"][data-grade-band="grade46"] .app,
+  body[data-role="student"][data-grade-band="grade46"] .screen,
+  body[data-role="student"][data-grade-band="grade46"] .screen.active,
+  body[data-role="student"][data-grade-band="grade46"] [id^="screen-"],
+  body[data-role="student"][data-grade-band="grade46"] #screen-student,
+  body[data-role="student"][data-grade-band="grade46"] #screen-lessons,
+  body[data-role="student"][data-grade-band="grade46"] #screen-stu-quizzes,
+  body[data-role="student"][data-grade-band="grade46"] #screen-stu-quiz-play,
+  body[data-role="student"][data-grade-band="grade46"] #screen-stu-quiz-result,
+  body[data-role="student"][data-grade-band="grade46"] #screen-lesson,
+  body[data-role="student"][data-grade-band="grade46"] #screen-stu-missions,
+  body[data-role="student"][data-grade-band="grade46"] #screen-stu-mission-play,
+  body[data-role="student"][data-grade-band="grade46"] #screen-stu-groups,
+  body[data-role="student"][data-grade-band="grade46"] #screen-stu-badges,
+  body[data-role="student"][data-grade-band="grade46"] #screen-stu-profile,
+  body:has(.g46-ref-page) #root,
+  body:has(.g46-ref-page) .app,
+  body:has(.g46-ref-page) .screen,
+  body:has(.g46-ref-page) .screen.active,
+  body:has(.g46-ref-page) [id^="screen-"] {
+    background: #f5fbf4 !important;
+    background-image:
+      radial-gradient(circle at 6% 0%, rgba(255, 235, 156, 0.28), transparent 30%),
+      radial-gradient(circle at 82% 4%, rgba(166, 231, 192, 0.32), transparent 34%),
+      linear-gradient(135deg, #fbfff8 0%, #eef9f1 52%, #fffaf0 100%) !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-page,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-frame,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-topbar,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-content,
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-column,
+  body:has(.g46-ref-page) .g46-ref-page,
+  body:has(.g46-ref-page) .g46-ref-frame,
+  body:has(.g46-ref-page) .g46-ref-main,
+  body:has(.g46-ref-page) .g46-ref-topbar,
+  body:has(.g46-ref-page) .g46-ref-content,
+  body:has(.g46-ref-page) .g46-ref-column {
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-main::before,
+  body:has(.g46-ref-page) .g46-ref-main::before {
+    content: none !important;
+    display: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar {
+    align-self: stretch !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-progress-mini,
+  body:has(.g46-ref-page) .g46-ref-progress-mini {
+    display: none !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-sidebar,
+  body:has(.g46-ref-page) .g46-ref-sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 0 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-menu,
+  body:has(.g46-ref-page) .g46-ref-menu {
+    margin-top: 0 !important;
+  }
+
+  body[data-role="student"][data-grade-band="grade46"] .g46-ref-logout,
+  body:has(.g46-ref-page) .g46-ref-logout {
+    margin-top: 18px !important;
+  }
+}
+/* === End Grade 3-6 desktop background and sidebar XP cleanup: Phase 3C === */

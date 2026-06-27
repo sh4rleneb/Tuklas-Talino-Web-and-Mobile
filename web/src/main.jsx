@@ -7,6 +7,7 @@ import './styles/legacy-theme.css';
 import './styles/gamification.css';
 import './styles/app.css';
 import './styles/mobile-responsive.css';
+import './styles/grade46-polish.css';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
