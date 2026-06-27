@@ -16,7 +16,7 @@ import MissionProgressCard from '../components/MissionProgressCard';
 import MissionQuestionCard from '../components/MissionQuestionCard';
 
 export default function WordMatchGame({
-  mission,
+  activity,
   submitting,
   onMissionComplete,
 }) {
@@ -28,7 +28,7 @@ export default function WordMatchGame({
   const [wrongWordId, setWrongWordId] = useState('');
   const [wrongPictureId, setWrongPictureId] = useState('');
 
-  const gradeLevel = Number(mission.gradeLevel);
+  const gradeLevel = Number(activity?.gradeLevel || 1);
 
   const [items, setItems] = useState([]);
 

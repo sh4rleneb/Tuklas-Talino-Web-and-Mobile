@@ -18,11 +18,11 @@ import MissionProgressCard from '../components/MissionProgressCard';
 import MissionQuestionCard from '../components/MissionQuestionCard';
 
 export default function LetterPopGame({
-  mission,
+  activity,
   submitting,
   onMissionComplete,
 }) {
-  const gradeLevel = Number(mission.gradeLevel);
+  const gradeLevel = Number(activity?.gradeLevel || 1);
 
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);

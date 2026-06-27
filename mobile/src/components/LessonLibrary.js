@@ -315,6 +315,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
             return (
               <Animated.View
+                key={category.key}
                 style={{
                   transform: [
                     {
@@ -324,7 +325,6 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                 }}
               >
               <TouchableOpacity
-                key={category.key}
                 style={[
                   styles.filter,
                   active && {

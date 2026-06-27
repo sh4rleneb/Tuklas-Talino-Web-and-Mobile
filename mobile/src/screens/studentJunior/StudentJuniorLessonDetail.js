@@ -23,9 +23,13 @@ import { uploadSpeechRecording } from '../../api/teacher';
 import {
   speakText,
   stopSpeech,
+  isSpeechPlaying,
+  getSpeechPlaybackState,
 } from '../../services/tts.service';
 
 import ReadingPassageCard from '../../components/lesson/ReadingPassageCard';
+import AudioPlayerCard from '../../components/lesson/AudioPlayerCard';
+import AudioPlayerButton from '../../components/lesson/AudioPlayerButton';
 import ActivityVisualCard from '../../components/lesson/ActivityVisualCard';
 import PowerUpTray from '../../components/lesson/PowerUpTray';
 import ActivityGuideCard from '../../components/lesson/ActivityGuideCard';
@@ -55,6 +59,13 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [recording, setRecording] = useState(false);
   const [recordingUri, setRecordingUri] = useState('');
   const [playing, setPlaying] = useState(false);
+  const [lessonListening, setLessonListening] = useState(false);
+  const [lessonListened, setLessonListened] = useState(false);
+
+const [lessonProgress,setLessonProgress]=useState(0);
+const [lessonDuration,setLessonDuration]=useState(0);
+
+
   const [speechStatus, setSpeechStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -150,13 +161,9 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
         }
 
         console.log(
-          '[LESSON_ACTIVITIES]',
+          '[LESSON_DATA]',
           JSON.stringify(
-            (loadedLesson?.activities || []).map(a => ({
-              id: a.id,
-              type: a.type,
-              title: a.title,
-            })),
+            loadedLesson,
             null,
             2
           )
@@ -428,6 +435,35 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
     const lessonIndex = lessons.findIndex((item) => Number(item.id) === Number(lessonId));
     return lessonIndex >= 0 ? lessons[lessonIndex + 1] : null;
   }, [dashboard, lessonId]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+
+      const playing = isSpeechPlaying();
+      const state = getSpeechPlaybackState();
+
+      setLessonListening(playing);
+      setLessonProgress(state.position || 0);
+      setLessonDuration(state.duration || 0);
+
+      if (!playing && lessonListening) {
+        setLessonListened(true);
+      }
+
+    }, 250);
+
+    return () => clearInterval(timer);
+  }, [lessonListening]);
+
+
+
+  const formatAudioTime = (ms=0)=>{
+    const total=Math.floor(ms/1000);
+    const m=Math.floor(total/60);
+    const s=String(total%60).padStart(2,'0');
+    return `${m}:${s}`;
+  };
+
   const homeRoute = route?.params?.homeRoute || 'StudentTabs';
 
   async function startRecording() {
@@ -768,31 +804,208 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
     if (currentStep?.type === 'listen') {
       return (
         <View style={styles.card}>
-          <Text style={styles.title}>👂 Listen</Text>
 
-          <Text style={styles.body}>
-            Press the button below to listen to today's lesson before continuing.
-          </Text>
+          <View
+            style={{
+              backgroundColor:'#ECFDF5',
+              borderRadius:22,
+              borderWidth:2,
+              borderColor:'#BBF7D0',
+              padding:18,
+              marginBottom:18,
+            }}
+          >
+            <Text
+              style={{
+                fontSize:24,
+                fontWeight:'900',
+                color:'#166534',
+              }}
+            >
+              👂 Listen Activity
+            </Text>
 
-          <TouchableOpacity
-            style={[styles.secondaryButton, littleLearnerGame && styles.kidSpeechButton]}
-            onPress={() =>
-              speakText(
-                `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`
-              )
-            }
+            <Text
+              style={{
+                marginTop:10,
+                fontSize:16,
+                lineHeight:24,
+                color:'#334155',
+              }}
+            >
+              🎧 Listen carefully to today's lesson.
+            </Text>
+
+            <Text
+              style={{
+                marginTop:8,
+                fontSize:15,
+                color:'#64748B',
+              }}
+            >
+              Tap Play to begin. You can stop anytime.
+            </Text>
+          </View>
+
+          <View
+            style={{
+              backgroundColor:'#ECFDF5',
+              borderRadius:24,
+              padding:20,
+              marginTop:18,
+              borderWidth:2,
+              borderColor:'#BBF7D0',
+              shadowColor:'#000',
+              shadowOpacity:0.08,
+              shadowRadius:8,
+              elevation:3,
+            }}
+          >
+
+            <Text
+              style={{
+                fontSize:18,
+                fontWeight:'900',
+                color:'#166534',
+                textAlign:'center',
+                marginBottom:18,
+              }}
+            >
+              🎵 Lesson Audio
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                {
+                  width:84,
+                  height:84,
+                  borderRadius:42,
+                  alignSelf:'center',
+                  alignItems:'center',
+                  justifyContent:'center',
+                  backgroundColor: lessonListening
+                    ? '#FEE2E2'
+                    : '#DCFCE7',
+                  borderWidth:3,
+                  borderColor: lessonListening
+                    ? '#EF4444'
+                    : '#22C55E',
+                }
+              ]}
+            onPress={async () => {
+
+              if (lessonListening) {
+                await stopSpeech();
+                
+                
+                return;
+              }
+
+              await speakText(
+                `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`,
+                {
+                  onStart: () => {
+                    
+                  },
+
+                  onFinish: () => {
+                    
+                    
+                  },
+                }
+              );
+
+            }}
           >
             <Text style={styles.secondaryText}>
-              🔊 Listen to Lesson
+              {
+                lessonListening
+                  ? '⏹'
+                  : lessonListened
+                    ? '🔁'
+                    : '▶️'
+              }
             </Text>
           </TouchableOpacity>
 
+          </View>
+
+          <Text
+            style={{
+              textAlign:'center',
+              marginTop:12,
+              color: lessonListening ? '#15803D' : '#64748B',
+              fontWeight:'700',
+            }}
+          >
+            {
+              lessonListening
+                ? '🎧 Playing lesson...'
+                : lessonListened
+                  ? '✅ Great listening! Tap Continue.'
+                  : '👆 Tap Play to start.'
+            }
+          </Text>
+
+
+          {lessonDuration > 0 && (
+            <View
+              style={{
+                marginTop:18,
+              }}
+            >
+
+              <View
+                style={{
+                  height:10,
+                  backgroundColor:'#DCFCE7',
+                  borderRadius:999,
+                  overflow:'hidden',
+                }}
+              >
+                <View
+                  style={{
+                    height:'100%',
+                    width:`${Math.min(
+                      100,
+                      lessonDuration
+                        ? (lessonProgress / lessonDuration) * 100
+                        : 0
+                    )}%`,
+                    backgroundColor:'#22C55E',
+                  }}
+                />
+              </View>
+
+              <View
+                style={{
+                  flexDirection:'row',
+                  justifyContent:'space-between',
+                  marginTop:8,
+                }}
+              >
+                <Text style={{fontWeight:'700'}}>
+                  {formatAudioTime(lessonProgress)}
+                </Text>
+
+                <Text style={{fontWeight:'700'}}>
+                  {formatAudioTime(lessonDuration)}
+                </Text>
+              </View>
+
+            </View>
+          )}
+
           <TouchableOpacity
             style={styles.primaryButton}
+            disabled={lessonListening}
             onPress={() => advance('listen')}
           >
-            <Text style={styles.primaryText}>Continue</Text>
+            <Text style={styles.primaryText}>
+              Continue
+            </Text>
           </TouchableOpacity>
+
         </View>
       );
     }
@@ -852,7 +1065,41 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
           )}
           {questions.map((question) => (
             <View key={question.id} style={styles.questionBlock}>
-              {!littleLearnerGame && (
+              {littleLearnerGame ? (
+                <View
+                  style={{
+                    backgroundColor:'#ECFDF5',
+                    borderWidth:2,
+                    borderColor:'#86EFAC',
+                    borderRadius:22,
+                    padding:18,
+                    marginBottom:18,
+                    alignItems:'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize:18,
+                      fontWeight:'900',
+                      color:'#15803D',
+                      marginBottom:8,
+                    }}
+                  >
+                    🤔 Piliin ang tamang sagot!
+                  </Text>
+
+                  <Text
+                    style={{
+                      fontSize:24,
+                      fontWeight:'900',
+                      textAlign:'center',
+                      color:'#0F172A',
+                    }}
+                  >
+                    {question.question}
+                  </Text>
+                </View>
+              ) : (
                 <Text style={styles.question}>
                   {question.question}
                 </Text>
@@ -862,6 +1109,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 const selected = answer?.selectedOptionId === option.id;
                 return (
                   <Animated.View
+                    key={option.id}
                     style={
                       selected && answer?.correct
                         ? {
@@ -871,7 +1119,6 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                     }
                   >
                   <TouchableOpacity
-                    key={option.id}
                     style={[
                       styles.option,
                       littleLearnerGame && {
@@ -1210,11 +1457,9 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
               },
             ]}
           >
-            <TouchableOpacity
-              style={[
-                styles.secondaryButton,
-                littleLearnerGame && styles.kidSpeechButton,
-              ]}
+            <AudioPlayerButton
+              icon="🔊"
+              label={littleLearnerGame ? "Listen" : "Listen Target"}
               onPress={() =>
                 speakText(
                   currentActivity.speechTask?.targetText ||
@@ -1222,68 +1467,36 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                   ''
                 )
               }
-            >
-              <Text style={littleLearnerGame ? styles.kidSpeechIcon : styles.secondaryText}>
-                🔊
-              </Text>
-              {littleLearnerGame ? (
-                <Text style={styles.kidSpeechLabel}>Listen</Text>
-              ) : (
-                <Text style={styles.secondaryText}>Listen Target</Text>
-              )}
-            </TouchableOpacity>
+            />
 
-            <TouchableOpacity
-              style={[
-                styles.secondaryButton,
-                littleLearnerGame && styles.kidSpeechButton,
-                recording && styles.recordingButton,
-              ]}
+            <AudioPlayerButton
+              icon={recording ? '⏹' : '🎤'}
+              label={
+                littleLearnerGame
+                  ? (recording ? 'Stop' : 'Record')
+                  : (recording ? 'Stop Recording' : 'Start Recording')
+              }
+              danger={recording}
               onPress={recording ? stopRecording : startRecording}
-            >
-              {littleLearnerGame ? (
-                <>
-                  <Text style={styles.kidSpeechIcon}>
-                    {recording ? '⏹' : '🎤'}
-                  </Text>
-                  <Text style={styles.kidSpeechLabel}>
-                    {recording ? 'Stop' : 'Record'}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.secondaryText}>
-                  {recording ? '⏹ Stop Recording' : '🎙 Start Recording'}
-                </Text>
-              )}
-            </TouchableOpacity>
+            />
 
             {recordingUri ? (
-              <TouchableOpacity
-                style={[
-                  styles.secondaryButton,
-                  littleLearnerGame && styles.kidSpeechButton,
-                ]}
-                onPress={playRecording}
+              <AudioPlayerButton
+                icon="▶️"
+                label={
+                  littleLearnerGame
+                    ? "Play"
+                    : (playing ? "Playing..." : "Replay")
+                }
                 disabled={playing}
-              >
-                {littleLearnerGame ? (
-                  <>
-                    <Text style={styles.kidSpeechIcon}>▶️</Text>
-                    <Text style={styles.kidSpeechLabel}>Play</Text>
-                  </>
-                ) : (
-                  <Text style={styles.secondaryText}>
-                    {playing ? '▶ Playing...' : '▶ Replay My Voice'}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                onPress={playRecording}
+              />
             ) : null}
 
-            <TouchableOpacity
-              style={[
-                styles.secondaryButton,
-                littleLearnerGame && styles.kidSpeechButton,
-              ]}
+            <AudioPlayerButton
+              icon="⏹"
+              label={littleLearnerGame ? "Stop" : "Stop Audio"}
+              danger
               onPress={async () => {
                 await stopSpeech();
 
@@ -1299,16 +1512,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 setPlaying(false);
                 setSpeechStatus('Audio stopped.');
               }}
-            >
-              {littleLearnerGame ? (
-                <>
-                  <Text style={styles.kidSpeechIcon}>⏹</Text>
-                  <Text style={styles.kidSpeechLabel}>Stop</Text>
-                </>
-              ) : (
-                <Text style={styles.secondaryText}>⏹ Stop Audio</Text>
-              )}
-            </TouchableOpacity>
+            />
           </View>
           {speechStatus ? <Text style={styles.statusMessage}>{speechStatus}</Text> : null}
           {littleLearnerGame ? null : (
@@ -1889,9 +2093,29 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                       alignItems:'center',
                     }}
                   >
-                    <Text style={{fontSize:22}}>🔥</Text>
-                    <Text style={{fontWeight:'900',fontSize:12}}>
-                      STREAK SAFE
+                    <Text style={{fontSize:28}}>⭐</Text>
+
+                    <Text
+                      style={{
+                        fontWeight:'900',
+                        fontSize:18,
+                        textAlign:'center',
+                        color:'#15803D',
+                        marginTop:6,
+                      }}
+                    >
+                      Great Job!
+                    </Text>
+
+                    <Text
+                      style={{
+                        fontSize:12,
+                        color:'#78716C',
+                        textAlign:'center',
+                        marginTop:2,
+                      }}
+                    >
+                      Keep Learning!
                     </Text>
                   </View>
 
@@ -1908,8 +2132,15 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                     <Text style={{fontWeight:'900',fontSize:12}}>
                       {(completionResult?.newBadges || []).length}
                     </Text>
-                    <Text style={{fontSize:11}}>
-                      BADGES
+                    <Text
+                      style={{
+                        fontSize:11,
+                        fontWeight:'700',
+                        color:'#475569',
+                        marginTop:2,
+                      }}
+                    >
+                      New Badges
                     </Text>
                   </View>
                 </View>
@@ -2278,18 +2509,25 @@ const styles = StyleSheet.create({
   primaryButton: { backgroundColor: '#16A34A', borderRadius: 16, alignItems: 'center', paddingVertical: 14, marginTop: 18 },
   secondaryButton: { backgroundColor: '#E0F2FE', borderRadius: 16, alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14, marginTop: 12 },
   recordingButton: { backgroundColor: '#FEE2E2' },
-  secondaryText: { color: '#0F172A', fontWeight: '900' },
+  secondaryText: {
+    color: '#166534',
+    fontWeight: '900',
+    fontSize: 20,
+    textAlign: 'center',
+},
 
   kidSpeechButton: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: '100%',
+    minHeight: 72,
     backgroundColor: '#ECFDF5',
+    borderRadius: 20,
     borderWidth: 2,
-    borderColor: '#BBF7D0',
+    borderColor: '#86EFAC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 8,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    marginTop: 18,
   },
   kidSpeechIcon: {
     fontSize: 34,

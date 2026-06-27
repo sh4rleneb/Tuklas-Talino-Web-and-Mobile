@@ -18,11 +18,11 @@ import {
 } from './data/pictureGuessData';
 
 export default function PictureGuessGame({
-  mission,
+  activity,
   submitting,
   onMissionComplete,
 }) {
-  const gradeLevel = Number(mission.gradeLevel);
+  const gradeLevel = Number(activity?.gradeLevel || 1);
 
   const [questions, setQuestions] = useState([]);
   const [index, setIndex] = useState(0);

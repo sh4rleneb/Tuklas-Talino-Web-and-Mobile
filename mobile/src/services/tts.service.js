@@ -3,21 +3,25 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { api } from '../api/client';
 
-let currentSound = null, isRequestInProgress = false;
+let currentSound = null;
+let isRequestInProgress = false;
+let isSpeaking = false;
 
-export async function speakText(text) {
+let playbackPosition = 0;
+let playbackDuration = 0;
+
+export async function speakText(text, callbacks = {}) {
   const cleanText = String(text || '').trim();
 
   if (!cleanText) {
     return;
   }
-    if (isRequestInProgress) {
-      return;
-    }
 
-    
+  if (isRequestInProgress) {
+    return;
+  }
 
-    isRequestInProgress = true;
+  isRequestInProgress = true;
 
   try {
     console.log('[TTS] Requesting audio');
@@ -34,9 +38,13 @@ export async function speakText(text) {
     const base64Audio =
       response?.audioContent || '';
 
-    console.log('[TTS] Base64 length:', base64Audio?.length || 0);
+    console.log(
+      '[TTS] Base64 length:',
+      base64Audio?.length || 0
+    );
 
     if (!base64Audio) {
+      isRequestInProgress = false;
       return;
     }
 
@@ -67,9 +75,43 @@ export async function speakText(text) {
       );
 
     currentSound = result.sound;
-    // FRAMEWORK TEST
+
+    isSpeaking = true;
+
+    callbacks.onStart?.();
+
+    currentSound.setOnPlaybackStatusUpdate((status) => {
+
+      if (!status.isLoaded) {
+        return;
+      }
+
+      playbackPosition = status.positionMillis || 0;
+      playbackDuration = status.durationMillis || 0;
+      isSpeaking = status.isPlaying || false;
+
+      callbacks.onStatus?.({
+        positionMillis: playbackPosition,
+        durationMillis: playbackDuration,
+        isPlaying: isSpeaking,
+      });
+
+      if (status.didJustFinish) {
+
+        playbackPosition = playbackDuration;
+        isRequestInProgress = false;
+        isSpeaking = false;
+
+        currentSound = null;
+
+        callbacks.onFinish?.();
+      }
+    });
+
     console.log('[TTS] Playback started');
   } catch (err) {
+    isRequestInProgress = false;
+
     console.error(
       'Mobile Google TTS failed:',
       err
@@ -79,6 +121,7 @@ export async function speakText(text) {
 
 export async function stopSpeech() {
   if (!currentSound) {
+    isRequestInProgress = false;
     return;
   }
 
@@ -86,4 +129,21 @@ export async function stopSpeech() {
   await currentSound.unloadAsync();
 
   currentSound = null;
+  isRequestInProgress = false;
+  isSpeaking = false;
+
+  playbackPosition = 0;
+  playbackDuration = 0;
+}
+
+export function getSpeechPlaybackState() {
+  return {
+    playing: isSpeaking,
+    position: playbackPosition,
+    duration: playbackDuration,
+  };
+}
+
+export function isSpeechPlaying() {
+  return isSpeaking;
 }

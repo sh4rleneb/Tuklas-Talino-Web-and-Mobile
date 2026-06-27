@@ -22,7 +22,7 @@ export function getLetterPopItemsForGrade(gradeLevel = 1) {
       id: 'g1-2',
       prompt: 'Pu + ? = Pusa',
       answer: 'sa',
-      choices: ['sa', 'ta', 'ka', 'la'],
+      choices: ['sa', 'ma', 'ka', 'la'],
     },
     {
       id: 'g2-1',

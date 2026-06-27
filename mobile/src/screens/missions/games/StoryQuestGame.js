@@ -15,11 +15,11 @@ import {
 } from './data/storyQuestData';
 
 export default function StoryQuestGame({
-  mission,
+  activity,
   submitting,
   onMissionComplete,
 }) {
-  const gradeLevel = Number(mission.gradeLevel);
+  const gradeLevel = Number(activity?.gradeLevel || 1);
 
   const [stories, setStories] = useState([]);
   const [storyIndex, setStoryIndex] = useState(0);
