@@ -1,17 +1,5 @@
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-
-import {
-  Animated,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 export default function FillInBlankGame({
   rubric = {},
@@ -24,280 +12,199 @@ export default function FillInBlankGame({
 
   const [selected, setSelected] = useState('');
   const [correct, setCorrect] = useState(false);
-
-  const choiceScale = useRef(new Animated.Value(1)).current;
-  const previewScale = useRef(new Animated.Value(1)).current;
+  const [locked, setLocked] = useState(false);
+  const [status, setStatus] = useState('');
 
   const preview = useMemo(() => {
-    return template.replace(/_{2,}|\[blank\]/gi, selected || '______');
+    return template.replace(/_{2,}|\[blank\]/gi, selected || '____');
   }, [template, selected]);
 
-  function checkAnswer(answer = selected) {
+  function checkAnswer(value) {
     const ok =
-      String(answer).trim().toLowerCase() ===
+      String(value).trim().toLowerCase() ===
       correctAnswer.trim().toLowerCase();
 
     setCorrect(ok);
+  }
+
+  function handleSelect(choice) {
+    if (locked || submitting) return;
+
+    setSelected(choice);
+    setTimeout(() => checkAnswer(choice), 150);
+  }
+
+  function reset() {
+    if (locked) return;
+    setSelected('');
+    setCorrect(false);
+    setStatus('');
+  }
+
+  function submit() {
+    setStatus('Submitting...');
+
+    if (correct) {
+      setLocked(true);
+      setStatus('🎉 Correct!');
+    } else {
+      setStatus('❌ Try again');
+    }
+
+    onSubmit?.(selected);
   }
 
   return (
     <View style={styles.card}>
       <Text style={styles.title}>🧩 Punan ang Patlang</Text>
 
-      <Animated.View
-        style={[
-          styles.preview,
-          selected && styles.previewSelected,
-          {
-            transform: [
-              {
-                scale: previewScale,
-              },
-            ],
-          },
-        ]}
-      >
-        <Text style={styles.previewText}>
-          {preview}
-        </Text>
-      </Animated.View>
+      <View style={styles.previewBox}>
+        <Text style={styles.previewText}>{preview}</Text>
+      </View>
 
-      <Text style={styles.subtitle}>
-        Piliin ang tamang sagot.
-      </Text>
+      <Text style={styles.subtitle}>Tapikin ang sagot</Text>
 
-      {choices.map((choice) => (
-        <Animated.View
-          key={choice}
-          style={{
-            transform: [
-              {
-                scale:
-                  selected === choice
-                    ? choiceScale
-                    : 1,
-              },
-            ],
-          }}
-        >
-        <TouchableOpacity
-          disabled={submitting}
-          onPress={() => {
-            setSelected(choice);
-
-            Animated.parallel([
-              Animated.sequence([
-                Animated.timing(choiceScale, {
-                  toValue: 1.08,
-                  duration: 120,
-                  useNativeDriver: true,
-                }),
-                Animated.spring(choiceScale, {
-                  toValue: 1,
-                  useNativeDriver: true,
-                }),
-              ]),
-              Animated.sequence([
-                Animated.timing(previewScale, {
-                  toValue: 1.05,
-                  duration: 120,
-                  useNativeDriver: true,
-                }),
-                Animated.spring(previewScale, {
-                  toValue: 1,
-                  useNativeDriver: true,
-                }),
-              ]),
-            ]).start();
-
-            setTimeout(() => {
-              checkAnswer(choice);
-            }, 180);
-          }}
-          style={[
-            styles.choice,
-            selected === choice && styles.choiceSelected,
-          ]}
-        >
-          <Text
+      <View style={styles.choiceRow}>
+        {choices.map((choice, index) => (
+          <TouchableOpacity
+            key={`${choice}-${index}`}
             style={[
-              styles.choiceText,
-              selected === choice &&
-                styles.choiceTextSelected,
+              styles.choice,
+              selected === choice && styles.choiceSelected,
             ]}
+            onPress={() => handleSelect(choice)}
+            disabled={submitting || locked}
           >
-            {choice}
-          </Text>
-        </TouchableOpacity>
-        </Animated.View>
-      ))}
-
-      {!selected ? (
-        <View style={{ height: 60 }} />
-      ) : correct ? (
-        <>
-          <View style={styles.successCard}>
-            <Text style={styles.successTitle}>
-              🎉 Great Job!
-            </Text>
-
-            <Text style={styles.successSentence}>
-              {preview}
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            disabled={submitting}
-            style={styles.primary}
-            onPress={() => onSubmit?.(selected)}
-          >
-            <Text style={styles.primaryText}>
-              ✅ Continue
+            <Text
+              style={[
+                styles.choiceText,
+                selected === choice && styles.choiceTextSelected,
+              ]}
+            >
+              {choice}
             </Text>
           </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <View style={styles.errorCard}>
-            <Text style={styles.error}>
-              ❌ Oops! Try again.
-            </Text>
-          </View>
+        ))}
+      </View>
 
-          <TouchableOpacity
-            style={styles.primary}
-            onPress={() => {
-              setSelected('');
-            }}
-          >
-            <Text style={styles.primaryText}>
-              Choose Again
-            </Text>
-          </TouchableOpacity>
-        </>
-      )}
+      {selected ? (
+        correct ? (
+          <View style={styles.successBox}>
+            <Text style={styles.successText}>🎉 Great Job!</Text>
+            <Text style={styles.successSentence}>{preview}</Text>
+
+            <TouchableOpacity style={styles.button} onPress={submit}>
+              <Text style={styles.buttonText}>✅ Ipasa ang Sagot</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>❌ Subukan muli</Text>
+
+            <TouchableOpacity style={styles.button} onPress={reset}>
+              <Text style={styles.buttonText}>Burahin</Text>
+            </TouchableOpacity>
+          </View>
+        )
+      ) : null}
+
+      {status ? (
+        <Text style={styles.status}>{status}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card:{
-    marginBottom:24,
+  card: {
+    marginBottom: 20,
   },
-  title:{
-    fontSize:28,
-    fontWeight:'900',
-    textAlign:'center',
-    marginBottom:18,
-    color:'#1E3A8A',
+  title: {
+    fontSize: 26,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 16,
   },
-  subtitle:{
-    marginBottom:18,
-    textAlign:'center',
-    color:'#64748B',
-    fontSize:16,
+  previewBox: {
+    backgroundColor: '#FFF7D6',
+    padding: 18,
+    borderRadius: 18,
+    marginBottom: 16,
   },
-  preview:{
-    backgroundColor:'#FFF7D6',
-    borderRadius:24,
-    padding:22,
-    marginBottom:22,
+  previewText: {
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
   },
-
-  previewSelected:{
-    borderColor:'#FACC15',
-    borderWidth:3,
-    backgroundColor:'#FEF9C3',
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: 12,
+    fontWeight: '700',
   },
-
-  previewText:{
-    fontSize:24,
-    fontWeight:'900',
-    textAlign:'center',
-    color:'#0F172A',
+  choiceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
   },
-  choice:{
-    borderWidth:2,
-    borderColor:'#BFDBFE',
-    backgroundColor:'#FFFFFF',
-    borderRadius:20,
-    paddingVertical:18,
-    paddingHorizontal:18,
-    marginBottom:14,
+  choice: {
+    padding: 14,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#fff',
+    marginBottom: 10,
   },
-  choiceSelected:{
-    backgroundColor:'#DBEAFE',
-    borderColor:'#2563EB',
-    borderWidth:3,
+  choiceSelected: {
+    backgroundColor: '#DBEAFE',
+    borderColor: '#2563EB',
   },
-  choiceText:{
-    textAlign:'center',
-    fontSize:20,
-    fontWeight:'900',
-    color:'#1E293B',
+  choiceText: {
+    fontWeight: '800',
   },
-  choiceTextSelected:{
-    color:'#166534',
+  choiceTextSelected: {
+    color: '#166534',
   },
-  primary:{
-    marginTop:18,
-    borderRadius:22,
-    paddingVertical:18,
-    backgroundColor:'#22C55E',
+  successBox: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 16,
   },
-  primaryText:{
-    color:'#fff',
-    textAlign:'center',
-    fontWeight:'900',
-    fontSize:18,
+  successText: {
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
   },
-
-  successCard:{
-    backgroundColor:'#DCFCE7',
-    borderColor:'#22C55E',
-    borderWidth:2,
-    borderRadius:20,
-    padding:18,
-    marginTop:18,
-    marginBottom:12,
+  successSentence: {
+    marginTop: 8,
+    textAlign: 'center',
+    fontWeight: '700',
   },
-
-  successTitle:{
-    textAlign:'center',
-    fontSize:24,
-    fontWeight:'900',
-    color:'#166534',
-    marginBottom:10,
+  errorBox: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#FEE2E2',
+    borderRadius: 16,
   },
-
-  successSentence:{
-    textAlign:'center',
-    fontSize:20,
-    fontWeight:'800',
-    color:'#14532D',
+  errorText: {
+    textAlign: 'center',
+    fontWeight: '900',
   },
-
-  errorCard:{
-    backgroundColor:'#FEE2E2',
-    borderColor:'#EF4444',
-    borderWidth:2,
-    borderRadius:20,
-    padding:18,
-    marginTop:18,
-    marginBottom:12,
+  button: {
+    marginTop: 12,
+    backgroundColor: '#22C55E',
+    padding: 14,
+    borderRadius: 14,
   },
-
-
-  success:{
-    textAlign:'center',
-    color:'#15803D',
-    fontWeight:'900',
-    fontSize:18,
+  buttonText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '900',
   },
-  error:{
-    textAlign:'center',
-    color:'#DC2626',
-    fontWeight:'900',
-    fontSize:18,
+  status: {
+    marginTop: 10,
+    textAlign: 'center',
+    fontWeight: '800',
   },
 });
