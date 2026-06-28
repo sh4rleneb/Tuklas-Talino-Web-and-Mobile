@@ -3,7 +3,15 @@ import { View, StyleSheet } from 'react-native';
 import { colors, shadow } from '../styles/theme';
 
 export default function Card({ children, style }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+  return (
+    <View
+      style={[styles.card, style]}
+      pointerEvents="box-none"
+      collapsable={false}
+    >
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

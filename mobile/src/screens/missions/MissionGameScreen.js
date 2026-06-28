@@ -16,6 +16,8 @@ import WordMatchGame from './games/WordMatchGame';
 import LetterPopGame from './games/LetterPopGame';
 import PictureGuessGame from './games/PictureGuessGame';
 import SentenceBuilderGame from './games/SentenceBuilderGame';
+import StoryQuestGame from './games/StoryQuestGame';
+import FillInTheBlankGame from './games/FillInTheBlankGame';
 
 
 const DEMOS = {
@@ -206,7 +208,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'word-match' && (
           <WordMatchGame
-            mission={mission}
+            activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
           />
@@ -214,7 +216,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'letter-pop' && (
           <LetterPopGame
-            mission={mission}
+            activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
           />
@@ -223,7 +225,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'picture-guess' && (
           <PictureGuessGame
-            mission={mission}
+            activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
           />
@@ -232,7 +234,24 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'sentence-builder' && (
           <SentenceBuilderGame
-            mission={mission}
+            activity={mission}
+            submitting={submitting}
+            onMissionComplete={handleSubmit}
+          />
+        )}
+
+
+        {missionId === 'story-quest' && (
+          <StoryQuestGame
+            activity={mission}
+            submitting={submitting}
+            onMissionComplete={handleSubmit}
+          />
+        )}
+
+        {missionId === 'fill-in-the-blank' && (
+          <FillInTheBlankGame
+            activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
           />

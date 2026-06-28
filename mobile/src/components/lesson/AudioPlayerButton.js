@@ -13,15 +13,18 @@ export default function AudioPlayerButton({
       disabled={disabled}
       onPress={onPress}
       style={{
-        width: 84,
-        minHeight: 92,
+        flexBasis: '47%',
+        maxWidth: '47%',
+        minHeight: 110,
         borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: danger ? '#FEE2E2' : '#ECFDF5',
         borderWidth: 2,
         borderColor: danger ? '#EF4444' : '#86EFAC',
-        margin: 6,
+        marginBottom: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 14,
         opacity: disabled ? 0.6 : 1,
       }}
     >
@@ -36,10 +39,11 @@ export default function AudioPlayerButton({
       <Text
         style={{
           marginTop: 8,
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: '900',
           color: danger ? '#B91C1C' : '#166534',
           textAlign: 'center',
+          lineHeight: 18,
         }}
       >
         {label}

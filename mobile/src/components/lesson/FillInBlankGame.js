@@ -31,7 +31,7 @@ export default function FillInBlankGame({
     if (locked || submitting) return;
 
     setSelected(choice);
-    setTimeout(() => checkAnswer(choice), 150);
+    checkAnswer(choice);
   }
 
   function reset() {
@@ -56,13 +56,13 @@ export default function FillInBlankGame({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>🧩 Punan ang Patlang</Text>
+      <Text style={styles.title}>🧩 Kumpletuhin ang Pangungusap</Text>
 
       <View style={styles.previewBox}>
         <Text style={styles.previewText}>{preview}</Text>
       </View>
 
-      <Text style={styles.subtitle}>Tapikin ang sagot</Text>
+      <Text style={styles.subtitle}>Piliin ang tamang sagot</Text>
 
       <View style={styles.choiceRow}>
         {choices.map((choice, index) => (
@@ -90,19 +90,19 @@ export default function FillInBlankGame({
       {selected ? (
         correct ? (
           <View style={styles.successBox}>
-            <Text style={styles.successText}>🎉 Great Job!</Text>
+            <Text style={styles.successText}>🌟 Ang Husay Mo! 🌟</Text>
             <Text style={styles.successSentence}>{preview}</Text>
 
             <TouchableOpacity style={styles.button} onPress={submit}>
-              <Text style={styles.buttonText}>✅ Ipasa ang Sagot</Text>
+              <Text style={styles.buttonText}>⭐ +1 Bituin!</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>❌ Subukan muli</Text>
+            <Text style={styles.errorText}>🙂 Hindi pa. Subukan muli!</Text>
 
             <TouchableOpacity style={styles.button} onPress={reset}>
-              <Text style={styles.buttonText}>Burahin</Text>
+              <Text style={styles.buttonText}>Subukang Muli</Text>
             </TouchableOpacity>
           </View>
         )
@@ -144,23 +144,28 @@ const styles = StyleSheet.create({
   choiceRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
   },
   choice: {
-    padding: 14,
-    borderRadius: 999,
+    width: '48%',
+    minHeight: 72,
+    borderRadius: 18,
     borderWidth: 2,
     borderColor: '#D1D5DB',
     backgroundColor: '#fff',
-    marginBottom: 10,
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   choiceSelected: {
     backgroundColor: '#DBEAFE',
     borderColor: '#2563EB',
   },
   choiceText: {
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
   },
   choiceTextSelected: {
     color: '#166534',

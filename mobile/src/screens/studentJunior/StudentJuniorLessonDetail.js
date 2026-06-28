@@ -54,6 +54,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [completed, setCompleted] = useState(false);
   const [completionResult, setCompletionResult] = useState(null);
   const [mcqAnswers, setMcqAnswers] = useState({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [writingAnswer, setWritingAnswer] = useState('');
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [recording, setRecording] = useState(false);
@@ -72,6 +73,7 @@ const [lessonDuration,setLessonDuration]=useState(0);
   const [error, setError] = useState('');
   
 const [activityNotice, setActivityNotice] = useState(null);
+const [mcqToast, setMcqToast] = useState(null);
 const [balloonProgress, setBalloonProgress] = useState({});
 
 const [selectedMatch, setSelectedMatch] = useState(null);
@@ -173,8 +175,16 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
         setMcqAnswers(restoredAnswers);
         setStudent(dashboard.student || null);
         setDashboard(dashboard);
-        setStep(progressData.progress?.currentStep || 1);
-        setCompleted(progressData.progress?.status === 'completed');
+        const lessonCompleted =
+          progressData.progress?.status === 'completed';
+
+        setCompleted(lessonCompleted);
+
+        setStep(
+          lessonCompleted
+            ? (loadedLesson?.activities?.length || 0) + 3
+            : (progressData.progress?.currentStep || 1)
+        );
       })
       .catch((err) => {
         if (active) setError(err.message || 'Unable to load lesson.');
@@ -230,6 +240,13 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
       spin.stop();
     };
   }, [completed, celebrationRotate, celebrationScale]);
+  useEffect(() => {
+    if (!completed) return;
+
+    continueButtonAnim.setValue(1);
+  }, [completed]);
+
+
 
   useEffect(() => {
     const id = xpCounter.addListener(({ value }) => {
@@ -289,8 +306,20 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
     setMatchedPairs({});
     setBalloonProgress({});
 
+    setCurrentQuestionIndex(0);
     setActivityNotice(null);
   }, [lessonId, currentActivity?.id]);
+
+  useEffect(() => {
+    if (!mcqToast) return;
+
+    const id = setTimeout(() => {
+      setMcqToast(null);
+    }, 900);
+
+    return () => clearTimeout(id);
+  }, [mcqToast]);
+
 
   useEffect(() => {
     console.log('[STEP_DEBUG]', {
@@ -303,6 +332,19 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
     });
   }, [step, totalSteps, currentStep, currentActivity]);
 
+  useEffect(() => {
+    console.log(
+      '[ACTIVITIES]',
+      activities.map((a, i) => ({
+        index: i,
+        id: a.id,
+        type: a.type,
+        title: a.title,
+      }))
+    );
+  }, [activities]);
+
+
 
   const getGameMeta = activity => {
     const type = String(activity?.type || activity?.activityType || activity?.kind || '').toLowerCase();
@@ -313,7 +355,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
         title: 'Word Builder Game',
         mission: 'Build an answer using word power-ups. Fill the answer box to claim your star.',
         steps: ['Pick', 'Build', 'Claim Star'],
-        button: '🏁 Claim Star & Continue',
+        button: '🏁 Kunin ang Bituin',
       };
     }
 
@@ -333,7 +375,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
         title: 'Tap the Answer Game',
         mission: 'Choose the correct answer tile. Correct answers move you closer to the finish flag.',
         steps: ['Read', 'Tap', 'Win'],
-        button: '🚀 Continue Game',
+        button: '🚀 Magpatuloy',
       };
     }
 
@@ -342,7 +384,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
       title: 'Learning Game',
       mission: 'Complete the challenge, collect stars, and unlock the next activity.',
       steps: ['Look', 'Play', 'Win'],
-      button: '🚀 Continue Game',
+      button: '🚀 Magpatuloy',
     };
   };
 
@@ -401,21 +443,21 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
         backgroundColor: '#ECFDF5',
         borderColor: '#BBF7D0',
         borderWidth: 2,
-        borderRadius: 28,
-        padding: 18,
-        marginBottom: 18,
+        borderRadius: 22,
+        padding: 12,
+        marginBottom: 10,
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
           <View style={{
-            width: 58,
-            height: 58,
-            borderRadius: 29,
+            width: 46,
+            height: 46,
+            borderRadius: 23,
             backgroundColor: '#DCFCE7',
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: 12,
           }}>
-            <Text style={{ fontSize: 30 }}>{game.icon}</Text>
+            <Text style={{ fontSize: 20 }}>{game.icon}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: '#0F172A', fontSize: 24, fontWeight: '900' }}>
@@ -600,25 +642,35 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
       setActivityNotice({
         type: data.correct ? 'success' : 'warning',
         title: data.correct
-          ? (littleLearnerGame ? '⭐ Star Earned!' : 'Correct!')
-          : (littleLearnerGame ? '💡 Try Again!' : 'Try again'),
+          ? (littleLearnerGame ? '🌟 Ang Husay!' : 'Tamang Sagot!')
+          : (littleLearnerGame ? '💡 Subukan Muli!' : 'Subukan muli'),
         message: data.correct
           ? (
               littleLearnerGame
-                ? 'Great job! You collected a mission star. Keep going!'
-                : 'Correct answer. XP is saved once for this question.'
+                ? '🌟 Ang husay!'
+                : 'Tamang sagot!'
             )
           : (
               littleLearnerGame
-                ? 'Almost there! Tap another answer balloon.'
-                : 'Your answer was saved. Choose another answer if needed.'
+                ? '🙂 Hindi pa. Subukan muli!'
+                : 'Mali ang sagot.'
             ),
       });
+
+      if (
+        data.correct &&
+        currentQuestionIndex < (currentActivity?.questions?.length || 0) - 1
+      ) {
+        setTimeout(() => {
+          setActivityNotice(null);
+          setCurrentQuestionIndex(i => i + 1);
+        }, 900);
+      }
     } catch (err) {
       setActivityNotice({
         type: 'error',
-        title: 'Unable to save answer',
-        message: err.message || 'Please try again.',
+        title: 'Hindi naisave ang sagot',
+        message: err.message || 'Subukan nating muli.',
       });
     } finally {
       setSubmitting(false);
@@ -838,7 +890,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
 
             <Text
               style={{
-                marginTop:8,
+                marginTop:4,
                 fontSize:15,
                 color:'#64748B',
               }}
@@ -933,7 +985,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
           <Text
             style={{
               textAlign:'center',
-              marginTop:12,
+              marginTop:4,
               color: lessonListening ? '#15803D' : '#64748B',
               fontWeight:'700',
             }}
@@ -942,7 +994,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
               lessonListening
                 ? '🎧 Playing lesson...'
                 : lessonListened
-                  ? '✅ Great listening! Tap Continue.'
+                  ? '✅ Magaling! Pindutin ang Magpatuloy.'
                   : '👆 Tap Play to start.'
             }
           </Text>
@@ -957,7 +1009,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
 
               <View
                 style={{
-                  height:10,
+                  height:6,
                   backgroundColor:'#DCFCE7',
                   borderRadius:999,
                   overflow:'hidden',
@@ -981,7 +1033,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 style={{
                   flexDirection:'row',
                   justifyContent:'space-between',
-                  marginTop:8,
+                  marginTop:4,
                 }}
               >
                 <Text style={{fontWeight:'700'}}>
@@ -1002,7 +1054,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
             onPress={() => advance('listen')}
           >
             <Text style={styles.primaryText}>
-              Continue
+              Magpatuloy
             </Text>
           </TouchableOpacity>
 
@@ -1010,33 +1062,138 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
       );
     }
 
-    if (currentStep?.type === 'read') {
-      return (
-        <View style={styles.card}>
-          <Text style={styles.title}>📖 Read</Text>
-
-          {!!lesson?.instructions && (
-            <Text style={styles.body}>
-              {lesson.instructions}
-            </Text>
-          )}
-
-          {!!lesson?.passage && (
-            <ReadingPassageCard
-              title={lesson.title}
-              passage={lesson.passage}
-            />
-          )}
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => advance('read')}
+      if (currentStep?.type === 'read') {
+        return (
+          <View
+            style={[
+              styles.card,
+              littleLearnerGame && {
+                borderWidth: 3,
+                borderColor: '#BFDBFE',
+                backgroundColor: '#F0FDF4',
+              },
+            ]}
           >
-            <Text style={styles.primaryText}>Continue</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
+            {littleLearnerGame ? (
+              <>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 18,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <View
+                      style={{
+                        width: 62,
+                        height: 62,
+                        borderRadius: 20,
+                        backgroundColor: '#EFF6FF',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 14,
+                      }}
+                    >
+                      <Text style={{ fontSize: 34 }}>📖</Text>
+                    </View>
+
+                    <Text
+                      style={{
+                        fontSize: 30,
+                        fontWeight: '900',
+                        color: '#0F172A',
+                        flexShrink: 1,
+                      }}
+                    >
+                      Basahin Mo
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      width: 88,
+                      height: 88,
+                      borderRadius: 22,
+                      backgroundColor: '#ECFDF5',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: '#BFDBFE',
+                    }}
+                  >
+                    <Text style={{ fontSize: 48 }}>📚</Text>
+                  </View>
+                </View>
+
+                {!!lesson?.instructions && (
+                  <Text
+                    style={{
+                      color: '#475569',
+                      fontSize: 18,
+                      marginBottom: 14,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {lesson.instructions}
+                  </Text>
+                )}
+
+                {!!lesson?.passage && (
+                  <View
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 24,
+                      padding: 22,
+                      borderWidth: 2,
+                      borderColor: '#BBF7D0',
+                      marginBottom: 18,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 24,
+                        fontWeight: '900',
+                        color: '#111827',
+                        lineHeight: 36,
+                      }}
+                    >
+                      {lesson.passage}
+                    </Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={styles.title}>📖 Read</Text>
+
+                {!!lesson?.instructions && (
+                  <Text style={styles.body}>
+                    {lesson.instructions}
+                  </Text>
+                )}
+
+                {!!lesson?.passage && (
+                  <ReadingPassageCard
+                    title={lesson.title}
+                    passage={lesson.passage}
+                  />
+                )}
+              </>
+            )}
+
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => advance('read')}
+            >
+              <Text style={styles.primaryText}>
+                {littleLearnerGame ? '⭐ Naintindihan Ko!' : 'Magpatuloy'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      }
 
     if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
  {
@@ -1052,10 +1209,12 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
             />
           )}
 
-          <ActivityVisualCard
-            activity={currentActivity}
-            lesson={lesson}
-          />
+          {!littleLearnerGame && (
+            <ActivityVisualCard
+              activity={currentActivity}
+              lesson={lesson}
+            />
+          )}
 
           {littleLearnerGame ? null : (
             <ReadingPassageCard
@@ -1063,7 +1222,9 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
               lesson={lesson}
             />
           )}
-          {questions.map((question) => (
+          {questions[currentQuestionIndex] && (() => {
+            const question = questions[currentQuestionIndex];
+            return (
             <View key={question.id} style={styles.questionBlock}>
               {littleLearnerGame ? (
                 <View
@@ -1122,13 +1283,13 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                     style={[
                       styles.option,
                       littleLearnerGame && {
-                        minHeight: 110,
-                        borderRadius: 28,
+                        minHeight: 82,
+                        borderRadius: 22,
                         justifyContent: 'center',
                         alignItems: 'center',
                         backgroundColor: '#F0FDF4',
                         borderColor: '#86EFAC',
-                        marginBottom: 14,
+                        marginBottom: 8,
                       },
                       selected && (answer.correct ? styles.optionCorrect : styles.optionIncorrect),
                     ]}
@@ -1145,9 +1306,9 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                           style={[
                             styles.optionText,
                             {
-                              fontSize: 28,
+                              fontSize: 24,
                               textAlign: 'center',
-                              lineHeight: 34,
+                              lineHeight: 28,
                             },
                           ]}
                         >
@@ -1164,8 +1325,90 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 );
               })}
             </View>
-          ))}
-          {activityNotice ? (
+          );
+          })()}
+          {!littleLearnerGame ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 20,
+              marginBottom: 12,
+            }}
+          >
+            <TouchableOpacity
+              disabled={currentQuestionIndex === 0}
+              style={[
+                styles.secondaryButton,
+                currentQuestionIndex === 0 && { opacity: 0.4 },
+              ]}
+              onPress={() =>
+                setCurrentQuestionIndex(i => Math.max(0, i - 1))
+              }
+            >
+              <Text style={styles.secondaryText}>← Previous</Text>
+            </TouchableOpacity>
+
+            <Text
+              style={{
+                fontWeight: '700',
+                color: '#475569',
+              }}
+            >
+              {currentQuestionIndex + 1} / {questions.length}
+            </Text>
+
+            <TouchableOpacity
+              disabled={
+                currentQuestionIndex >= questions.length - 1 ||
+                !mcqAnswers[questions[currentQuestionIndex]?.id]
+              }
+              style={[
+                styles.primaryButton,
+                (
+                  currentQuestionIndex >= questions.length - 1 ||
+                  !mcqAnswers[questions[currentQuestionIndex]?.id]
+                ) && {
+                  opacity: 0.4,
+                },
+              ]}
+              onPress={() => {
+                const current = questions[currentQuestionIndex];
+
+                if (!mcqAnswers[current.id]) {
+                  setActivityNotice({
+                    type: 'warning',
+                    title: 'Kailangan ng Sagot',
+                    message: 'Sagutin muna ang tanong bago magpatuloy.',
+                  });
+                  return;
+                }
+
+                setCurrentQuestionIndex(i =>
+                  Math.min(questions.length - 1, i + 1)
+                );
+              }}
+            >
+              <Text style={styles.primaryText}>Next →</Text>
+            </TouchableOpacity>
+          </View>
+          ) : (
+            <Text
+              style={{
+                textAlign: 'center',
+                fontSize: 18,
+                fontWeight: '900',
+                color: '#15803D',
+                marginTop: 12,
+                marginBottom: 8,
+              }}
+            >
+              ⭐ Tanong {currentQuestionIndex + 1} sa {questions.length}
+            </Text>
+          )}
+
+{activityNotice ? (
             littleLearnerGame ? (
               <View
                 style={[
@@ -1175,24 +1418,24 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                     : styles.feedbackWarning,
                   {
                     alignItems:'center',
-                    paddingVertical:24,
+                    paddingVertical:14,
                   },
                 ]}
               >
-                <Text style={{ fontSize:64 }}>
+                <Text style={{ fontSize:32 }}>
                   {activityNotice.type === 'success' ? '⭐😊' : '❌😅'}
                 </Text>
 
                 <Text
                   style={{
-                    fontSize:26,
+                    fontSize:16,
                     fontWeight:'900',
-                    marginTop:12,
+                    marginTop:4,
                   }}
                 >
                   {activityNotice.type === 'success'
-                    ? 'Great Job!'
-                    : 'Try Again!'}
+                    ? 'Ang husay mo!'
+                    : 'Subukan muli!'}
                 </Text>
               </View>
             ) : (
@@ -1219,7 +1462,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
             onPress={() => advance('mcq')}
             disabled={!allAnswered || submitting}
           >
-            <Text style={styles.primaryText}>Continue</Text>
+            <Text style={styles.primaryText}>Magpatuloy</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1352,7 +1595,9 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
           </View>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={submitWriting}
+            onPress={() => {
+              submitWriting();
+            }}
             disabled={submitting}
           >
             <Text style={styles.primaryText}>
@@ -1360,7 +1605,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 ? 'Saving...'
                 : littleLearnerGame
                   ? game.button
-                  : 'Save and Continue'}
+                  : 'I-save at Magpatuloy'}
             </Text>
           </TouchableOpacity>
             </>
@@ -1453,7 +1698,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 justifyContent:'space-evenly',
                 alignItems:'flex-start',
                 flexWrap:'wrap',
-                marginTop:12,
+                marginTop:4,
               },
             ]}
           >
@@ -1522,7 +1767,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
               littleLearnerGame && {
                 borderColor: '#FDE68A',
                 backgroundColor: '#FFFBEB',
-                minHeight: 110,
+                minHeight: 82,
                 fontSize: 18,
               },
             ]}
@@ -1534,6 +1779,73 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
           )}
           <TouchableOpacity style={styles.primaryButton} onPress={submitSpeech} disabled={submitting}>
             <Text style={styles.primaryText}>{submitting ? 'Saving...' : littleLearnerGame ? game.button : 'Save Speech Attempt'}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+
+    if (
+      currentStep?.type === 'activity' &&
+      currentActivity?.type === 'infographic'
+    ) {
+      return (
+        <View
+          style={[
+            styles.card,
+            littleLearnerGame && {
+              borderWidth: 3,
+              borderColor: '#FDE68A',
+              backgroundColor: '#F0FDF4',
+            },
+          ]}
+        >
+          {renderGameHeader(currentActivity)}
+
+          {littleLearnerGame && (
+            <Text
+              style={{
+                textAlign: 'center',
+                fontSize: 26,
+                marginBottom: 10,
+              }}
+            >
+              🌈 ⭐ 🎈 ⭐ 🌈
+            </Text>
+          )}
+
+          {!littleLearnerGame && (
+            <>
+              <Text style={styles.cardTitle}>
+                📖 {currentActivity.title}
+              </Text>
+
+              <Text style={styles.body}>
+                {currentActivity.instructions}
+              </Text>
+
+              <ActivityGuideCard
+                activity={currentActivity}
+                littleLearnerGame={littleLearnerGame}
+              />
+            </>
+          )}
+
+          <ActivityVisualCard
+            activity={currentActivity}
+            lesson={lesson}
+          />
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            disabled={submitting}
+            onPress={() => advance('infographic')}
+          >
+            <Text style={styles.primaryText}>
+              {littleLearnerGame
+                ? '⭐ Naintindihan Ko!'
+                : 'Magpatuloy'}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -1558,7 +1870,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 fontSize: 22,
                 fontWeight: '900',
                 color: '#15803D',
-                marginBottom: 14,
+                marginBottom: 8,
                 textAlign: 'center',
               }}
             >
@@ -1571,7 +1883,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 style={{
                   backgroundColor:'#F0FDF4',
                   borderRadius:20,
-                  padding:16,
+                  padding:12,
                   marginBottom:16,
                 }}
               >
@@ -1589,7 +1901,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 <TouchableOpacity
                   style={{
                     backgroundColor:'#FECACA',
-                    padding:16,
+                    padding:12,
                     borderRadius:999,
                     marginBottom:8,
                   }}
@@ -1620,7 +1932,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 fontWeight: '900',
                 color: '#15803D',
                 marginTop: 20,
-                marginBottom: 14,
+                marginBottom: 8,
                 textAlign: 'center',
               }}
             >
@@ -1704,7 +2016,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                           setActivityNotice({
                             type: 'warning',
                             title: '💡 Pumili Muna',
-                            message: 'Pumili muna ng salita sa kaliwa.',
+                            message: 'Pumili muna ng salita sa kaliwa. 😊',
                           });
                           return;
                         }
@@ -1735,7 +2047,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                           setActivityNotice({
                             type: 'warning',
                             title: '🔄 Subukan Muli',
-                            message: 'Hindi magkatugma ang napili.',
+                            message: 'Hindi ito ang tamang pares. 😊 Subukan nating muli!',
                           });
                         }
 
@@ -1775,7 +2087,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
           onPress={() => advance(currentActivity.type || 'activity')}
           disabled={submitting}
         >
-          <Text style={styles.primaryText}>Continue</Text>
+          <Text style={styles.primaryText}>Magpatuloy</Text>
         </TouchableOpacity>
       </View>
     );
@@ -1837,16 +2149,16 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
             style={{
               backgroundColor:'#FFF7ED',
               borderRadius:24,
-              padding:16,
-              marginTop:12,
-              marginBottom:12,
+              padding:12,
+              marginTop:4,
+              marginBottom:8,
               borderWidth:2,
               borderColor:'#FED7AA',
             }}
           >
             <Text
               style={{
-                fontSize:28,
+                fontSize:22,
                 fontWeight:'900',
                 color:'#15803D',
               }}
@@ -1880,10 +2192,10 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
 
             <View
               style={{
-                height:10,
+                height:6,
                 backgroundColor:'#DCFCE7',
                 borderRadius:999,
-                marginTop:14,
+                marginTop:4,
                 overflow:'hidden',
               }}
             >
@@ -1900,7 +2212,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
               style={{
                 flexDirection:'row',
                 justifyContent:'space-between',
-                marginTop:16,
+                marginTop:10,
               }}
             >
               {[
@@ -1916,8 +2228,8 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                   style={{
                     flex:1,
                     marginHorizontal:3,
-                    paddingVertical:10,
-                    borderRadius:14,
+                    paddingVertical:6,
+                    borderRadius:10,
                     backgroundColor:
                       step === index + 1
                         ? '#FEF3C7'
@@ -2029,10 +2341,10 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
 
                 <Text
                   style={{
-                    fontSize:28,
+                    fontSize:22,
                     fontWeight:'900',
                     color:'#92400E',
-                    marginTop:8,
+                    marginTop:4,
                   }}
                 >
                   Lesson Complete!
@@ -2042,7 +2354,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                   style={{
                     textAlign:'center',
                     color:'#78716C',
-                    marginTop:8,
+                    marginTop:4,
                     marginBottom:18,
                   }}
                 >
@@ -2054,8 +2366,8 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                     width:'100%',
                     backgroundColor:'#ECFDF5',
                     borderRadius:18,
-                    padding:16,
-                    marginBottom:12,
+                    padding:12,
+                    marginBottom:8,
                     borderWidth:1,
                     borderColor:'#BBF7D0',
                   }}
@@ -2104,7 +2416,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                         marginTop:6,
                       }}
                     >
-                      Great Job!
+                      Ang Husay Mo!
                     </Text>
 
                     <Text
@@ -2195,38 +2507,77 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                   ],
                 }}
               >
-              {nextLesson ? (
+                {nextLesson ? (
+                  <TouchableOpacity
+                    style={styles.finishHeroButton}
+                    onPress={() =>
+                      navigation.navigate('Lessons', {
+                        screen: 'StudentJuniorLessonDetail',
+                        params: { lessonId: nextLesson.id },
+                      })
+                    }
+                  >
+                    <Text style={styles.finishHeroIcon}>🚀</Text>
+
+                    <View style={styles.finishHeroTextWrap}>
+                      <Text style={styles.finishHeroTitle}>
+                        Next Lesson
+                      </Text>
+
+                      <Text style={styles.finishHeroSubtitle}>
+                        Continue your learning adventure!
+                      </Text>
+                    </View>
+
+                    <Text style={styles.finishHeroIcon}>➡️</Text>
+                  </TouchableOpacity>
+                ) : null}
+
                 <TouchableOpacity
-                  style={styles.primaryButton}
-                  onPress={() => navigation.navigate('Lessons', {
-                    screen: 'StudentJuniorLessonDetail',
-                    params: { lessonId: nextLesson.id },
-                  })}
+                  style={styles.finishCardButton}
+                  onPress={() =>
+                    navigation.navigate('Lessons', {
+                      screen: 'LessonsList',
+                    })
+                  }
                 >
-                  <Text style={styles.primaryText}>Next Lesson →</Text>
+                  <Text style={styles.finishCardIcon}>📚</Text>
+
+                  <View style={styles.finishCardTextWrap}>
+                    <Text style={styles.finishCardTitle}>
+                      Back to Lesson Library
+                    </Text>
+
+                    <Text style={styles.finishCardSubtitle}>
+                      Choose another lesson
+                    </Text>
+                  </View>
+
+                  <Text style={{ fontSize: 26 }}>›</Text>
                 </TouchableOpacity>
-              ) : null}
 
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() =>
-                  navigation.navigate('Lessons', {
-                    screen: 'LessonsList',
-                  })
-                }>
-                <Text style={styles.primaryText}>Back to Library</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.finishCardButton}
+                  onPress={() =>
+                    navigation.navigate('StudentTabs', {
+                      screen: 'Home',
+                    })
+                  }
+                >
+                  <Text style={styles.finishCardIcon}>🏠</Text>
 
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() =>
-                  navigation.navigate('StudentTabs', {
-                    screen: 'Home',
-                  })
-                }>
-                <Text style={styles.secondaryText}>🏠 Return Home</Text>
-              </TouchableOpacity>
+                  <View style={styles.finishCardTextWrap}>
+                    <Text style={styles.finishCardTitle}>
+                      Back to Home
+                    </Text>
 
+                    <Text style={styles.finishCardSubtitle}>
+                      Return to your dashboard
+                    </Text>
+                  </View>
+
+                  <Text style={{ fontSize: 26 }}>›</Text>
+                </TouchableOpacity>
               </Animated.View>
             </View>
           ) : renderActivity()}
@@ -2309,7 +2660,7 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: '#ECFDF5',
     borderColor: '#BBF7D0',
-    borderWidth: 1,
+    borderWidth: 2,
     borderRadius: 20,
     padding: 16,
     marginBottom: 18,
@@ -2335,10 +2686,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#EFF6FF',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#BFDBFE',
     borderRadius: 22,
-    padding: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     marginBottom: 18,
   },
   visualImageWrap: {
@@ -2403,10 +2755,11 @@ const styles = StyleSheet.create({
 
   passageCard: {
     backgroundColor: '#FFFBEB',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#FDE68A',
     borderRadius: 18,
-    padding: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     marginBottom: 18,
   },
   passageTitle: {
@@ -2431,13 +2784,15 @@ const styles = StyleSheet.create({
   xp: { color: '#F97316', fontWeight: '900' },
   title: { color: '#16A34A', fontSize: 31, fontWeight: '900', marginTop: 20 },
   stepText: { color: '#64748B', marginTop: 7 },
-  progressTrack: { height: 12, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 16, marginBottom: 20 },
+  progressTrack: { height: 12, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 10,
+    alignSelf: 'center',
+    minWidth: '75%', marginBottom: 20 },
   progressFill: { height: '100%', backgroundColor: '#22C55E', borderRadius: 99 },
   card: {
     backgroundColor: '#FFF',
     borderRadius: 24,
     padding: 18,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     shadowColor: 'transparent',
     shadowOpacity: 0,
@@ -2447,8 +2802,17 @@ const styles = StyleSheet.create({
   },
   cardTitle: { color: '#0F172A', fontSize: 23, fontWeight: '900' },
   body: { color: '#475569', lineHeight: 22, marginTop: 10 },
-  questionBlock: { marginTop: 16 },
-  question: { color: '#0F172A', fontWeight: '900', fontSize: 17 },
+  questionBlock: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  question: {
+    color: '#0F172A',
+    fontWeight: '900',
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   option: {
     borderWidth: 3,
     borderColor: '#F9A8D4',
@@ -2474,10 +2838,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   feedbackCard: {
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 16,
-    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    marginTop: 10,
+    alignSelf: 'center',
+    minWidth: '75%',
+    borderWidth: 2,
   },
   feedbackSuccess: {
     backgroundColor: '#DCFCE7',
@@ -2505,9 +2872,82 @@ const styles = StyleSheet.create({
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   choiceChip: { backgroundColor: '#FEF3C7', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 9 },
   choiceText: { color: '#92400E', fontWeight: '900' },
-  input: { borderWidth: 2, borderColor: '#D1FAE5', borderRadius: 14, minHeight: 110, padding: 12, marginTop: 16, textAlignVertical: 'top' },
-  primaryButton: { backgroundColor: '#16A34A', borderRadius: 16, alignItems: 'center', paddingVertical: 14, marginTop: 18 },
-  secondaryButton: { backgroundColor: '#E0F2FE', borderRadius: 16, alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14, marginTop: 12 },
+  input: { borderWidth: 2, borderColor: '#D1FAE5', borderRadius: 14, minHeight: 110, padding: 12, marginTop: 10,
+    alignSelf: 'center',
+    minWidth: '75%', textAlignVertical: 'top' },
+  primaryButton: { backgroundColor: '#16A34A', borderRadius: 999, alignItems: 'center', paddingVertical: 14, marginTop: 18 },
+  secondaryButton: { backgroundColor: '#E0F2FE', borderRadius: 999, alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14, marginTop: 12 },
+
+  finishHeroButton: {
+    marginTop: 24,
+    backgroundColor: '#16A34A',
+    borderRadius: 22,
+    minHeight: 78,
+    paddingHorizontal: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 4,
+  },
+
+  finishHeroTextWrap: {
+    flex: 1,
+    marginHorizontal: 16,
+  },
+
+  finishHeroTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+
+  finishHeroSubtitle: {
+    color: '#DCFCE7',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+
+  finishHeroIcon: {
+    fontSize: 42,
+  },
+
+  finishCardButton: {
+    marginTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#A7F3D0',
+    minHeight: 74,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  finishCardIcon: {
+    fontSize: 34,
+    width: 42,
+    textAlign: 'center',
+  },
+
+  finishCardTextWrap: {
+    flex: 1,
+    marginLeft: 16,
+  },
+
+  finishCardTitle: {
+    color: '#166534',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  finishCardSubtitle: {
+    color: '#64748B',
+    fontSize: 13,
+    marginTop: 2,
+  },
+
   recordingButton: { backgroundColor: '#FEE2E2' },
   secondaryText: {
     color: '#166534',
@@ -2539,7 +2979,14 @@ const styles = StyleSheet.create({
     color: '#15803D',
   },
 
-  speechButtons: { marginTop: 4 },
+  speechButtons: {
+    marginTop: 4,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'stretch',
+    gap: 12,
+  },
   speechPassageWrap: { marginTop: 16 },
   statusMessage: { color: '#0369A1', fontWeight: '800', marginTop: 10 },
   contentRow: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, marginTop: 10 },

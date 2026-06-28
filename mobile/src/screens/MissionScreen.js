@@ -154,7 +154,7 @@ export default function MissionScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" removeClippedSubviews={false}>
       <StudentScreenHeader
         navigation={navigation}
         avatar={student?.avatar}
@@ -245,13 +245,15 @@ export default function MissionScreen({ navigation }) {
                 styles.button,
                 mission.state === 'claimed' && styles.buttonDisabled,
               ]}
-              disabled={mission.state === 'claimed'}
-              onPress={() =>
-                navigation.navigate('MissionGame', {
+              disabled={false}
+              onPress={() => {
+
+
+                navigation.navigate("MissionGame", {
                   missionId: mission.id,
                   gradeLevel: student?.gradeLevel,
-                })
-              }
+                });
+              }}
             >
               <Text style={styles.buttonText}>
                 {mission.state === 'claimed'

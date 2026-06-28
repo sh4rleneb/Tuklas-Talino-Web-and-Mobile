@@ -158,8 +158,7 @@ async function ensureCoreBadges() {
 async function buildBadgeStats(student) {
   const studentId = student.id;
 
-  const timer = (label, start) =>
-    console.log(`[BADGE STATS] ${label}: ${Date.now() - start} ms`);
+  const timer = () => undefined;
 
   let t = Date.now();
   const completedLessons =
@@ -321,71 +320,123 @@ function uniqueBadgeResponses(badges = []) {
 
 
 export async function awardXp(studentId, points, sourceType, sourceId = null, note = '') {
-  const profileStart = Date.now();
-
-  const profile = (label) => {
-    console.log(`[XP PROFILE] ${label}: ${Date.now() - profileStart} ms`);
-  };
-
-  const student = await Student.findByPk(studentId);
-  profile('Student.findByPk');
-  if (!student) return null;
-
   const safePoints = Math.max(0, Number(points || 0));
+  const normalizedSourceType = String(sourceType || '').trim();
+  const normalizedSourceId =
+    sourceId === undefined || sourceId === ''
+      ? null
+      : sourceId;
 
-  student.xp = Number(student.xp || 0) + safePoints;
-  student.lastActiveAt = new Date();
+  const canCheckDuplicateSource =
+    Boolean(normalizedSourceType) &&
+    normalizedSourceId !== null &&
+    normalizedSourceId !== undefined;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const previousDate = student.lastActivityDate;
+  const sequelize = Student.sequelize;
+  let updatedStudent = null;
+  let xpAwarded = 0;
+  let xpAlreadyAwarded = false;
 
-  if (!previousDate) {
-    student.currentStreak = 1;
-  } else {
-    const previous = new Date(previousDate);
-    const current = new Date(today);
+  await sequelize.transaction(async (transaction) => {
+    const student = await Student.findByPk(studentId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
 
-    const diffDays = Math.floor(
-      (current - previous) / (1000 * 60 * 60 * 24)
+    if (!student) {
+      updatedStudent = null;
+      return;
+    }
+
+    if (canCheckDuplicateSource) {
+      const existingXpLog = await XpLog.findOne({
+        where: {
+          studentId,
+          sourceType: normalizedSourceType,
+          sourceId: normalizedSourceId
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (existingXpLog) {
+        xpAlreadyAwarded = true;
+        updatedStudent = student;
+        return;
+      }
+    }
+
+    if (safePoints <= 0) {
+      updatedStudent = student;
+      return;
+    }
+
+    xpAwarded = safePoints;
+    student.xp = Number(student.xp || 0) + xpAwarded;
+    student.lastActiveAt = new Date();
+
+    const today = new Date().toISOString().slice(0, 10);
+    const previousDate = student.lastActivityDate;
+
+    if (!previousDate) {
+      student.currentStreak = 1;
+    } else {
+      const previous = new Date(previousDate);
+      const current = new Date(today);
+
+      const diffDays = Math.floor(
+        (current - previous) / (1000 * 60 * 60 * 24)
+      );
+
+      if (diffDays === 1) {
+        student.currentStreak =
+          Number(student.currentStreak || 0) + 1;
+      } else if (diffDays > 1) {
+        student.currentStreak = 1;
+      }
+    }
+
+    student.longestStreak = Math.max(
+      Number(student.longestStreak || 0),
+      Number(student.currentStreak || 0)
     );
 
-    if (diffDays === 1) {
-      student.currentStreak =
-        Number(student.currentStreak || 0) + 1;
-    } else if (diffDays > 1) {
-      student.currentStreak = 1;
-    }
+    student.lastActivityDate = today;
+
+    await student.save({ transaction });
+
+    await XpLog.create({
+      studentId,
+      sourceType: normalizedSourceType || sourceType,
+      sourceId: normalizedSourceId,
+      points: xpAwarded,
+      note
+    }, { transaction });
+
+    updatedStudent = student;
+  });
+
+  if (!updatedStudent) return null;
+
+  let newBadges = [];
+
+  if (xpAwarded > 0) {
+    newBadges = await awardThresholdBadges(updatedStudent);
   }
 
-  student.longestStreak = Math.max(
-    Number(student.longestStreak || 0),
-    Number(student.currentStreak || 0)
-  );
+  updatedStudent.newBadges = newBadges;
 
-  student.lastActivityDate = today;
-
-  await student.save();
-  profile('student.save');
-  await XpLog.create({ studentId, sourceType, sourceId, points: safePoints, note });
-  profile('XpLog.create');
-
-  const newBadges = await awardThresholdBadges(student);
-  profile('awardThresholdBadges');
-
-  student.newBadges = newBadges;
-
-  if (typeof student.setDataValue === 'function') {
-    student.setDataValue('newBadges', newBadges);
+  if (typeof updatedStudent.setDataValue === 'function') {
+    updatedStudent.setDataValue('newBadges', newBadges);
+    updatedStudent.setDataValue('xpAwarded', xpAwarded);
+    updatedStudent.setDataValue('xpAlreadyAwarded', xpAlreadyAwarded);
   }
 
-  profile('awardXp complete');
-  return student;
+  return updatedStudent;
 }
 
 export async function awardThresholdBadges(student) {
-  const badgeStart = Date.now();
-  const profile = (label) =>
-    console.log(`[BADGE PROFILE] ${label}: ${Date.now() - badgeStart} ms`);
+  const profile = () => undefined;
 
   const badges = await Badge.findAll();
   profile('Badge.findAll');

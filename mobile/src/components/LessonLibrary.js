@@ -250,17 +250,40 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
   const progress = dashboard?.progress || {};
 
   function openLesson(lesson) {
-    if (!lesson.unlocked) return;
-    navigation.navigate(
-      'Lessons',
-      {
-        screen: 'StudentJuniorLessonDetail',
-        params: {
-          lessonId: lesson.id,
-          homeRoute: 'StudentTabs',
-        },
-      }
+    
+    console.log("[OPEN LESSON]", {
+      variant,
+      lessonId: lesson.id,
+      unlocked: lesson.unlocked,
+    });
+
+console.log(
+      "[LessonLibrary]",
+      "variant=", variant,
+      "lesson=", lesson.id,
+      "unlocked=", lesson.unlocked
     );
+
+    if (!lesson.unlocked) {
+      console.log("[LessonLibrary] BLOCKED: lesson is locked");
+      return;
+    }
+
+    if (variant === 'senior') {
+      navigation.navigate('StudentJuniorLessonDetail', {
+        lessonId: lesson.id,
+        homeRoute: 'StudentSeniorTabs',
+      });
+      return;
+    }
+
+    navigation.navigate('Lessons', {
+      screen: 'StudentJuniorLessonDetail',
+      params: {
+        lessonId: lesson.id,
+        homeRoute: 'StudentTabs',
+      },
+    });
   }
 
   if (loading && !dashboard) {
@@ -401,6 +424,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                 disabled={!lesson.unlocked}
                 style={[
                   styles.lessonCard,
+                  littleQuest && styles.questCard,
                   !lesson.unlocked && styles.lockedCard,
                 ]}
                 onPress={() => openLesson(lesson)}
@@ -430,10 +454,13 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                       {lesson.title}
                     </Text>
 
+                    {!littleQuest && (
                     <Text style={styles.lessonMeta}>
                       {meta.label} • Grade {lesson.gradeLevel || student.gradeLevel || '—'} • {lesson.xpReward || 0} XP
                     </Text>
+                    )}
 
+                    {!littleQuest && (
                     <View style={styles.metaRow}>
                       <View
                         style={[
@@ -468,36 +495,45 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                         ))}
                       </View>
                     </View>
+                    )}
 
-                    <Text style={styles.difficultyHelp}>
-                      {game.title}
-                    </Text>
+                    {!littleQuest && (
+                      <>
+                        <Text style={styles.difficultyHelp}>
+                          {game.title}
+                        </Text>
 
-                    <Text style={styles.lessonMeta}>
-                      {game.mission}
-                    </Text>
+                        <Text style={styles.lessonMeta}>
+                          {game.mission}
+                        </Text>
+                      </>
+                    )}
 
-                    <View style={styles.lessonTrack}>
-                      <View
-                        style={[
-                          styles.lessonFill,
-                          {
-                            width: `${lesson.progressPercent}%`,
-                            backgroundColor: meta.accent,
-                          },
-                        ]}
-                      />
-                    </View>
+                    {!littleQuest && (
+                      <>
+                        <View style={styles.lessonTrack}>
+                          <View
+                            style={[
+                              styles.lessonFill,
+                              {
+                                width: `${lesson.progressPercent}%`,
+                                backgroundColor: meta.accent,
+                              },
+                            ]}
+                          />
+                        </View>
 
-                    <View style={styles.lessonProgressRow}>
-                      <Text style={styles.progressValue}>
-                        {lesson.progressPercent}%
-                      </Text>
+                        <View style={styles.lessonProgressRow}>
+                          <Text style={styles.progressValue}>
+                            {lesson.progressPercent}%
+                          </Text>
 
-                      <Text style={styles.xpChip}>
-                        {action}
-                      </Text>
-                    </View>
+                          <Text style={styles.xpChip}>
+                            {action}
+                          </Text>
+                        </View>
+                      </>
+                    )}
                   </View>
 
                   <Text style={styles.lessonArrow}>

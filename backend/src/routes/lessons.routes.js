@@ -1019,6 +1019,13 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
     }
 
     const review = Array.isArray(req.body.review) ? req.body.review : [];
+
+    if (!review.length) {
+      return res.status(422).json({
+        message: 'Quiz answers are required before saving a quiz result.',
+      });
+    }
+
     const normalizedReview = review
       .map((item) => ({
         questionId: Number(item.questionId || 0),
@@ -1026,25 +1033,61 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       }))
       .filter((item) => item.questionId && item.selectedOptionId);
 
-    const questionIds = [...new Set(normalizedReview.map((item) => item.questionId))];
-    const optionIds = [...new Set(normalizedReview.map((item) => item.selectedOptionId))];
+    if (normalizedReview.length !== review.length) {
+      return res.status(422).json({
+        message: 'Every quiz answer must include a valid question and option.',
+      });
+    }
 
-    const [questions, options] = await Promise.all([
-      questionIds.length ? MCQQuestion.findAll({ where: { id: questionIds } }) : [],
-      optionIds.length ? MCQOption.findAll({ where: { id: optionIds } }) : [],
-    ]);
-    const lessonActivities = questions.length
-      ? await LessonActivity.findAll({
-        where: { id: [...new Set(questions.map((question) => question.activityId))] }
-      })
+    const submittedQuestionIds = normalizedReview.map((item) => item.questionId);
+    const uniqueSubmittedQuestionIds = new Set(submittedQuestionIds);
+
+    if (uniqueSubmittedQuestionIds.size !== submittedQuestionIds.length) {
+      return res.status(422).json({
+        message: 'Each quiz question can only be answered once.',
+      });
+    }
+
+    const lessonActivities = await LessonActivity.findAll({
+      where: { lessonId: lesson.id }
+    });
+    const lessonActivityIds = lessonActivities.map((activity) => Number(activity.id));
+
+    const expectedQuestions = lessonActivityIds.length
+      ? await MCQQuestion.findAll({ where: { activityId: lessonActivityIds } })
       : [];
-    const lessonActivityIds = new Set(
-      lessonActivities
-        .filter((activity) => Number(activity.lessonId) === Number(lesson.id))
-        .map((activity) => Number(activity.id))
+
+    const expectedQuestionIds = new Set(
+      expectedQuestions.map((question) => Number(question.id))
     );
-    const questionById = new Map(questions.map((question) => [Number(question.id), question]));
-    const optionById = new Map(options.map((option) => [Number(option.id), option]));
+
+    if (!expectedQuestionIds.size) {
+      return res.status(422).json({
+        message: 'This lesson has no quiz questions configured.',
+      });
+    }
+
+    const answeredAllQuestions =
+      normalizedReview.length === expectedQuestionIds.size &&
+      normalizedReview.every((item) => expectedQuestionIds.has(item.questionId));
+
+    if (!answeredAllQuestions) {
+      return res.status(422).json({
+        message: 'Please answer all quiz questions before submitting.',
+      });
+    }
+
+    const optionIds = [...new Set(normalizedReview.map((item) => item.selectedOptionId))];
+    const options = optionIds.length
+      ? await MCQOption.findAll({ where: { id: optionIds } })
+      : [];
+
+    const questionById = new Map(
+      expectedQuestions.map((question) => [Number(question.id), question])
+    );
+    const optionById = new Map(
+      options.map((option) => [Number(option.id), option])
+    );
     const historyRows = [];
 
     for (const item of normalizedReview) {
@@ -1054,10 +1097,11 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       if (
         !question ||
         !option ||
-        !lessonActivityIds.has(Number(question.activityId)) ||
         Number(option.questionId) !== Number(question.id)
       ) {
-        continue;
+        return res.status(422).json({
+          message: 'Quiz answers must belong to this lesson.',
+        });
       }
 
       historyRows.push({
@@ -1069,31 +1113,20 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       });
     }
 
-    const hasSubmittedReview = review.length > 0;
-
-    if (hasSubmittedReview && historyRows.length !== review.length) {
-      return res.status(422).json({
-        message: 'Quiz answers must belong to this lesson.'
-      });
-    }
-
-    const score = hasSubmittedReview
-      ? historyRows.filter((row) => row.isCorrect).length
-      : Number(req.body.score || 0);
-    const total = hasSubmittedReview
-      ? historyRows.length
-      : Number(req.body.total || 0);
-    const submittedPercent = hasSubmittedReview ? Number.NaN : Number(req.body.percent);
-    const percent = Number.isFinite(submittedPercent)
-      ? Math.max(0, Math.min(100, Math.round(submittedPercent)))
-      : total
-        ? Math.max(0, Math.min(100, Math.round((score / total) * 100)))
-        : 0;
+    const score = historyRows.filter((row) => row.isCorrect).length;
+    const total = expectedQuestions.length;
+    const percent = total
+      ? Math.max(0, Math.min(100, Math.round((score / total) * 100)))
+      : 0;
 
     const xpPossible = quizXpForPercent(percent);
     const masteryLabel = quizMasteryLabel(percent);
 
-    const existingQuizXp = await XpLog.findOne({
+    const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
+    let xpAwarded = 0;
+    let xpResult = null;
+
+    const legacyQuizLogs = await XpLog.findAll({
       where: {
         studentId: req.student.id,
         sourceType: 'quiz',
@@ -1101,22 +1134,92 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       },
     });
 
-    let xpAwarded = 0;
-    let newBadges = [];
-    let xpResult = null;
-    const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
+    const legacyLoggedQuizXp = legacyQuizLogs.reduce(
+      (sum, log) => sum + Number(log.points || 0),
+      0
+    );
 
-    if (!existingQuizXp) {
-      xpResult = await awardXp(
+    const quizXpTiers = [
+      {
+        unlockXp: 5,
+        points: 5,
+        sourceType: 'quiz_base',
+        note: `Quiz participation for ${lesson.title}: ${percent}%`,
+      },
+      {
+        unlockXp: 10,
+        points: 5,
+        sourceType: 'quiz_tier_50',
+        note: `Quiz improvement 50%+ for ${lesson.title}: ${percent}%`,
+      },
+      {
+        unlockXp: 15,
+        points: 5,
+        sourceType: 'quiz_tier_75',
+        note: `Quiz improvement 75%+ for ${lesson.title}: ${percent}%`,
+      },
+      {
+        unlockXp: 20,
+        points: 5,
+        sourceType: 'quiz_tier_90',
+        note: `Quiz improvement 90%+ for ${lesson.title}: ${percent}%`,
+      },
+    ];
+
+    let tierLoggedQuizXp = 0;
+
+    for (const tier of quizXpTiers) {
+      const existingTierLog = await XpLog.findOne({
+        where: {
+          studentId: req.student.id,
+          sourceType: tier.sourceType,
+          sourceId: lesson.id,
+        },
+      });
+
+      if (existingTierLog) {
+        tierLoggedQuizXp += Number(existingTierLog.points || 0);
+      }
+    }
+
+    const previousAttemptBestXp = existingAttempts.reduce(
+      (best, attempt) => Math.max(
+        best,
+        Number(attempt.xpPossible || attempt.xpAwarded || 0)
+      ),
+      0
+    );
+
+    const previousBestXp = Math.max(
+      legacyLoggedQuizXp,
+      tierLoggedQuizXp,
+      previousAttemptBestXp
+    );
+
+    const tiersToAward = quizXpTiers.filter((tier) =>
+      xpPossible >= tier.unlockXp && previousBestXp < tier.unlockXp
+    );
+
+    for (const tier of tiersToAward) {
+      const tierResult = await awardXp(
         req.student.id,
-        xpPossible,
-        'quiz',
+        tier.points,
+        tier.sourceType,
         lesson.id,
-        `Quiz result for ${lesson.title}: ${percent}%`
+        tier.note
       );
 
-      xpAwarded = xpPossible;
+      const tierAwarded = Number(
+        tierResult?.getDataValue?.('xpAwarded') || 0
+      );
 
+      if (tierAwarded > 0) {
+        xpAwarded += tierAwarded;
+        xpResult = tierResult;
+      }
+    }
+
+    if (xpAwarded > 0) {
       notifyTeacherAndLeaderboard({
         type: 'quiz_completed',
         studentId: req.student.id,
@@ -1133,6 +1236,11 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
     }
 
     const savedAnswers = historyRows.length;
+    const reviewJson = historyRows.map((row) => ({
+      questionId: row.questionId,
+      selectedOptionId: row.selectedOptionId,
+      isCorrect: row.isCorrect,
+    }));
 
     const attempt = await QuizAttempt.create({
       studentId: req.student.id,
@@ -1146,11 +1254,11 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       xpAwarded,
       xpPossible,
       masteryLabel,
-      reviewJson: review,
+      reviewJson,
     });
 
     await awardThresholdBadges(xpResult || req.student);
-    newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
+    const newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
 
     const allAttempts = [...existingAttempts, attempt].map(formatQuizAttempt);
 
@@ -1159,6 +1267,8 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       total,
       percent,
       xpAwarded,
+      xpPossible,
+      previousBestXp,
       attemptNo: attempt.attemptNo,
     });
 
@@ -1174,7 +1284,8 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
         attemptNo: attempt.attemptNo,
         xpPossible,
         xpAwarded,
-        xpAlreadyAwarded: Boolean(existingQuizXp),
+        xpAlreadyAwarded: xpAwarded <= 0 && previousBestXp >= xpPossible,
+        previousBestXp,
         savedAnswers,
       },
       quizAttempts: allAttempts,

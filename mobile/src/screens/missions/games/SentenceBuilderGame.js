@@ -13,6 +13,12 @@ import {
 
 import MissionProgressCard from '../components/MissionProgressCard';
 import MissionQuestionCard from '../components/MissionQuestionCard';
+import SentenceSlotRow from '../components/SentenceSlotRow';
+import WordBank from '../components/WordBank';
+
+import {
+  getSentenceBuilderAttemptItems,
+} from './data/sentenceBuilderData';
 
 export default function SentenceBuilderGame({
   activity,
@@ -29,14 +35,17 @@ export default function SentenceBuilderGame({
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-  const items = activity?.dataJson?.sentences || [];
+    const items =
+      getSentenceBuilderAttemptItems(
+        gradeLevel
+      );
 
-  setQuestions(Array.isArray(items) ? items : []);
-  setIndex(0);
-  setSelectedWords([]);
-  setLocked(false);
-  setToast(null);
-}, [activity]);
+    setQuestions(items);
+    setIndex(0);
+    setSelectedWords([]);
+    setLocked(false);
+    setToast(null);
+  }, [gradeLevel]);
 
   const question = questions[index];
 
@@ -75,9 +84,9 @@ export default function SentenceBuilderGame({
     ]);
   };
 
-  const handleUndo = () => {
+  const handleRemoveWord = (index) => {
     setSelectedWords((current) =>
-      current.slice(0, -1)
+      current.filter((_, i) => i !== index)
     );
   };
 
@@ -144,45 +153,37 @@ export default function SentenceBuilderGame({
       />
 
       <MissionQuestionCard
-        title="Build the Sentence"
+        title="🧱 Sentence Builder"
       >
-        {builtSentence || 'Tap the words below'}
+        {question.prompt || "Buuin ang tamang pangungusap."}
       </MissionQuestionCard>
 
-      <View style={styles.words}>
-        {shuffledWords.map((word) => (
-          <TouchableOpacity
-            key={word}
-            disabled={
-              locked ||
-              submitting ||
-              selectedWords.includes(word)
-            }
-            onPress={() => handleWordPress(word)}
-            style={styles.word}
-          >
-            <Text style={styles.wordText}>
-              {word}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <Text
+        style={{
+          textAlign:'center',
+          fontSize:18,
+          color:'#64748B',
+          fontWeight:'700',
+          marginBottom:16,
+        }}
+      >
+        Ayusin ang mga salita sa tamang pagkakasunod-sunod.
+      </Text>
+
+      <SentenceSlotRow
+        words={selectedWords}
+        totalSlots={question.words.length}
+        onRemoveWord={handleRemoveWord}
+      />
+
+      <WordBank
+        words={shuffledWords}
+        selectedWords={selectedWords}
+        disabled={locked || submitting}
+        onPress={handleWordPress}
+      />
 
       <View style={styles.actionRow}>
-        <TouchableOpacity
-          disabled={
-            submitting ||
-            locked ||
-            selectedWords.length === 0
-          }
-          onPress={handleUndo}
-          style={styles.secondaryButton}
-        >
-          <Text style={styles.secondaryButtonText}>
-            ↩ Undo
-          </Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           disabled={
             submitting ||
@@ -193,7 +194,7 @@ export default function SentenceBuilderGame({
           style={styles.secondaryButton}
         >
           <Text style={styles.secondaryButtonText}>
-            ✕ Clear
+            🧹 Clear
           </Text>
         </TouchableOpacity>
       </View>

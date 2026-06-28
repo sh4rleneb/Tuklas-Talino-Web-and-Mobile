@@ -150,11 +150,34 @@ export default function StoryQuestGame({
           total={totalPages}
         />
 
+        <Text
+          style={{
+            textAlign:'center',
+            fontSize:18,
+            fontWeight:'700',
+            color:'#64748B',
+            marginBottom:14,
+          }}
+        >
+          📚 Basahin muna ang kuwento bago sagutan ang mga tanong.
+        </Text>
+
         <MissionQuestionCard
-          title={story.title}
+          title={`📖 ${story.title}`}
         >
           {currentPage}
         </MissionQuestionCard>
+
+        <Text
+          style={{
+            textAlign:'center',
+            color:'#94A3B8',
+            fontWeight:'800',
+            marginBottom:16,
+          }}
+        >
+          Page {pageIndex + 1} of {totalPages}
+        </Text>
 
         <View style={styles.navigationRow}>
 
@@ -168,7 +191,7 @@ export default function StoryQuestGame({
             onPress={previousPage}
           >
             <Text style={styles.secondaryText}>
-              ← Previous
+              ⬅ Previous Page
             </Text>
           </TouchableOpacity>
 
@@ -182,7 +205,7 @@ export default function StoryQuestGame({
             onPress={nextPage}
           >
             <Text style={styles.secondaryText}>
-              Next →
+              Next Page ➡
             </Text>
           </TouchableOpacity>
 
@@ -195,7 +218,7 @@ export default function StoryQuestGame({
             onPress={beginQuiz}
           >
             <Text style={styles.primaryText}>
-              📖 Start Quiz
+              🎯 Start Quiz
             </Text>
           </TouchableOpacity>
 
