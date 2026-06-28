@@ -1,3 +1,4 @@
+import { validateLesson } from '../validators/lesson.validator.js';
 
 import { Router } from 'express';
 import {

@@ -86,3 +86,5 @@ connectDatabase()
     console.error('Database connection failed:', err.message);
     process.exit(1);
   });
+
+// lessonSchemaLockApplied=true
