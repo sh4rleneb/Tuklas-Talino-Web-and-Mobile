@@ -66,7 +66,7 @@ export const CORE_BADGE_DEFINITIONS = [
   {
     code: 'speech_3',
     name: 'Boses Bituin',
-    description: 'Magsumite ng 3 speech attempts.',
+    description: 'Magsumite ng 3 magkakaibang speech activities.',
     icon: '🎤',
     xpThreshold: null,
     metric: 'speechAttempts',
@@ -178,8 +178,8 @@ async function buildBadgeStats(student) {
 
   t = Date.now();
   const speechAttempts =
-    await SpeechAttempt.count({ where: { studentId } });
-  timer('SpeechAttempt.count', t);
+    await countUniqueSpeechTasks(studentId);
+  timer('countUniqueSpeechTasks', t);
 
   t = Date.now();
   const approvedGroupTasks =
@@ -200,6 +200,17 @@ async function buildBadgeStats(student) {
     xp: Number(student.xp || 0),
     level: calculateLevel(student.xp)
   };
+}
+
+async function countUniqueSpeechTasks(studentId) {
+  const rows = await SpeechAttempt.findAll({
+    where: { studentId },
+    attributes: ['taskId'],
+    group: ['taskId'],
+    raw: true,
+  });
+
+  return rows.length;
 }
 
 function badgeMetricValue(stats, metric) {

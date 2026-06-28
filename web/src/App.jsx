@@ -1,4 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  clearStudentNavigationState,
+  isRestorableStudentScreen,
+  readStudentNavigationState,
+  saveStudentNavigationState
+} from './utils/studentNavigationState.js';
 import { api, downloadFile, uploadForm } from './api/client';
 import { speakText, stopSpeech } from './services/tts.service';
 import { useAuth } from './contexts/AuthContext';
@@ -355,6 +361,7 @@ function showBadgeUnlockPopup(badges = []) {
 export default function App() {
   const { user, login, logout: authLogout, booting, setUser } = useAuth();
   const [screen, setScreen] = useState('screen-landing');
+  const restoredStudentNavigationRef = useRef(false);
   const [notice, setNotice] = useState(null);
   const [selectedAvatar, setSelectedAvatar] = useState('🦊');
   const [studentDash, setStudentDash] = useState(null);
@@ -426,7 +433,11 @@ useEffect(() => {
 
       loadStudentDashboard()
         .then(() => {
-          setScreen('screen-student');
+          const savedStudentNavigation = readStudentNavigationState();
+
+          if (!savedStudentNavigation || !isRestorableStudentScreen(savedStudentNavigation.screen)) {
+            setScreen('screen-student');
+          }
         })
         .catch((err) => {
           notify(err.message || 'Hindi ma-load ang student dashboard.', 'bad');
@@ -464,7 +475,233 @@ useEffect(() => {
 }, [booting, user?.id, user?.role, user?.mustChangePassword]);
 
   function notify(text, type = '') { setNotice({ text, type }); }
-  function go(id) { setScreen(id); }
+  function rememberStudentScreen(id, extra = {}) {
+    if (user?.role !== 'student') return;
+    if (!isRestorableStudentScreen(id)) return;
+
+    const payload = {
+      screen: id,
+      subjectFilter,
+      ...extra
+    };
+
+    if (id !== 'screen-lesson' && extra.selectedLessonId === undefined) {
+      payload.selectedLessonId = null;
+    }
+
+    if (id === 'screen-lesson' && extra.selectedLessonId === undefined && selectedLesson?.id) {
+      payload.selectedLessonId = selectedLesson.id;
+    }
+
+    if (!['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedQuizId === undefined) {
+      payload.selectedQuizId = null;
+    }
+
+    if (['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedQuizId === undefined && selectedQuiz?.id) {
+      payload.selectedQuizId = selectedQuiz.id;
+    }
+
+    if (id !== 'screen-stu-mission-play' && extra.selectedMissionGameId === undefined) {
+      payload.selectedMissionGameId = null;
+    }
+
+    if (id === 'screen-stu-mission-play' && extra.selectedMissionGameId === undefined && selectedMissionGameId) {
+      payload.selectedMissionGameId = selectedMissionGameId;
+    }
+
+    saveStudentNavigationState(payload);
+  }
+
+  function go(id) {
+    setScreen(id);
+    rememberStudentScreen(id);
+  }
+
+  useEffect(() => {
+    if (user?.role !== 'student') return;
+    if (!isRestorableStudentScreen(screen)) return;
+
+    rememberStudentScreen(screen);
+  }, [subjectFilter]);
+
+  function getStudentQuizzesForRestore() {
+    const quizzes = [];
+
+    try {
+      quizzes.push(...asArray(buildStudentQuizzes(studentDash)));
+    } catch {
+      // If quiz building fails for any reason, fallback sources below still keep the app safe.
+    }
+
+    quizzes.push(...asArray(studentDash?.quizzes));
+
+    const unique = new Map();
+
+    for (const quiz of quizzes) {
+      const key = String(quiz?.id || quiz?.quizId || '');
+      if (key && !unique.has(key)) {
+        unique.set(key, quiz);
+      }
+    }
+
+    return Array.from(unique.values());
+  }
+
+  function findStudentQuizForRestore(quizId) {
+    const targetId = String(quizId || '');
+    if (!targetId) return null;
+
+    return getStudentQuizzesForRestore().find(quiz =>
+      String(quiz?.id || quiz?.quizId || '') === targetId
+    ) || null;
+  }
+
+  function getLatestQuizAttemptForRestore(quiz) {
+    if (!quiz?.id) return null;
+
+    const attemptsByQuiz = studentDash?.quizAttempts || quizAttempts || {};
+    const attempts = asArray(attemptsByQuiz?.[quiz.id]);
+
+    const highestAttemptNo = Math.max(
+      0,
+      ...attempts.map((attempt) => Number(attempt?.attemptNo || 0))
+    );
+
+    const latestAttempt =
+      attempts.find((attempt) => Number(attempt?.attemptNo || 0) === highestAttemptNo) ||
+      attempts[attempts.length - 1] ||
+      attempts[0] ||
+      null;
+
+    return latestAttempt
+      ? {
+          ...latestAttempt,
+          attemptHistory: attempts,
+          maxAttempts: 2,
+          maxAttemptsReached: attempts.length >= 2,
+        }
+      : null;
+  }
+
+  useEffect(() => {
+    if (restoredStudentNavigationRef.current) return;
+    if (booting || user?.role !== 'student' || !studentDash) return;
+
+    const saved = readStudentNavigationState();
+    restoredStudentNavigationRef.current = true;
+
+    if (!saved) return;
+
+    if (saved.subjectFilter) {
+      setSubjectFilter(saved.subjectFilter);
+    }
+
+    if (saved.screen === 'screen-lesson') {
+      const savedLessonId = Number(saved.selectedLessonId || 0);
+      const lesson = (studentDash.lessons || []).find(item => Number(item.id) === savedLessonId);
+
+      if (lesson) {
+        openLesson(lesson);
+        return;
+      }
+
+      setScreen('screen-lessons');
+      saveStudentNavigationState({
+        screen: 'screen-lessons',
+        selectedLessonId: null,
+        selectedQuizId: null,
+        selectedMissionGameId: null,
+        subjectFilter: saved.subjectFilter || subjectFilter
+      });
+      return;
+    }
+
+    if (saved.screen === 'screen-stu-quiz-play') {
+      const quiz = findStudentQuizForRestore(saved.selectedQuizId);
+
+      if (quiz) {
+        setSelectedQuiz(quiz);
+        setQuizResult(null);
+        setScreen('screen-stu-quiz-play');
+        saveStudentNavigationState({
+          screen: 'screen-stu-quiz-play',
+          selectedQuizId: quiz.id,
+          selectedLessonId: null,
+          selectedMissionGameId: null,
+          subjectFilter: saved.subjectFilter || subjectFilter
+        });
+        return;
+      }
+
+      setScreen('screen-stu-quizzes');
+      saveStudentNavigationState({
+        screen: 'screen-stu-quizzes',
+        selectedQuizId: null,
+        selectedLessonId: null,
+        selectedMissionGameId: null,
+        subjectFilter: saved.subjectFilter || subjectFilter
+      });
+      return;
+    }
+
+    if (saved.screen === 'screen-stu-quiz-result') {
+      const quiz = findStudentQuizForRestore(saved.selectedQuizId);
+      const restoredResult = quiz ? getLatestQuizAttemptForRestore(quiz) : null;
+
+      if (quiz && restoredResult) {
+        setSelectedQuiz(quiz);
+        setQuizResult(restoredResult);
+        setScreen('screen-stu-quiz-result');
+        saveStudentNavigationState({
+          screen: 'screen-stu-quiz-result',
+          selectedQuizId: quiz.id,
+          selectedLessonId: null,
+          selectedMissionGameId: null,
+          subjectFilter: saved.subjectFilter || subjectFilter
+        });
+        return;
+      }
+
+      setScreen('screen-stu-quizzes');
+      saveStudentNavigationState({
+        screen: 'screen-stu-quizzes',
+        selectedQuizId: null,
+        selectedLessonId: null,
+        selectedMissionGameId: null,
+        subjectFilter: saved.subjectFilter || subjectFilter
+      });
+      return;
+    }
+
+    if (saved.screen === 'screen-stu-mission-play') {
+      if (saved.selectedMissionGameId) {
+        setSelectedMissionGameId(saved.selectedMissionGameId);
+        setScreen('screen-stu-mission-play');
+        saveStudentNavigationState({
+          screen: 'screen-stu-mission-play',
+          selectedMissionGameId: saved.selectedMissionGameId,
+          selectedLessonId: null,
+          selectedQuizId: null,
+          subjectFilter: saved.subjectFilter || subjectFilter
+        });
+        return;
+      }
+
+      setScreen('screen-stu-missions');
+      saveStudentNavigationState({
+        screen: 'screen-stu-missions',
+        selectedMissionGameId: null,
+        selectedLessonId: null,
+        selectedQuizId: null,
+        subjectFilter: saved.subjectFilter || subjectFilter
+      });
+      return;
+    }
+
+    if (isRestorableStudentScreen(saved.screen)) {
+      setScreen(saved.screen);
+    }
+  }, [booting, user?.role, studentDash]);
 
   async function safeRun(fn, fallback = 'May nangyaring error. Pakisubukan muli.') {
   try {
@@ -480,6 +717,8 @@ useEffect(() => {
 
   async function doLogout() {
     authLogout();
+    clearStudentNavigationState();
+    restoredStudentNavigationRef.current = false;
     setStudentDash(null);
     setSelectedLesson(null);
     setSelectedQuiz(null);
@@ -644,12 +883,20 @@ if (role === 'admin') {
   async function openLesson(lesson) {
     await safeRun(async () => {
       const data = await api(`/lessons/${lesson.id}`);
-      setSelectedLesson({
+      const hydratedLesson = {
         ...data.lesson,
+        progress: data.lesson?.progress || lesson?.progress || null,
         completed: Boolean(lesson?.completed || data.lesson?.completed)
-      });
+      };
+
+      setSelectedLesson(hydratedLesson);
       setLessonFeedback('');
       go('screen-lesson');
+      saveStudentNavigationState({
+        screen: 'screen-lesson',
+        selectedLessonId: hydratedLesson.id,
+        subjectFilter
+      });
     });
   }
 
@@ -658,6 +905,13 @@ if (role === 'admin') {
     setSelectedQuiz(quiz);
     setQuizResult(null);
     go('screen-stu-quiz-play');
+    saveStudentNavigationState({
+      screen: 'screen-stu-quiz-play',
+      selectedQuizId: quiz.id,
+      selectedLessonId: null,
+      selectedMissionGameId: null,
+      subjectFilter
+    });
   }
 
   function openQuizResult(quiz) {
@@ -686,6 +940,13 @@ if (role === 'admin') {
       maxAttemptsReached: attempts.length >= 2,
     });
     go('screen-stu-quiz-result');
+    saveStudentNavigationState({
+      screen: 'screen-stu-quiz-result',
+      selectedQuizId: quiz?.id || selectedQuiz?.id || null,
+      selectedLessonId: null,
+      selectedMissionGameId: null,
+      subjectFilter
+    });
   }
 
   async function submitQuiz(quiz, answers) {
@@ -708,6 +969,13 @@ if (role === 'admin') {
 
       notify('You already used your 2 quiz attempts. Review your answers instead.');
       go('screen-stu-quiz-result');
+    saveStudentNavigationState({
+      screen: 'screen-stu-quiz-result',
+      selectedQuizId: quiz?.id || selectedQuiz?.id || null,
+      selectedLessonId: null,
+      selectedMissionGameId: null,
+      subjectFilter
+    });
       return latestAttempt || null;
     }
 
@@ -734,6 +1002,13 @@ if (role === 'admin') {
     setQuizAttempts(localUpdatedAttempts);
     setQuizResult(finalResult);
     go('screen-stu-quiz-result');
+    saveStudentNavigationState({
+      screen: 'screen-stu-quiz-result',
+      selectedQuizId: quiz?.id || selectedQuiz?.id || null,
+      selectedLessonId: null,
+      selectedMissionGameId: null,
+      subjectFilter
+    });
 
     if (lessonId) {
       window.setTimeout(() => {
@@ -927,14 +1202,16 @@ if (role === 'admin') {
 }
 
   async function submitSpeech(taskId, transcript, score) {
-  if (!selectedLesson) return;
+  if (!selectedLesson) return null;
 
   if (!transcript || transcript.trim().length < 2) {
-    setLessonFeedback('🎤 Paki-subukan munang magsalita bago i-submit.');
-    return;
+    const message = 'Paki-subukan munang magsalita bago i-submit.';
+    setLessonFeedback(`🎤 ${message}`);
+    notify(message, 'warn');
+    return null;
   }
 
-  await safeRun(async () => {
+  return await safeRun(async () => {
     const data = await api(`/lessons/${selectedLesson.id}/speech`, {
       method: 'POST',
       body: {
@@ -944,11 +1221,13 @@ if (role === 'admin') {
       }
     });
 
-    setLessonFeedback(`🎤 Na-save ang speech practice attempt. Score: ${score}% +6 XP`);
+    const successMessage = 'Naipasa na ang iyong speech attempt.';
+    setLessonFeedback('');
     showBadgeUnlockPopup(data?.newBadges);
     await loadStudentDashboard();
-    await loadStudentDashboard();
-  });
+
+    return data;
+  }, 'Hindi ma-save ang speech attempt. Pakisubukan muli.');
 }
 
   async function updateAvatar(avatar) {
@@ -3589,6 +3868,13 @@ async function archiveTeacher(id) {
           onPlayMission={(gameId) => {
             setSelectedMissionGameId(gameId);
             go('screen-stu-mission-play');
+            saveStudentNavigationState({
+              screen: 'screen-stu-mission-play',
+              selectedMissionGameId: gameId,
+              selectedLessonId: null,
+              selectedQuizId: null,
+              subjectFilter
+            });
           }}
         />
       </Screen>
@@ -7733,20 +8019,51 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   const [readStepListened, setReadStepListened] = useState(false);
 
   useEffect(() => {
-    setLessonStep(0);
-    setMaxUnlockedStep(0);
-    setPracticeStep(0);
+    const savedStep = Math.max(
+      0,
+      Math.min(
+        Number(lesson?.progress?.currentStep || 1) - 1,
+        Math.max(0, lessonSteps.length - 1)
+      )
+    );
+    const readStepIndex = lessonSteps.findIndex(step => step.key === 'read');
+    const activitiesStepIndex = lessonSteps.findIndex(step => step.key === 'activities');
+    const firstIncompletePracticeIndex = practiceActivities.findIndex((activity, index) =>
+      !isPracticeActivityComplete(activity, index)
+    );
+    const hasSubmittedPractice = practiceActivities.some((activity, index) =>
+      isPracticeActivityComplete(activity, index)
+    );
+
+    setLessonStep(savedStep);
+    setMaxUnlockedStep(savedStep);
+    setPracticeStep(
+      savedStep >= activitiesStepIndex && firstIncompletePracticeIndex >= 0
+        ? firstIncompletePracticeIndex
+        : 0
+    );
     setCompletedPracticeKeys([]);
     setActivityFeedbackKey('');
     setReflectionChoice('');
     setLessonGateToast('');
-    setReadStepListened(false);
+    setReadStepListened(
+      (readStepIndex >= 0 && Number(lesson?.progress?.currentStep || 1) > readStepIndex + 1) ||
+      hasSubmittedPractice
+    );
 
     stopSpeech();
-  }, [lesson?.id]);
+  }, [lesson?.id, lesson?.progress?.currentStep, lesson?.progress?.totalSteps]);
 
   async function speakLesson() {
     setReadStepListened(true);
+
+    const readStepIndex = lessonSteps.findIndex(step => step.key === 'read');
+    if (readStepIndex >= 0) {
+      saveGrade46LessonProgress(
+        Math.min(readStepIndex + 1, lessonSteps.length - 1),
+        'read'
+      );
+    }
 
     const lessonPassage = lesson?.passage || '';
     const listenSections = ['layunin', 'panimula', 'aralin']
@@ -7779,7 +8096,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     if (completedPracticeKeys.includes(key)) return true;
 
     if (activity?.type === 'mcq') {
-      const questions = activity.questions || [];
+      const questions = asArray(activity.questions).slice(0, 1);
       return Boolean(questions.length) && questions.every(question => Boolean(question.mcqAttempt));
     }
 
@@ -7809,6 +8126,11 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   function markPracticeComplete(activity, index) {
     const key = getPracticeKey(activity, index);
     setCompletedPracticeKeys(prev => prev.includes(key) ? prev : [...prev, key]);
+
+    const activitiesStepIndex = lessonSteps.findIndex(step => step.key === 'activities');
+    if (activitiesStepIndex >= 0) {
+      saveGrade46LessonProgress(activitiesStepIndex, activity?.type || 'activity');
+    }
   }
 
   const currentPracticeIndex = activityTotal ? Math.min(practiceStep, activityTotal - 1) : 0;
@@ -7867,6 +8189,26 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     }, 2600);
   }
 
+
+  async function saveGrade46LessonProgress(targetStepIndex, lastActivityType = '') {
+    if (!lesson?.id || lesson?.completed) return;
+
+    const safeTargetIndex = Math.max(0, Math.min(targetStepIndex, lessonSteps.length - 1));
+
+    try {
+      await api(`/lessons/${lesson.id}/progress`, {
+        method: 'PATCH',
+        body: {
+          currentStep: safeTargetIndex + 1,
+          totalSteps: lessonSteps.length,
+          lastActivityType
+        }
+      });
+    } catch (err) {
+      console.warn('Unable to save lesson progress', err);
+    }
+  }
+
   function practiceActivityGateMessage(activity = currentPracticeActivity) {
     const type = String(activity?.type || '').toLowerCase();
 
@@ -7892,6 +8234,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
 
     if (targetStep > safeStep) {
       setMaxUnlockedStep(prev => Math.max(prev, targetStep));
+      saveGrade46LessonProgress(targetStep, currentStep?.key || '');
     }
 
     setLessonStep(targetStep);
@@ -8299,10 +8642,9 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
                   return result;
                 }}
                 submitSpeech={async (...args) => {
-                  const transcript = String(args?.[1] || '').trim();
                   const result = await submitSpeech(...args);
 
-                  if (transcript.length >= 2) {
+                  if (result) {
                     markPracticeComplete(currentActivity, currentPracticeIndex);
                     setActivityFeedbackKey(getPracticeKey(currentActivity, currentPracticeIndex));
                   }
@@ -8648,13 +8990,32 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
   const [earlyActivityDone, setEarlyActivityDone] = useState({});
 
   useEffect(() => {
-    setMissionStep(0);
+    const savedStep = Math.max(
+      0,
+      Math.min(
+        Number(lesson?.progress?.currentStep || 1) - 1,
+        Math.max(0, missionSteps.length - 1)
+      )
+    );
+    const hasSubmittedPractice = corePracticeActivities.some((activity, index) =>
+      isEarlyLessonActivitySubmitted(activity, index)
+    );
+    const reachedPast = (type) => {
+      const stepIndex = missionSteps.findIndex(step => step.type === type);
+      return stepIndex >= 0 && Number(lesson?.progress?.currentStep || 1) > stepIndex + 1;
+    };
+
+    setMissionStep(savedStep);
     setRewardModal(null);
     setRewardClaimed(Boolean(lesson?.completed));
     setLessonGateToast('');
-    setListenedSteps({});
+    setListenedSteps({
+      listen: reachedPast('listen') || hasSubmittedPractice,
+      know: reachedPast('know') || hasSubmittedPractice,
+      read: reachedPast('read') || hasSubmittedPractice,
+    });
     setEarlyActivityDone({});
-  }, [lesson?.id, lesson?.completed]);
+  }, [lesson?.id, lesson?.completed, lesson?.progress?.currentStep, lesson?.progress?.totalSteps]);
 
   const kidPassage = makeStudentFriendlyPassage(lesson);
   const isReviewMode = Boolean(lesson?.completed || rewardClaimed);
@@ -8685,6 +9046,26 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     }, 2600);
   }
 
+
+  async function saveEarlyLessonProgress(targetStepIndex, lastActivityType = '') {
+    if (!lesson?.id || isReviewMode) return;
+
+    const safeTargetIndex = Math.max(0, Math.min(targetStepIndex, missionSteps.length - 1));
+
+    try {
+      await api(`/lessons/${lesson.id}/progress`, {
+        method: 'PATCH',
+        body: {
+          currentStep: safeTargetIndex + 1,
+          totalSteps: missionSteps.length,
+          lastActivityType
+        }
+      });
+    } catch (err) {
+      console.warn('Unable to save lesson progress', err);
+    }
+  }
+
   function earlyActivityKey(activity = {}, fallbackIndex = 0) {
     const firstQuestion = asArray(activity.questions)[0];
 
@@ -8707,6 +9088,18 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
       ...previous,
       [key]: true
     }));
+
+    const stepIndex = missionSteps.findIndex(step =>
+      step.type === 'activity' &&
+      earlyActivityKey(step.activity, step.activityIndex || 0) === key
+    );
+
+    if (stepIndex >= 0) {
+      saveEarlyLessonProgress(
+        Math.min(stepIndex + 1, missionSteps.length - 1),
+        activity?.type || 'activity'
+      );
+    }
   }
 
   function isEarlyLessonActivitySubmitted(activity = {}, fallbackIndex = 0) {
@@ -8716,7 +9109,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     if (earlyActivityDone[key]) return true;
 
     if (type === 'mcq') {
-      const questions = asArray(activity.questions);
+      const questions = asArray(activity.questions).slice(0, 1);
       return Boolean(questions.length) && questions.every(question => Boolean(question.mcqAttempt));
     }
 
@@ -8788,6 +9181,11 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
       [key]: true
     }));
 
+    saveEarlyLessonProgress(
+      Math.min(safeStep + 1, missionSteps.length - 1),
+      key
+    );
+
     speakFilipinoText(text);
   }
 
@@ -8805,7 +9203,11 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
   async function handleEarlySubmitSpeech(...args) {
     const result = await submitSpeech(...args);
-    markEarlyActivityDone(currentStep?.activity);
+
+    if (result) {
+      markEarlyActivityDone(currentStep?.activity);
+    }
+
     return result;
   }
 
@@ -8834,7 +9236,9 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
       return;
     }
 
-    setMissionStep(step => Math.min(step + 1, missionSteps.length - 1));
+    const targetStep = Math.min(safeStep + 1, missionSteps.length - 1);
+    saveEarlyLessonProgress(targetStep, currentStep?.type || '');
+    setMissionStep(targetStep);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -11083,6 +11487,23 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
   const [speechScore, setSpeechScore] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState('');
+  const activityAlreadySubmitted = Boolean(
+    activity?.speechAttempt ||
+    activity?.attempt ||
+    activity?.latestAttempt ||
+    activity?.completed ||
+    activity?.speechTask?.speechAttempt ||
+    activity?.speechTask?.attempt ||
+    activity?.speechTask?.latestAttempt ||
+    activity?.speechTask?.completed
+  );
+  const [speechSubmitted, setSpeechSubmitted] = useState(activityAlreadySubmitted);
+  const [isSubmittingSpeech, setIsSubmittingSpeech] = useState(false);
+
+  useEffect(() => {
+    setSpeechSubmitted(activityAlreadySubmitted);
+    setIsSubmittingSpeech(false);
+  }, [activity?.id, activity?.speechTask?.id, activityAlreadySubmitted]);
 
   const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
 
@@ -11127,6 +11548,22 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
     };
 
     recognition.start();
+  }
+
+  async function handleSubmitSpeechAttempt() {
+    if (!speechTranscript || speechSubmitted || isSubmittingSpeech) return;
+
+    setIsSubmittingSpeech(true);
+
+    try {
+      const result = await submitSpeech(activity.speechTask?.id, speechTranscript, speechScore || 0);
+
+      if (result) {
+        setSpeechSubmitted(true);
+      }
+    } finally {
+      setIsSubmittingSpeech(false);
+    }
   }
 
   return (
@@ -11235,10 +11672,14 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
 
       <button
         className="btn btn-purple"
-        onClick={() => submitSpeech(activity.speechTask?.id, speechTranscript, speechScore || 0)}
-        disabled={!speechTranscript}
+        onClick={handleSubmitSpeechAttempt}
+        disabled={!speechTranscript || isSubmittingSpeech || speechSubmitted}
       >
-        🎤 Submit Speech Attempt
+        {speechSubmitted
+          ? (isEarlyGrade ? '✅ Naipasa na' : '✅ Submitted')
+          : isSubmittingSpeech
+            ? (isEarlyGrade ? '⏳ Ipinapasa...' : '⏳ Submitting...')
+            : '🎤 Submit Speech Attempt'}
       </button>
     </div>
   );

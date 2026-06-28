@@ -1,4 +1,5 @@
-import { listMissionsForStudent } from './missions.routes.js';
+import {
+  listMissionsForStudent } from './missions.routes.js';
 import {
   Router } from 'express'; import bcrypt from 'bcryptjs'; import crypto from 'crypto'; import { Op } from 'sequelize'; import { authenticate,
   requireRole,
@@ -81,7 +82,7 @@ const CORE_BADGE_DEFINITIONS = [
   {
     code: 'speech_3',
     name: 'Boses Bituin',
-    description: 'Magsumite ng 3 speech attempts.',
+    description: 'Magsumite ng 3 magkakaibang speech activities.',
     icon: '🎤',
     xpThreshold: null,
     target: 3,
@@ -148,6 +149,17 @@ async function ensureCoreBadges() {
   }
 
   return badges;
+}
+
+async function countUniqueSpeechTasks(studentId) {
+  const rows = await SpeechAttempt.findAll({
+    where: { studentId },
+    attributes: ['taskId'],
+    group: ['taskId'],
+    raw: true,
+  });
+
+  return rows.length;
 }
 
 function badgeProgressValue(stats, metric) {
@@ -283,6 +295,8 @@ async function dashboardPayload(student) {
     badgeProgress,
     xpLogs,
     quizAttemptRows,
+    writingSubmissionRows,
+    speechAttemptRows,
     groupTaskCompletions,
     memberships,
     missionResult
@@ -301,6 +315,14 @@ async function dashboardPayload(student) {
       limit: 10
     }),
     QuizAttempt.findAll({
+      where: { studentId: student.id },
+      order: [['submittedAt', 'ASC'], ['id', 'ASC']]
+    }),
+    WritingSubmission.findAll({
+      where: { studentId: student.id },
+      order: [['submittedAt', 'ASC'], ['id', 'ASC']]
+    }),
+    SpeechAttempt.findAll({
       where: { studentId: student.id },
       order: [['submittedAt', 'ASC'], ['id', 'ASC']]
     }),
@@ -380,6 +402,158 @@ async function dashboardPayload(student) {
 
 
 
+  function rowJson(row) {
+    return row?.toJSON ? row.toJSON() : row;
+  }
+
+  function parseReviewJson(value) {
+    if (Array.isArray(value)) return value;
+
+    if (typeof value === 'string' && value.trim()) {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
+  }
+
+  function latestByTask(rows = [], keyGetter) {
+    const map = new Map();
+
+    for (const sourceRow of rows) {
+      const row = rowJson(sourceRow);
+      const key = Number(keyGetter(row) || 0);
+      if (!key) continue;
+
+      map.set(key, row);
+    }
+
+    return map;
+  }
+
+  const mcqAttemptByQuestionId = new Map();
+
+  for (const sourceRow of quizAttemptRows) {
+    const row = rowJson(sourceRow);
+    const reviewItems = parseReviewJson(row.reviewJson);
+
+    for (const review of reviewItems) {
+      const questionId = Number(
+        review?.questionId ||
+        review?.mcqQuestionId ||
+        review?.id ||
+        review?.question?.id ||
+        0
+      );
+
+      if (!questionId) continue;
+
+      const selectedOptionId =
+        review?.selectedOptionId ??
+        review?.optionId ??
+        review?.answerOptionId ??
+        review?.selectedId ??
+        review?.selectedOption?.id ??
+        null;
+
+      const isCorrect = Boolean(
+        review?.isCorrect ??
+        review?.correct ??
+        review?.selectedOption?.isCorrect ??
+        false
+      );
+
+      mcqAttemptByQuestionId.set(questionId, {
+        id: row.id,
+        quizId: row.quizId || `lesson-${row.lessonId}`,
+        lessonId: row.lessonId,
+        selectedOptionId,
+        isCorrect,
+        answeredAt: row.submittedAt,
+        attemptNo: row.attemptNo,
+        xpAwarded: row.xpAwarded,
+        backendSaved: true
+      });
+    }
+  }
+
+  const writingSubmissionByTaskId = latestByTask(writingSubmissionRows, row => row.taskId);
+  const speechAttemptByTaskId = latestByTask(speechAttemptRows, row => row.taskId);
+
+  function hydrateLessonActivitySubmissions(lesson) {
+    const lessonRow = rowJson(lesson);
+
+    return {
+      ...lessonRow,
+      activities: Array.isArray(lessonRow.activities)
+        ? lessonRow.activities.map(activity => {
+            const activityType = String(activity?.type || '').toLowerCase();
+            const hydrated = { ...activity };
+
+            if (activityType === 'mcq') {
+              hydrated.questions = Array.isArray(activity.questions)
+                ? activity.questions.map(question => {
+                    const attempt = mcqAttemptByQuestionId.get(Number(question?.id || 0));
+                    return attempt ? { ...question, mcqAttempt: attempt } : question;
+                  })
+                : [];
+            }
+
+            if (activityType === 'writing') {
+              const taskId = Number(activity?.writingTask?.id || activity?.taskId || 0);
+              const submission = writingSubmissionByTaskId.get(taskId);
+
+              if (submission) {
+                hydrated.completed = true;
+                hydrated.writingSubmission = submission;
+                hydrated.latestSubmission = submission;
+                hydrated.submission = submission;
+
+                if (activity.writingTask) {
+                  hydrated.writingTask = {
+                    ...activity.writingTask,
+                    completed: true,
+                    writingSubmission: submission,
+                    latestSubmission: submission,
+                    submission
+                  };
+                }
+              }
+            }
+
+            if (activityType === 'speech') {
+              const taskId = Number(activity?.speechTask?.id || activity?.taskId || 0);
+              const attempt = speechAttemptByTaskId.get(taskId);
+
+              if (attempt) {
+                hydrated.completed = true;
+                hydrated.speechAttempt = attempt;
+                hydrated.latestAttempt = attempt;
+                hydrated.attempt = attempt;
+
+                if (activity.speechTask) {
+                  hydrated.speechTask = {
+                    ...activity.speechTask,
+                    completed: true,
+                    speechAttempt: attempt,
+                    latestAttempt: attempt,
+                    attempt,
+                    transcript: attempt.transcript || ''
+                  };
+                }
+              }
+            }
+
+            return hydrated;
+          })
+        : []
+    };
+  }
+
   const completedGroupTaskIds = new Set(
     groupTaskCompletions
       .filter(completion => completion.verificationStatus === 'approved')
@@ -406,11 +580,15 @@ async function dashboardPayload(student) {
       totalLessons: lessons.length,
       percent: lessons.length ? Math.round((completed.length / lessons.length) * 100) : 0
     },
-    lessons: lessons.map(l => ({
-      ...l.toJSON(),
-      completed: completedIds.has(l.id),
-      progress: lessonProgressMap.get(Number(l.id)) || null
-    })),
+    lessons: lessons.map(l => {
+      const lessonRow = hydrateLessonActivitySubmissions(l);
+
+      return {
+        ...lessonRow,
+        completed: completedIds.has(Number(lessonRow.id)),
+        progress: lessonProgressMap.get(Number(lessonRow.id)) || null
+      };
+    }),
     badges: badges.map(sb => sb.Badge),
     earnedBadges: badges.map(sb => ({
       ...sb.Badge.toJSON(),

@@ -472,13 +472,44 @@ router.get('/:id', async (req, res, next) => {
     const lessonJson = lesson.toJSON();
 
     if (req.student?.id) {
-      const histories = await QuizHistory.findAll({
-        where: {
-          studentId: req.student.id,
-          lessonId: lesson.id,
-        },
-        order: [['answeredAt', 'DESC']],
-      });
+      const [
+        progress,
+        histories,
+        writingSubmissions,
+        speechAttempts
+      ] = await Promise.all([
+        LessonProgress.findOne({
+          where: {
+            studentId: req.student.id,
+            lessonId: lesson.id,
+          },
+        }),
+        QuizHistory.findAll({
+          where: {
+            studentId: req.student.id,
+            lessonId: lesson.id,
+          },
+          order: [['answeredAt', 'DESC']],
+        }),
+        WritingSubmission.findAll({
+          where: {
+            studentId: req.student.id,
+            lessonId: lesson.id,
+          },
+          order: [['submittedAt', 'DESC'], ['id', 'DESC']],
+        }),
+        SpeechAttempt.findAll({
+          where: {
+            studentId: req.student.id,
+            lessonId: lesson.id,
+          },
+          order: [['submittedAt', 'DESC'], ['id', 'DESC']],
+        }),
+      ]);
+
+      if (progress) {
+        lessonJson.progress = progressResponse(progress);
+      }
 
       const latestByQuestion = new Map();
 
@@ -488,15 +519,81 @@ router.get('/:id', async (req, res, next) => {
             selectedOptionId: history.selectedOptionId,
             isCorrect: history.isCorrect,
             answeredAt: history.answeredAt,
+            backendSaved: true,
           });
         }
       }
 
+      const latestWritingByTaskId = new Map();
+
+      for (const sourceRow of writingSubmissions) {
+        const row = sourceRow?.toJSON ? sourceRow.toJSON() : sourceRow;
+        const taskId = Number(row?.taskId || 0);
+
+        if (taskId && !latestWritingByTaskId.has(taskId)) {
+          latestWritingByTaskId.set(taskId, row);
+        }
+      }
+
+      const latestSpeechByTaskId = new Map();
+
+      for (const sourceRow of speechAttempts) {
+        const row = sourceRow?.toJSON ? sourceRow.toJSON() : sourceRow;
+        const taskId = Number(row?.taskId || 0);
+
+        if (taskId && !latestSpeechByTaskId.has(taskId)) {
+          latestSpeechByTaskId.set(taskId, row);
+        }
+      }
+
       for (const activity of lessonJson.activities || []) {
-        for (const question of activity.questions || []) {
-          const saved = latestByQuestion.get(Number(question.id));
-          if (saved) {
-            question.mcqAttempt = saved;
+        const activityType = String(activity?.type || '').toLowerCase();
+
+        if (activityType === 'mcq') {
+          for (const question of activity.questions || []) {
+            const saved = latestByQuestion.get(Number(question.id));
+            if (saved) {
+              question.mcqAttempt = saved;
+            }
+          }
+        }
+
+        if (activityType === 'writing') {
+          const taskId = Number(activity?.writingTask?.id || activity?.taskId || 0);
+          const submission = latestWritingByTaskId.get(taskId);
+
+          if (submission) {
+            activity.completed = true;
+            activity.writingSubmission = submission;
+            activity.latestSubmission = submission;
+            activity.submission = submission;
+
+            if (activity.writingTask) {
+              activity.writingTask.completed = true;
+              activity.writingTask.writingSubmission = submission;
+              activity.writingTask.latestSubmission = submission;
+              activity.writingTask.submission = submission;
+            }
+          }
+        }
+
+        if (activityType === 'speech') {
+          const taskId = Number(activity?.speechTask?.id || activity?.taskId || 0);
+          const attempt = latestSpeechByTaskId.get(taskId);
+
+          if (attempt) {
+            activity.completed = true;
+            activity.speechAttempt = attempt;
+            activity.latestAttempt = attempt;
+            activity.attempt = attempt;
+
+            if (activity.speechTask) {
+              activity.speechTask.completed = true;
+              activity.speechTask.speechAttempt = attempt;
+              activity.speechTask.latestAttempt = attempt;
+              activity.speechTask.attempt = attempt;
+              activity.speechTask.transcript = attempt.transcript || '';
+            }
           }
         }
       }
@@ -573,7 +670,12 @@ router.patch('/:id/progress', requireRole('student'), async (req, res, next) => 
       return res.status(404).json({ message: 'Lesson not found.' });
     }
 
-    const totalSteps = await lessonTotalSteps(lesson.id);
+    const defaultTotalSteps = await lessonTotalSteps(lesson.id);
+    const requestedTotalSteps = Number(req.body.totalSteps || defaultTotalSteps);
+    const totalSteps = Math.max(
+      1,
+      Number.isFinite(requestedTotalSteps) ? requestedTotalSteps : defaultTotalSteps
+    );
     const requestedStep = Number(req.body.currentStep || 1);
     const [progress] = await LessonProgress.findOrCreate({
       where: {
@@ -588,13 +690,16 @@ router.patch('/:id/progress', requireRole('student'), async (req, res, next) => 
     });
 
     if (progress.status !== 'completed') {
-      const currentStep = Math.max(
+      const requestedSafeStep = Math.max(
         1,
         Math.min(
           Number.isFinite(requestedStep) ? requestedStep : 1,
-          totalSteps,
-          Number(progress.currentStep || 1) + 1
+          totalSteps
         )
+      );
+      const currentStep = Math.max(
+        Number(progress.currentStep || 1),
+        requestedSafeStep
       );
       progress.currentStep = currentStep;
       progress.totalSteps = totalSteps;
@@ -1312,14 +1417,29 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
     }
 
     const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
-    const attempt = await SpeechAttempt.create({
+    let attempt = await SpeechAttempt.findOne({
+      where: {
+        studentId: req.student.id,
+        lessonId: req.params.id,
+        taskId: req.body.taskId,
+      },
+    });
+    const isNewSpeechAttempt = !attempt;
+    const attemptPayload = {
       studentId: req.student.id,
       lessonId: req.params.id,
       taskId: req.body.taskId,
       transcript: req.body.transcript || '',
       audioUrl: req.body.audioUrl || null,
       score: req.body.score || null,
-    });
+      submittedAt: new Date(),
+    };
+
+    if (attempt) {
+      await attempt.update(attemptPayload);
+    } else {
+      attempt = await SpeechAttempt.create(attemptPayload);
+    }
 
     const existingSpeechXp = await XpLog.findOne({
       where: {
@@ -1344,15 +1464,17 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
       xpAwarded = 6;
     }
 
-    notifyTeacherAndLeaderboard({
-      type: 'speech_submission',
-      studentId: req.student.id,
-      studentName: req.student.name,
-      lessonId: Number(req.params.id),
-      attemptId: attempt.id,
-      xp: xpAwarded,
-      message: `${req.student.name} submitted a speech activity`,
-    });
+    if (isNewSpeechAttempt) {
+      notifyTeacherAndLeaderboard({
+        type: 'speech_submission',
+        studentId: req.student.id,
+        studentName: req.student.name,
+        lessonId: Number(req.params.id),
+        attemptId: attempt.id,
+        xp: xpAwarded,
+        message: `${req.student.name} submitted a speech activity`,
+      });
+    }
 
     await awardThresholdBadges(xpResult || req.student);
     const newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
