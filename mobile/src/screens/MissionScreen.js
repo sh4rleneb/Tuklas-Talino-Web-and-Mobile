@@ -21,7 +21,7 @@ const MISSION_GAMES = [
     icon: '🧩',
     module: 'Bokabularyo',
     xp: 15,
-    instruction: 'Hanapin ang tamang pares.',
+    instruction: 'Itugma ang salita sa tamang larawan.',
     sample: 'aso → larawan ng aso'
   },
   {
@@ -30,7 +30,7 @@ const MISSION_GAMES = [
     icon: '🎈',
     module: 'Pagbasa',
     xp: 12,
-    instruction: 'Piliin ang nawawalang titik o pantig.',
+    instruction: 'Piliin ang tamang titik o pantig upang mabuo ang salita.',
     sample: 'ba + ___ = bata'
   },
   {
@@ -39,7 +39,7 @@ const MISSION_GAMES = [
     icon: '🖼️',
     module: 'Bokabularyo',
     xp: 12,
-    instruction: 'Piliin ang salitang tumutukoy sa larawan.',
+    instruction: 'Tukuyin ang tamang salita batay sa larawan.',
     sample: 'pusa → pusa'
   },
   {
@@ -48,7 +48,7 @@ const MISSION_GAMES = [
     icon: '🧱',
     module: 'Pagsulat',
     xp: 18,
-    instruction: 'Ayusin ang mga salita para makabuo ng pangungusap.',
+    instruction: 'Ayusin ang mga salita upang makabuo ng wastong pangungusap.',
     sample: 'Ako / ay / bata'
   },
   {
@@ -57,7 +57,7 @@ const MISSION_GAMES = [
     icon: '📖',
     module: 'Panitikan',
     xp: 20,
-    instruction: 'Basahin ang story at sagutin ang tanong.'
+    instruction: 'Basahin ang kuwento at sagutin ang mga tanong.'
   },
   {
     id: 'sound-and-say',
@@ -65,7 +65,7 @@ const MISSION_GAMES = [
     icon: '🎙️',
     module: 'Oral Comm',
     xp: 15,
-    instruction: 'Pakinggan at bigkasin ang salita.'
+    instruction: 'Makinig muna, pagkatapos bigkasin nang malinaw ang ipinakitang salita o pangungusap.'
   }
 ];
 
@@ -83,14 +83,8 @@ export default function MissionScreen({ navigation }) {
     try {
       const dashboard = await api('/dashboard');
 
-      console.log('[DASHBOARD]', dashboard);
-      console.log('[MISSIONS]', dashboard?.missions);
 
 
-      console.log(
-        '[MISSION SCREEN]',
-        JSON.stringify(dashboard.missions, null, 2)
-      );
 
       const backendMissions = dashboard.missions || [];
 
@@ -105,10 +99,6 @@ export default function MissionScreen({ navigation }) {
         };
       });
 
-      console.log(
-        '[MERGED MISSIONS]',
-        JSON.stringify(merged, null, 2)
-      );
 
       setMissions(merged);
       setStudent(dashboard.student || null);

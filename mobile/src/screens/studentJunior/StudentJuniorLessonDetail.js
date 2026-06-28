@@ -127,6 +127,7 @@ useEffect(() => {
 }, [littleLearnerGame]);
 
 const celebrationRotate = useRef(new Animated.Value(0)).current;
+const stepScrollRef = useRef(null);
 
 
   useEffect(() => {
@@ -162,14 +163,6 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
           }
         }
 
-        console.log(
-          '[LESSON_DATA]',
-          JSON.stringify(
-            loadedLesson,
-            null,
-            2
-          )
-        );
 
         setLesson(loadedLesson);
         setMcqAnswers(restoredAnswers);
@@ -321,27 +314,23 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
   }, [mcqToast]);
 
 
+
+
   useEffect(() => {
-    console.log('[STEP_DEBUG]', {
-      step,
-      totalSteps,
-      currentStepType: currentStep?.type,
-      currentActivityId: currentActivity?.id,
-      currentActivityType: currentActivity?.type,
-      currentActivityTitle: currentActivity?.title,
+    if (!stepScrollRef.current) return;
+
+    const chipWidth = 74;
+
+    stepScrollRef.current.scrollTo({
+      x: Math.max(0, (step - 2) * chipWidth),
+      animated: true,
     });
+  }, [step]);
+
+  useEffect(() => {
   }, [step, totalSteps, currentStep, currentActivity]);
 
   useEffect(() => {
-    console.log(
-      '[ACTIVITIES]',
-      activities.map((a, i) => ({
-        index: i,
-        id: a.id,
-        type: a.type,
-        title: a.title,
-      }))
-    );
   }, [activities]);
 
 
@@ -657,9 +646,11 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
             ),
       });
 
+      const visibleQuestions = (currentActivity?.questions || []).slice(0, 1);
+
       if (
         data.correct &&
-        currentQuestionIndex < (currentActivity?.questions?.length || 0) - 1
+        currentQuestionIndex < visibleQuestions.length - 1
       ) {
         setTimeout(() => {
           setActivityNotice(null);
@@ -685,11 +676,6 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
     }
     const answer = answerOverride ?? writingAnswer;
 
-    console.log('[SUBMIT_WRITING]', {
-      answerOverride,
-      writingAnswer,
-      answer,
-    });
 
     if (answer.trim().length < 2) {
       Alert.alert('Writing', 'Please write your answer before continuing.');
@@ -707,14 +693,11 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
         },
       });
 
-      console.log('[WRITING_RESPONSE]', JSON.stringify(data, null, 2));
       // Success feedback is already shown in the Fill-in-the-Blank UI.
       if (data.correct === false) {
-        console.log('[WRITING] Incorrect answer.');
         return;
       }
 
-      console.log('[WRITING] Advancing to next step.');
       await saveNextStep('writing');
     } catch (err) {
       Alert.alert('Writing', err.message || 'Unable to save your writing answer.');
@@ -916,7 +899,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
 
             <Text
               style={{
-                fontSize:18,
+                fontSize:16,
                 fontWeight:'900',
                 color:'#166534',
                 textAlign:'center',
@@ -1197,7 +1180,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
 
     if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
  {
-      const questions = currentActivity.questions || [];
+      const questions = (currentActivity.questions || []).slice(0, 1);
       const allAnswered = questions.length > 0 && questions.every((question) => mcqAnswers[question.id]);
       return (
         <View style={styles.card}>
@@ -1474,6 +1457,7 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
         || [];
       const game = getGameMeta(currentActivity);
 
+
       const isFillInBlank =
         currentActivity?.writingTask?.rubricJson?.gawainType ===
         'complete_sentence';
@@ -1533,7 +1517,6 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
               rubric={currentActivity.writingTask?.rubricJson}
               submitting={submitting}
               onSubmit={(answer) => {
-                console.log('[FILL_IN_BLANK] answer =', answer);
                 setWritingAnswer(answer);
                 submitWriting(answer);
               }}
@@ -1617,12 +1600,61 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
 
     if (currentStep?.type === 'finish') {
       return (
-        <View style={styles.card}>
-          <Text style={styles.title}>🏁 Finish Mission</Text>
+        <View
+          style={[
+            styles.card,
+            littleLearnerGame && {
+              borderWidth: 3,
+              borderColor: '#FDE68A',
+              backgroundColor: '#F0FDF4',
+            },
+          ]}
+        >
+          {littleLearnerGame ? (
+            <>
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontSize: 28,
+                  marginBottom: 10,
+                }}
+              >
+                🎉 ⭐ 🌈 ⭐ 🎈
+              </Text>
 
-          <Text style={styles.body}>
-            Great job! You finished every challenge in this lesson.
-          </Text>
+              <Text
+                style={{
+                  fontSize: 30,
+                  fontWeight: '900',
+                  textAlign: 'center',
+                  color: '#15803D',
+                }}
+              >
+                Ang Galing!
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 14,
+                  marginBottom: 24,
+                  fontSize: 20,
+                  lineHeight: 30,
+                  textAlign: 'center',
+                  color: '#334155',
+                }}
+              >
+                Natapos mo ang lahat ng mga gawain sa lesson!
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>🏁 Finish Mission</Text>
+
+              <Text style={styles.body}>
+                Great job! You finished every challenge in this lesson.
+              </Text>
+            </>
+          )}
 
           <TouchableOpacity
             style={styles.primaryButton}
@@ -1630,7 +1662,9 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
             onPress={finishLesson}
           >
             <Text style={styles.primaryText}>
-              ⭐ Complete Lesson
+              {littleLearnerGame
+                ? '🌟 Kunin ang Iyong Gantimpala!'
+                : '⭐ Complete Lesson'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -2208,28 +2242,39 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
               />
             </View>
 
-            <View
+            <ScrollView
+              ref={stepScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingVertical: 4,
+                paddingRight: 8,
+              }}
               style={{
-                flexDirection:'row',
-                justifyContent:'space-between',
-                marginTop:10,
+                marginTop: 10,
               }}
             >
+              <View
+                style={{
+                  flexDirection:'row',
+                }}
+              >
               {[
-                ['👂','Makinig'],
+                ['👂','Pakinggan'],
                 ['📖','Basahin'],
                 ['🎮','Quiz'],
-                ['🧩','Patlang'],
+                ['🧩','Gawain'],
                 ['🎤','Bigkas'],
                 ['⭐','Tapos'],
               ].slice(0,totalSteps).map(([icon,label],index)=>(
                 <View
                   key={label}
                   style={{
-                    flex:1,
-                    marginHorizontal:3,
-                    paddingVertical:6,
-                    borderRadius:10,
+                    width:68,
+                    minHeight:66,
+                    marginRight:6,
+                    paddingVertical:8,
+                    borderRadius:12,
                     backgroundColor:
                       step === index + 1
                         ? '#FEF3C7'
@@ -2246,17 +2291,24 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                 >
                   <Text style={{fontSize:18}}>{icon}</Text>
                   <Text
+                    numberOfLines={2}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
                     style={{
-                      fontSize:11,
+                      fontSize:10,
                       fontWeight:'800',
                       marginTop:4,
+                      textAlign:'center',
+                      lineHeight:12,
+                      width:'100%',
                     }}
                   >
                     {label}
                   </Text>
                 </View>
               ))}
-            </View>
+              </View>
+            </ScrollView>
           </View>
         ) : null}
 

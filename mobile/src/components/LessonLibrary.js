@@ -396,10 +396,10 @@ console.log(
 
             if (littleQuest) {
               action = lesson.completed
-                ? '🏆 Game Done'
+                ? '✅ Tapos Na'
                 : lesson.unlocked
-                  ? lesson.progressPercent > 0 ? '🎮 Continue Game' : '🕹️ Play Game'
-                  : '🔒 Unlock Game';
+                  ? lesson.progressPercent > 0 ? '▶ Magpatuloy' : '▶ Simulan'
+                  : '🔒 Naka-lock';
             }
 
             return (
@@ -430,26 +430,24 @@ console.log(
                 onPress={() => openLesson(lesson)}
               >
                 <View style={styles.lessonTop}>
-                  <View
-                    style={[
-                      littleQuest
-                        ? styles.questThumbnail
-                        : styles.thumbnail,
-                      { backgroundColor: meta.soft },
-                    ]}
-                  >
-                    <Text
-                      style={
-                        littleQuest
-                          ? styles.questThumbnailIcon
-                          : styles.thumbnailIcon
-                      }
+                  {!littleQuest && (
+                    <View
+                      style={[
+                        styles.thumbnail,
+                        { backgroundColor: meta.soft },
+                      ]}
                     >
-                      {lesson.completed ? '✅' : meta.icon}
-                    </Text>
-                  </View>
+                      <Text style={styles.thumbnailIcon}>
+                        {lesson.completed ? '✅' : meta.icon}
+                      </Text>
+                    </View>
+                  )}
 
-                  <View style={{ flex: 1, marginLeft: 14 }}>
+                  <View
+                    style={{
+                      flex: 1,
+                      marginLeft: littleQuest ? 0 : 14,
+                    }}>
                     <Text style={styles.lessonTitle}>
                       {lesson.title}
                     </Text>
@@ -509,6 +507,59 @@ console.log(
                       </>
                     )}
 
+
+                    {littleQuest && (
+                      <>
+                        <Text
+                          style={{
+                            marginTop: 8,
+                            fontSize: 14,
+                            fontWeight: '800',
+                            color: '#16A34A',
+                          }}
+                        >
+                          ⭐ {lesson.xpReward || 0} XP
+                        </Text>
+
+                        <View
+                          style={{
+                            marginTop: 10,
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <View
+                            style={{
+                              flex: 1,
+                              height: 8,
+                              backgroundColor: '#E5E7EB',
+                              borderRadius: 999,
+                              marginRight: 12,
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <View
+                              style={{
+                                width: `${lesson.progressPercent}%`,
+                                height: '100%',
+                                backgroundColor: meta.accent,
+                              }}
+                            />
+                          </View>
+
+                          <Text
+                            style={{
+                              fontWeight: '900',
+                              color: '#15803D',
+                            }}
+                          >
+                            {action}
+                          </Text>
+                        </View>
+                      </>
+                    )}
+
                     {!littleQuest && (
                       <>
                         <View style={styles.lessonTrack}>
@@ -555,7 +606,7 @@ console.log(
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
-  page: { padding: 16, paddingBottom: 44 },
+  page: { padding: 12, paddingBottom: 44 },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -602,9 +653,9 @@ const styles = StyleSheet.create({
   filterText: { color: '#64748B', fontWeight: '800' },
   lessonCard: {
     backgroundColor: '#FFF',
-    borderRadius: 22,
+    borderRadius: 18,
     padding: 16,
-    marginBottom: 14,
+    marginBottom: 10,
     elevation: 3,
   },
   questCard: {
@@ -617,7 +668,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 8,
   },
   thumbnail: {
     width: 54,
@@ -657,14 +708,14 @@ const styles = StyleSheet.create({
   subject: { marginTop: 12, fontWeight: '900' },
   lessonTitle: {
     color: '#0F172A',
-    fontSize: 21,
+    fontSize: 19,
     fontWeight: '900',
-    marginTop: 4,
+    marginTop: 2,
   },
 
   lessonMeta: {
     color: '#64748B',
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 4,
   },
   lessonArrow: {
@@ -729,7 +780,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   muted: { color: '#64748B', marginTop: 4 },
-  xpChip: { color: '#F97316', fontSize: 12, fontWeight: '900' },
+  xpChip: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    overflow: 'hidden',
+    textAlign: 'center',
+  },
   lessonProgressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
