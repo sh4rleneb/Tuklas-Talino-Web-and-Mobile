@@ -2441,7 +2441,14 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                     }}
                   >
                     <Text style={{fontSize:22}}>🏅</Text>
-                    <Text style={{fontWeight:'900',fontSize:12}}>
+                    <Text
+                      style={{
+                        fontWeight:'900',
+                        fontSize:24,
+                        color:'#1D4ED8',
+                        marginTop:4,
+                      }}
+                    >
                       {(completionResult?.newBadges || []).length}
                     </Text>
                     <Text
@@ -2533,51 +2540,51 @@ const celebrationRotate = useRef(new Animated.Value(0)).current;
                   </TouchableOpacity>
                 ) : null}
 
-                <TouchableOpacity
-                  style={styles.finishCardButton}
-                  onPress={() =>
-                    navigation.navigate('Lessons', {
-                      screen: 'LessonsList',
-                    })
-                  }
-                >
-                  <Text style={styles.finishCardIcon}>📚</Text>
+                  <TouchableOpacity
+                    style={styles.finishCardButton}
+                    onPress={() =>
+                      navigation.navigate('Lessons', {
+                        screen: 'LessonsList',
+                      })
+                    }
+                  >
+                    <Text style={styles.finishCardIcon}>📚</Text>
 
-                  <View style={styles.finishCardTextWrap}>
-                    <Text style={styles.finishCardTitle}>
-                      Back to Lesson Library
-                    </Text>
+                    <View style={styles.finishCardTextWrap}>
+                      <Text style={styles.finishCardTitle}>
+                        Back to Lesson Library
+                      </Text>
 
-                    <Text style={styles.finishCardSubtitle}>
-                      Choose another lesson
-                    </Text>
-                  </View>
+                      <Text style={styles.finishCardSubtitle}>
+                        Choose another lesson
+                      </Text>
+                    </View>
 
-                  <Text style={{ fontSize: 26 }}>›</Text>
-                </TouchableOpacity>
+                    <Text style={styles.finishCardArrow}>›</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.finishCardButton}
-                  onPress={() =>
-                    navigation.navigate('StudentTabs', {
-                      screen: 'Home',
-                    })
-                  }
-                >
-                  <Text style={styles.finishCardIcon}>🏠</Text>
+                  <TouchableOpacity
+                    style={styles.finishCardButton}
+                    onPress={() =>
+                      navigation.navigate('StudentTabs', {
+                        screen: 'Home',
+                      })
+                    }
+                  >
+                    <Text style={styles.finishCardIcon}>🏠</Text>
 
-                  <View style={styles.finishCardTextWrap}>
-                    <Text style={styles.finishCardTitle}>
-                      Back to Home
-                    </Text>
+                    <View style={styles.finishCardTextWrap}>
+                      <Text style={styles.finishCardTitle}>
+                        Back to Home
+                      </Text>
 
-                    <Text style={styles.finishCardSubtitle}>
-                      Return to your dashboard
-                    </Text>
-                  </View>
+                      <Text style={styles.finishCardSubtitle}>
+                        Return to your dashboard
+                      </Text>
+                    </View>
 
-                  <Text style={{ fontSize: 26 }}>›</Text>
-                </TouchableOpacity>
+                    <Text style={styles.finishCardArrow}>›</Text>
+                  </TouchableOpacity>
               </Animated.View>
             </View>
           ) : renderActivity()}
@@ -2893,19 +2900,22 @@ const styles = StyleSheet.create({
   finishHeroTextWrap: {
     flex: 1,
     marginHorizontal: 16,
+    justifyContent: 'center',
   },
 
   finishHeroTitle: {
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: '900',
+    lineHeight: 28,
   },
 
   finishHeroSubtitle: {
     color: '#DCFCE7',
     fontSize: 14,
     fontWeight: '700',
-    marginTop: 4,
+    lineHeight: 18,
+    marginTop: 2,
   },
 
   finishHeroIcon: {
@@ -2918,36 +2928,47 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 2,
     borderColor: '#A7F3D0',
-    minHeight: 74,
+
+    minHeight: 82,
     paddingHorizontal: 20,
+    paddingVertical: 14,
+
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
 
   finishCardIcon: {
-    fontSize: 34,
     width: 42,
+    fontSize: 34,
     textAlign: 'center',
   },
 
   finishCardTextWrap: {
     flex: 1,
     marginLeft: 16,
+    justifyContent: 'center',
   },
 
   finishCardTitle: {
     color: '#166534',
     fontSize: 20,
     fontWeight: '900',
+    lineHeight: 24,
   },
 
   finishCardSubtitle: {
     color: '#64748B',
     fontSize: 13,
-    marginTop: 2,
+    lineHeight: 18,
+    marginTop: 1,
   },
 
+  finishCardArrow: {
+    fontSize: 30,
+    color: '#16A34A',
+    fontWeight: '900',
+    marginLeft: 10,
+  },
   recordingButton: { backgroundColor: '#FEE2E2' },
   secondaryText: {
     color: '#166534',
