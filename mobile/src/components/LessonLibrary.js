@@ -263,7 +263,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     }
 
     if (variant === 'senior') {
-      navigation.navigate('StudentJuniorLessonDetail', {
+      navigation.navigate('LessonDashboardScreen', {
         lessonId: lesson.id,
         homeRoute: 'StudentSeniorTabs',
       });
@@ -271,7 +271,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     }
 
     navigation.navigate('Lessons', {
-      screen: 'StudentJuniorLessonDetail',
+      screen: 'LessonDashboardScreen',
       params: {
         lessonId: lesson.id,
         homeRoute: 'StudentTabs',

@@ -1114,7 +1114,7 @@ You will be required to change this PIN after first login.`
               style={styles.input}
               value={adminActionReason}
               onChangeText={setAdminActionReason}
-              placeholder="e.g. Student transferred to another school"
+              placeholder="e.g. Teacher no longer works at this school"
               placeholderTextColor="#94A3B8"
             />
 

@@ -35,6 +35,12 @@ import PowerUpTray from '../../components/lesson/PowerUpTray';
 import ActivityGuideCard from '../../components/lesson/ActivityGuideCard';
 import FillInBlankGame from '../../components/lesson/FillInBlankGame';
 
+import {
+  getStructuredLessonSectionText,
+  getStructuredLessonKnowAudioText,
+  getStructuredLessonAralinAudioText,
+} from '../../utils/structuredLesson';
+
 function optionalProgressRequest(request, fallback) {
   return request.catch((err) => {
     if (err.status === 404 || err.message === 'Route not found.') {
@@ -62,6 +68,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [playing, setPlaying] = useState(false);
   const [lessonListening, setLessonListening] = useState(false);
   const [lessonListened, setLessonListened] = useState(false);
+  const [knowListened, setKnowListened] = useState(false);
   const [readListened, setReadListened] = useState(false);
 
 const [lessonProgress,setLessonProgress]=useState(0);
@@ -75,6 +82,7 @@ const [lessonDuration,setLessonDuration]=useState(0);
   
 const [activityNotice, setActivityNotice] = useState(null);
 const [mcqToast, setMcqToast] = useState(null);
+const [gateToast, setGateToast] = useState('');
 const [balloonProgress, setBalloonProgress] = useState({});
 
 const [selectedMatch, setSelectedMatch] = useState(null);
@@ -174,11 +182,17 @@ const stepScrollRef = useRef(null);
 
         setCompleted(lessonCompleted);
 
-        setStep(
-          lessonCompleted
-            ? (loadedLesson?.activities?.length || 0) + 3
-            : (progressData.progress?.currentStep || 1)
-        );
+        const restoredStep = lessonCompleted
+          ? (loadedLesson?.activities?.length || 0) + 4
+          : (progressData.progress?.currentStep || 1);
+
+        // Pre-unlock gates for steps the student already passed (mirrors web reachedPast).
+        // Step 1 = Layunin, Step 2 = Alamin, Step 3 = Aralin.
+        setLessonListened(lessonCompleted || restoredStep > 1);
+        setKnowListened(lessonCompleted || restoredStep > 2);
+        setReadListened(lessonCompleted || restoredStep > 3);
+
+        setStep(restoredStep);
       })
       .catch((err) => {
         if (active) setError(err.message || 'Unable to load lesson.');
@@ -262,11 +276,15 @@ const stepScrollRef = useRef(null);
   const missionSteps = useMemo(() => [
     {
       type: 'listen',
-      title: 'Listen',
+      title: 'Layunin',
+    },
+    {
+      type: 'know',
+      title: 'Alamin',
     },
     {
       type: 'read',
-      title: 'Read',
+      title: 'Aralin',
     },
     ...activities.map(activity => ({
       type: 'activity',
@@ -287,6 +305,75 @@ const stepScrollRef = useRef(null);
     currentStep?.type === 'activity'
       ? currentStep.activity
       : null;
+
+  const lessonText =
+    lesson?.passage ||
+    lesson?.content ||
+    lesson?.material ||
+    lesson?.description ||
+    lesson?.instructions ||
+    '';
+
+  const layuninText =
+    getStructuredLessonSectionText(lessonText, 'layunin');
+
+  const alaminText =
+    getStructuredLessonSectionText(lessonText, 'alamin');
+
+  const aralinText =
+    getStructuredLessonSectionText(lessonText, 'aralin');
+
+  const knowAudioText =
+    getStructuredLessonKnowAudioText(
+      lessonText,
+      lesson,
+    );
+
+  const aralinAudioText =
+    getStructuredLessonAralinAudioText(
+      lessonText,
+    );
+
+  const layuninDisplayText =
+    layuninText || lesson?.title || 'Handa ka na bang matuto?';
+
+  const alaminDisplayText =
+    alaminText || knowAudioText;
+
+  const aralinDisplayText =
+    aralinText || lessonText;
+
+  function missionStepIcon(stepItem) {
+    if (stepItem?.type === 'listen') return '👂';
+    if (stepItem?.type === 'know') return '💡';
+    if (stepItem?.type === 'read') return '📖';
+    if (stepItem?.type === 'finish') return '⭐';
+
+    const activityType = stepItem?.activity?.type;
+    if (activityType === 'mcq') return '🎮';
+    if (activityType === 'writing') return '🧩';
+    if (activityType === 'speech') return '🎤';
+    if (activityType === 'vocabulary') return '📚';
+    if (activityType === 'matching') return '🧩';
+    if (activityType === 'infographic') return '📎';
+
+    return '🚀';
+  }
+
+  function missionStepLabel(stepItem) {
+    if (stepItem?.title) return stepItem.title;
+
+    const activityType = stepItem?.activity?.type;
+    if (activityType === 'mcq') return 'Quiz';
+    if (activityType === 'writing') return 'Gawain';
+    if (activityType === 'speech') return 'Bigkas';
+    if (activityType === 'vocabulary') return 'Salita';
+    if (activityType === 'matching') return 'Pares';
+    if (activityType === 'infographic') return 'Materyal';
+
+    return 'Gawain';
+  }
+
   const littleLearnerGame = Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 2;
 
 
@@ -314,6 +401,16 @@ const stepScrollRef = useRef(null);
 
     return () => clearTimeout(id);
   }, [mcqToast]);
+
+  useEffect(() => {
+    if (!gateToast) return;
+
+    const id = setTimeout(() => {
+      setGateToast('');
+    }, 1800);
+
+    return () => clearTimeout(id);
+  }, [gateToast]);
 
 
 
@@ -861,7 +958,7 @@ const stepScrollRef = useRef(null);
                 color:'#166534',
               }}
             >
-              👂 Listen Activity
+              👂 Layunin
             </Text>
 
             <Text
@@ -872,7 +969,7 @@ const stepScrollRef = useRef(null);
                 color:'#334155',
               }}
             >
-              🎧 Listen carefully to today's lesson.
+              {layuninDisplayText}
             </Text>
 
             <Text
@@ -882,7 +979,7 @@ const stepScrollRef = useRef(null);
                 color:'#64748B',
               }}
             >
-              Tap Play to begin. You can stop anytime.
+              Pakinggan muna ang layunin bago magpatuloy.
             </Text>
           </View>
 
@@ -910,7 +1007,7 @@ const stepScrollRef = useRef(null);
                 marginBottom:18,
               }}
             >
-              🎵 Lesson Audio
+              🎵 Layunin Audio
             </Text>
 
             <TouchableOpacity
@@ -943,7 +1040,7 @@ const stepScrollRef = useRef(null);
               setLessonListened(true);
 
               await speakText(
-                `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`,
+                layuninDisplayText,
                 {
                   onStart: () => {
                     
@@ -983,7 +1080,7 @@ const stepScrollRef = useRef(null);
               lessonListening
                 ? '🎧 Playing lesson...'
                 : lessonListened
-                  ? '✅ Magaling! Pindutin ang Magpatuloy.'
+                  ? '✅ Magaling! Pindutin ang Magpatuloy sa Alamin.'
                   : '👆 Tap Play to start.'
             }
           </Text>
@@ -1037,16 +1134,127 @@ const stepScrollRef = useRef(null);
             </View>
           )}
 
+          {gateToast ? (
+            <View style={[styles.feedbackCard, styles.feedbackWarning]}>
+              <Text style={styles.feedbackMessage}>{gateToast}</Text>
+            </View>
+          ) : null}
+
           <TouchableOpacity
             style={[styles.primaryButton, (lessonListening || !lessonListened) && styles.disabledButton]}
-            disabled={lessonListening || !lessonListened}
-            onPress={() => advance('listen')}
+            onPress={() => {
+              if (lessonListening) return;
+              if (!lessonListened) {
+                setGateToast('Pakinggan muna ang layunin.');
+                return;
+              }
+              advance('listen');
+            }}
           >
             <Text style={styles.primaryText}>
               {lessonListened ? 'Magpatuloy' : 'Pakinggan muna'}
             </Text>
           </TouchableOpacity>
 
+        </View>
+      );
+    }
+
+    if (currentStep?.type === 'know') {
+      return (
+        <View style={styles.card}>
+
+          <View
+            style={{
+              backgroundColor:'#EFF6FF',
+              borderRadius:22,
+              borderWidth:2,
+              borderColor:'#BFDBFE',
+              padding:18,
+              marginBottom:18,
+            }}
+          >
+            <Text
+              style={{
+                fontSize:24,
+                fontWeight:'900',
+                color:'#1D4ED8',
+              }}
+            >
+              💡 Alamin
+            </Text>
+
+            {!!alaminDisplayText && (
+              <Text
+                style={{
+                  marginTop:10,
+                  fontSize:16,
+                  lineHeight:24,
+                  color:'#334155',
+                }}
+              >
+                {alaminDisplayText}
+              </Text>
+            )}
+
+            <Text
+              style={{
+                marginTop:8,
+                fontSize:15,
+                color:'#64748B',
+              }}
+            >
+              Pakinggan muna ang paksa bago pumunta sa aralin.
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.secondaryButton, { alignSelf: 'center', minWidth: '60%' }]}
+            onPress={() => {
+              setKnowListened(true);
+              speakText(knowAudioText);
+            }}
+          >
+            <Text style={styles.secondaryText}>
+              {knowListened ? '🔁 Pakinggan Muli' : '🔊 Pakinggan'}
+            </Text>
+          </TouchableOpacity>
+
+          {gateToast ? (
+            <View style={[styles.feedbackCard, styles.feedbackWarning]}>
+              <Text style={styles.feedbackMessage}>{gateToast}</Text>
+            </View>
+          ) : null}
+
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 12,
+              marginTop: 14,
+            }}
+          >
+            <TouchableOpacity
+              style={[styles.secondaryButton, { flex: 1 }]}
+              onPress={goToPreviousStep}
+            >
+              <Text style={styles.secondaryText}>← Balik</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.primaryButton, { flex: 1 }, !knowListened && styles.disabledButton]}
+              onPress={() => {
+                if (!knowListened) {
+                  setGateToast('Pakinggan muna ang alamin.');
+                  return;
+                }
+                advance('know');
+              }}
+            >
+              <Text style={styles.primaryText}>
+                {knowListened ? 'Aralin →' : 'Pakinggan muna'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -1116,20 +1324,7 @@ const stepScrollRef = useRef(null);
                   </View>
                 </View>
 
-                {!!lesson?.instructions && (
-                  <Text
-                    style={{
-                      color: '#475569',
-                      fontSize: 18,
-                      marginBottom: 14,
-                      textAlign: 'center',
-                    }}
-                  >
-                    {lesson.instructions}
-                  </Text>
-                )}
-
-                {!!lesson?.passage && (
+                {!!aralinDisplayText && (
                   <View
                     style={{
                       backgroundColor: '#FFFFFF',
@@ -1148,25 +1343,19 @@ const stepScrollRef = useRef(null);
                         lineHeight: 36,
                       }}
                     >
-                      {lesson.passage}
+                      {aralinDisplayText}
                     </Text>
                   </View>
                 )}
               </>
             ) : (
               <>
-                <Text style={styles.title}>📖 Read</Text>
+                <Text style={styles.title}>📖 Aralin</Text>
 
-                {!!lesson?.instructions && (
-                  <Text style={styles.body}>
-                    {lesson.instructions}
-                  </Text>
-                )}
-
-                {!!lesson?.passage && (
+                {!!aralinDisplayText && (
                   <ReadingPassageCard
                     title={lesson.title}
-                    passage={lesson.passage}
+                    passage={aralinDisplayText}
                   />
                 )}
               </>
@@ -1176,9 +1365,7 @@ const stepScrollRef = useRef(null);
               style={[styles.secondaryButton, { alignSelf: 'center', minWidth: '60%' }]}
               onPress={() => {
                 setReadListened(true);
-                speakText(
-                  `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`
-                );
+                speakText(aralinAudioText);
               }}
             >
               <Text style={styles.secondaryText}>
@@ -1186,10 +1373,21 @@ const stepScrollRef = useRef(null);
               </Text>
             </TouchableOpacity>
 
+            {gateToast ? (
+              <View style={[styles.feedbackCard, styles.feedbackWarning]}>
+                <Text style={styles.feedbackMessage}>{gateToast}</Text>
+              </View>
+            ) : null}
+
             <TouchableOpacity
               style={[styles.primaryButton, !readListened && styles.disabledButton]}
-              disabled={!readListened}
-              onPress={() => advance('read')}
+              onPress={() => {
+                if (!readListened) {
+                  setGateToast('Pakinggan muna ang aralin.');
+                  return;
+                }
+                advance('read');
+              }}
             >
               <Text style={styles.primaryText}>
                 {!readListened
@@ -2220,7 +2418,15 @@ const stepScrollRef = useRef(null);
                 color:'#15803D',
               }}
             >
-              {(currentActivity?.type === 'mcq'
+              {(currentStep?.type === 'listen'
+                ? '👂 Layunin'
+                : currentStep?.type === 'know'
+                ? '💡 Alamin'
+                : currentStep?.type === 'read'
+                ? '📖 Aralin'
+                : currentStep?.type === 'finish'
+                ? '🏁 Lesson Complete'
+                : currentActivity?.type === 'mcq'
                 ? '🎮 Mini Quiz'
                 : currentActivity?.type === 'writing'
                 ? '🧩 Punan ang Patlang'
@@ -2232,8 +2438,6 @@ const stepScrollRef = useRef(null);
                 ? '🧩 Matching Game'
                 : currentActivity?.type === 'infographic'
                 ? '📖 Basahin Muna'
-                : !currentActivity
-                ? '🏁 Lesson Complete'
                 : '🚀 Mission') + ' ⭐'}
             </Text>
 
@@ -2282,14 +2486,10 @@ const stepScrollRef = useRef(null);
                   flexDirection:'row',
                 }}
               >
-              {[
-                ['👂','Pakinggan'],
-                ['📖','Basahin'],
-                ['🎮','Quiz'],
-                ['🧩','Gawain'],
-                ['🎤','Bigkas'],
-                ['⭐','Tapos'],
-              ].slice(0,totalSteps).map(([icon,label],index)=>(
+              {missionSteps.map((stepItem,index)=> {
+                const icon = missionStepIcon(stepItem);
+                const label = missionStepLabel(stepItem);
+                return (
                 <View
                   key={label}
                   style={{
@@ -2329,7 +2529,8 @@ const stepScrollRef = useRef(null);
                     {label}
                   </Text>
                 </View>
-              ))}
+                );
+              })}
               </View>
             </ScrollView>
           </View>

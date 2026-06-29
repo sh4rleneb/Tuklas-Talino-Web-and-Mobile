@@ -170,19 +170,13 @@ export default function StudentLogin({
         ? 'StudentTabs'
         : 'StudentSeniorTabs';
 
-      if (user.mustChangePassword) {
-        navigation.replace(
-          'ChangePassword',
-          { homeRoute }
-        );
-      } else {
-
-        navigation.reset({
-          index: 0,
-          routes: [{ name: homeRoute }],
-        });
-
-      }
+      // TEMPORARY:
+      // Skip forced password change on mobile until the
+      // mobile Change Password flow is implemented.
+      navigation.reset({
+        index: 0,
+        routes: [{ name: homeRoute }],
+      });
 
     } catch (error) {
 
