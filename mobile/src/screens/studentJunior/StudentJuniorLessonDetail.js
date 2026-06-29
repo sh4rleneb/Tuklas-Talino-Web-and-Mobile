@@ -192,6 +192,7 @@ const stepScrollRef = useRef(null);
   }, [lessonId]);
 
   useEffect(() => () => {
+    stopSpeech();
     soundRef.current?.unloadAsync();
     recordingRef.current?.stopAndUnloadAsync();
   }, []);

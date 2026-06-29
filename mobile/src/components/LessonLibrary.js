@@ -256,22 +256,9 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
   const progress = dashboard?.progress || {};
 
   function openLesson(lesson) {
-    
-    console.log("[OPEN LESSON]", {
-      variant,
-      lessonId: lesson.id,
-      unlocked: lesson.unlocked,
-    });
 
-console.log(
-      "[LessonLibrary]",
-      "variant=", variant,
-      "lesson=", lesson.id,
-      "unlocked=", lesson.unlocked
-    );
 
     if (!lesson.unlocked) {
-      console.log("[LessonLibrary] BLOCKED: lesson is locked");
       return;
     }
 
