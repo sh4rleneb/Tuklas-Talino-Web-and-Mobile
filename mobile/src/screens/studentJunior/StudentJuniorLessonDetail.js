@@ -589,6 +589,7 @@ const stepScrollRef = useRef(null);
     if (submitting) return;
     setSubmitting(true);
     try {
+      await stopSpeech();
       await saveNextStep(activityType);
     } catch (err) {
       Alert.alert('Lesson', err.message || 'Unable to save lesson progress.');
@@ -755,9 +756,8 @@ const stepScrollRef = useRef(null);
   }
 
   function goToPreviousStep() {
-
-
     if (submitting || completed) return;
+    stopSpeech();
     setActivityNotice(null);
     setStep((current) => Math.max(1, Number(current || 1) - 1));
   }
