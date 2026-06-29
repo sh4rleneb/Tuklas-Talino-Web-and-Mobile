@@ -1,5 +1,5 @@
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system/legacy';
+import { File, Paths } from 'expo-file-system';
 
 import { api } from '../api/client';
 
@@ -48,18 +48,14 @@ export async function speakText(text, callbacks = {}) {
       return;
     }
 
-    const fileUri =
-      `${FileSystem.cacheDirectory}tts-${Date.now()}.mp3`;
+    const audioFile = new File(Paths.cache, `tts-${Date.now()}.mp3`);
+    const fileUri = audioFile.uri;
 
     console.log('[TTS] Writing file:', fileUri);
 
-    await FileSystem.writeAsStringAsync(
-      fileUri,
-      base64Audio,
-      {
-        encoding: 'base64',
-      }
-    );
+    audioFile.write(base64Audio, {
+      encoding: 'base64',
+    });
 
     if (currentSound) {
       await currentSound.unloadAsync();

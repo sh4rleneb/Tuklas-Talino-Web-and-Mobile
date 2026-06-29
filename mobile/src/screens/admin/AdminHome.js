@@ -14,6 +14,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { File, Paths } from 'expo-file-system';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 import {
   archiveStudent,
@@ -42,7 +45,6 @@ import {
   updateStudentEnrollment,
 } from '../../api/admin';
 import { logout, verifyPassword } from '../../api/auth';
-
 const NAV_ITEMS = [
   ['overview', '🏠', 'Overview'],
   ['accounts', '➕', 'Add Accounts'],
@@ -292,12 +294,182 @@ async function executeVerifiedAction() {
     }
   }
 
-  async function shareReport(title, loader) {
+  function escapeReportHtml(value = '') {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function summaryReportHtml(title, reportText) {
+    const rows = String(reportText || '')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const separatorIndex = line.indexOf(':');
+
+        if (separatorIndex === -1) {
+          return `
+            <tr>
+              <th colspan="2" class="section-row">${escapeReportHtml(line)}</th>
+            </tr>
+          `;
+        }
+
+        const label = line.slice(0, separatorIndex).trim();
+        const value = line.slice(separatorIndex + 1).trim();
+
+        return `
+          <tr>
+            <th>${escapeReportHtml(label)}</th>
+            <td>${escapeReportHtml(value)}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    return `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 28px;
+              color: #0F172A;
+            }
+            h1 {
+              color: #166534;
+              font-size: 24px;
+              margin-bottom: 18px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 12px;
+            }
+            th,
+            td {
+              border: 1px solid #CBD5E1;
+              padding: 10px 12px;
+              font-size: 13px;
+              line-height: 1.4;
+              text-align: left;
+              vertical-align: top;
+            }
+            th {
+              width: 38%;
+              background: #ECFDF5;
+              color: #14532D;
+              font-weight: 700;
+            }
+            td {
+              background: #FFFFFF;
+              color: #0F172A;
+            }
+            .section-row {
+              width: auto;
+              background: #166534;
+              color: #FFFFFF;
+              text-align: center;
+              font-size: 15px;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>${escapeReportHtml(title)}</h1>
+          <table>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+  }
+
+  async function shareReportFile(fileUri, options) {
+    const canShare = await Sharing.isAvailableAsync();
+
+    if (!canShare) {
+      Alert.alert(
+        'Report Generated',
+        `The report file was created here: ${fileUri}`
+      );
+      return;
+    }
+
+    await Sharing.shareAsync(fileUri, options);
+  }
+
+  async function saveReportFile(sourceFile, title, filename, options) {
+    await shareReportFile(sourceFile.uri, {
+      ...options,
+      dialogTitle: `${title} - Save ${filename}`,
+    });
+  }
+
+  async function downloadTextReport(title, filename, mimeType, loader) {
     setBusy(title);
+
     try {
-      await Share.share({ title, message: await loader() });
+      const content = await loader();
+      const file = new File(Paths.cache, filename);
+
+      if (file.exists) {
+        file.delete();
+      }
+
+      file.write(content || '');
+
+      await saveReportFile(file, title, filename, {
+        dialogTitle: title,
+        mimeType,
+        UTI: mimeType === 'text/csv'
+          ? 'public.comma-separated-values-text'
+          : 'public.plain-text',
+      });
     } catch (err) {
-      Alert.alert('Reports', err.message || 'Unable to generate report.');
+      Alert.alert(
+        'Reports',
+        err.message || 'Unable to download report file.'
+      );
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function downloadPdfReport(title, filename, loader) {
+    setBusy(title);
+
+    try {
+      const content = await loader();
+      const printed = await Print.printToFileAsync({
+        html: summaryReportHtml(title, content),
+      });
+
+      const generatedFile = new File(printed.uri);
+      const pdfFile = new File(Paths.cache, filename);
+
+      if (pdfFile.exists) {
+        pdfFile.delete();
+      }
+
+      generatedFile.copy(pdfFile);
+
+      await saveReportFile(pdfFile, title, filename, {
+        dialogTitle: title,
+        mimeType: 'application/pdf',
+        UTI: 'com.adobe.pdf',
+      });
+    } catch (err) {
+      Alert.alert(
+        'Reports',
+        err.message || 'Unable to download PDF report.'
+      );
     } finally {
       setBusy('');
     }
@@ -818,10 +990,41 @@ function renderLogs() {
       <>
         <Card>
           <Text style={styles.cardTitle}>Admin Reports</Text>
-          <Text style={styles.body}>Generate system reports and share them using your device.</Text>
-          <Button disabled={Boolean(busy)} onPress={() => shareReport('Student CSV', getStudentReportCsv)}>Export CSV</Button>
-          <Button disabled={Boolean(busy)} onPress={() => shareReport('Activity Logs CSV', getActivityLogsCsv)}>Export Logs</Button>
-          <Button disabled={Boolean(busy)} onPress={() => shareReport('Tuklas Talino Summary Report', getSummaryReportText)}>Download Summary Report</Button>
+          <Text style={styles.body}>
+            Download reports in their correct formats: CSV for exports and PDF for the summary.
+          </Text>
+          <Button
+            disabled={Boolean(busy)}
+            onPress={() => downloadTextReport(
+              'Student CSV',
+              'tuklas-talino-students.csv',
+              'text/csv',
+              getStudentReportCsv
+            )}
+          >
+            Export CSV
+          </Button>
+          <Button
+            disabled={Boolean(busy)}
+            onPress={() => downloadTextReport(
+              'Activity Logs CSV',
+              'tuklas-talino-activity-logs.csv',
+              'text/csv',
+              getActivityLogsCsv
+            )}
+          >
+            Export Logs
+          </Button>
+          <Button
+            disabled={Boolean(busy)}
+            onPress={() => downloadPdfReport(
+              'Tuklas Talino Summary Report',
+              'tuklas-talino-summary-report.pdf',
+              getSummaryReportText
+            )}
+          >
+            Download Summary Report
+          </Button>
         </Card>
         <Card>
           <Text style={styles.cardTitle}>System Summary</Text>
