@@ -67,7 +67,7 @@ export default function ModulesScreen({ navigation }) {
   async function loadModules() {
     try {
       setLoading(true);
-      const data = await api('/lessons');
+      const data = await api('/dashboard');
       setModules(data.lessons || []);
     } catch (error) {
       Alert.alert('Error', error.message);

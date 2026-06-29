@@ -186,16 +186,21 @@ function isLittleQuestLesson(lesson = {}, student = {}, playful = false) {
   return playful && grade > 0 && grade <= 2;
 }
 
-function withUnlockStates(lessons = []) {
+function withUnlockStates(lessons = [], enforceSequential = false) {
   const unlockBySubject = new Map();
 
   return lessons.map((lesson) => {
     const subject = categoryKey(lesson.subject);
-    const canStart = unlockBySubject.get(subject) ?? true;
     const completed = Boolean(lesson.completed);
-    const unlocked = completed || canStart;
 
-    if (!completed) unlockBySubject.set(subject, false);
+    let unlocked;
+    if (!enforceSequential) {
+      unlocked = true;
+    } else {
+      const canStart = unlockBySubject.get(subject) ?? true;
+      unlocked = completed || canStart;
+      if (!completed) unlockBySubject.set(subject, false);
+    }
 
     return {
       ...lesson,
@@ -234,10 +239,11 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     load();
   }, [load]));
 
-  const lessons = useMemo(
-    () => withUnlockStates(dashboard?.lessons || []),
-    [dashboard]
-  );
+  const lessons = useMemo(() => {
+    const grade = Number(dashboard?.student?.gradeLevel || 0);
+    const enforceSequential = grade > 0 && grade <= 2;
+    return withUnlockStates(dashboard?.lessons || [], enforceSequential);
+  }, [dashboard]);
 
   const filteredLessons = useMemo(
     () => selectedCategory === 'ALL'

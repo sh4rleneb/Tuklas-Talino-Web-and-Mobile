@@ -2618,7 +2618,7 @@ const stepScrollRef = useRef(null);
                   <TouchableOpacity
                     style={styles.finishCardButton}
                     onPress={() =>
-                      navigation.navigate('StudentTabs', {
+                      navigation.navigate(homeRoute, {
                         screen: 'Home',
                       })
                     }
