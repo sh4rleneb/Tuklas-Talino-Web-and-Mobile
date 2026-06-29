@@ -62,6 +62,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [playing, setPlaying] = useState(false);
   const [lessonListening, setLessonListening] = useState(false);
   const [lessonListened, setLessonListened] = useState(false);
+  const [readListened, setReadListened] = useState(false);
 
 const [lessonProgress,setLessonProgress]=useState(0);
 const [lessonDuration,setLessonDuration]=useState(0);
@@ -939,6 +940,8 @@ const stepScrollRef = useRef(null);
                 return;
               }
 
+              setLessonListened(true);
+
               await speakText(
                 `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`,
                 {
@@ -1035,12 +1038,12 @@ const stepScrollRef = useRef(null);
           )}
 
           <TouchableOpacity
-            style={styles.primaryButton}
-            disabled={lessonListening}
+            style={[styles.primaryButton, (lessonListening || !lessonListened) && styles.disabledButton]}
+            disabled={lessonListening || !lessonListened}
             onPress={() => advance('listen')}
           >
             <Text style={styles.primaryText}>
-              Magpatuloy
+              {lessonListened ? 'Magpatuloy' : 'Pakinggan muna'}
             </Text>
           </TouchableOpacity>
 
@@ -1170,11 +1173,28 @@ const stepScrollRef = useRef(null);
             )}
 
             <TouchableOpacity
-              style={styles.primaryButton}
+              style={[styles.secondaryButton, { alignSelf: 'center', minWidth: '60%' }]}
+              onPress={() => {
+                setReadListened(true);
+                speakText(
+                  `${lesson?.title || ''}. ${lesson?.instructions || ''}. ${lesson?.passage || ''}`
+                );
+              }}
+            >
+              <Text style={styles.secondaryText}>
+                {readListened ? '🔁 Pakinggan Muli' : '🔊 Pakinggan'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.primaryButton, !readListened && styles.disabledButton]}
+              disabled={!readListened}
               onPress={() => advance('read')}
             >
               <Text style={styles.primaryText}>
-                {littleLearnerGame ? '⭐ Naintindihan Ko!' : 'Magpatuloy'}
+                {!readListened
+                  ? 'Pakinggan muna'
+                  : littleLearnerGame ? '⭐ Naintindihan Ko!' : 'Magpatuloy'}
               </Text>
             </TouchableOpacity>
           </View>

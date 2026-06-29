@@ -114,9 +114,9 @@ export default function QuizScreen({ navigation }) {
         },
       });
       const quizResult = data.quizResult || null;
-      const attempts = data.quizAttempts || [];
-      const review = attempts.length ? (attempts[attempts.length - 1].review || []) : [];
-      setResult(quizResult ? { ...quizResult, review } : null);
+      const savedAttempts = data.quizAttempts || [];
+      const reviewItems = savedAttempts.length ? (savedAttempts[savedAttempts.length - 1].review || []) : [];
+      setResult(quizResult ? { ...quizResult, review: reviewItems } : null);
       await load();
     } catch (err) {
       Alert.alert('Quiz', err.message || 'Unable to submit this quiz.');
