@@ -98,6 +98,16 @@ export async function getReportSummary() {
   return api('/reports/summary');
 }
 
+
+export async function getStudentReport() {
+  return api('/reports/students');
+}
+
+export async function getActivityLogs() {
+  return api('/reports/activity-logs');
+}
+
+
 export async function getStudentReportCsv() {
   return apiText('/reports/students.csv');
 }

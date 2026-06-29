@@ -45,6 +45,63 @@ function csvEscape(value) {
   return `"${v.replace(/"/g, '""')}"`;
 }
 
+
+router.get('/students', async (req, res, next) => {
+  try {
+    const assignments = await getTeacherAssignments(req);
+    const where = assignedStudentWhere(assignments);
+
+    const students = await Student.findAll({
+      where,
+      order: [['gradeLevel', 'ASC'], ['name', 'ASC']]
+    });
+
+    res.json(
+      students.map((student) => ({
+        id: student.id,
+        studentCode: student.studentCode,
+        name: student.name,
+        gradeLevel: student.gradeLevel,
+        section: student.section,
+        avatar: student.avatar,
+        xp: student.xp,
+        status: student.status,
+        lastActiveAt: student.lastActiveAt,
+      }))
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/activity-logs', async (req, res, next) => {
+  try {
+    const where = req.role === 'teacher'
+      ? { actorUserId: req.user.id }
+      : {};
+
+    const logs = await AuditLog.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: 1000
+    });
+
+    res.json(
+      logs.map((log) => ({
+        id: log.id,
+        createdAt: log.createdAt,
+        actorUserId: log.actorUserId,
+        action: log.action,
+        entityType: log.entityType,
+        entityId: log.entityId,
+        metadata: log.metadata,
+      }))
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/students.csv', async (req, res, next) => {
   try {
     const assignments = await getTeacherAssignments(req);

@@ -8,7 +8,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +15,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  downloadPdfReport,
+  downloadTextReport,
+} from '../../services/reportExport';
 
 import {
   addGroupMember,
@@ -24,9 +27,11 @@ import {
   archiveLesson,
   createGroup,
   createLesson,
+  getActivityLogs,
   getActivityLogsCsv,
   getPendingGroupChecks,
   getReportSummary,
+  getStudentReport,
   getStudentReportCsv,
   getSummaryReportText,
   getTeacherDashboard,
@@ -114,6 +119,8 @@ export default function TeacherHome({ navigation }) {
   const [groups, setGroups] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [reportSummary, setReportSummary] = useState(null);
+  const [studentReport, setStudentReport] = useState([]);
+  const [activityLogs, setActivityLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -138,7 +145,7 @@ export default function TeacherHome({ navigation }) {
     setLoading(true);
     setError('');
     try {
-      const [dash, monitor, quiz, pending, groupData, lessonData, summary, reviews] = await Promise.all([
+      const [dash, monitor, quiz, pending, groupData, lessonData, summary, reviews, students, logs] = await Promise.all([
         getTeacherDashboard(),
         getTeacherMonitoringStats(),
         getTeacherQuizPerformance(),
@@ -147,6 +154,8 @@ export default function TeacherHome({ navigation }) {
         getTeacherLessons(),
         getReportSummary(),
         getTeacherReviews(),
+        getStudentReport(),
+        getActivityLogs(),
       ]);
       setDashboard(dash);
       setMonitoring(monitor);
@@ -156,6 +165,8 @@ export default function TeacherHome({ navigation }) {
       setLessons(lessonData.lessons || []);
       setReportSummary(summary);
       setReviewQueue(reviews || { summary: {}, writing: [], speech: [] });
+      setStudentReport(students || []);
+      setActivityLogs(logs || []);
     } catch (err) {
       setError(err.message || 'Unable to load teacher workspace.');
     } finally {
@@ -321,17 +332,8 @@ async function handleLogout() {
     }
   }
 
-  async function shareReport(title, loader) {
-    setBusy(title);
-    try {
-      const message = await loader();
-      await Share.share({ title, message });
-    } catch (err) {
-      Alert.alert('Reports', err.message || 'Unable to generate report.');
-    } finally {
-      setBusy('');
-    }
-  }
+
+
 
   function renderTabs() {
     return (
@@ -725,9 +727,46 @@ async function handleLogout() {
         <SectionCard>
           <Text style={styles.cardTitle}>Reports</Text>
           <Text style={styles.body}>Generate current teacher reports and share them using your device.</Text>
-          <SmallButton disabled={Boolean(busy)} onPress={() => shareReport('Student CSV', getStudentReportCsv)}>Export Student CSV</SmallButton>
-          <SmallButton disabled={Boolean(busy)} onPress={() => shareReport('Activity Logs CSV', getActivityLogsCsv)}>Export Activity Logs</SmallButton>
-          <SmallButton disabled={Boolean(busy)} onPress={() => shareReport('Tuklas Talino Summary Report', getSummaryReportText)}>Download Summary Report</SmallButton>
+          <SmallButton
+            disabled={Boolean(busy)}
+            onPress={() =>
+              downloadTextReport({
+                title: 'Student CSV',
+                filename: 'tuklas-talino-students.csv',
+                mimeType: 'text/csv',
+                loader: getStudentReportCsv,
+              })
+            }
+          >
+            Export Student CSV
+          </SmallButton>
+
+          <SmallButton
+            disabled={Boolean(busy)}
+            onPress={() =>
+              downloadTextReport({
+                title: 'Activity Logs CSV',
+                filename: 'tuklas-talino-activity-logs.csv',
+                mimeType: 'text/csv',
+                loader: getActivityLogsCsv,
+              })
+            }
+          >
+            Export Activity Logs
+          </SmallButton>
+
+          <SmallButton
+            disabled={Boolean(busy)}
+            onPress={() =>
+              downloadPdfReport({
+                title: 'Tuklas Talino Summary Report',
+                filename: 'tuklas-talino-summary-report.pdf',
+                loader: getSummaryReportText,
+              })
+            }
+          >
+            Download Summary Report
+          </SmallButton>
         </SectionCard>
         <SectionCard>
           <Text style={styles.cardTitle}>Current Summary</Text>
@@ -736,6 +775,64 @@ async function handleLogout() {
           <Text style={styles.body}>Total XP: {reportSummary?.totalXp || 0}</Text>
           <Text style={styles.body}>Average progress: {reportSummary?.averageProgress || 0}%</Text>
           <Text style={styles.body}>Completions: {reportSummary?.completions || 0}</Text>
+        </SectionCard>
+
+        <SectionCard>
+          <Text style={styles.cardTitle}>Student Report</Text>
+
+          {studentReport.map((student) => (
+            <View key={student.id} style={styles.studentCard}>
+              <View style={styles.flex}>
+                <Text style={styles.rowTitle}>{student.name}</Text>
+                <Text style={styles.muted}>
+                  {student.studentCode} • Grade {student.gradeLevel} • {student.section}
+                </Text>
+                <Text style={styles.muted}>
+                  XP: {student.xp} • {student.status}
+                </Text>
+
+                <Text style={styles.muted}>
+                  Last Active:{' '}
+                  {student.lastActiveAt
+                    ? new Date(student.lastActiveAt).toLocaleString()
+                    : 'Never'}
+                </Text>
+              </View>
+            </View>
+          ))}
+
+          {!studentReport.length && (
+            <Text style={styles.muted}>No students available.</Text>
+          )}
+        </SectionCard>
+
+        <SectionCard>
+          <Text style={styles.cardTitle}>Recent Activity Logs</Text>
+
+          {activityLogs.map((log) => (
+            <View key={log.id} style={styles.studentCard}>
+              <View style={styles.flex}>
+                <Text style={styles.rowTitle}>
+                  {String(log.action || '')
+                    .replace(/_/g, ' ')
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
+                </Text>
+
+                <Text style={styles.muted}>
+                  {log.entityType || 'System'}
+                  {log.entityId != null ? ` • ID ${log.entityId}` : ''}
+                </Text>
+
+                <Text style={styles.muted}>
+                  {new Date(log.createdAt).toLocaleString()}
+                </Text>
+              </View>
+            </View>
+          ))}
+
+          {!activityLogs.length && (
+            <Text style={styles.muted}>No activity logs available.</Text>
+          )}
         </SectionCard>
       </>
     );

@@ -14,9 +14,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { File, Paths } from 'expo-file-system';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
+import {
+  downloadPdfReport,
+  downloadTextReport,
+} from '../../services/reportExport';
 
 import {
   archiveStudent,
@@ -291,187 +292,6 @@ async function executeVerifiedAction() {
         'Verification Failed',
         err?.message || 'Incorrect password.'
       );
-    }
-  }
-
-  function escapeReportHtml(value = '') {
-    return String(value || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function summaryReportHtml(title, reportText) {
-    const rows = String(reportText || '')
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const separatorIndex = line.indexOf(':');
-
-        if (separatorIndex === -1) {
-          return `
-            <tr>
-              <th colspan="2" class="section-row">${escapeReportHtml(line)}</th>
-            </tr>
-          `;
-        }
-
-        const label = line.slice(0, separatorIndex).trim();
-        const value = line.slice(separatorIndex + 1).trim();
-
-        return `
-          <tr>
-            <th>${escapeReportHtml(label)}</th>
-            <td>${escapeReportHtml(value)}</td>
-          </tr>
-        `;
-      })
-      .join('');
-
-    return `
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 28px;
-              color: #0F172A;
-            }
-            h1 {
-              color: #166534;
-              font-size: 24px;
-              margin-bottom: 18px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 12px;
-            }
-            th,
-            td {
-              border: 1px solid #CBD5E1;
-              padding: 10px 12px;
-              font-size: 13px;
-              line-height: 1.4;
-              text-align: left;
-              vertical-align: top;
-            }
-            th {
-              width: 38%;
-              background: #ECFDF5;
-              color: #14532D;
-              font-weight: 700;
-            }
-            td {
-              background: #FFFFFF;
-              color: #0F172A;
-            }
-            .section-row {
-              width: auto;
-              background: #166534;
-              color: #FFFFFF;
-              text-align: center;
-              font-size: 15px;
-            }
-          </style>
-        </head>
-        <body>
-          <h1>${escapeReportHtml(title)}</h1>
-          <table>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-  }
-
-  async function shareReportFile(fileUri, options) {
-    const canShare = await Sharing.isAvailableAsync();
-
-    if (!canShare) {
-      Alert.alert(
-        'Report Generated',
-        `The report file was created here: ${fileUri}`
-      );
-      return;
-    }
-
-    await Sharing.shareAsync(fileUri, options);
-  }
-
-  async function saveReportFile(sourceFile, title, filename, options) {
-    await shareReportFile(sourceFile.uri, {
-      ...options,
-      dialogTitle: `${title} - Save ${filename}`,
-    });
-  }
-
-  async function downloadTextReport(title, filename, mimeType, loader) {
-    setBusy(title);
-
-    try {
-      const content = await loader();
-      const file = new File(Paths.cache, filename);
-
-      if (file.exists) {
-        file.delete();
-      }
-
-      file.write(content || '');
-
-      await saveReportFile(file, title, filename, {
-        dialogTitle: title,
-        mimeType,
-        UTI: mimeType === 'text/csv'
-          ? 'public.comma-separated-values-text'
-          : 'public.plain-text',
-      });
-    } catch (err) {
-      Alert.alert(
-        'Reports',
-        err.message || 'Unable to download report file.'
-      );
-    } finally {
-      setBusy('');
-    }
-  }
-
-  async function downloadPdfReport(title, filename, loader) {
-    setBusy(title);
-
-    try {
-      const content = await loader();
-      const printed = await Print.printToFileAsync({
-        html: summaryReportHtml(title, content),
-      });
-
-      const generatedFile = new File(printed.uri);
-      const pdfFile = new File(Paths.cache, filename);
-
-      if (pdfFile.exists) {
-        pdfFile.delete();
-      }
-
-      generatedFile.copy(pdfFile);
-
-      await saveReportFile(pdfFile, title, filename, {
-        dialogTitle: title,
-        mimeType: 'application/pdf',
-        UTI: 'com.adobe.pdf',
-      });
-    } catch (err) {
-      Alert.alert(
-        'Reports',
-        err.message || 'Unable to download PDF report.'
-      );
-    } finally {
-      setBusy('');
     }
   }
 
@@ -995,33 +815,33 @@ function renderLogs() {
           </Text>
           <Button
             disabled={Boolean(busy)}
-            onPress={() => downloadTextReport(
-              'Student CSV',
-              'tuklas-talino-students.csv',
-              'text/csv',
-              getStudentReportCsv
-            )}
+            onPress={() => downloadTextReport({
+              title: 'Student CSV',
+              filename: 'tuklas-talino-students.csv',
+              mimeType: 'text/csv',
+              loader: getStudentReportCsv,
+            })}
           >
             Export CSV
           </Button>
           <Button
             disabled={Boolean(busy)}
-            onPress={() => downloadTextReport(
-              'Activity Logs CSV',
-              'tuklas-talino-activity-logs.csv',
-              'text/csv',
-              getActivityLogsCsv
-            )}
+            onPress={() => downloadTextReport({
+              title: 'Activity Logs CSV',
+              filename: 'tuklas-talino-activity-logs.csv',
+              mimeType: 'text/csv',
+              loader: getActivityLogsCsv,
+            })}
           >
             Export Logs
           </Button>
           <Button
             disabled={Boolean(busy)}
-            onPress={() => downloadPdfReport(
-              'Tuklas Talino Summary Report',
-              'tuklas-talino-summary-report.pdf',
-              getSummaryReportText
-            )}
+            onPress={() => downloadPdfReport({
+              title: 'Tuklas Talino Summary Report',
+              filename: 'tuklas-talino-summary-report.pdf',
+              loader: getSummaryReportText,
+            })}
           >
             Download Summary Report
           </Button>
