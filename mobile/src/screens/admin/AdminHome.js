@@ -18,6 +18,11 @@ import {
   downloadPdfReport,
   downloadTextReport,
 } from '../../services/reportExport';
+import {
+  normalizeSpaces,
+  studentErrors,
+  teacherErrors,
+} from '../../utils/accountValidation';
 
 import {
   archiveStudent,
@@ -140,9 +145,15 @@ const [auditSearch, setAuditSearch] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [accountType, setAccountType] = useState('student');
-  const [studentForm, setStudentForm] = useState({ studentCode: '', name: '', gradeLevel: '1', section: '' });
-  const [teacherForm, setTeacherForm] = useState({ username: '', name: '' });
+  const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
+  const [teacherForm, setTeacherForm] = useState({ name: '', email: '' });
   const [assignmentForm, setAssignmentForm] = useState({ teacherId: '', gradeLevel: '1', section: '' });
+
+  const studentValidation = studentErrors(studentForm);
+  const teacherValidation = teacherErrors(teacherForm);
+
+  const studentFormValid = !Object.values(studentValidation).some(Boolean);
+  const teacherFormValid = !Object.values(teacherValidation).some(Boolean);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -387,18 +398,47 @@ async function executeVerifiedAction() {
         </View>
         {accountType === 'student' ? (
           <>
-            <Field label="Student ID" placeholder="STU-2026-001" value={studentForm.studentCode} onChangeText={(studentCode) => setStudentForm((current) => ({ ...current, studentCode: studentCode.toUpperCase() }))} />
-            <Field label="Name" value={studentForm.name} onChangeText={(name) => setStudentForm((current) => ({ ...current, name }))} />
+            <Field
+              label="Name"
+              value={studentForm.name}
+              onChangeText={(name) =>
+                setStudentForm((current) => ({
+                  ...current,
+                  name: normalizeSpaces(name),
+                }))
+              }
+            />
+            {studentValidation.name && (
+              <Text style={styles.errorText}>
+                Enter a valid student name.
+              </Text>
+            )}
             <Field label="Grade" value={studentForm.gradeLevel} keyboardType="numeric" onChangeText={(gradeLevel) => setStudentForm((current) => ({ ...current, gradeLevel }))} />
-            <Field label="Section" value={studentForm.section} onChangeText={(section) => setStudentForm((current) => ({ ...current, section }))} />
-            <Button disabled={Boolean(busy)} onPress={async () => {
+            <Field
+              label="Section"
+              value={studentForm.section}
+              onChangeText={(section) =>
+                setStudentForm((current) => ({
+                  ...current,
+                  section: normalizeSpaces(section),
+                }))
+              }
+            />
+            {studentValidation.section && (
+              <Text style={styles.errorText}>
+                Section is required.
+              </Text>
+            )}
+            <Button
+              disabled={Boolean(busy) || !studentFormValid}
+              onPress={async () => {
               const saved = await run('create-student', () => createStudentAccount({ ...studentForm, gradeLevel: Number(studentForm.gradeLevel), avatar: '🧒' }), 'Student account created.');
 
               if (saved) {
                 setRecentCredentials(current => [
                   {
                     type: 'Student',
-                    username: studentForm.studentCode,
+                    username: saved.username,
                     pin: saved.temporaryPin
                   },
                   ...current
@@ -406,10 +446,10 @@ async function executeVerifiedAction() {
 
                 Alert.alert(
                   'Student Account Created',
-                  `Temporary PIN\n\n${saved.temporaryPin}\n\nStudent must change this PIN on first login.`
+                  `Username\n\n${saved.username}\n\nTemporary PIN\n\n${saved.temporaryPin}\n\nStudent must change this PIN on first login.`
                 );
 
-                setStudentForm({ studentCode: '', name: '', gradeLevel: '1', section: '' });
+                setStudentForm({ name: '', gradeLevel: '1', section: '' });
               }
             }}>Create Student</Button>
           </>
@@ -422,33 +462,53 @@ async function executeVerifiedAction() {
             </Text>
 
             <Field
-              label="Username (unique)"
-              value={teacherForm.username}
-              onChangeText={(username) =>
-                setTeacherForm((current) => ({ ...current, username }))
-              }
-            />
-
-            <Field
               label="Teacher Name"
               value={teacherForm.name}
               onChangeText={(name) =>
-                setTeacherForm((current) => ({ ...current, name }))
+                setTeacherForm((current) => ({
+                  ...current,
+                  name: normalizeSpaces(name),
+                }))
               }
             />
+            {teacherValidation.name && (
+              <Text style={styles.errorText}>
+                Enter a valid teacher name.
+              </Text>
+            )}
+
+            <Field
+              label="Email (optional)"
+              value={teacherForm.email}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              onChangeText={(email) =>
+                setTeacherForm((current) => ({
+                  ...current,
+                  email: email.trim(),
+                }))
+              }
+            />
+            {teacherValidation.email && (
+              <Text style={styles.errorText}>
+                Invalid email address.
+              </Text>
+            )}
 
             <Text style={styles.helperText}>
-              Employee code will be generated automatically from the username.
+              Username (TCH-YYYY-XXX) and employee code are generated automatically.
             </Text>
 
-            <Button disabled={Boolean(busy)} onPress={async () => {
+            <Button
+              disabled={Boolean(busy) || !teacherFormValid}
+              onPress={async () => {
               const saved = await run('create-teacher', () => createTeacherAccount(teacherForm), 'Teacher account created.');
 
               if (saved) {
                 setRecentCredentials(current => [
                   {
                     type: 'Teacher',
-                    username: teacherForm.username,
+                    username: saved.username,
                     pin: saved.temporaryPin
                   },
                   ...current
@@ -456,10 +516,10 @@ async function executeVerifiedAction() {
 
                 Alert.alert(
                   'Teacher Account Created',
-                  `Temporary PIN\n\n${saved.temporaryPin}\n\nTeacher must change this PIN on first login.`
+                  `Username\n\n${saved.username}\n\nTemporary PIN\n\n${saved.temporaryPin}\n\nTeacher must change this PIN on first login.`
                 );
 
-                setTeacherForm({ username: '', name: '' });
+                setTeacherForm({ name: '', email: '' });
               }
             }}>Add Teacher</Button>
           </>
@@ -1582,6 +1642,14 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 16,
   },
+
+  errorText: {
+    color: '#DC2626',
+    fontSize: 12,
+    marginTop: -6,
+    marginBottom: 8,
+  },
+
 
   helperText: {
     color: '#64748B',

@@ -33,6 +33,7 @@ import {
   levelTitleForXp
 } from '../services/progress.service.js';
 import { audit } from '../services/audit.service.js';
+import { generateStudentCode } from '../services/accountCode.service.js';
 import { studentSchema, validate } from '../validators/common.js';
 
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
@@ -653,17 +654,27 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
     const role = await Role.findOne({ where: { name: 'student' } });
 
     const temporaryPin = generateTemporaryPin();
+    const studentCode = await generateStudentCode();
 
     const user = await User.create({
-  roleId: role.id,
-  username: body.studentCode,
-  displayName: body.name,
-  passwordHash: await bcrypt.hash(temporaryPin, 12),
-  mustChangePassword: true
-});
-    const student = await Student.create({ userId: user.id, ...body });
+      roleId: role.id,
+      username: studentCode,
+      displayName: body.name,
+      passwordHash: await bcrypt.hash(temporaryPin, 12),
+      mustChangePassword: true
+    });
+
+    const student = await Student.create({
+      ...body,
+      userId: user.id,
+      studentCode
+    });
     await audit(req.user.id, 'student.create', 'student', student.id);
-    res.status(201).json({ student, temporaryPin });
+    res.status(201).json({
+      student,
+      username: studentCode,
+      temporaryPin
+    });
   } catch (err) { next(err); }
 });
 

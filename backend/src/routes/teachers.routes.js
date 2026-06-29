@@ -22,6 +22,7 @@ import {
 import { authenticate, requirePasswordChanged, requireRole } from '../middleware/auth.js';
 import { teacherSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
+import { generateTeacherCode } from '../services/accountCode.service.js';
 
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
 function generateTemporaryPin() {
@@ -119,21 +120,28 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
 
     const temporaryPin = generateTemporaryPin();
 
-    const generatedEmployeeCode =
-      body.employeeCode ||
-      `EMP-${body.username.toUpperCase()}`;
+    const teacherCode = await generateTeacherCode();
 
     const user = await User.create({
-  roleId: role.id,
-  username: body.username,
-  email: body.email,
-  displayName: body.name,
-  passwordHash: await bcrypt.hash(temporaryPin, 12),
-  mustChangePassword: true
-});
-    const teacher = await Teacher.create({ userId: user.id, employeeCode: generatedEmployeeCode, name: body.name });
+      roleId: role.id,
+      username: teacherCode,
+      email: body.email,
+      displayName: body.name,
+      passwordHash: await bcrypt.hash(temporaryPin, 12),
+      mustChangePassword: true
+    });
+
+    const teacher = await Teacher.create({
+      userId: user.id,
+      employeeCode: teacherCode,
+      name: body.name
+    });
     await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
-    res.status(201).json({ teacher, temporaryPin });
+    res.status(201).json({
+      teacher,
+      username: teacherCode,
+      temporaryPin
+    });
   } catch (err) {
     if (err?.name === "SequelizeUniqueConstraintError") {
       const field = err.errors?.[0]?.path;

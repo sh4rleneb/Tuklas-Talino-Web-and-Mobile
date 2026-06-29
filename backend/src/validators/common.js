@@ -97,13 +97,6 @@ export const loginSchema = z.object({
 });
 
 export const studentSchema = z.object({
-  studentCode: z
-    .string()
-    .trim()
-    .regex(
-      /^STU-\d{4}-\d{3}$/,
-      'Student ID must follow the format STU-2025-001.'
-    ),
   name: z.string().trim().min(2, 'Name cannot be empty.'),
   gradeLevel: z.number().int().min(1).max(6),
   section: z.string().trim().min(1, 'Section cannot be empty.'),
@@ -112,8 +105,6 @@ export const studentSchema = z.object({
 });
 
 export const teacherSchema = z.object({
-  username: z.string().trim().min(3, 'Username cannot be empty.'),
-  employeeCode: z.string().trim().min(3, 'Employee code cannot be empty.').optional(),
   name: z.string().trim().min(2, 'Name cannot be empty.'),
   email: z.string().email().optional().nullable(),
   password: z.string().min(6).optional()
