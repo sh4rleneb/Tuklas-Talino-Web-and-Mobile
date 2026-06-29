@@ -2574,7 +2574,7 @@ const stepScrollRef = useRef(null);
                     onPress={() =>
                       navigation.navigate('Lessons', {
                         screen: 'StudentJuniorLessonDetail',
-                        params: { lessonId: nextLesson.id },
+                        params: { lessonId: nextLesson.id, homeRoute },
                       })
                     }
                   >
