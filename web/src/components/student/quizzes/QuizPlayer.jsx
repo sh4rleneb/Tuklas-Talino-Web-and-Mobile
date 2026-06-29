@@ -84,11 +84,10 @@ export default function QuizPlayer({
 
   function finishQuiz() {
     if (answeredCount < questions.length) {
-      const proceed = window.confirm(
-        `May ${answeredCount}/${questions.length} ka pang nasagutan. I-submit na ba ang quiz kahit may hindi pa nasasagutan?`
+      alert(
+        `Sagutin muna ang lahat ng tanong. ${answeredCount} sa ${questions.length} ang nasagutan mo.`
       );
-
-      if (!proceed) return;
+      return;
     }
 
     submitQuiz(quiz, answers);

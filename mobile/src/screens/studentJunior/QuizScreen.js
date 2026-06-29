@@ -21,7 +21,7 @@ function quizCatalog(dashboard) {
     (lesson.activities || [])
       .filter((activity) => activity.type === 'mcq' && (activity.questions || []).length)
       .map((activity) => ({
-        quizId: `lesson-${lesson.id}-activity-${activity.id}`,
+        quizId: `lesson-${lesson.id}`,
         lessonId: lesson.id,
         lessonTitle: lesson.title,
         title: activity.title || `${lesson.title} Quiz`,
@@ -61,6 +61,8 @@ export default function QuizScreen({ navigation }) {
   const quizzes = useMemo(() => quizCatalog(dashboard), [dashboard]);
   const student = dashboard?.student;
   const attempts = dashboard?.quizAttempts || {};
+  const activeQuizAttempts = activeQuiz ? (attempts[activeQuiz.quizId] || []) : [];
+  const canRetry = activeQuizAttempts.length < 2;
   const question = activeQuiz?.questions?.[questionIndex];
   const selectedOptionId = question ? answers[question.id] : null;
 
@@ -111,7 +113,10 @@ export default function QuizScreen({ navigation }) {
           review,
         },
       });
-      setResult(data.quizResult || null);
+      const quizResult = data.quizResult || null;
+      const attempts = data.quizAttempts || [];
+      const review = attempts.length ? (attempts[attempts.length - 1].review || []) : [];
+      setResult(quizResult ? { ...quizResult, review } : null);
       await load();
     } catch (err) {
       Alert.alert('Quiz', err.message || 'Unable to submit this quiz.');
@@ -185,6 +190,42 @@ export default function QuizScreen({ navigation }) {
               ⭐ +{result.xpAwarded || 0} XP Earned
             </Text>
 
+            {(result.review || []).length > 0 && (
+              <View style={{ width: '100%', marginTop: 18 }}>
+                <Text style={{ color: '#166534', fontWeight: '900', fontSize: 15, marginBottom: 8 }}>
+                  📝 Review Your Answers
+                </Text>
+                {(result.review || []).map((item, index) => (
+                  <View
+                    key={item.questionId || index}
+                    style={{
+                      backgroundColor: item.isCorrect ? '#DCFCE7' : '#FEE2E2',
+                      borderRadius: 14,
+                      padding: 12,
+                      marginBottom: 8,
+                      borderWidth: 1,
+                      borderColor: item.isCorrect ? '#22C55E' : '#EF4444',
+                    }}
+                  >
+                    <Text style={{ fontWeight: '900', color: '#0F172A', fontSize: 14 }}>
+                      {index + 1}. {item.isCorrect ? '✅ Correct' : '❌ Incorrect'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {canRetry && (
+              <TouchableOpacity
+                style={[styles.primaryButton, { marginTop: 10, backgroundColor: '#166534' }]}
+                onPress={() => {
+                  setResult(null);
+                  setAnswers({});
+                  setQuestionIndex(0);
+                }}
+              >
+                <Text style={styles.primaryButtonText}>🔄 Try Again</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={closeQuiz}
@@ -215,6 +256,14 @@ export default function QuizScreen({ navigation }) {
                   </TouchableOpacity>
                 );
               })}
+              {questionIndex > 0 && (
+                <TouchableOpacity
+                  style={[styles.primaryButton, { backgroundColor: '#64748B', marginBottom: 8 }]}
+                  onPress={() => setQuestionIndex((i) => Math.max(0, i - 1))}
+                >
+                  <Text style={styles.primaryButtonText}>← Previous</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.primaryButton, !selectedOptionId && styles.buttonDisabled]}
                 onPress={continueQuiz}
