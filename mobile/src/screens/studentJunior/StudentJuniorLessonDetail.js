@@ -496,6 +496,8 @@ const stepScrollRef = useRef(null);
   };
 
   const homeRoute = route?.params?.homeRoute || 'StudentTabs';
+  const lessonsListScreen =
+    homeRoute === 'StudentSeniorTabs' ? 'StudentSeniorLessonsHome' : 'LessonsList';
 
   async function startRecording() {
     try {
@@ -2596,7 +2598,7 @@ const stepScrollRef = useRef(null);
                     style={styles.finishCardButton}
                     onPress={() =>
                       navigation.navigate('Lessons', {
-                        screen: 'LessonsList',
+                        screen: lessonsListScreen,
                       })
                     }
                   >
