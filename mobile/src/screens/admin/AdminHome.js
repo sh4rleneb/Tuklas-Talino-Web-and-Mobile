@@ -634,7 +634,17 @@ async function executeVerifiedAction() {
             <Text style={styles.rowTitle}>{student.avatar || '🧒'} {student.name}</Text>
             <Text style={styles.muted}>{student.studentCode} • Grade {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
             <View style={styles.choiceRow}>
-              <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`student-pin-${student.id}`, () => resetStudentPassword(student.id), (data) => `Temporary PIN: ${data.temporaryPin}`)}>Reset Password</Button>
+              <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
+                keyword: 'STUDENTPIN',
+                reasonPlaceholder: 'e.g. Student forgot their password',
+                action: (reason) => run(
+                  `student-pin-${student.id}`,
+                  () => resetStudentPassword(student.id, {
+                    reason
+                  }),
+                  (data) => `Temporary PIN: ${data.temporaryPin}`
+                )
+              })}>Reset Password</Button>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'RESET',
                 reasonPlaceholder: 'e.g. Student needs to restart their lesson progress',
