@@ -337,7 +337,7 @@ async function dashboardPayload(student) {
         include: [{ model: GroupTask, as: 'tasks' }]
       }]
     }),
-    listMissionsForStudent(student)
+    listMissionsForStudent(student.id)
   ]);
 
   const completedIds = new Set(completed.map(c => c.lessonId));

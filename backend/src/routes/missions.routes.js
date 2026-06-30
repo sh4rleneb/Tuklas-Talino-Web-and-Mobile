@@ -72,13 +72,34 @@ function missionPayload(missionId, mission, completions, completedLessons) {
   };
 }
 
+function missionStudentId(value) {
+  const id = Number(
+    typeof value === 'object' && value !== null
+      ? value.id
+      : value
+  );
+
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 async function listMissionsForStudent(studentId) {
+  const normalizedStudentId = missionStudentId(studentId);
+
+  if (!normalizedStudentId) {
+    return {
+      missions: Object.entries(MISSION_CATALOG).map(([missionId, mission]) =>
+        missionPayload(missionId, mission, [], 0)
+      ),
+      completions: []
+    };
+  }
+
   const [completions, completedLessons] = await Promise.all([
     MissionCompletion.findAll({
-      where: { studentId },
+      where: { studentId: normalizedStudentId },
       order: [['completedAt', 'DESC']]
     }),
-    CompletedLesson.count({ where: { studentId } })
+    CompletedLesson.count({ where: { studentId: normalizedStudentId } })
   ]);
 
   return {
