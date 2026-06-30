@@ -32,7 +32,6 @@ import {
   assignTeacher,
   createStudentAccount,
   createTeacherAccount,
-  getActivityLogsCsv,
   getActiveStudents,
   getActiveTeachers,
   getAdminAccounts,
@@ -42,7 +41,6 @@ import {
   getArchivedStudents,
   getArchivedTeachers,
   getReportSummary,
-  getStudentReportCsv,
   getSummaryReportCsv,
   getSummaryReportPdf,
   reactivateStudent,
@@ -980,40 +978,8 @@ function renderLogs() {
         <Card>
           <Text style={styles.cardTitle}>Admin Reports</Text>
           <Text style={styles.body}>
-            Download reports in their correct formats: CSV for exports and PDF for the summary.
+            Download the administrator summary report in CSV or PDF format.
           </Text>
-
-          <Button
-            disabled={Boolean(busy)}
-            onPress={() =>
-              runExport('admin-student-csv', () =>
-                downloadTextReport({
-                  title: 'Student CSV',
-                  filename: 'tuklas-talino-students.csv',
-                  mimeType: 'text/csv',
-                  loader: getStudentReportCsv,
-                })
-              )
-            }
-          >
-            {busy === 'admin-student-csv' ? 'Preparing Student CSV...' : 'Export Student CSV'}
-          </Button>
-
-          <Button
-            disabled={Boolean(busy)}
-            onPress={() =>
-              runExport('admin-activity-logs-csv', () =>
-                downloadTextReport({
-                  title: 'Activity Logs CSV',
-                  filename: 'tuklas-talino-activity-logs.csv',
-                  mimeType: 'text/csv',
-                  loader: getActivityLogsCsv,
-                })
-              )
-            }
-          >
-            {busy === 'admin-activity-logs-csv' ? 'Preparing Activity Logs CSV...' : 'Export Activity Logs CSV'}
-          </Button>
 
           <Button
             disabled={Boolean(busy)}

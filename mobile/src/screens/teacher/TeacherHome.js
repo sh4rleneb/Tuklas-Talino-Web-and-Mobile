@@ -30,7 +30,6 @@ import {
   getPendingGroupChecks,
   getReportSummary,
   getStudentReport,
-  getStudentReportCsv,
   getSummaryReportCsv,
   getSummaryReportPdf,
   getTeacherDashboard,
@@ -1405,20 +1404,6 @@ async function handleLogout() {
             disabled={Boolean(busy)}
             onPress={() =>
               downloadTextReport({
-                title: 'Teacher Student CSV',
-                filename: 'teacher-student-report.csv',
-                mimeType: 'text/csv',
-                loader: getStudentReportCsv,
-              })
-            }
-          >
-            Download Student CSV
-          </SmallButton>
-
-          <SmallButton
-            disabled={Boolean(busy)}
-            onPress={() =>
-              downloadTextReport({
                 title: 'Teacher Summary CSV',
                 filename: 'teacher-summary-report.csv',
                 mimeType: 'text/csv',
@@ -1426,7 +1411,7 @@ async function handleLogout() {
               })
             }
           >
-            Download Summary CSV
+            Download Teacher Summary CSV
           </SmallButton>
 
           <SmallButton
@@ -1439,7 +1424,7 @@ async function handleLogout() {
               })
             }
           >
-            Download Summary PDF
+            Download Teacher Summary PDF
           </SmallButton>
         </SectionCard>
 

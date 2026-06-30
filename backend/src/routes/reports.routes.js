@@ -616,7 +616,8 @@ router.get('/summary.pdf', async (req, res, next) => {
 
     const doc = new PDFDocument({
       margin:40,
-      size:'A4'
+      size:'A4',
+      bufferPages: true
     });
 
     res.setHeader(
