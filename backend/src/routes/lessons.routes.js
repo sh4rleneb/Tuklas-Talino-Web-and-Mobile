@@ -25,6 +25,8 @@ import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
 import { assertSafeContentPayload, assertSafeText } from '../validators/contentSafety.js';
+const MAX_QUIZ_ATTEMPTS = 5;
+
 const router = Router();
 
 function plainBadgeResponse(badge) {
@@ -1241,6 +1243,24 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       selectedOptionId: row.selectedOptionId,
       isCorrect: row.isCorrect,
     }));
+
+    const existingQuizAttempts = await QuizAttempt.findAll({
+      where: {
+        studentId: req.student.id,
+        lessonId: lesson.id,
+        quizId,
+      },
+      order: [['attemptNo', 'ASC']]
+    });
+
+    if (existingQuizAttempts.length >= MAX_QUIZ_ATTEMPTS) {
+      return res.status(409).json({
+        message: `You already used all ${MAX_QUIZ_ATTEMPTS} quiz attempts. Review your answers instead.`,
+        maxAttempts: MAX_QUIZ_ATTEMPTS,
+        attemptsUsed: existingQuizAttempts.length,
+        quizAttempts: existingQuizAttempts
+      });
+    }
 
     const attempt = await QuizAttempt.create({
       studentId: req.student.id,

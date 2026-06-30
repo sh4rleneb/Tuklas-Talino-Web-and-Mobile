@@ -39,14 +39,30 @@ const MISSION_CATALOG = {
     xp: 20,
     perChallenge: true,
     requiredCompletedLessons: 5
-  }
+  },
+  'sound-and-say': {
+    title: 'Sound and Say',
+    xp: 15,
+    requiredCompletedLessons: 1,
+    perChallenge: true
+  },
 };
 
-function missionIsCompleted(completions, missionId) {
-  return completions.some((completion) => {
+const MAX_MISSION_ATTEMPTS = 5;
+
+function missionAttemptCompletions(completions, missionId) {
+  return completions.filter((completion) => {
     const completionId = String(completion.missionId || '');
     return completionId === missionId || completionId.startsWith(`${missionId}:`);
   });
+}
+
+function missionAttemptCount(completions, missionId) {
+  return missionAttemptCompletions(completions, missionId).length;
+}
+
+function missionIsCompleted(completions, missionId, maxAttempts = MAX_MISSION_ATTEMPTS) {
+  return missionAttemptCount(completions, missionId) >= maxAttempts;
 }
 
 function missionPayload(missionId, mission, completions, completedLessons) {
@@ -139,6 +155,21 @@ async function completeMission(req, res, next, options = {}) {
           mission: availability
         });
       }
+    }
+
+    const existingMissionCompletions = await MissionCompletion.findAll({
+      where: { studentId: student.id }
+    });
+    const maxAttempts = Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS);
+    const existingMissionAttempts = missionAttemptCount(existingMissionCompletions, missionId);
+
+    if (existingMissionAttempts >= maxAttempts) {
+      return res.status(409).json({
+        message: `You already used all ${maxAttempts} attempts for this mission.`,
+        attemptsUsed: existingMissionAttempts,
+        maxAttempts,
+        attemptsRemaining: 0
+      });
     }
 
     const challengeKey = mission.perChallenge

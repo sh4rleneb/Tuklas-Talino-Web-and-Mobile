@@ -16,6 +16,8 @@ import { api } from '../../api/client';
 import Card from '../../components/Card';
 import { colors } from '../../styles/theme';
 
+const MAX_QUIZ_ATTEMPTS = 5;
+
 function quizCatalog(dashboard) {
   return (dashboard?.lessons || []).flatMap((lesson) =>
     (lesson.activities || [])
@@ -62,7 +64,7 @@ export default function QuizScreen({ navigation }) {
   const student = dashboard?.student;
   const attempts = dashboard?.quizAttempts || {};
   const activeQuizAttempts = activeQuiz ? (attempts[activeQuiz.quizId] || []) : [];
-  const canRetry = activeQuizAttempts.length < 2;
+  const canRetry = activeQuizAttempts.length < MAX_QUIZ_ATTEMPTS;
   const question = activeQuiz?.questions?.[questionIndex];
   const selectedOptionId = question ? answers[question.id] : null;
 
@@ -315,21 +317,21 @@ export default function QuizScreen({ navigation }) {
       ) : quizzes.length ? (
         quizzes.map((quiz) => {
           const quizAttempts = attempts[quiz.quizId] || [];
-          const limitReached = quizAttempts.length >= 2;
+          const limitReached = quizAttempts.length >= MAX_QUIZ_ATTEMPTS;
           const best = quizAttempts.reduce((value, attempt) => Math.max(value, attempt.percent || 0), 0);
 
           return (
             <Card key={quiz.quizId}>
               <Text style={styles.quizTitle}>{quiz.title}</Text>
               <Text style={styles.muted}>{quiz.lessonTitle}</Text>
-              <Text style={styles.quizMeta}>{quiz.questions.length} questions • {quizAttempts.length}/2 attempts</Text>
+              <Text style={styles.quizMeta}>{quiz.questions.length} questions • {quizAttempts.length}/{MAX_QUIZ_ATTEMPTS} attempts</Text>
               {quizAttempts.length > 0 && <Text style={styles.quizBest}>Best score: {best}%</Text>}
               <TouchableOpacity
                 style={[styles.primaryButton, limitReached && styles.buttonDisabled]}
                 onPress={() => startQuiz(quiz)}
                 disabled={limitReached}
               >
-                <Text style={styles.primaryButtonText}>{limitReached ? 'Attempt Limit Reached' : 'Start Quiz'}</Text>
+                <Text style={styles.primaryButtonText}>{limitReached ? '5 Attempts Used' : 'Start Quiz'}</Text>
               </TouchableOpacity>
             </Card>
           );
