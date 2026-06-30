@@ -7,9 +7,11 @@ export function normalizeSpaces(value = '') {
 export function isValidName(value = '') {
   const name = normalizeSpaces(value);
 
+  // Allow letters, spaces, apostrophes, periods and hyphens.
+  // Require at least one alphabetic character.
   return (
     name.length >= 2 &&
-    /^[A-Za-zÀ-ÿ'. -]+$/.test(name)
+    /^(?=.*[A-Za-zÀ-ÿ])[A-Za-zÀ-ÿ'. -]+$/.test(name)
   );
 }
 

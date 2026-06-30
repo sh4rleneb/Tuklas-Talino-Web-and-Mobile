@@ -1,4 +1,5 @@
 import { Audio } from 'expo-av';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { File, Paths } from 'expo-file-system';
 
 import { api } from '../api/client';
@@ -53,9 +54,13 @@ export async function speakText(text, callbacks = {}) {
 
     console.log('[TTS] Writing file:', fileUri);
 
-    audioFile.write(base64Audio, {
-      encoding: 'base64',
-    });
+    await LegacyFileSystem.writeAsStringAsync(
+      fileUri,
+      base64Audio,
+      {
+        encoding: 'base64',
+      }
+    );
 
     if (currentSound) {
       await currentSound.unloadAsync();
@@ -108,10 +113,22 @@ export async function speakText(text, callbacks = {}) {
   } catch (err) {
     isRequestInProgress = false;
 
-    console.error(
-      'Mobile Google TTS failed:',
-      err
-    );
+    console.log('========== TTS ERROR ==========');
+    console.log('Message:', err?.message);
+    console.log('Name:', err?.name);
+
+    if (err?.response) {
+      console.log('Response:', JSON.stringify(err.response, null, 2));
+    }
+
+    if (err?.details) {
+      console.log('Details:', JSON.stringify(err.details, null, 2));
+    }
+
+    console.log('Raw Error:', err);
+    console.log('===============================');
+
+    console.error('Mobile Google TTS failed:', err);
   }
 }
 

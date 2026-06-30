@@ -49,6 +49,7 @@ export async function api(path, options = {}) {
     const error = new Error(data.message || 'Request failed');
     error.status = response.status;
     error.code = data.code;
+    error.details = data.details;
     throw error;
   }
 
@@ -74,4 +75,36 @@ export async function apiText(path, options = {}) {
   }
 
   return text;
+}
+
+
+export async function apiBinary(path, options = {}) {
+  const token = await getToken();
+
+  const headers = {
+    ...(options.headers || {}),
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error('Request failed');
+  }
+
+
+  const blob = await response.blob();
+
+  console.log('[apiBinary]');
+  console.log('type=', blob.type);
+  console.log('size=', blob.size);
+
+  return blob;
+
 }

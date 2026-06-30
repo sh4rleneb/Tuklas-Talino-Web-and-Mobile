@@ -1467,6 +1467,8 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
         taskId,
         content,
         feedback: 'Tama ang sagot. Na-award na ang XP.',
+        reviewStatus: 'auto_checked',
+        score: 100,
       });
 
       const xpAwarded = 10;
@@ -1509,6 +1511,8 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
       content,
       feedback:
         'Salamat sa iyong sagot. Naka-save na ito para sa pagsusuri ng guro.',
+      reviewStatus: 'pending',
+      score: null,
     });
 
     notifyTeacherAndLeaderboard({

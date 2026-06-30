@@ -1242,14 +1242,15 @@ if (role === 'admin') {
   }
 
   async function loadTeacherDashboard() {
-    const [dash, monitoring, groups, students, lessons, quizPerformance, pendingGroupChecks] = await Promise.all([
+    const [dash, monitoring, groups, students, lessons, quizPerformance, pendingGroupChecks, teacherReviews] = await Promise.all([
       api('/teachers/dashboard'),
       api('/teachers/monitoring/stats'),
       api('/groups'),
       api('/students?status=active'),
       api('/lessons'),
       api('/teachers/quiz-performance'),
-      api('/groups/task-completions/pending')
+      api('/groups/task-completions/pending'),
+      api('/teachers/reviews/writing-speech')
     ]);
 
     const sortedLessons = [...(lessons.lessons || [])].sort((a, b) => {
@@ -1269,7 +1270,8 @@ if (role === 'admin') {
       students: students.students || [],
       lessons: sortedLessons,
       quizPerformance: quizPerformance || { summary: {}, rows: [] },
-      pendingGroupChecks: pendingGroupChecks || { summary: {}, rows: [] }
+      pendingGroupChecks: pendingGroupChecks || { summary: {}, rows: [] },
+      teacherReviews: teacherReviews || { summary: {}, writing: [], speech: [] }
     });
   }
 
@@ -1313,6 +1315,31 @@ if (role === 'admin') {
       });
 
       notify(`${row.groupName || 'Group'} task was rejected and returned for revision.`);
+      await loadTeacherDashboard();
+    });
+  }
+
+  async function teacherGradeWritingSubmission(submissionId, payload = {}) {
+    if (!submissionId) {
+      notify('Missing writing submission details.', 'warn');
+      return;
+    }
+
+    const score = Number(payload.score);
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      notify('Score must be a whole number from 1 to 10.', 'warn');
+      return;
+    }
+
+    const feedback = String(payload.feedback || '').trim();
+
+    await safeRun(async () => {
+      const data = await api(`/teachers/reviews/writing/${submissionId}`, {
+        method: 'PATCH',
+        body: { score, feedback }
+      });
+
+      notify(data.message || `Writing grade saved. Student earned +${data.xpAwarded || 0} XP.`);
       await loadTeacherDashboard();
     });
   }
@@ -3935,6 +3962,7 @@ async function archiveTeacher(id) {
           exportStudentsCSV={exportStudentsCSV}
           exportLogsCSV={exportLogsCSV}
           downloadSummaryReport={downloadSummaryReport}
+          gradeWritingSubmission={teacherGradeWritingSubmission}
         />
       </Screen>
 

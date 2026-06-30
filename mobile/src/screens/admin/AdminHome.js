@@ -43,7 +43,8 @@ import {
   getArchivedTeachers,
   getReportSummary,
   getStudentReportCsv,
-  getSummaryReportText,
+  getSummaryReportCsv,
+  getSummaryReportPdf,
   reactivateStudent,
   reactivateTeacher,
   removeTeacherAssignment,
@@ -934,6 +935,25 @@ function renderLogs() {
     );
   }
 
+  async function runExport(action, task) {
+    if (busy) {
+      return;
+    }
+
+    setBusy(action);
+
+    try {
+      await task();
+    } catch (err) {
+      Alert.alert(
+        'Export failed',
+        err?.response?.data?.message || err?.message || 'Unable to complete the export.'
+      );
+    } finally {
+      setBusy('');
+    }
+  }
+
   function renderReports() {
     return (
       <>
@@ -942,37 +962,68 @@ function renderLogs() {
           <Text style={styles.body}>
             Download reports in their correct formats: CSV for exports and PDF for the summary.
           </Text>
+
           <Button
             disabled={Boolean(busy)}
-            onPress={() => downloadTextReport({
-              title: 'Student CSV',
-              filename: 'tuklas-talino-students.csv',
-              mimeType: 'text/csv',
-              loader: getStudentReportCsv,
-            })}
+            onPress={() =>
+              runExport('admin-student-csv', () =>
+                downloadTextReport({
+                  title: 'Student CSV',
+                  filename: 'tuklas-talino-students.csv',
+                  mimeType: 'text/csv',
+                  loader: getStudentReportCsv,
+                })
+              )
+            }
           >
-            Export CSV
+            {busy === 'admin-student-csv' ? 'Preparing Student CSV...' : 'Export Student CSV'}
           </Button>
+
           <Button
             disabled={Boolean(busy)}
-            onPress={() => downloadTextReport({
-              title: 'Activity Logs CSV',
-              filename: 'tuklas-talino-activity-logs.csv',
-              mimeType: 'text/csv',
-              loader: getActivityLogsCsv,
-            })}
+            onPress={() =>
+              runExport('admin-activity-logs-csv', () =>
+                downloadTextReport({
+                  title: 'Activity Logs CSV',
+                  filename: 'tuklas-talino-activity-logs.csv',
+                  mimeType: 'text/csv',
+                  loader: getActivityLogsCsv,
+                })
+              )
+            }
           >
-            Export Logs
+            {busy === 'admin-activity-logs-csv' ? 'Preparing Activity Logs CSV...' : 'Export Activity Logs CSV'}
           </Button>
+
           <Button
             disabled={Boolean(busy)}
-            onPress={() => downloadPdfReport({
-              title: 'Tuklas Talino Summary Report',
-              filename: 'tuklas-talino-summary-report.pdf',
-              loader: getSummaryReportText,
-            })}
+            onPress={() =>
+              runExport('admin-summary-csv', () =>
+                downloadTextReport({
+                  title: 'Administrator Summary CSV',
+                  filename: 'admin-summary-report.csv',
+                  mimeType: 'text/csv',
+                  loader: getSummaryReportCsv,
+                })
+              )
+            }
           >
-            Download Summary Report
+            {busy === 'admin-summary-csv' ? 'Preparing Summary CSV...' : 'Download Summary CSV'}
+          </Button>
+
+          <Button
+            disabled={Boolean(busy)}
+            onPress={() =>
+              runExport('admin-summary-pdf', () =>
+                downloadPdfReport({
+                  title: 'Administrator Summary Report',
+                  filename: 'admin-summary-report.pdf',
+                  loader: getSummaryReportPdf,
+                })
+              )
+            }
+          >
+            {busy === 'admin-summary-pdf' ? 'Preparing Summary PDF...' : 'Download Summary PDF'}
           </Button>
         </Card>
         <Card>

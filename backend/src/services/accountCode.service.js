@@ -1,43 +1,44 @@
-import { Op } from 'sequelize';
-import { Student, Teacher } from '../models/index.js';
-
-function nextCode(previousCode, prefix, year) {
-  if (!previousCode) {
-    return `${prefix}-${year}-001`;
-  }
-
-  const match = previousCode.match(/-(\d{3})$/);
-  const sequence = match ? Number(match[1]) + 1 : 1;
-
-  return `${prefix}-${year}-${String(sequence).padStart(3, '0')}`;
-}
+import { Student, Teacher, User } from '../models/index.js';
 
 export async function generateStudentCode() {
   const year = new Date().getFullYear();
 
-  const latest = await Student.findOne({
-    where: {
-      studentCode: {
-        [Op.like]: `STU-${year}-%`,
-      },
-    },
-    order: [['studentCode', 'DESC']],
-  });
+  let sequence = 1;
 
-  return nextCode(latest?.studentCode, 'STU', year);
+  while (true) {
+    const candidate =
+      `STU-${year}-${String(sequence).padStart(3, '0')}`;
+
+    const exists = await User.findOne({
+      where: { username: candidate },
+      attributes: ['id'],
+    });
+
+    if (!exists) {
+      return candidate;
+    }
+
+    sequence++;
+  }
 }
-
 export async function generateTeacherCode() {
   const year = new Date().getFullYear();
 
-  const latest = await Teacher.findOne({
-    where: {
-      employeeCode: {
-        [Op.like]: `TCH-${year}-%`,
-      },
-    },
-    order: [['employeeCode', 'DESC']],
-  });
+  let sequence = 1;
 
-  return nextCode(latest?.employeeCode, 'TCH', year);
+  while (true) {
+    const candidate =
+      `TCH-${year}-${String(sequence).padStart(3, '0')}`;
+
+    const exists = await User.findOne({
+      where: { username: candidate },
+      attributes: ['id'],
+    });
+
+    if (!exists) {
+      return candidate;
+    }
+
+    sequence++;
+  }
 }

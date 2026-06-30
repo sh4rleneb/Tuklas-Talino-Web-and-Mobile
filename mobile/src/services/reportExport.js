@@ -1,5 +1,6 @@
+import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { File, Paths } from 'expo-file-system';
-import * as Print from 'expo-print';
+import { getToken } from '../api/client';
 import * as Sharing from 'expo-sharing';
 
 function escapeReportHtml(value = '') {
@@ -48,16 +49,37 @@ export function summaryReportHtml(title, reportText) {
   `;
 }
 
+
 async function shareReportFile(fileUri, options) {
-  if (!(await Sharing.isAvailableAsync())) {
+  console.log('[SHARE] fileUri =', fileUri);
+
+  const available = await Sharing.isAvailableAsync();
+  console.log('[SHARE] available =', available);
+
+  if (!available) {
+    console.log('[SHARE] Sharing unavailable');
     return fileUri;
   }
 
-  await Sharing.shareAsync(fileUri, options);
+  try {
+    const result = await Sharing.shareAsync(fileUri, options);
+    console.log('[SHARE] result =', result);
+  } catch (err) {
+    console.log('========== SHARE ERROR ==========');
+    console.log('Message:', err?.message);
+    console.log('Name:', err?.name);
+    console.log('Raw:', err);
+    console.log('=================================');
+    throw err;
+  }
+
   return fileUri;
 }
 
 async function saveReportFile(file, title, filename, options) {
+  console.log('[SAVE] file.uri =', file.uri);
+  console.log('[SAVE] exists =', file.exists);
+
   return shareReportFile(file.uri, {
     ...options,
     dialogTitle: `${title} - Save ${filename}`,
@@ -89,25 +111,36 @@ export async function downloadTextReport({
   });
 }
 
+
 export async function downloadPdfReport({
   title,
   filename,
   loader,
 }) {
-  const content = await loader();
+  void loader;
 
-  const printed = await Print.printToFileAsync({
-    html: summaryReportHtml(title, content),
-  });
+  const token = await getToken();
 
-  const source = new File(printed.uri);
-  const file = new File(Paths.cache, filename);
+  const destination = new File(Paths.cache, filename);
 
-  if (file.exists) {
-    file.delete();
+  if (destination.exists) {
+    destination.delete();
   }
 
-  source.copy(file);
+  console.log('[PDF] Downloading with File.downloadFileAsync');
+
+  const file = await File.downloadFileAsync(
+    'https://tuklastalino.com/api/reports/summary.pdf',
+    destination,
+    {
+      idempotent: true,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  console.log('[PDF] Saved to:', file.uri);
 
   return saveReportFile(file, title, filename, {
     mimeType: 'application/pdf',

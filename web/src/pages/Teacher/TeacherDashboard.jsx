@@ -166,11 +166,13 @@ export default function TeacherDashboard({
   deleteLesson,
   exportStudentsCSV,
   exportLogsCSV,
-  downloadSummaryReport
+  downloadSummaryReport,
+  gradeWritingSubmission
 }) {
   const [teacherTab, setTeacherTab] = useState('lessons');
   const [openGroupTools, setOpenGroupTools] = useState({});
   const [openGroupProgress, setOpenGroupProgress] = useState({});
+  const [gradingWritingIds, setGradingWritingIds] = useState({});
 
   const lessons = data.lessons || [];
   const groups = data.groups || [];
@@ -180,7 +182,18 @@ export default function TeacherDashboard({
   const stats = data.stats || {};
   const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
   const pendingGroupChecks = data.pendingGroupChecks || { summary: {}, rows: [] };
+  const teacherReviews = data.teacherReviews || { summary: {}, writing: [], speech: [] };
   const pendingGroupRows = asArray(pendingGroupChecks.rows).filter(row => Number(row.gradeLevel || 0) >= 3);
+  const writingReviewRows = asArray(teacherReviews.writing);
+  const pendingWritingReviewRows = writingReviewRows.filter(item =>
+    String(item.reviewStatus || 'pending').toLowerCase() === 'pending' &&
+    Boolean(item.reviewEligible) &&
+    Number(item.student?.gradeLevel || item.lesson?.gradeLevel || 0) >= 3
+  );
+  const gradedWritingReviewRows = writingReviewRows
+    .filter(item => String(item.reviewStatus || '').toLowerCase() === 'graded')
+    .slice(0, 8);
+  const speechReviewRows = asArray(teacherReviews.speech).slice(0, 12);
   const groupProgressRows = buildGroupProgressRows(groups);
   const teacherName = user?.displayName || 'Teacher 1';
 
@@ -305,9 +318,147 @@ export default function TeacherDashboard({
     return 'Not Submitted';
   }
 
+  function formatReviewDate(value) {
+    if (!value) return 'No date yet';
+    try {
+      return new Date(value).toLocaleString();
+    } catch {
+      return 'No date yet';
+    }
+  }
+
+  function handleSaveWritingGrade(item) {
+    if (!item?.id || !gradeWritingSubmission) return;
+
+    const scoreInputId = `writing-review-score-${item.id}`;
+    const feedbackInputId = `writing-review-feedback-${item.id}`;
+    const score = Number(document.getElementById(scoreInputId)?.value || 0);
+    const feedback = String(document.getElementById(feedbackInputId)?.value || '').trim();
+
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      window.alert('Please select a score from 1 to 10.');
+      return;
+    }
+
+    setGradingWritingIds(prev => ({ ...prev, [item.id]: true }));
+
+    Promise.resolve(gradeWritingSubmission(item.id, { score, feedback }))
+      .finally(() => {
+        setGradingWritingIds(prev => ({ ...prev, [item.id]: false }));
+      });
+  }
+
+  function renderReviewIdentity(item, statusLabel = '') {
+    const grade = item.student?.gradeLevel || item.lesson?.gradeLevel || '-';
+    const section = item.student?.section || 'No section';
+    const subject = item.lesson?.subject || 'Subject';
+    const lessonTitle = item.lesson?.title || 'Lesson';
+
+    return (
+      <div className="teacher-review-identity-block">
+        <div className="teacher-review-identity-main">
+          <div>
+            <strong className="teacher-review-student-name">{item.student?.name || 'Student'}</strong>
+            <div className="teacher-review-chip-row">
+              <span>Grade {grade}</span>
+              <span>{section}</span>
+              <span>{subject}</span>
+            </div>
+          </div>
+          {statusLabel ? <span className="lms-mini-pill">{statusLabel}</span> : null}
+        </div>
+
+        <div className="teacher-review-lesson-box">
+          <span>Lesson</span>
+          <strong>{lessonTitle}</strong>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="teacher-redesign-page">
       <TeacherRedesignStyles />
+
+      <style>{`
+        /* wr-c-review-identity-visibility-polish */
+        .teacher-review-identity-block {
+          background: linear-gradient(135deg, #f0fdf4 0%, #fffbea 100%);
+          border: 1px solid #bbf7d0;
+          border-radius: 22px;
+          padding: 15px 16px;
+          margin-bottom: 14px;
+          box-shadow: 0 10px 24px rgba(0, 107, 63, 0.08);
+        }
+
+        .teacher-review-identity-main {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .teacher-review-student-name {
+          display: block;
+          color: #061733;
+          font-size: 1.28rem;
+          line-height: 1.15;
+          margin-bottom: 10px;
+        }
+
+        .teacher-review-chip-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .teacher-review-chip-row span {
+          display: inline-flex;
+          align-items: center;
+          border-radius: 999px;
+          background: #ffffff;
+          border: 1px solid #b7ecd0;
+          color: #006b3f;
+          font-size: 0.86rem;
+          font-weight: 950;
+          padding: 7px 10px;
+          letter-spacing: 0.01em;
+        }
+
+        .teacher-review-lesson-box {
+          display: grid;
+          gap: 5px;
+          background: #ffffff;
+          border: 1px solid #d9f4e5;
+          border-radius: 16px;
+          padding: 11px 12px;
+        }
+
+        .teacher-review-lesson-box span {
+          color: #64748b;
+          font-size: 0.74rem;
+          font-weight: 950;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .teacher-review-lesson-box strong {
+          color: #0f172a;
+          font-size: 1rem;
+          line-height: 1.35;
+        }
+
+        @media (max-width: 760px) {
+          .teacher-review-identity-main {
+            flex-direction: column;
+          }
+
+          .teacher-review-student-name {
+            font-size: 1.14rem;
+          }
+        }
+      `}</style>
 
       <style>{`
         /* teacher-verification-tab-polish */
@@ -1007,6 +1158,15 @@ export default function TeacherDashboard({
             </button>
 
             <button
+              className={`teacher-sidebar-button ${teacherTab === 'reviews' ? 'active' : ''}`}
+              type="button"
+              onClick={() => openTab('reviews')}
+            >
+              <span>📝</span>
+              <strong>Writing & Speech Reviews</strong>
+            </button>
+
+            <button
               className={`teacher-sidebar-button ${teacherTab === 'assessments' ? 'active' : ''}`}
               type="button"
               onClick={() => openTab('assessments')}
@@ -1119,7 +1279,227 @@ export default function TeacherDashboard({
           </section>
         )}
 
-        
+
+        {teacherTab === 'reviews' && (
+          <section className="teacher-workspace-card clean-groups-panel teacher-review-panel" id="teacher-writing-speech-reviews">
+            <div className="teacher-workspace-heading">
+              <div>
+                <div className="lms-section-label">Writing & Speech Reviews</div>
+                <h2>Student Submission Review</h2>
+                <p>Grade Grade 3–6 writing submissions and view speech attempts from your assigned learners.</p>
+              </div>
+            </div>
+
+            <div className="teacher-monitor-summary" style={{ marginBottom: 18 }}>
+              <div><span>Pending Writing</span><strong>{pendingWritingReviewRows.length}</strong></div>
+              <div><span>Graded Writing</span><strong>{gradedWritingReviewRows.length}</strong></div>
+              <div><span>Speech Attempts</span><strong>{speechReviewRows.length}</strong></div>
+            </div>
+
+            <div className="teacher-tool-box" style={{ marginBottom: 18 }}>
+              <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
+                <div>
+                  <div className="lms-section-label">Writing Submissions</div>
+                  <h3>Writing Submissions for Grading</h3>
+                  <p>Only Grade 3–6 pending writing submissions can be graded here. The score from 1–10 becomes the XP earned.</p>
+                </div>
+                <span className="lms-mini-pill">✍️ {pendingWritingReviewRows.length} pending</span>
+              </div>
+
+              {pendingWritingReviewRows.length ? (
+                <div className="teacher-groups-grid">
+                  {pendingWritingReviewRows.map(item => {
+                    const scoreInputId = `writing-review-score-${item.id}`;
+                    const feedbackInputId = `writing-review-feedback-${item.id}`;
+                    const isSaving = Boolean(gradingWritingIds[item.id]);
+
+                    return (
+                      <div className="teacher-group-item" key={`writing-review-${item.id}`}>
+                        {renderReviewIdentity(item, 'Pending Grade')}
+
+                        <div className="teacher-group-submission-evidence">
+                          <div>
+                            <span>Submitted Date</span>
+                            <strong>{formatReviewDate(item.submittedAt)}</strong>
+                          </div>
+
+                          <div>
+                            <span>XP Rule</span>
+                            <strong>Score 1–10 = +1 to +10 XP</strong>
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: 14 }}>
+                          <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Writing Prompt</div>
+                          <div className="teacher-group-detail-section" style={{ minHeight: 'auto' }}>
+                            {item.task?.prompt || 'No prompt available.'}
+                          </div>
+                        </div>
+
+                        <div style={{ marginTop: 14 }}>
+                          <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Student Answer</div>
+                          <div className="teacher-group-detail-section" style={{ minHeight: 'auto', whiteSpace: 'pre-wrap' }}>
+                            {item.content || 'No answer submitted.'}
+                          </div>
+                        </div>
+
+                        <label className="g46-ref-muted" htmlFor={scoreInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
+                          Score
+                          <select
+                            id={scoreInputId}
+                            className="input-field"
+                            defaultValue=""
+                            style={{ width: '100%', minHeight: 46 }}
+                          >
+                            <option value="">Select score from 1 to 10</option>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(score => (
+                              <option key={score} value={score}>{score}/10 → +{score} XP</option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="g46-ref-muted" htmlFor={feedbackInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
+                          Teacher Feedback
+                          <textarea
+                            id={feedbackInputId}
+                            className="input-field"
+                            placeholder="Optional feedback for the student. Do not include XP here; the system will show XP separately."
+                            rows="3"
+                            style={{
+                              width: '100%',
+                              minHeight: 92,
+                              resize: 'vertical',
+                              fontSize: 15,
+                              lineHeight: 1.45,
+                              padding: '13px 15px'
+                            }}
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          className="lms-main-action full"
+                          style={{ marginTop: 12 }}
+                          disabled={isSaving}
+                          onClick={() => handleSaveWritingGrade(item)}
+                        >
+                          {isSaving ? 'Saving Grade...' : 'Save Grade'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="teacher-empty-panel">
+                  <div>✅</div>
+                  <strong>No pending writing submissions.</strong>
+                  <p>Grade 3–6 writing submissions waiting for grades will appear here.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="teacher-tool-box" style={{ marginBottom: 18 }}>
+              <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
+                <div>
+                  <div className="lms-section-label">Speech Review</div>
+                  <h3>Speech Attempts</h3>
+                  <p>View student speech attempts, transcript, target text, and recording if available.</p>
+                </div>
+                <span className="lms-mini-pill">🎙️ {speechReviewRows.length} attempts</span>
+              </div>
+
+              {speechReviewRows.length ? (
+                <div className="teacher-groups-grid">
+                  {speechReviewRows.map(item => (
+                    <div className="teacher-group-item" key={`speech-review-${item.id}`}>
+                      {renderReviewIdentity(item, 'View Only')}
+
+                      <div className="teacher-group-submission-evidence">
+                        <div>
+                          <span>Submitted Date</span>
+                          <strong>{formatReviewDate(item.submittedAt)}</strong>
+                        </div>
+
+                        <div>
+                          <span>Speech Score</span>
+                          <strong>{item.score ?? 'Not scored'}</strong>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 14 }}>
+                        <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Target Text</div>
+                        <div className="teacher-group-detail-section" style={{ minHeight: 'auto' }}>
+                          {item.task?.targetText || 'No target text available.'}
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 14 }}>
+                        <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Student Transcript</div>
+                        <div className="teacher-group-detail-section" style={{ minHeight: 'auto', whiteSpace: 'pre-wrap' }}>
+                          {item.transcript || 'No transcript available.'}
+                        </div>
+                      </div>
+
+                      {item.audioUrl ? (
+                        <a
+                          className="teacher-file-link"
+                          href={item.audioUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ marginTop: 12, display: 'inline-flex' }}
+                        >
+                          ▶ Play Recording
+                        </a>
+                      ) : (
+                        <p className="g46-ref-muted" style={{ marginTop: 12 }}>No recording link available.</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="teacher-empty-panel">
+                  <div>🎙️</div>
+                  <strong>No speech attempts yet.</strong>
+                  <p>Speech attempts from assigned learners will appear here.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="teacher-tool-box">
+              <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
+                <div>
+                  <div className="lms-section-label">Recently Graded</div>
+                  <h3>Recently Graded Writing</h3>
+                </div>
+                <span className="lms-mini-pill">⭐ {gradedWritingReviewRows.length} graded</span>
+              </div>
+
+              {gradedWritingReviewRows.length ? (
+                <div className="teacher-group-progress-list">
+                  {gradedWritingReviewRows.map(item => (
+                    <div className="teacher-group-progress-card" key={`graded-writing-${item.id}`}>
+                      {renderReviewIdentity(item, `Score ${item.score ?? '-'} / 10`)}
+                      <div style={{ marginTop: 10 }}>
+                        <span className="lms-mini-pill">+{item.xpPreview ?? item.score ?? 0} XP</span>
+                      </div>
+                      <p className="g46-ref-muted" style={{ marginTop: 10 }}>
+                        Feedback: {item.feedback || 'No feedback added.'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="teacher-empty-panel">
+                  <div>📝</div>
+                  <strong>No graded writing yet.</strong>
+                  <p>Saved grades will appear here after teachers review writing submissions.</p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+
         {teacherTab === 'verification' && (
           <section className="teacher-workspace-card clean-groups-panel teacher-verification-panel" id="teacher-verification-panel">
             <div className="teacher-workspace-heading">
@@ -1392,7 +1772,7 @@ export default function TeacherDashboard({
               )}
             </div>
 
-            
+
           </section>
         )}
 

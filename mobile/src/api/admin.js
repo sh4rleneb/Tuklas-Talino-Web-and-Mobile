@@ -1,4 +1,4 @@
-import { api, apiText } from './client';
+import { api, apiText, apiBinary } from './client';
 
 export async function getAdminStats() {
   return api('/admin/stats');
@@ -120,6 +120,10 @@ export async function getActivityLogsCsv() {
   return apiText('/reports/activity-logs.csv');
 }
 
-export async function getSummaryReportText() {
-  return apiText('/reports/summary.txt');
+export async function getSummaryReportCsv() {
+  return apiText('/reports/summary.csv');
+}
+
+export async function getSummaryReportPdf() {
+  return apiBinary('/reports/summary.pdf');
 }
