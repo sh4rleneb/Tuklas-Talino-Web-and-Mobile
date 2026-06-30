@@ -108,6 +108,167 @@ function SmallButton({ children, onPress, tone = 'green', disabled = false }) {
   );
 }
 
+
+function cleanTeacherLessonText(value) {
+  return String(value ?? '').trim();
+}
+
+function getTeacherActivityValidationMessage(activity = {}) {
+  const type = cleanTeacherLessonText(
+    activity.type || activity.gawainType || activity.activityType
+  ).toLowerCase();
+
+  const hasAnyText = (...keys) =>
+    keys.some((key) => cleanTeacherLessonText(activity[key]));
+
+  const optionTexts = [
+    activity.optionA,
+    activity.optionB,
+    activity.optionC,
+    activity.optionD,
+    ...(Array.isArray(activity.options)
+      ? activity.options.map((option) => option?.text ?? option?.label ?? option?.value ?? option)
+      : []),
+  ]
+    .map(cleanTeacherLessonText)
+    .filter(Boolean);
+
+  if (!type) {
+    return 'Select an activity type.';
+  }
+
+  if (
+    type.includes('mcq') ||
+    type.includes('quiz') ||
+    type.includes('multiple') ||
+    type.includes('choice')
+  ) {
+    if (!hasAnyText('question', 'prompt')) {
+      return 'Add a quiz question.';
+    }
+
+    if (optionTexts.length < 2) {
+      return 'Add at least two answer options.';
+    }
+
+    return '';
+  }
+
+  if (type.includes('speech') || type.includes('bigkas') || type.includes('read')) {
+    if (!hasAnyText('targetText', 'content', 'prompt')) {
+      return 'Add the speech text students must read.';
+    }
+
+    return '';
+  }
+
+  if (type.includes('writing') || type.includes('sulat') || type.includes('essay')) {
+    if (!hasAnyText('prompt', 'content', 'question')) {
+      return 'Add writing instructions for the student.';
+    }
+
+    return '';
+  }
+
+  if (type.includes('matching') || type.includes('pair')) {
+    const pairs = Array.isArray(activity.pairs) ? activity.pairs : [];
+    const validPairs = pairs.filter(
+      (pair) => cleanTeacherLessonText(pair?.left) && cleanTeacherLessonText(pair?.right)
+    );
+
+    if (pairs.length && validPairs.length < 2) {
+      return 'Add at least two complete matching pairs.';
+    }
+
+    if (!pairs.length && !hasAnyText('content', 'prompt')) {
+      return 'Add matching instructions or matching pairs.';
+    }
+
+    return '';
+  }
+
+  if (type.includes('vocab') || type.includes('word')) {
+    const words = Array.isArray(activity.words) ? activity.words : [];
+    const validWords = words.filter(
+      (word) => cleanTeacherLessonText(word?.word) && cleanTeacherLessonText(word?.meaning)
+    );
+
+    if (words.length && validWords.length < 1) {
+      return 'Add at least one vocabulary word with a meaning.';
+    }
+
+    if (!words.length && !hasAnyText('content', 'prompt')) {
+      return 'Add vocabulary content before saving.';
+    }
+
+    return '';
+  }
+
+  if (!hasAnyText('title', 'prompt', 'content', 'question', 'targetText')) {
+    return 'Add the required activity instructions before saving.';
+  }
+
+  return '';
+}
+
+function getTeacherLessonBuilderValidationMessage(draft = {}, activities = [], assignedGradeLevels = []) {
+  const gradeLevel = Number(draft.gradeLevel ?? draft.grade ?? 0);
+
+  if (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 6) {
+    return 'Select a valid Grade 1 to Grade 6 level.';
+  }
+
+  const assignedGrades = Array.isArray(assignedGradeLevels)
+    ? assignedGradeLevels.map((level) => Number(level)).filter(Boolean)
+    : [];
+
+  if (assignedGrades.length && !assignedGrades.includes(gradeLevel)) {
+    return 'You can only create lessons for your assigned grade level.';
+  }
+
+  if (!cleanTeacherLessonText(draft.title)) {
+    return 'Add a lesson title.';
+  }
+
+  const xpReward = Number(draft.xpReward ?? draft.xp ?? 20);
+
+  if (!Number.isFinite(xpReward) || xpReward < 1 || xpReward > 500) {
+    return 'Enter an XP reward from 1 to 500.';
+  }
+
+  const hasUploadedMaterial = Boolean(
+    draft.materialFile ||
+    draft.material ||
+    draft.file ||
+    draft.lessonPlanFile ||
+    draft.materialName ||
+    draft.fileName
+  );
+
+  if (
+    hasUploadedMaterial &&
+    !cleanTeacherLessonText(draft.layunin) &&
+    !cleanTeacherLessonText(draft.alamin) &&
+    !cleanTeacherLessonText(draft.aralin)
+  ) {
+    return 'Add a short Layunin, Alamin, or Aralin summary for uploaded material.';
+  }
+
+  const activityList = Array.isArray(activities)
+    ? activities
+    : Array.isArray(draft.activities)
+      ? draft.activities
+      : [];
+
+  for (const activity of activityList) {
+    const activityMessage = getTeacherActivityValidationMessage(activity);
+    if (activityMessage) return activityMessage;
+  }
+
+  return '';
+}
+
+
 export default function TeacherHome({ navigation }) {
   const insets = useSafeAreaInsets();
   const [section, setSection] = useState('dashboard');
@@ -243,6 +404,11 @@ async function handleLogout() {
 
   function addActivity() {
     const type = newActivity.type;
+    const activityValidationMessage = getTeacherActivityValidationMessage(newActivity);
+    if (activityValidationMessage) {
+      return Alert.alert('Activity Builder', activityValidationMessage);
+    }
+
     const title = newActivity.title.trim() || {
       infographic: 'Lesson Notes',
       writing: 'Writing Activity',
@@ -302,7 +468,36 @@ async function handleLogout() {
   }
 
   async function saveLesson(status) {
-    if (!draft.title.trim()) return Alert.alert('Lesson Builder', 'Add a lesson title.');
+    const derivedAssignedGrades = [
+      ...new Set([
+        ...(Array.isArray(dashboard?.assignedClasses)
+          ? dashboard.assignedClasses.map((item) => Number(item.gradeLevel || item.grade || 0))
+          : []),
+        ...groups.map((group) => Number(group.gradeLevel || group.grade || 0)),
+        ...groups.flatMap((group) =>
+          Array.isArray(group.members)
+            ? group.members.map((member) =>
+                Number(
+                  member?.gradeLevel ||
+                    member?.Student?.gradeLevel ||
+                    member?.student?.gradeLevel ||
+                    0
+                )
+              )
+            : []
+        ),
+        ...studentReport.map((student) => Number(student.gradeLevel || student.grade || 0)),
+      ].filter(Boolean)),
+    ];
+
+    const lessonValidationMessage = getTeacherLessonBuilderValidationMessage(
+      draft,
+      Array.isArray(draft.activities) ? draft.activities : [],
+      derivedAssignedGrades
+    );
+    if (lessonValidationMessage) {
+      return Alert.alert('Lesson Builder', lessonValidationMessage);
+    }
 
     const activities = [
       ...(draft.material ? [{
