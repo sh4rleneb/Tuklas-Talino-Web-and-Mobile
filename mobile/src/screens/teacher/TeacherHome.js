@@ -1305,7 +1305,7 @@ async function handleLogout() {
 
         <SectionCard>
           <Text style={styles.cardTitle}>Student Submissions</Text>
-          <Text style={styles.muted}>Canvas-style review: choose a learner to inspect their writing and speech submissions.</Text>
+          <Text style={styles.muted}>Choose a learner to inspect their writing and speech submissions.</Text>
 
           <TouchableOpacity
             style={[styles.canvasStudentButton, selectedReviewStudentKey === 'all' && styles.canvasStudentButtonActive]}

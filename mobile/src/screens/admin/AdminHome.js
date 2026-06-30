@@ -987,7 +987,7 @@ function renderLogs() {
               runExport('admin-summary-csv', () =>
                 downloadTextReport({
                   title: 'Administrator Summary CSV',
-                  filename: 'admin-summary-report.csv',
+                  filename: 'administrator-summary-report.csv',
                   mimeType: 'text/csv',
                   loader: getSummaryReportCsv,
                 })
@@ -1002,8 +1002,8 @@ function renderLogs() {
             onPress={() =>
               runExport('admin-summary-pdf', () =>
                 downloadPdfReport({
-                  title: 'Administrator Summary Report',
-                  filename: 'admin-summary-report.pdf',
+                  title: 'Administrator Summary PDF',
+                  filename: 'administrator-summary-report.pdf',
                   loader: getSummaryReportPdf,
                 })
               )

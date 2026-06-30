@@ -588,8 +588,8 @@ router.get('/summary.csv', async (req, res, next) => {
 
     res.attachment(
       req.role === 'admin'
-        ? 'admin-performance-report.csv'
-        : 'teacher-performance-report.csv'
+        ? 'administrator-summary-report.csv'
+        : 'teacher-summary-report.csv'
     );
 
     res.send(csv.join('\\n'));
@@ -604,448 +604,421 @@ router.get('/summary.csv', async (req, res, next) => {
 
 router.get('/summary.pdf', async (req, res, next) => {
   try {
-
     const assignments = await getTeacherAssignments(req);
     const where = assignedStudentWhere(assignments);
+    const rows = await loadStudentPerformance(where);
+    const summary = buildPerformanceSummary(rows);
 
-    const rows =
-      await loadStudentPerformance(where);
+    const reportTitle =
+      req.role === 'admin'
+        ? 'Administrator Summary Report'
+        : 'Teacher Summary Report';
 
-    const summary =
-      buildPerformanceSummary(rows);
+    const reportSubtitle =
+      req.role === 'admin'
+        ? 'System-wide learning analytics and student performance overview'
+        : 'Assigned classes, handled students, progress, and review needs';
+
+    const fileName =
+      req.role === 'admin'
+        ? 'administrator-summary-report.pdf'
+        : 'teacher-summary-report.pdf';
+
+    const classMap = new Map();
+
+    for (const row of rows) {
+      const key = `Grade ${row.student.gradeLevel} - ${row.student.section || 'N/A'}`;
+
+      if (!classMap.has(key)) {
+        classMap.set(key, {
+          label: key,
+          students: 0,
+          xp: 0,
+          quizTotal: 0,
+          completionTotal: 0,
+          pendingWriting: 0,
+          speechAttempts: 0
+        });
+      }
+
+      const item = classMap.get(key);
+      item.students += 1;
+      item.xp += Number(row.student.xp || 0);
+      item.quizTotal += Number(row.averageQuiz || 0);
+      item.completionTotal += Number(row.completionPercent || 0);
+      item.pendingWriting += Number(row.writingPending || 0);
+      item.speechAttempts += Number(row.speechAttempts || 0);
+    }
+
+    const classRows = Array.from(classMap.values())
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    const totals = rows.reduce(
+      (acc, row) => ({
+        pendingWriting: acc.pendingWriting + Number(row.writingPending || 0),
+        speechAttempts: acc.speechAttempts + Number(row.speechAttempts || 0)
+      }),
+      {
+        pendingWriting: 0,
+        speechAttempts: 0
+      }
+    );
 
     const doc = new PDFDocument({
-      margin:40,
-      size:'A4',
+      margin: 44,
+      size: 'A4',
       bufferPages: true
     });
 
-    res.setHeader(
-      'Content-Type',
-      'application/pdf'
-    );
-
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      'attachment; filename=' +
-      (
-        req.role === 'admin'
-          ? 'admin-summary-report.pdf'
-          : 'teacher-summary-report.pdf'
-      )
+      `attachment; filename="${fileName}"`
     );
 
     doc.pipe(res);
 
-    doc
-      .font('Helvetica-Bold')
-      .fontSize(24)
-      .text('TUKLAS TALINO', {
-        align: 'center'
-      });
+    const pageBottom = () =>
+      doc.page.height - doc.page.margins.bottom;
 
-    doc
-      .fontSize(16)
-      .text(
-        req.role === 'admin'
-          ? 'Administrator Student Performance Report'
-          : 'Teacher Student Performance Report',
+    const contentWidth = () =>
+      doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+    function ensureSpace(height = 80) {
+      if (doc.y + height > pageBottom()) {
+        doc.addPage();
+      }
+    }
+
+    function section(title) {
+      ensureSpace(48);
+
+      doc
+        .moveDown(0.7)
+        .font('Helvetica-Bold')
+        .fontSize(14)
+        .fillColor('#0F172A')
+        .text(title, {
+          width: contentWidth()
+        });
+
+      doc
+        .moveTo(doc.page.margins.left, doc.y + 4)
+        .lineTo(doc.page.width - doc.page.margins.right, doc.y + 4)
+        .strokeColor('#CBD5E1')
+        .lineWidth(1)
+        .stroke();
+
+      doc
+        .moveDown(0.8)
+        .fillColor('black');
+    }
+
+    function metric(label, value) {
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(10)
+        .fillColor('#334155')
+        .text(`${label}: `, {
+          continued: true
+        });
+
+      doc
+        .font('Helvetica')
+        .fillColor('#0F172A')
+        .text(String(value ?? '-'));
+
+      doc.fillColor('black');
+    }
+
+    function paragraph(value) {
+      ensureSpace(42);
+
+      doc
+        .font('Helvetica')
+        .fontSize(10)
+        .fillColor('#334155')
+        .text(String(value || ''), {
+          width: contentWidth(),
+          lineGap: 3
+        });
+
+      doc.fillColor('black');
+    }
+
+    function studentBlock(row) {
+      ensureSpace(112);
+
+      const s = row.student;
+      const status =
+        row.averageQuiz >= 90
+          ? 'Excellent'
+          : row.averageQuiz >= 75
+            ? 'Good'
+            : row.averageQuiz >= 60
+              ? 'Fair'
+              : 'Needs Support';
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(11)
+        .fillColor('#0F172A')
+        .text(s.name || 'Unnamed Student', {
+          width: contentWidth()
+        });
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#475569')
+        .text(
+          `${s.studentCode || 'No ID'} | Grade ${s.gradeLevel} - ${s.section || 'N/A'} | ${s.status || 'active'}`,
+          {
+            width: contentWidth()
+          }
+        );
+
+      doc.moveDown(0.25);
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#334155')
+        .text(
+          `XP: ${s.xp || 0} | Lessons Completed: ${row.completed || 0} | Completion: ${row.completionPercent || 0}% | Average Quiz: ${row.averageQuiz || 0}% | Best Quiz: ${row.bestQuiz || 0}%`,
+          {
+            width: contentWidth(),
+            lineGap: 2
+          }
+        );
+
+      doc.text(
+        `Pending Writing Reviews: ${row.writingPending || 0} | Speech Attempts: ${row.speechAttempts || 0} | Performance Rating: ${status}`,
         {
-          align: 'center'
+          width: contentWidth(),
+          lineGap: 2
         }
       );
 
-    doc.moveDown();
+      doc
+        .moveDown(0.45)
+        .moveTo(doc.page.margins.left, doc.y)
+        .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+        .strokeColor('#E2E8F0')
+        .lineWidth(0.8)
+        .stroke();
+
+      doc
+        .moveDown(0.6)
+        .fillColor('black');
+    }
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(22)
+      .fillColor('#0F172A')
+      .text('TUKLAS TALINO', {
+        align: 'center',
+        width: contentWidth()
+      });
+
+    doc
+      .moveDown(0.25)
+      .fontSize(16)
+      .text(reportTitle, {
+        align: 'center',
+        width: contentWidth()
+      });
+
+    doc
+      .moveDown(0.25)
+      .font('Helvetica')
+      .fontSize(10)
+      .fillColor('#475569')
+      .text(reportSubtitle, {
+        align: 'center',
+        width: contentWidth()
+      });
+
+    doc
+      .moveDown(1)
+      .fillColor('black');
+
+    section('Report Overview');
+
+    metric('Generated', new Date().toLocaleString());
+    metric('Students Included', summary.students);
+    metric('Average Quiz Score', `${summary.averageQuiz}%`);
+    metric('Average Lesson Completion', `${summary.averageCompletion}%`);
+    metric('Average XP Earned', summary.averageXp);
+    metric('Pending Writing Reviews', totals.pendingWriting);
+    metric('Speech Attempts', totals.speechAttempts);
+
+    if (summary.highest) {
+      metric('Top Performer', summary.highest.student.name);
+    }
+
+    metric('Students Requiring Intervention', summary.intervention.length);
+
+    if (req.role !== 'admin') {
+      section('Assigned Classes');
+
+      if (!classRows.length) {
+        paragraph('No assigned class data is available for this teacher yet.');
+      }
+
+      for (const item of classRows) {
+        const averageQuiz = item.students
+          ? Math.round(item.quizTotal / item.students)
+          : 0;
+
+        const averageCompletion = item.students
+          ? Math.round(item.completionTotal / item.students)
+          : 0;
+
+        ensureSpace(62);
+
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(11)
+          .fillColor('#0F172A')
+          .text(item.label);
+
+        doc
+          .font('Helvetica')
+          .fontSize(9)
+          .fillColor('#334155')
+          .text(
+            `Students: ${item.students} | Avg Quiz: ${averageQuiz}% | Avg Completion: ${averageCompletion}% | Pending Reviews: ${item.pendingWriting} | Speech Attempts: ${item.speechAttempts}`,
+            {
+              width: contentWidth(),
+              lineGap: 2
+            }
+          );
+
+        doc
+          .moveDown(0.55)
+          .fillColor('black');
+      }
+    }
+
+    section(
+      req.role === 'admin'
+        ? 'System Student Performance'
+        : 'Handled Student Performance'
+    );
+
+    if (!rows.length) {
+      paragraph('No student performance data is available yet.');
+    }
+
+    for (const row of rows) {
+      studentBlock(row);
+    }
+
+    section('Students Needing Intervention');
+
+    if (!summary.intervention.length) {
+      paragraph('No students currently require intervention based on the report thresholds.');
+    } else {
+      for (const row of summary.intervention) {
+        ensureSpace(28);
+
+        doc
+          .font('Helvetica')
+          .fontSize(9)
+          .fillColor('#334155')
+          .text(
+            `- ${row.student.name} | Grade ${row.student.gradeLevel} - ${row.student.section || 'N/A'} | Quiz: ${row.averageQuiz}% | Completion: ${row.completionPercent}%`,
+            {
+              width: contentWidth(),
+              lineGap: 2
+            }
+          );
+      }
+
+      doc.fillColor('black');
+    }
+
+    section('Overall Remarks');
+
+    let remarks = 'Intervention is recommended. Provide remediation and individualized support to improve learning outcomes.';
+
+    if (summary.averageQuiz >= 90) {
+      remarks = 'Outstanding performance. Learners consistently demonstrate mastery of lessons.';
+    } else if (summary.averageQuiz >= 80) {
+      remarks = 'Very satisfactory performance. Continue reinforcing higher-order learning activities.';
+    } else if (summary.averageQuiz >= 75) {
+      remarks = 'Satisfactory performance. Additional practice is recommended for selected learners.';
+    }
+
+    paragraph(remarks);
+
+    doc.moveDown(1.6);
+    paragraph('Prepared by:');
+    doc.moveDown(1.2);
 
     doc
       .font('Helvetica')
-      .fontSize(10);
+      .fontSize(10)
+      .fillColor('#0F172A')
+      .text('__________________________________');
 
     doc.text(
-      'Generated: ' +
-      new Date().toLocaleString()
+      req.role === 'admin'
+        ? 'System Administrator'
+        : 'Teacher'
     );
 
-    doc.text(
-      'Students Included: ' +
-      summary.students
-    );
+    const pages = doc.bufferedPageRange();
 
-    doc.text(
-      'Average Quiz: ' +
-      summary.averageQuiz +
-      '%'
-    );
+    for (let i = 0; i < pages.count; i++) {
+      doc.switchToPage(pages.start + i);
 
-    doc.text(
-      'Average Completion: ' +
-      summary.averageCompletion +
-      '%'
-    );
+      const footerY =
+        doc.page.height -
+        doc.page.margins.bottom -
+        14;
 
-    doc.text(
-      'Average XP: ' +
-      summary.averageXp
-    );
+      doc
+        .font('Helvetica')
+        .fontSize(8)
+        .fillColor('#64748B');
 
-    if (summary.highest) {
       doc.text(
-        'Highest Performer: ' +
-        summary.highest.student.name
+        'Tuklas Talino Learning Analytics Report',
+        doc.page.margins.left,
+        footerY,
+        {
+          width:
+            doc.page.width -
+            doc.page.margins.left -
+            doc.page.margins.right -
+            120,
+          lineBreak: false
+        }
       );
+
+      doc.text(
+        'Page ' + (i + 1) + ' of ' + pages.count,
+        doc.page.width - doc.page.margins.right - 100,
+        footerY,
+        {
+          width: 100,
+          align: 'right',
+          lineBreak: false
+        }
+      );
+
+      doc.fillColor('black');
     }
 
-    doc.text(
-      'Students Requiring Intervention: ' +
-      summary.intervention.length
-    );
-
-    doc.moveDown(2);
-
-    doc.font('Helvetica-Bold');
-
-    doc.text(
-      'Student Code',
-      40,
-      doc.y,
-      {continued:true}
-    );
-
-    doc.text(
-      'Name',
-      130,
-      doc.y,
-      {continued:true}
-    );
-
-    doc.text(
-      'Grade',
-      300,
-      doc.y,
-      {continued:true}
-    );
-
-    doc.text(
-      'Section',
-      350,
-      doc.y,
-      {continued:true}
-    );
-
-    doc.text(
-      'XP',
-      450,
-      doc.y,
-      {continued:true}
-    );
-
-    doc.text(
-      'Status',
-      500
-    );
-
-    doc.moveDown();
-
-    doc.font('Helvetica');
-
-
-
-for (const row of rows) {
-
-  const s = row.student;
-
-  if (doc.y > 690) {
-    doc.addPage();
-  }
-
-  doc
-    .roundedRect(40, doc.y, 520, 110, 6)
-    .stroke();
-
-  const top = doc.y + 10;
-
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(14)
-    .text(
-      s.name,
-      55,
-      top
-    );
-
-  doc
-    .font('Helvetica')
-    .fontSize(10);
-
-  doc.text(
-    `Student ID: ${s.studentCode}`,
-    55
-  );
-
-  doc.text(
-    `Grade ${s.gradeLevel} • ${s.section}`
-  );
-
-  doc.text(
-    `XP: ${s.xp}`
-  );
-
-  doc.moveDown(0.3);
-
-  doc.text(
-    `Lessons Completed: ${row.completed}`
-  );
-
-  doc.text(
-    `Completion Rate: ${row.completionPercent}%`
-  );
-
-  doc.text(
-    `Average Quiz: ${row.averageQuiz}%`
-  );
-
-  doc.text(
-    `Best Quiz: ${row.bestQuiz}%`
-  );
-
-  doc.text(
-    `Pending Writing Reviews: ${row.writingPending}`
-  );
-
-  doc.text(
-    `Speech Attempts: ${row.speechAttempts}`
-  );
-
-  let label = 'Needs Support';
-
-  if (row.averageQuiz >= 90)
-    label = 'Excellent';
-  else if (row.averageQuiz >= 75)
-    label = 'Good';
-  else if (row.averageQuiz >= 60)
-    label = 'Fair';
-
-  doc.moveDown(0.2);
-
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(11)
-    .text(
-      `Performance Rating: ${label}`
-    );
-
-  //
-  // Quiz Performance Bar
-  //
-
-  doc.moveDown(0.3);
-
-  const quizWidth = Math.max(
-    0,
-    Math.min(100, row.averageQuiz)
-  ) * 3;
-
-  doc
-    .rect(55, doc.y, 300, 10)
-    .stroke();
-
-  doc
-    .rect(55, doc.y, quizWidth, 10)
-    .fillAndStroke('#4F46E5', '#4F46E5');
-
-  doc.moveDown();
-
-  doc
-    .fillColor('black')
-    .font('Helvetica')
-    .text(
-      `Quiz Performance: ${row.averageQuiz}%`
-    );
-
-  //
-  // Completion Bar
-  //
-
-  const completionWidth = Math.max(
-    0,
-    Math.min(100, row.completionPercent)
-  ) * 3;
-
-  doc
-    .rect(55, doc.y, 300, 10)
-    .stroke();
-
-  doc
-    .rect(55, doc.y, completionWidth, 10)
-    .fillAndStroke('#22C55E', '#22C55E');
-
-  doc.moveDown();
-
-  doc
-    .fillColor('black')
-    .text(
-      `Lesson Completion: ${row.completionPercent}%`
-    );
-
-  doc.moveDown(2);
-
-}
-
-doc.addPage();
-
-doc
-  .font('Helvetica-Bold')
-  .fontSize(18)
-  .text('CLASS PERFORMANCE SUMMARY');
-
-doc.moveDown();
-
-doc.font('Helvetica');
-
-doc.text('Total Students: ' + summary.students);
-doc.text('Average Quiz Score: ' + summary.averageQuiz + '%');
-doc.text('Average Lesson Completion: ' + summary.averageCompletion + '%');
-doc.text('Average XP Earned: ' + summary.averageXp);
-
-doc.moveDown();
-
-doc
-  .font('Helvetica-Bold')
-  .fontSize(14)
-  .text('TOP PERFORMER');
-
-doc.font('Helvetica');
-
-if(summary.highest){
-  doc.text(
-    summary.highest.student.name
-  );
-
-  doc.text(
-    'Quiz Average: ' +
-    summary.highest.averageQuiz +
-    '%'
-  );
-
-  doc.text(
-    'Completion: ' +
-    summary.highest.completionPercent +
-    '%'
-  );
-
-  doc.text(
-    'XP: ' +
-    summary.highest.student.xp
-  );
-}
-
-doc.moveDown();
-
-doc
-  .font('Helvetica-Bold')
-  .fontSize(14)
-  .text('STUDENTS NEEDING INTERVENTION');
-
-doc.font('Helvetica');
-
-if(summary.intervention.length===0){
-
-  doc.text('No students currently require intervention.');
-
-}else{
-
-  for(const row of summary.intervention){
-
-    doc.text(
-      '• ' +
-      row.student.name +
-      ' — Quiz: ' +
-      row.averageQuiz +
-      '% | Completion: ' +
-      row.completionPercent +
-      '%'
-    );
-
-  }
-
-}
-
-//
-// OVERALL REMARKS
-//
-
-doc.addPage();
-
-doc
-  .font('Helvetica-Bold')
-  .fontSize(18)
-  .text('OVERALL CLASS REMARKS');
-
-doc.moveDown();
-
-doc.font('Helvetica');
-
-let remarks = 'Needs Improvement';
-
-if (summary.averageQuiz >= 90) {
-  remarks = 'Outstanding class performance. Students consistently demonstrate mastery of lessons.';
-} else if (summary.averageQuiz >= 80) {
-  remarks = 'Very satisfactory class performance. Continue reinforcing higher-order learning activities.';
-} else if (summary.averageQuiz >= 75) {
-  remarks = 'Satisfactory performance. Additional practice is recommended for some learners.';
-} else {
-  remarks = 'Intervention is recommended. Provide remediation and individualized support to improve learning outcomes.';
-}
-
-doc.text(remarks);
-
-doc.moveDown(2);
-
-doc.text('Prepared by:');
-
-doc.moveDown(2);
-
-doc.text('__________________________________');
-
-doc.text(
-  req.role === 'admin'
-    ? 'System Administrator'
-    : 'Teacher'
-);
-
-//
-// FOOTER
-//
-
-const pages = doc.bufferedPageRange();
-
-for (let i = 0; i < pages.count; i++) {
-
-  doc.switchToPage(i);
-
-  doc.fontSize(8);
-
-  doc.text(
-    'Tuklas Talino Learning Analytics Report',
-    40,
-    805
-  );
-
-  doc.text(
-    'Page ' + (i + 1) + ' of ' + pages.count,
-    470,
-    805
-  );
-
-}
-
-doc.end();
-
-
-  } catch(err){
+    doc.end();
+  } catch (err) {
     next(err);
   }
 });
+
 
 
 router.get('/summary.txt', async (req, res, next) => {
