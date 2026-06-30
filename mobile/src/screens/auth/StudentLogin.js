@@ -15,6 +15,17 @@ import {
 
 import { api, setToken } from '../../api/client';
 
+function sanitizeStudentLoginIdInput(value) {
+  return String(value || '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Za-z0-9-]/g, '')
+    .toUpperCase();
+}
+
+function cleanStudentLoginPasswordInput(value) {
+  return String(value || '').replace(/\s+/g, '');
+}
+
 export default function StudentLogin({
   navigation,
 }) {
@@ -104,12 +115,9 @@ export default function StudentLogin({
   }, [studentId]);
 
   function handleStudentIdChange(value) {
-
-  const upper =
-    value.toUpperCase();
-
+    const upper = sanitizeStudentLoginIdInput(value);
     setStudentId(upper);
-}
+  }
 
   async function handleLogin() {
 
@@ -183,7 +191,7 @@ export default function StudentLogin({
       Alert.alert(
         'Login Failed',
         error.message ||
-          'Invalid credentials.'
+          'Username was not found or password is incorrect.'
       );
 
     } finally {
@@ -389,7 +397,7 @@ export default function StudentLogin({
             <TextInput
               style={styles.input}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => setPassword(cleanStudentLoginPasswordInput(value))}
               placeholder="Default: student123"
               placeholderTextColor="#64748B"
               secureTextEntry={!showPassword}

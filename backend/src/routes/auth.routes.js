@@ -13,6 +13,26 @@ import { audit } from '../services/audit.service.js';
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
 const router = Router();
 
+function normalizeLoginIdentifier(value, role = '') {
+  const cleaned = String(value || '')
+    .replace(/\s+/g, '')
+    .trim();
+
+  return ['student', 'teacher'].includes(String(role || '').toLowerCase())
+    ? cleaned.toUpperCase()
+    : cleaned;
+}
+
+function normalizeLoginPassword(value) {
+  return String(value || '').replace(/\s+/g, '');
+}
+
+function isValidLoginIdentifier(value) {
+  return /^[A-Za-z0-9._@-]+$/.test(String(value || ''));
+}
+
+
+
 function publicUser(user) {
   return {
     id: user.id,
@@ -61,6 +81,15 @@ router.get('/check-student/:identifier', async (req, res, next) => {
 router.post('/login', async (req, res, next) => {
   try {
     const body = validate(loginSchema, req.body);
+    body.role = String(body.role || '').trim().toLowerCase();
+    body.identifier = normalizeLoginIdentifier(body.identifier, body.role);
+    body.password = normalizeLoginPassword(body.password);
+
+    if (!isValidLoginIdentifier(body.identifier)) {
+      return res.status(422).json({
+        message: 'Login username/code contains unsupported characters.'
+      });
+    }
     const identifier = body.identifier.trim();
 
     const user = await User.findOne({
@@ -69,7 +98,7 @@ router.post('/login', async (req, res, next) => {
     });
 
     if (!user || user.status !== 'active') {
-      return res.status(401).json({ message: 'Invalid credentials.' });
+      return res.status(404).json({ message: 'Username was not found for this login type.' });
     }
 
     if (body.role && user.Role?.name !== body.role) {
@@ -80,7 +109,7 @@ router.post('/login', async (req, res, next) => {
 
     const valid = await bcrypt.compare(body.password, user.passwordHash);
     if (!valid) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
+      return res.status(401).json({ message: 'Password is incorrect.' });
     }
 
     const requestedAvatar = loginAvatar(req.body.avatar);

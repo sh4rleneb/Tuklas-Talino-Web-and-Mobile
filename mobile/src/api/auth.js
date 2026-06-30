@@ -1,3 +1,11 @@
+function sanitizeLoginIdentifierForRequest(value) {
+  return String(value || '').replace(/\s+/g, '').trim();
+}
+
+function sanitizeLoginPasswordForRequest(value) {
+  return String(value || '').replace(/\s+/g, '');
+}
+
 import { api, setToken } from './client';
 
 export async function loginTeacher(identifier, password) {
@@ -5,8 +13,8 @@ export async function loginTeacher(identifier, password) {
     method: 'POST',
     body: {
       role: 'teacher',
-      identifier: identifier.trim(),
-      password,
+      identifier: sanitizeLoginIdentifierForRequest(identifier),
+      password: sanitizeLoginPasswordForRequest(password),
     },
   });
 
@@ -22,8 +30,8 @@ export async function loginAdmin(identifier, password) {
     method: 'POST',
     body: {
       role: 'admin',
-      identifier: identifier.trim(),
-      password,
+      identifier: sanitizeLoginIdentifierForRequest(identifier),
+      password: sanitizeLoginPasswordForRequest(password),
     },
   });
 

@@ -18,6 +18,18 @@ from '@expo/vector-icons';
 import { loginTeacher }
 from '../../api/auth';
 
+function cleanLoginIdentifierInput(value, shouldUppercase = false) {
+  const cleaned = String(value || '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Za-z0-9._@-]/g, '');
+
+  return shouldUppercase ? cleaned.toUpperCase() : cleaned;
+}
+
+function cleanLoginPasswordInput(value) {
+  return String(value || '').replace(/\s+/g, '');
+}
+
 export default function TeacherLogin({
   navigation,
 }) {
@@ -161,7 +173,7 @@ export default function TeacherLogin({
             <TextInput
               style={styles.input}
               value={identifier}
-              onChangeText={setIdentifier}
+              onChangeText={(value) => setIdentifier(cleanLoginIdentifierInput(value, true))}
               placeholder="Enter your username"
               placeholderTextColor="#94A3B8"
               spellCheck={false}
@@ -191,7 +203,7 @@ export default function TeacherLogin({
                 !showPassword
               }
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => setPassword(cleanLoginPasswordInput(value))}
               placeholder="Enter your password"
               placeholderTextColor="#94A3B8"
               spellCheck={false}
