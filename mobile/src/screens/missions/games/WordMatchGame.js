@@ -85,6 +85,14 @@ export default function WordMatchGame({
         total={items.length}
       />
 
+      {toast && (
+        <View style={styles.toastInline}>
+          <Text style={styles.toast}>
+            {toast}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.boardCard}>
         <View style={styles.board}>
 
@@ -210,15 +218,6 @@ export default function WordMatchGame({
         </Text>
       </TouchableOpacity>
 
-      {toast && (
-        <View style={styles.toastOverlay}>
-          <View style={styles.toastCard}>
-            <Text style={styles.toast}>
-              {toast}
-            </Text>
-          </View>
-        </View>
-      )}
     </>
   );
 }
@@ -375,38 +374,25 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  toastOverlay: {
-    position: 'absolute',
-    top: '40%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 999,
-  },
-
-  toastCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingVertical: 18,
-    paddingHorizontal: 28,
-    borderWidth: 2,
-    borderColor: '#F7D77A',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    elevation: 6,
+  toastInline: {
+    alignSelf: 'center',
+    backgroundColor: '#FFF7ED',
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#FACC15',
+    marginTop: -4,
+    marginBottom: 14,
+    maxWidth: '92%',
   },
 
   toast: {
-    marginTop: 20,
     textAlign: 'center',
-    fontWeight: '700',
-    fontSize: 16,
+    fontWeight: '900',
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#78350F',
   },
 });
 
