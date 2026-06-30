@@ -8,10 +8,19 @@ export function isValidName(value = '') {
   const name = normalizeSpaces(value);
 
   // Allow letters, spaces, apostrophes, periods and hyphens.
-  // Require at least one alphabetic character.
+  // Require at least first and last name.
+  if (!/^(?=.*[A-Za-zÀ-ÿ])[A-Za-zÀ-ÿ'. -]+$/.test(name)) {
+    return false;
+  }
+
+  const parts = name
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
   return (
-    name.length >= 2 &&
-    /^(?=.*[A-Za-zÀ-ÿ])[A-Za-zÀ-ÿ'. -]+$/.test(name)
+    parts.length >= 2 &&
+    parts.every((part) => /[A-Za-zÀ-ÿ]/.test(part))
   );
 }
 

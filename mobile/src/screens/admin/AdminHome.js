@@ -402,18 +402,19 @@ async function executeVerifiedAction() {
         {accountType === 'student' ? (
           <>
             <Field
-              label="Name"
+              label="Student Full Name"
               value={studentForm.name}
+              placeholder="e.g. Juan Dela Cruz"
               onChangeText={(name) =>
                 setStudentForm((current) => ({
                   ...current,
-                  name: normalizeSpaces(name),
+                  name,
                 }))
               }
             />
             {studentValidation.name && (
               <Text style={styles.errorText}>
-                Enter a valid student name.
+                Enter the student's first and last name.
               </Text>
             )}
             <Field
@@ -492,18 +493,19 @@ async function executeVerifiedAction() {
             </Text>
 
             <Field
-              label="Teacher Name"
+              label="Teacher Full Name"
               value={teacherForm.name}
+              placeholder="e.g. Maria Santos"
               onChangeText={(name) =>
                 setTeacherForm((current) => ({
                   ...current,
-                  name: normalizeSpaces(name),
+                  name,
                 }))
               }
             />
             {teacherValidation.name && (
               <Text style={styles.errorText}>
-                Enter a valid teacher name.
+                Enter the teacher's first and last name.
               </Text>
             )}
 
@@ -532,11 +534,14 @@ async function executeVerifiedAction() {
             <Button
               disabled={Boolean(busy) || !teacherFormValid}
               onPress={async () => {
+              const teacherEmail = String(teacherForm.email || '').trim();
               const teacherPayload = {
-                ...teacherForm,
                 name: normalizeSpaces(teacherForm.name),
-                email: String(teacherForm.email || '').trim(),
               };
+
+              if (teacherEmail) {
+                teacherPayload.email = teacherEmail;
+              }
 
               const saved = await run('create-teacher', () => createTeacherAccount(teacherPayload), 'Teacher account created.');
 
