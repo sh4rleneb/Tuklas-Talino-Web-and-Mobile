@@ -637,6 +637,7 @@ async function executeVerifiedAction() {
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(`student-pin-${student.id}`, () => resetStudentPassword(student.id), (data) => `Temporary PIN: ${data.temporaryPin}`)}>Reset Password</Button>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'RESET',
+                reasonPlaceholder: 'e.g. Student needs to restart their lesson progress',
                 action: (reason) => run(
                       `student-progress-${student.id}`,
                       () => resetStudentProgress(student.id, {
@@ -658,6 +659,7 @@ async function executeVerifiedAction() {
               }}>Login Credentials</Button>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'ARCHIVE',
+                reasonPlaceholder: 'e.g. Student transferred to another class or school',
                 action: (reason) => run(
                       `student-archive-${student.id}`,
                       () => archiveStudent(student.id, {
@@ -670,6 +672,7 @@ async function executeVerifiedAction() {
             <View style={styles.choiceRow}>
               {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                     keyword: 'PROMOTE',
+                    reasonPlaceholder: 'e.g. Student is moving to the selected grade level',
                     action: (reason) => run(
                       `grade-${student.id}`,
                       () => updateStudentEnrollment(student.id, {
@@ -702,6 +705,7 @@ async function executeVerifiedAction() {
               <View style={styles.choiceRow}>
                 <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                   keyword: 'TEACHERPIN',
+                  reasonPlaceholder: 'e.g. Teacher forgot their password',
                   action: (reason) => run(
                     `teacher-pin-${teacher.id}`,
                     () => resetTeacherPassword(teacher.id, {
@@ -723,6 +727,7 @@ async function executeVerifiedAction() {
                 }}>Login Credentials</Button>
                 <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                   keyword: 'TEACHERARCHIVE',
+                  reasonPlaceholder: 'e.g. Teacher no longer works at this school',
                   action: (reason) => run(
                     `teacher-archive-${teacher.id}`,
                     () => archiveTeacher(teacher.id, {
@@ -1317,7 +1322,7 @@ You will be required to change this PIN after first login.`
               style={styles.input}
               value={adminActionReason}
               onChangeText={setAdminActionReason}
-              placeholder="e.g. Teacher no longer works at this school"
+              placeholder={pendingAdminAction?.reasonPlaceholder || 'e.g. Reason for this administrative action'}
               placeholderTextColor="#94A3B8"
             />
 
