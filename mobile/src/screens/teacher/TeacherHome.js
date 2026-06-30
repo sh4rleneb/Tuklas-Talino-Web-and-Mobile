@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   downloadPdfReport,
   downloadTextReport,
@@ -27,19 +27,20 @@ import {
   archiveLesson,
   createGroup,
   createLesson,
-  getActivityLogs,
-  getActivityLogsCsv,
   getPendingGroupChecks,
   getReportSummary,
   getStudentReport,
   getStudentReportCsv,
-  getSummaryReportText,
+  getSummaryReportCsv,
+  getSummaryReportPdf,
   getTeacherDashboard,
   getTeacherGroups,
   getTeacherLessons,
   getTeacherMonitoringStats,
   getTeacherQuizPerformance,
   getTeacherReviews,
+  gradeWritingSubmission,
+  reviewSpeechAttempt,
   returnGroupTask,
   updateLesson,
   uploadLessonMaterial,
@@ -108,6 +109,7 @@ function SmallButton({ children, onPress, tone = 'green', disabled = false }) {
 }
 
 export default function TeacherHome({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [section, setSection] = useState('dashboard');
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [dashboard, setDashboard] = useState(null);
@@ -116,11 +118,13 @@ export default function TeacherHome({ navigation }) {
   const [workspaceNotice, setWorkspaceNotice] = useState(null);
   const [pendingChecks, setPendingChecks] = useState({ summary: {}, rows: [] });
   const [reviewQueue, setReviewQueue] = useState({ summary: {}, writing: [], speech: [] });
+  const [selectedReviewStudentKey, setSelectedReviewStudentKey] = useState('');
+  const [reviewDrafts, setReviewDrafts] = useState({});
+  const [reviewModal, setReviewModal] = useState(null);
   const [groups, setGroups] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [reportSummary, setReportSummary] = useState(null);
   const [studentReport, setStudentReport] = useState([]);
-  const [activityLogs, setActivityLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -155,7 +159,6 @@ export default function TeacherHome({ navigation }) {
         getReportSummary(),
         getTeacherReviews(),
         getStudentReport(),
-        getActivityLogs(),
       ]);
       setDashboard(dash);
       setMonitoring(monitor);
@@ -166,7 +169,6 @@ export default function TeacherHome({ navigation }) {
       setReportSummary(summary);
       setReviewQueue(reviews || { summary: {}, writing: [], speech: [] });
       setStudentReport(students || []);
-      setActivityLogs(logs || []);
     } catch (err) {
       setError(err.message || 'Unable to load teacher workspace.');
     } finally {
@@ -365,6 +367,7 @@ async function handleLogout() {
             </SectionCard>
           ))}
         </View>
+
         <SectionCard>
           <Text style={styles.cardTitle}>Assigned Classes</Text>
           {(dashboard?.assignedClasses || []).map((item) => (
@@ -372,8 +375,11 @@ async function handleLogout() {
               <Text style={styles.rowTitle}>Grade {item.gradeLevel} • {item.section}</Text>
             </View>
           ))}
-          {!dashboard?.assignedClasses?.length && <Text style={styles.muted}>No assigned classes yet.</Text>}
+          {!dashboard?.assignedClasses?.length && (
+            <Text style={styles.muted}>No assigned classes yet.</Text>
+          )}
         </SectionCard>
+
         <SectionCard>
           <Text style={styles.cardTitle}>Pending Group Checks</Text>
           {(pendingChecks.rows || []).slice(0, 4).map((row) => (
@@ -382,13 +388,11 @@ async function handleLogout() {
                 <Text style={styles.rowTitle}>{row.groupName}</Text>
                 <Text style={styles.muted}>{row.taskTitle} • {row.studentName}</Text>
               </View>
-              <View style={styles.buttonRow}>
-                <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => run(`return-${row.id}`, () => returnGroupTask(row.groupTaskId, row.studentId, 'Please revise and resubmit this task.'), 'Task returned for revision.')}>Return</SmallButton>
-                <SmallButton disabled={Boolean(busy)} onPress={() => run(`approve-${row.id}`, () => approveGroupTask(row.groupTaskId, row.studentId), 'Task approved.')}>Approve</SmallButton>
-              </View>
             </View>
           ))}
-          {!pendingChecks.rows?.length && <Text style={styles.muted}>No pending checks.</Text>}
+          {!(pendingChecks.rows || []).length && (
+            <Text style={styles.muted}>No pending group checks.</Text>
+          )}
         </SectionCard>
       </>
     );
@@ -600,81 +604,502 @@ async function handleLogout() {
 
 
   function formatReviewDate(value) {
-    if (!value) return 'No date';
-    try {
-      return new Date(value).toLocaleDateString();
-    } catch (err) {
+    if (!value) {
       return 'No date';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return 'No date';
+    }
+
+    return date.toLocaleDateString();
+  }
+
+  function getReviewStudent(item) {
+    return item.student || item.Student || {};
+  }
+
+  function getReviewLesson(item) {
+    return item.lesson || item.Lesson || {};
+  }
+
+  function getReviewTask(item) {
+    return item.task || item.Task || {};
+  }
+
+  function getReviewStudentName(item) {
+    const student = getReviewStudent(item);
+    return item.studentName || student.name || item.name || 'Student';
+  }
+
+  function getReviewStudentKey(item) {
+    const student = getReviewStudent(item);
+    return String(item.studentId || student.id || item.studentCode || student.studentCode || getReviewStudentName(item));
+  }
+
+  function getReviewLessonTitle(item) {
+    const lesson = getReviewLesson(item);
+    return item.lessonTitle || lesson.title || item.activityTitle || 'Untitled lesson';
+  }
+
+  function getReviewSubject(item) {
+    const lesson = getReviewLesson(item);
+    return item.subject || lesson.subject || '';
+  }
+
+  function getReviewGradeSection(item) {
+    const student = getReviewStudent(item);
+    const grade = item.gradeLevel || student.gradeLevel || '—';
+    const section = item.section || student.section || 'No section';
+    return `Grade ${grade} • ${section}`;
+  }
+
+  function getReviewPrompt(item, type) {
+    const task = getReviewTask(item);
+
+    if (type === 'speech') {
+      return item.speechTarget || item.targetText || task.targetText || task.speechTarget || item.prompt || 'No speech target provided.';
+    }
+
+    return item.prompt || task.prompt || item.question || item.instructions || 'No writing prompt provided.';
+  }
+
+  function getReviewAnswer(item, type) {
+    if (type === 'speech') {
+      return item.transcript || item.studentTranscript || item.answer || '[VOICE_RECORDING_SUBMITTED]';
+    }
+
+    return item.content || item.answer || item.studentAnswer || item.response || 'No answer submitted.';
+  }
+
+  function buildReviewStudentBuckets(writingItems, speechItems) {
+    const bucketMap = new Map();
+
+    [...writingItems.map((item) => ({ ...item, reviewType: 'writing' })), ...speechItems.map((item) => ({ ...item, reviewType: 'speech' }))].forEach((item) => {
+      const key = getReviewStudentKey(item);
+
+      if (!bucketMap.has(key)) {
+        bucketMap.set(key, {
+          key,
+          name: getReviewStudentName(item),
+          gradeSection: getReviewGradeSection(item),
+          writing: [],
+          speech: [],
+        });
+      }
+
+      bucketMap.get(key)[item.reviewType].push(item);
+    });
+
+    return Array.from(bucketMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  function getReviewSubmissionId(item) {
+    return item.submissionId || item.id;
+  }
+
+  function getReviewDraftKey(type, item) {
+    return `${type}-${getReviewSubmissionId(item) || item.createdAt || getReviewStudentName(item)}`;
+  }
+
+  function getReviewDraft(type, item) {
+    const key = getReviewDraftKey(type, item);
+
+    return reviewDrafts[key] || {
+      score: item.score === 0 || item.score ? String(item.score) : '',
+      feedback: item.feedback || item.teacherFeedback || '',
+    };
+  }
+
+  function updateReviewDraft(type, item, field, value) {
+    const key = getReviewDraftKey(type, item);
+
+    setReviewDrafts((current) => ({
+      ...current,
+      [key]: {
+        ...getReviewDraft(type, item),
+        ...current[key],
+        [field]: value,
+      },
+    }));
+  }
+
+  async function submitWritingReview(item) {
+    const submissionId = getReviewSubmissionId(item);
+
+    if (!submissionId) {
+      Alert.alert('Missing submission', 'This writing submission cannot be reviewed because its ID is missing.');
+      return;
+    }
+
+    const draft = getReviewDraft('writing', item);
+    const score = Number.parseInt(draft.score, 10);
+
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      Alert.alert('Score required', 'Enter a whole number score from 1 to 10.');
+      return;
+    }
+
+    const actionKey = `writing-review-${submissionId}`;
+
+    if (busy) {
+      return;
+    }
+
+    setBusy(actionKey);
+
+    try {
+      await gradeWritingSubmission(submissionId, {
+        score,
+        feedback: draft.feedback || '',
+      });
+
+      setWorkspaceNotice({
+        type: 'success',
+        text: 'Writing review saved.',
+      });
+
+      setReviewDrafts((current) => {
+        const next = { ...current };
+        delete next[getReviewDraftKey('writing', item)];
+        return next;
+      });
+
+      setReviewModal(null);
+      await load();
+    } catch (err) {
+      Alert.alert(
+        'Review failed',
+        err?.response?.data?.message || err?.message || 'Unable to save the writing review.'
+      );
+    } finally {
+      setBusy('');
     }
   }
 
-  function renderReviewItem(item, type) {
-    const student = item.student || {};
-    const lesson = item.lesson || {};
-    const task = item.task || {};
+  async function submitSpeechReview(item) {
+    const attemptId = getReviewSubmissionId(item);
+
+    if (!attemptId) {
+      Alert.alert('Missing attempt', 'This speech attempt cannot be reviewed because its ID is missing.');
+      return;
+    }
+
+    const draft = getReviewDraft('speech', item);
+    const rawScore = String(draft.score || '').trim();
+    const score = rawScore ? Number.parseInt(rawScore, 10) : null;
+
+    if (rawScore && (!Number.isInteger(score) || score < 1 || score > 10)) {
+      Alert.alert('Score invalid', 'Enter a whole number score from 1 to 10, or leave it blank.');
+      return;
+    }
+
+    if (!rawScore && !String(draft.feedback || '').trim()) {
+      Alert.alert('Review required', 'Add feedback or a score before saving the speech review.');
+      return;
+    }
+
+    const actionKey = `speech-review-${attemptId}`;
+
+    if (busy) {
+      return;
+    }
+
+    setBusy(actionKey);
+
+    try {
+      await reviewSpeechAttempt(attemptId, {
+        score,
+        feedback: draft.feedback || '',
+      });
+
+      setWorkspaceNotice({
+        type: 'success',
+        text: 'Speech review saved.',
+      });
+
+      setReviewDrafts((current) => {
+        const next = { ...current };
+        delete next[getReviewDraftKey('speech', item)];
+        return next;
+      });
+
+      setReviewModal(null);
+      await load();
+    } catch (err) {
+      Alert.alert(
+        'Review failed',
+        err?.response?.data?.message || err?.message || 'Unable to save the speech review.'
+      );
+    } finally {
+      setBusy('');
+    }
+  }
+
+  function getReviewCanGrade(item, type) {
+    const status = item.status || item.reviewStatus || 'pending';
     const isWriting = type === 'writing';
+    const submissionId = getReviewSubmissionId(item);
+    const isGraded = isWriting && (status === 'graded' || item.score === 0 || item.score);
+    const isAutoChecked = isWriting && status === 'auto_checked';
+
+    return isWriting && submissionId && !isGraded && !isAutoChecked && item.reviewEligible !== false;
+  }
+
+  function renderCanvasSubmissionCard(item, type) {
+    const isSpeech = type === 'speech';
+    const title = isSpeech ? 'Speech attempt' : 'Writing submission';
+    const subject = getReviewSubject(item);
+    const status = item.status || item.reviewStatus || 'pending';
+    const submittedAt = item.submittedAt || item.createdAt || item.updatedAt;
+    const canGrade = getReviewCanGrade(item, type);
 
     return (
-      <View key={`${type}-${item.id}`} style={styles.softRow}>
-        <Text style={styles.rowTitle}>
-          {student.avatar || '🧒'} {student.name || 'Student'}
-        </Text>
-        <Text style={styles.muted}>
-          Grade {student.gradeLevel || '—'} • {student.section || 'No section'} • {formatReviewDate(item.submittedAt)}
-        </Text>
-        <Text style={styles.muted}>
-          {lesson.title || 'Untitled lesson'} {lesson.subject ? `• ${lesson.subject}` : ''}
-        </Text>
-
-        <Text style={styles.fieldLabel}>
-          {isWriting ? 'Writing Prompt' : 'Speech Target Only'}
-        </Text>
-        <Text style={styles.body}>
-          {isWriting
-            ? task.prompt || 'No writing prompt saved.'
-            : task.targetText || 'No speech target saved.'}
-        </Text>
-
-        <Text style={styles.fieldLabel}>
-          {isWriting ? 'Student Answer' : 'Student Transcript'}
-        </Text>
-        <Text style={styles.body}>
-          {isWriting
-            ? item.content || 'No answer text.'
-            : item.transcript || 'No transcript text.'}
-        </Text>
-
-        {!isWriting && item.audioUrl ? (
-          <TouchableOpacity
-            style={styles.smallButton}
-            onPress={() => Linking.openURL(item.audioUrl)}
-          >
-            <Text style={styles.smallButtonText}>
-              ▶ Play Recording
+      <View key={`${type}-${getReviewSubmissionId(item) || item.createdAt}`} style={styles.canvasSubmissionCard}>
+        <View style={styles.canvasSubmissionHeader}>
+          <View style={styles.flex}>
+            <Text style={styles.canvasSubmissionType}>{title}</Text>
+            <Text style={styles.canvasSubmissionTitle}>{getReviewLessonTitle(item)}</Text>
+            <Text style={styles.canvasSubmissionMeta}>
+              {subject ? `${subject} • ` : ''}{formatReviewDate(submittedAt)}
             </Text>
-          </TouchableOpacity>
-        ) : null}
+          </View>
 
-        {isWriting && item.feedback ? (
-          <Text style={styles.statusText}>{item.feedback}</Text>
-        ) : null}
+          <Text style={styles.canvasStatusChip}>{status}</Text>
+        </View>
+
+        <View style={styles.canvasBlock}>
+          <Text style={styles.canvasBlockLabel}>{isSpeech ? 'Speech target' : 'Writing prompt'}</Text>
+          <Text numberOfLines={3} style={styles.canvasBlockText}>{getReviewPrompt(item, type)}</Text>
+        </View>
+
+        <View style={styles.canvasBlock}>
+          <Text style={styles.canvasBlockLabel}>{isSpeech ? 'Student transcript' : 'Student answer'}</Text>
+          <Text numberOfLines={4} style={styles.canvasAnswerText}>{getReviewAnswer(item, type)}</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.canvasOpenButton}
+          onPress={() => setReviewModal({ type, item })}
+        >
+          <Text style={styles.canvasOpenButtonText}>
+            {canGrade ? 'Open Grading' : isSpeech ? 'Open Review' : 'View Submission'}
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  function renderReviewGradingModal() {
+    if (!reviewModal) {
+      return null;
+    }
+
+    const { type, item } = reviewModal;
+    const isSpeech = type === 'speech';
+    const isWriting = type === 'writing';
+    const title = isSpeech ? 'Speech attempt' : 'Writing submission';
+    const subject = getReviewSubject(item);
+    const status = item.status || item.reviewStatus || 'pending';
+    const submittedAt = item.submittedAt || item.createdAt || item.updatedAt;
+    const submissionId = getReviewSubmissionId(item);
+    const actionKey = `writing-review-${submissionId}`;
+    const draft = getReviewDraft(type, item);
+    const canGrade = getReviewCanGrade(item, type);
+    const isGraded = isWriting && (status === 'graded' || item.score === 0 || item.score);
+    const isAutoChecked = isWriting && status === 'auto_checked';
+
+    return (
+      <Modal
+        visible={Boolean(reviewModal)}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setReviewModal(null)}
+      >
+        <View style={styles.canvasGradingBackdrop}>
+          <View style={styles.canvasGradingSheet}>
+            <View style={styles.canvasGradingHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.canvasSubmissionType}>{title}</Text>
+                <Text style={styles.canvasGradingTitle}>{getReviewLessonTitle(item)}</Text>
+                <Text style={styles.canvasSubmissionMeta}>
+                  {subject ? `${subject} • ` : ''}{formatReviewDate(submittedAt)} • {status}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.canvasCloseButton}
+                onPress={() => setReviewModal(null)}
+              >
+                <Text style={styles.canvasCloseButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={styles.canvasGradingBody}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.canvasBlock}>
+                <Text style={styles.canvasBlockLabel}>{isSpeech ? 'Speech target' : 'Writing prompt'}</Text>
+                <Text style={styles.canvasBlockText}>{getReviewPrompt(item, type)}</Text>
+              </View>
+
+              <View style={styles.canvasBlock}>
+                <Text style={styles.canvasBlockLabel}>{isSpeech ? 'Student transcript' : 'Student answer'}</Text>
+                <Text style={styles.canvasAnswerText}>{getReviewAnswer(item, type)}</Text>
+              </View>
+
+              {isSpeech && item.audioUrl ? (
+                <TouchableOpacity
+                  style={styles.canvasPlayButton}
+                  onPress={() => Linking.openURL(item.audioUrl)}
+                >
+                  <Text style={styles.canvasPlayButtonText}>▶ Play recording</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {isWriting ? (
+                <View style={styles.canvasReviewPanel}>
+                  <Text style={styles.canvasBlockLabel}>Teacher grading</Text>
+
+                  {isGraded || isAutoChecked ? (
+                    <>
+                      <Text style={styles.canvasBlockText}>
+                        {isAutoChecked ? 'Auto-checked submission.' : `Score: ${item.score ?? draft.score}/10`}
+                      </Text>
+                      {item.feedback || item.teacherFeedback ? (
+                        <Text style={styles.canvasBlockText}>{item.feedback || item.teacherFeedback}</Text>
+                      ) : null}
+                    </>
+                  ) : canGrade ? (
+                    <>
+                      <View style={styles.canvasScoreRow}>
+                        <Text style={styles.canvasScoreLabel}>Score /10</Text>
+                        <TextInput
+                          value={draft.score}
+                          onChangeText={(value) => updateReviewDraft('writing', item, 'score', value.replace(/[^0-9]/g, '').slice(0, 2))}
+                          keyboardType="number-pad"
+                          placeholder="1-10"
+                          placeholderTextColor="#94A3B8"
+                          style={styles.canvasScoreInput}
+                        />
+                      </View>
+
+                      <TextInput
+                        value={draft.feedback}
+                        onChangeText={(value) => updateReviewDraft('writing', item, 'feedback', value)}
+                        multiline
+                        placeholder="Write feedback for this learner..."
+                        placeholderTextColor="#94A3B8"
+                        style={styles.canvasFeedbackInput}
+                      />
+
+                      <TouchableOpacity
+                        style={[styles.canvasReviewButton, busy === actionKey && styles.canvasReviewButtonDisabled]}
+                        disabled={Boolean(busy)}
+                        onPress={() => submitWritingReview(item)}
+                      >
+                        <Text style={styles.canvasReviewButtonText}>
+                          {busy === actionKey ? 'Saving Review...' : 'Save Review'}
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <Text style={styles.canvasBlockText}>
+                      This writing submission is not eligible for teacher grading.
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.canvasReviewPanel}>
+                  <Text style={styles.canvasBlockLabel}>Teacher speech review</Text>
+
+                  <View style={styles.canvasScoreRow}>
+                    <Text style={styles.canvasScoreLabel}>Score /10</Text>
+                    <TextInput
+                      value={draft.score}
+                      onChangeText={(value) => updateReviewDraft('speech', item, 'score', value.replace(/[^0-9]/g, '').slice(0, 2))}
+                      keyboardType="number-pad"
+                      placeholder="Optional"
+                      placeholderTextColor="#94A3B8"
+                      style={styles.canvasScoreInput}
+                    />
+                  </View>
+
+                  <TextInput
+                    value={draft.feedback}
+                    onChangeText={(value) => updateReviewDraft('speech', item, 'feedback', value)}
+                    multiline
+                    placeholder="Comment on pronunciation, clarity, fluency, or corrections..."
+                    placeholderTextColor="#94A3B8"
+                    style={styles.canvasFeedbackInput}
+                  />
+
+                  <TouchableOpacity
+                    style={[styles.canvasReviewButton, busy === `speech-review-${submissionId}` && styles.canvasReviewButtonDisabled]}
+                    disabled={Boolean(busy)}
+                    onPress={() => submitSpeechReview(item)}
+                  >
+                    <Text style={styles.canvasReviewButtonText}>
+                      {busy === `speech-review-${submissionId}` ? 'Saving Review...' : 'Save Speech Review'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  function renderCanvasStudentButton(bucket) {
+    const active = selectedReviewStudentKey === bucket.key;
+    const count = bucket.writing.length + bucket.speech.length;
+
+    return (
+      <TouchableOpacity
+        key={bucket.key}
+        style={[styles.canvasStudentButton, active && styles.canvasStudentButtonActive]}
+        onPress={() => setSelectedReviewStudentKey(bucket.key)}
+      >
+        <View style={styles.flex}>
+          <Text style={[styles.canvasStudentName, active && styles.canvasStudentNameActive]}>
+            {bucket.name}
+          </Text>
+          <Text style={[styles.canvasStudentMeta, active && styles.canvasStudentMetaActive]}>
+            {bucket.gradeSection}
+          </Text>
+        </View>
+
+        <View style={styles.canvasStudentCount}>
+          <Text style={styles.canvasStudentCountText}>{count}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   function renderReviews() {
-    const writing = reviewQueue.writing || [];
-    const speech = reviewQueue.speech || [];
-    const summary = reviewQueue.summary || {};
+    const writingItems = reviewQueue.writing || [];
+    const speechItems = reviewQueue.speech || [];
+    const buckets = buildReviewStudentBuckets(writingItems, speechItems);
+    const allCount = writingItems.length + speechItems.length;
+    const selectedBucket = buckets.find((bucket) => bucket.key === selectedReviewStudentKey);
+    const hasSelectedStudent = selectedReviewStudentKey && selectedReviewStudentKey !== 'all';
+    const hasSelectedAll = selectedReviewStudentKey === 'all';
+    const activeWriting = hasSelectedAll ? writingItems : hasSelectedStudent ? selectedBucket?.writing || [] : [];
+    const activeSpeech = hasSelectedAll ? speechItems : hasSelectedStudent ? selectedBucket?.speech || [] : [];
 
     return (
       <>
         <View style={styles.statsGrid}>
           {[
-            ['📝', summary.total ?? writing.length + speech.length, 'Total Reviews'],
-            ['✍️', summary.writing ?? writing.length, 'Writing'],
-            ['🎤', summary.speech ?? speech.length, 'Speech'],
-            ['👀', writing.length || speech.length ? 'Ready' : 'Empty', 'Queue'],
+            ['📝', allCount, 'Total Reviews'],
+            ['✍️', writingItems.length, 'Writing'],
+            ['🎤', speechItems.length, 'Speech'],
+            ['👥', buckets.length, 'Students'],
           ].map(([icon, value, label]) => (
             <SectionCard key={label} style={styles.statCard}>
               <Text style={styles.statIcon}>{icon}</Text>
@@ -685,17 +1110,71 @@ async function handleLogout() {
         </View>
 
         <SectionCard>
-          <Text style={styles.cardTitle}>Writing Submissions</Text>
-          <Text style={styles.muted}>Review students’ essay and writing answers.</Text>
-          {writing.map((item) => renderReviewItem(item, 'writing'))}
-          {!writing.length && <Text style={styles.muted}>No writing submissions yet.</Text>}
+          <Text style={styles.cardTitle}>Student Submissions</Text>
+          <Text style={styles.muted}>Canvas-style review: choose a learner to inspect their writing and speech submissions.</Text>
+
+          <TouchableOpacity
+            style={[styles.canvasStudentButton, selectedReviewStudentKey === 'all' && styles.canvasStudentButtonActive]}
+            onPress={() => setSelectedReviewStudentKey('all')}
+          >
+            <View style={styles.flex}>
+              <Text style={[styles.canvasStudentName, selectedReviewStudentKey === 'all' && styles.canvasStudentNameActive]}>
+                All students
+              </Text>
+              <Text style={[styles.canvasStudentMeta, selectedReviewStudentKey === 'all' && styles.canvasStudentMetaActive]}>
+                Optional: show the full class queue
+              </Text>
+            </View>
+
+            <View style={styles.canvasStudentCount}>
+              <Text style={styles.canvasStudentCountText}>{allCount}</Text>
+            </View>
+          </TouchableOpacity>
+
+          {buckets.map(renderCanvasStudentButton)}
+          {!buckets.length && (
+            <View style={styles.canvasEmptyState}>
+              <Text style={styles.canvasEmptyTitle}>No submissions yet</Text>
+              <Text style={styles.muted}>Writing and speech submissions will appear here once students submit work.</Text>
+            </View>
+          )}
         </SectionCard>
 
         <SectionCard>
-          <Text style={styles.cardTitle}>Speech Attempts</Text>
-          <Text style={styles.muted}>Check students’ speech transcripts and targets.</Text>
-          {speech.map((item) => renderReviewItem(item, 'speech'))}
-          {!speech.length && <Text style={styles.muted}>No speech attempts yet.</Text>}
+          <View style={styles.canvasSectionHeader}>
+            <View style={styles.flex}>
+              <Text style={styles.cardTitle}>
+                {hasSelectedAll ? 'All Submission Reports' : hasSelectedStudent ? `${selectedBucket?.name || 'Student'} Reports` : 'Select a Student'}
+              </Text>
+              <Text style={styles.muted}>
+                {hasSelectedAll
+                  ? 'Review every submission in the current class queue.'
+                  : hasSelectedStudent
+                    ? 'Review the selected learner’s submitted work.'
+                    : 'Choose a learner above to view writing and speech submissions.'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.canvasSectionLabel}>Writing submissions</Text>
+          {activeWriting.length ? (
+            activeWriting.map((item) => renderCanvasSubmissionCard(item, 'writing'))
+          ) : (
+            <View style={styles.canvasEmptyState}>
+              <Text style={styles.canvasEmptyTitle}>No writing submissions</Text>
+              <Text style={styles.muted}>No written work for this selection.</Text>
+            </View>
+          )}
+
+          <Text style={styles.canvasSectionLabel}>Speech attempts</Text>
+          {activeSpeech.length ? (
+            activeSpeech.map((item) => renderCanvasSubmissionCard(item, 'speech'))
+          ) : (
+            <View style={styles.canvasEmptyState}>
+              <Text style={styles.canvasEmptyTitle}>No speech attempts</Text>
+              <Text style={styles.muted}>No oral submissions for this selection.</Text>
+            </View>
+          )}
         </SectionCard>
       </>
     );
@@ -725,49 +1204,50 @@ async function handleLogout() {
     return (
       <>
         <SectionCard>
-          <Text style={styles.cardTitle}>Reports</Text>
-          <Text style={styles.body}>Generate current teacher reports and share them using your device.</Text>
+          <Text style={styles.cardTitle}>Report Downloads</Text>
+
           <SmallButton
             disabled={Boolean(busy)}
             onPress={() =>
               downloadTextReport({
-                title: 'Student CSV',
-                filename: 'tuklas-talino-students.csv',
+                title: 'Teacher Student CSV',
+                filename: 'teacher-student-report.csv',
                 mimeType: 'text/csv',
                 loader: getStudentReportCsv,
               })
             }
           >
-            Export Student CSV
+            Download Student CSV
           </SmallButton>
 
           <SmallButton
             disabled={Boolean(busy)}
             onPress={() =>
               downloadTextReport({
-                title: 'Activity Logs CSV',
-                filename: 'tuklas-talino-activity-logs.csv',
+                title: 'Teacher Summary CSV',
+                filename: 'teacher-summary-report.csv',
                 mimeType: 'text/csv',
-                loader: getActivityLogsCsv,
+                loader: getSummaryReportCsv,
               })
             }
           >
-            Export Activity Logs
+            Download Summary CSV
           </SmallButton>
 
           <SmallButton
             disabled={Boolean(busy)}
             onPress={() =>
               downloadPdfReport({
-                title: 'Tuklas Talino Summary Report',
-                filename: 'tuklas-talino-summary-report.pdf',
-                loader: getSummaryReportText,
+                title: 'Teacher Summary Report',
+                filename: 'teacher-summary-report.pdf',
+                loader: getSummaryReportPdf,
               })
             }
           >
-            Download Summary Report
+            Download Summary PDF
           </SmallButton>
         </SectionCard>
+
         <SectionCard>
           <Text style={styles.cardTitle}>Current Summary</Text>
           <Text style={styles.body}>Students: {reportSummary?.students || 0}</Text>
@@ -776,115 +1256,68 @@ async function handleLogout() {
           <Text style={styles.body}>Average progress: {reportSummary?.averageProgress || 0}%</Text>
           <Text style={styles.body}>Completions: {reportSummary?.completions || 0}</Text>
         </SectionCard>
-
-        <SectionCard>
-          <Text style={styles.cardTitle}>Student Report</Text>
-
-          {studentReport.map((student) => (
-            <View key={student.id} style={styles.studentCard}>
-              <View style={styles.flex}>
-                <Text style={styles.rowTitle}>{student.name}</Text>
-                <Text style={styles.muted}>
-                  {student.studentCode} • Grade {student.gradeLevel} • {student.section}
-                </Text>
-                <Text style={styles.muted}>
-                  XP: {student.xp} • {student.status}
-                </Text>
-
-                <Text style={styles.muted}>
-                  Last Active:{' '}
-                  {student.lastActiveAt
-                    ? new Date(student.lastActiveAt).toLocaleString()
-                    : 'Never'}
-                </Text>
-              </View>
-            </View>
-          ))}
-
-          {!studentReport.length && (
-            <Text style={styles.muted}>No students available.</Text>
-          )}
-        </SectionCard>
-
-        <SectionCard>
-          <Text style={styles.cardTitle}>Recent Activity Logs</Text>
-
-          {activityLogs.map((log) => (
-            <View key={log.id} style={styles.studentCard}>
-              <View style={styles.flex}>
-                <Text style={styles.rowTitle}>
-                  {String(log.action || '')
-                    .replace(/_/g, ' ')
-                    .replace(/\b\w/g, (c) => c.toUpperCase())}
-                </Text>
-
-                <Text style={styles.muted}>
-                  {log.entityType || 'System'}
-                  {log.entityId != null ? ` • ID ${log.entityId}` : ''}
-                </Text>
-
-                <Text style={styles.muted}>
-                  {new Date(log.createdAt).toLocaleString()}
-                </Text>
-              </View>
-            </View>
-          ))}
-
-          {!activityLogs.length && (
-            <Text style={styles.muted}>No activity logs available.</Text>
-          )}
-        </SectionCard>
       </>
     );
   }
 
-  if (loading && !dashboard) {
-    return <SafeAreaView style={styles.safe}><View style={styles.center}><ActivityIndicator size="large" color="#16A34A" /><Text style={styles.muted}>Loading teacher workspace...</Text></View></SafeAreaView>;
-  }
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.flex}>
-            <Text style={styles.title}>Teacher Workspace</Text>
-            <Text style={styles.subtitle}>Teach, monitor, and review learning progress from mobile.</Text>
-
-          </View>
-          <SmallButton tone="slate" onPress={confirmLogout}>Logout</SmallButton>
-        </View>
-
-        <View style={styles.workspaceHero}>
-          <View style={styles.workspaceHeroIcon}>
-            <Text style={styles.workspaceHeroEmoji}>📚</Text>
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            styles.teacherScrollContentInset,
+            { paddingBottom: Math.max(insets.bottom + 32, 48) },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <View style={styles.flex}>
+              <Text style={styles.title}>Teacher Workspace</Text>
+              <Text style={styles.subtitle}>Manage lessons, groups, assessments, and reports.</Text>
+            </View>
+            <SmallButton tone="slate" onPress={confirmLogout}>Logout</SmallButton>
           </View>
 
-          <View style={styles.workspaceHeroCopy}>
-            <Text style={styles.workspaceHeroKicker}>Today&apos;s teaching hub</Text>
-            <Text style={styles.workspaceHeroTitle}>Guide lessons, groups, and progress in one place.</Text>
+          <View style={styles.workspaceHero}>
+            <View style={styles.workspaceHeroIcon}>
+              <Text style={styles.workspaceHeroEmoji}>📚</Text>
+            </View>
 
-            <View style={styles.workspaceHeroChips}>
-              <Text style={styles.workspaceHeroChip}>✨ Live class view</Text>
-              <Text style={styles.workspaceHeroChip}>✅ Checks ready</Text>
+            <View style={styles.workspaceHeroCopy}>
+              <Text style={styles.workspaceHeroKicker}>TEACHING HUB</Text>
+              <Text style={styles.workspaceHeroTitle}>
+                Guide lessons, groups, and learner progress safely.
+              </Text>
+
+              <View style={styles.workspaceHeroChips}>
+                <Text style={styles.workspaceHeroChip}>✨ Lessons</Text>
+                <Text style={styles.workspaceHeroChip}>✅ Checks</Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        {renderTabs()}
-        {workspaceNotice ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setWorkspaceNotice(null)}
-            style={[
-              styles.workspaceNoticeCard,
-              workspaceNotice.type === 'success' && styles.workspaceNoticeSuccess,
-            ]}
-          >
-            <Text style={styles.workspaceNoticeText}>{workspaceNotice.text}</Text>
-          </Pressable>
-        ) : null}
+          {renderTabs()}
 
-        {error ? <SectionCard><Text style={styles.error}>{error}</Text><SmallButton onPress={load}>Try Again</SmallButton></SectionCard> : null}
+          {workspaceNotice ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setWorkspaceNotice(null)}
+              style={[
+                styles.workspaceNoticeCard,
+                workspaceNotice.type === 'success' && styles.workspaceNoticeSuccess,
+              ]}
+            >
+              <Text style={styles.workspaceNoticeText}>{workspaceNotice.text}</Text>
+            </Pressable>
+          ) : null}
+
+          {error ? (
+            <SectionCard>
+              <Text style={styles.error}>{error}</Text>
+              <SmallButton onPress={load}>Try Again</SmallButton>
+            </SectionCard>
+          ) : null}
         {section === 'dashboard' && renderDashboard()}
         {section === 'lessons' && renderBuilder()}
         {section === 'groups' && renderGroups()}
@@ -892,6 +1325,8 @@ async function handleLogout() {
         {section === 'review' && renderReviews()}
         {section === 'students' && renderStudents()}
         {section === 'reports' && renderReports()}
+
+          {renderReviewGradingModal()}
 
       <Modal
         visible={logoutVisible}
@@ -934,6 +1369,71 @@ async function handleLogout() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  teacherScrollContentInset: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  canvasOpenButton: {
+    backgroundColor: '#16A34A',
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  canvasOpenButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 13,
+  },
+  canvasGradingBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    justifyContent: 'flex-end',
+  },
+  canvasGradingSheet: {
+    maxHeight: '92%',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    overflow: 'hidden',
+  },
+  canvasGradingHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  canvasGradingTitle: {
+    color: '#0F172A',
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: '900',
+  },
+  canvasCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  canvasCloseButtonText: {
+    color: '#0F172A',
+    fontWeight: '900',
+    fontSize: 16,
+  },
+  canvasGradingBody: {
+    padding: 16,
+    paddingBottom: 28,
+  },
   workspaceNoticeCard: {
     marginHorizontal: 16,
     marginTop: 12,
@@ -1094,6 +1594,225 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     marginRight: 8,
     marginBottom: 8,
+  },
+
+  canvasStudentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 13,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  canvasStudentButtonActive: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#22C55E',
+  },
+  canvasStudentName: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  canvasStudentNameActive: {
+    color: '#166534',
+  },
+  canvasStudentMeta: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  canvasStudentMetaActive: {
+    color: '#166534',
+  },
+  canvasStudentCount: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  canvasStudentCountText: {
+    color: '#166534',
+    fontWeight: '900',
+  },
+  canvasSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  canvasSectionLabel: {
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginTop: 14,
+    marginBottom: 2,
+  },
+  canvasSubmissionCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  canvasSubmissionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  canvasSubmissionType: {
+    color: '#166534',
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  canvasSubmissionTitle: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  canvasSubmissionMeta: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  canvasStatusChip: {
+    color: '#166534',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+    marginLeft: 8,
+    textTransform: 'uppercase',
+  },
+  canvasBlock: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 11,
+    marginTop: 8,
+  },
+  canvasBlockLabel: {
+    color: '#166534',
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginBottom: 5,
+  },
+  canvasBlockText: {
+    color: '#334155',
+    lineHeight: 19,
+    fontSize: 13,
+  },
+  canvasAnswerText: {
+    color: '#0F172A',
+    lineHeight: 19,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  canvasFeedbackBlock: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 14,
+    padding: 11,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  canvasPlayButton: {
+    backgroundColor: '#16A34A',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  canvasPlayButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 12,
+  },
+  canvasReviewPanel: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 14,
+    padding: 11,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  canvasScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  canvasScoreLabel: {
+    color: '#0F172A',
+    fontWeight: '900',
+  },
+  canvasScoreInput: {
+    width: 82,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: '#0F172A',
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  canvasFeedbackInput: {
+    minHeight: 82,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: '#0F172A',
+    textAlignVertical: 'top',
+  },
+  canvasReviewButton: {
+    backgroundColor: '#16A34A',
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  canvasReviewButtonDisabled: {
+    opacity: 0.65,
+  },
+  canvasReviewButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 13,
+  },
+
+  canvasEmptyState: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  canvasEmptyTitle: {
+    color: '#0F172A',
+    fontWeight: '900',
+    marginBottom: 3,
   },
 
   safe: { flex: 1, backgroundColor: '#F6FFF5' },

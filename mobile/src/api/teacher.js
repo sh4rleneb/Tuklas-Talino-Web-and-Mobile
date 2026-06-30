@@ -1,4 +1,4 @@
-import { api, apiText } from './client';
+import { api, apiText, apiBinary } from './client';
 
 export async function getTeacherDashboard() {
   return api('/teachers/dashboard');
@@ -14,6 +14,20 @@ export async function getTeacherQuizPerformance() {
 
 export async function getTeacherReviews() {
   return api('/teachers/reviews/writing-speech');
+}
+
+export async function gradeWritingSubmission(submissionId, body) {
+  return api(`/teachers/reviews/writing/${submissionId}`, {
+    method: 'PATCH',
+    body,
+  });
+}
+
+export async function reviewSpeechAttempt(attemptId, body) {
+  return api(`/teachers/reviews/speech/${attemptId}`, {
+    method: 'PATCH',
+    body,
+  });
 }
 
 export async function getPendingGroupChecks() {
@@ -116,6 +130,10 @@ export async function getActivityLogsCsv() {
   return apiText('/reports/activity-logs.csv');
 }
 
-export async function getSummaryReportText() {
-  return apiText('/reports/summary.txt');
+export async function getSummaryReportCsv() {
+  return apiText('/reports/summary.csv');
+}
+
+export async function getSummaryReportPdf() {
+  return apiBinary('/reports/summary.pdf');
 }

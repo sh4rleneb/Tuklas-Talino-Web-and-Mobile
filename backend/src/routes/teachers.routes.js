@@ -1,9 +1,7 @@
-import { Router } from 'express';
-import bcrypt from 'bcryptjs';
-import { Op } from 'sequelize';
-import crypto from 'crypto';
+import { sequelize } from '../config/database.js';
 import {
-  Role,
+  Router } from 'express'; import bcrypt from 'bcryptjs'; import { Op,
+  DataTypes } from 'sequelize'; import crypto from 'crypto'; import {   Role,
   User,
   Teacher,
   TeacherAssignment,
@@ -17,14 +15,15 @@ import {
   WritingTask,
   SpeechAttempt,
   SpeechTask,
-  LessonActivity,
+  LessonActivity
 } from '../models/index.js';
 import { authenticate, requirePasswordChanged, requireRole } from '../middleware/auth.js';
 import { teacherSchema, validate } from '../validators/common.js';
 import { audit } from '../services/audit.service.js';
 import { generateTeacherCode } from '../services/accountCode.service.js';
 
-import { assertSafeContentPayload } from '../validators/contentSafety.js';
+import { assertSafeContentPayload, assertSafeText } from '../validators/contentSafety.js';
+import { awardXp, awardThresholdBadges } from '../services/progress.service.js';
 function generateTemporaryPin() {
   return Array.from({ length: 4 }, () => crypto.randomInt(2, 10)).join('');
 }
@@ -492,8 +491,95 @@ router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
 });
 
 
+function normalizeWritingReviewStatus(value) {
+  return String(value || 'pending').trim().toLowerCase();
+}
+
+function writingScoreToXp(score) {
+  const value = Number(score);
+  if (!Number.isInteger(value) || value < 1 || value > 10) return 0;
+  return value;
+}
+
+function isGradeThreeToSix(value) {
+  const grade = Number(value || 0);
+  return grade >= 3 && grade <= 6;
+}
+
+function canTeacherReviewWriting(student, lesson, row = {}) {
+  const status = normalizeWritingReviewStatus(row.reviewStatus);
+  return (
+    isGradeThreeToSix(student?.gradeLevel) &&
+    isGradeThreeToSix(lesson?.gradeLevel || student?.gradeLevel) &&
+    status === 'pending'
+  );
+}
+
+
+let speechReviewColumnsReady = false;
+
+async function ensureSpeechReviewColumns() {
+  if (speechReviewColumnsReady) return;
+
+  const queryInterface = sequelize.getQueryInterface();
+  const table = await queryInterface.describeTable('speech_attempts');
+
+  const columns = [
+    ['feedback', { type: DataTypes.TEXT, allowNull: true }],
+    ['review_status', { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'pending' }],
+    ['reviewed_at', { type: DataTypes.DATE, allowNull: true }],
+    ['reviewed_by_teacher_id', { type: DataTypes.INTEGER, allowNull: true }],
+  ];
+
+  for (const [name, definition] of columns) {
+    if (!table[name]) {
+      await queryInterface.addColumn('speech_attempts', name, definition);
+    }
+  }
+
+  speechReviewColumnsReady = true;
+}
+
+function normalizeSpeechReviewStatus(row = {}) {
+  return String(row.reviewStatus || (row.feedback ? 'reviewed' : 'pending')).trim().toLowerCase() || 'pending';
+}
+
+async function speechReviewAssignedStudentIds(req) {
+  if (req.role === 'admin') return null;
+  if (req.role !== 'teacher') return [];
+  if (!req.teacher?.id) return [];
+
+  const assignments = await TeacherAssignment.findAll({
+    where: { teacherId: req.teacher.id },
+  });
+
+  if (!assignments.length) return [];
+
+  const classFilters = assignments
+    .map((assignment) => {
+      const row = assignment.toJSON ? assignment.toJSON() : assignment;
+      const gradeLevel = row.gradeLevel || row.grade || row.classGradeLevel;
+      const section = row.section || row.classSection;
+
+      if (!gradeLevel || !section) return null;
+
+      return { gradeLevel, section };
+    })
+    .filter(Boolean);
+
+  if (!classFilters.length) return [];
+
+  const students = await Student.findAll({
+    where: { [Op.or]: classFilters },
+    attributes: ['id'],
+  });
+
+  return students.map((student) => Number(student.id));
+}
+
 router.get('/reviews/writing-speech', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
+    await ensureSpeechReviewColumns();
     const assignments = await getTeacherAssignments(req);
     const assignedStudentIds =
       assignments === null
@@ -587,52 +673,310 @@ router.get('/reviews/writing-speech', requireRole('teacher', 'admin'), async (re
 
     const formatDate = (value) => value ? new Date(value).toISOString() : null;
 
+    const writingItems = writing.map((row) => {
+      const student = studentById.get(Number(row.studentId));
+      const lesson = lessonById.get(Number(row.lessonId));
+      const task = writingTaskById.get(Number(row.taskId));
+      const reviewStatus = normalizeWritingReviewStatus(row.reviewStatus);
+      const reviewEligible = canTeacherReviewWriting(student, lesson, row);
+      const score = Number.isInteger(Number(row.score)) ? Number(row.score) : null;
+
+      return {
+        id: row.id,
+        type: 'writing',
+        content: row.content || '',
+        feedback: row.feedback || '',
+        reviewStatus,
+        score,
+        reviewedAt: formatDate(row.reviewedAt),
+        reviewedByTeacherId: row.reviewedByTeacherId || null,
+        reviewEligible,
+        xpPreview: reviewStatus === 'graded' && score !== null ? writingScoreToXp(score) : null,
+        submittedAt: formatDate(row.submittedAt || row.createdAt),
+        student: formatStudent(student),
+        lesson: formatLesson(lesson),
+        task: task ? {
+          id: task.id,
+          prompt: task.prompt || '',
+          rubricJson: task.rubricJson || null,
+        } : null,
+      };
+    });
+
+    const speechItems = speech.map((row) => {
+      const task = speechTaskById.get(Number(row.taskId));
+
+      return {
+        id: row.id,
+        type: 'speech',
+        transcript: row.transcript || '',
+        audioUrl: row.audioUrl || null,
+        score: row.score ?? null,
+        feedback: row.feedback || '',
+        reviewStatus: normalizeSpeechReviewStatus(row),
+        reviewedAt: formatDate(row.reviewedAt),
+        reviewedByTeacherId: row.reviewedByTeacherId || null,
+        reviewEligible: true,
+        submittedAt: formatDate(row.createdAt || row.submittedAt),
+        student: formatStudent(studentById.get(Number(row.studentId))),
+        lesson: formatLesson(lessonById.get(Number(row.lessonId))),
+        task: task ? {
+          id: task.id,
+          targetText: task.targetText || '',
+          promptJson: task.promptJson || null,
+        } : null,
+      };
+    });
+
     return res.json({
       summary: {
-        total: writing.length + speech.length,
-        writing: writing.length,
-        speech: speech.length,
+        total: writingItems.length + speechItems.length,
+        writing: writingItems.length,
+        speech: speechItems.length,
+        pendingWriting: writingItems.filter((item) => item.reviewStatus === 'pending' && item.reviewEligible).length,
+        gradedWriting: writingItems.filter((item) => item.reviewStatus === 'graded').length,
+        reviewEligibleWriting: writingItems.filter((item) => item.reviewEligible).length,
       },
-      writing: writing.map((row) => {
-        const task = writingTaskById.get(Number(row.taskId));
-
-        return {
-          id: row.id,
-          type: 'writing',
-          content: row.content || '',
-          feedback: row.feedback || '',
-          submittedAt: formatDate(row.submittedAt || row.createdAt),
-          student: formatStudent(studentById.get(Number(row.studentId))),
-          lesson: formatLesson(lessonById.get(Number(row.lessonId))),
-          task: task ? {
-            id: task.id,
-            prompt: task.prompt || '',
-            rubricJson: task.rubricJson || null,
-          } : null,
-        };
-      }),
-      speech: speech.map((row) => {
-        const task = speechTaskById.get(Number(row.taskId));
-
-        return {
-          id: row.id,
-          type: 'speech',
-          transcript: row.transcript || '',
-          audioUrl: row.audioUrl || null,
-          score: row.score ?? null,
-          submittedAt: formatDate(row.createdAt || row.submittedAt),
-          student: formatStudent(studentById.get(Number(row.studentId))),
-          lesson: formatLesson(lessonById.get(Number(row.lessonId))),
-          task: task ? {
-            id: task.id,
-            targetText: task.targetText || '',
-            promptJson: task.promptJson || null,
-          } : null,
-        };
-      }),
+      writing: writingItems,
+      speech: speechItems,
     });
   } catch (err) {
     next(err);
+  }
+});
+
+router.patch('/reviews/writing/:submissionId', requireRole('teacher', 'admin'), async (req, res, next) => {
+  try {
+    const submissionId = Number(req.params.submissionId);
+
+    if (!Number.isInteger(submissionId) || submissionId <= 0) {
+      return res.status(400).json({ message: 'Invalid writing submission.' });
+    }
+
+    const score = Number(req.body?.score);
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      return res.status(422).json({ message: 'Score must be a whole number from 1 to 10.' });
+    }
+
+    const feedback = String(req.body?.feedback || req.body?.teacherFeedback || '').trim();
+    assertSafeText(feedback, 'teacher feedback');
+
+    const submission = await WritingSubmission.findByPk(submissionId);
+
+    if (!submission) {
+      return res.status(404).json({ message: 'Writing submission not found.' });
+    }
+
+    const [student, lesson] = await Promise.all([
+      Student.findByPk(submission.studentId),
+      Lesson.findByPk(submission.lessonId),
+    ]);
+
+    if (!student || !lesson) {
+      return res.status(404).json({ message: 'Writing submission is missing student or lesson details.' });
+    }
+
+    const assignments = await getTeacherAssignments(req);
+    const assignedStudentIds =
+      assignments === null
+        ? null
+        : await getAssignedStudentIds(assignments);
+
+    if (
+      Array.isArray(assignedStudentIds) &&
+      !assignedStudentIds.includes(Number(submission.studentId))
+    ) {
+      return res.status(403).json({ message: 'You can only grade writing submissions from your assigned students.' });
+    }
+
+    if (!isGradeThreeToSix(student.gradeLevel) || !isGradeThreeToSix(lesson.gradeLevel || student.gradeLevel)) {
+      return res.status(422).json({ message: 'Only Grade 3 to Grade 6 writing submissions can be graded by teachers.' });
+    }
+
+    const currentStatus = normalizeWritingReviewStatus(submission.reviewStatus);
+
+    if (currentStatus !== 'pending') {
+      return res.status(409).json({
+        message: 'This writing submission has already been graded.',
+        submission: {
+          id: submission.id,
+          reviewStatus: currentStatus,
+          score: submission.score ?? null,
+          feedback: submission.feedback || '',
+          reviewedAt: submission.reviewedAt || null,
+          reviewedByTeacherId: submission.reviewedByTeacherId || null,
+        },
+        xpAwarded: 0,
+      });
+    }
+
+    const reviewedAt = new Date();
+
+    const [updatedCount] = await WritingSubmission.update(
+      {
+        reviewStatus: 'graded',
+        score,
+        feedback: feedback || submission.feedback || null,
+        reviewedAt,
+        reviewedByTeacherId: req.teacher?.id || null,
+      },
+      {
+        where: {
+          id: submission.id,
+          reviewStatus: 'pending',
+        },
+      }
+    );
+
+    if (!updatedCount) {
+      const latest = await WritingSubmission.findByPk(submission.id);
+      return res.status(409).json({
+        message: 'This writing submission was already graded. Please refresh the page.',
+        submission: latest ? {
+          id: latest.id,
+          reviewStatus: normalizeWritingReviewStatus(latest.reviewStatus),
+          score: latest.score ?? null,
+          feedback: latest.feedback || '',
+          reviewedAt: latest.reviewedAt || null,
+          reviewedByTeacherId: latest.reviewedByTeacherId || null,
+        } : null,
+        xpAwarded: 0,
+      });
+    }
+
+    const updatedSubmission = await WritingSubmission.findByPk(submission.id);
+    const xpToAward = writingScoreToXp(score);
+
+    const xpResult = await awardXp(
+      submission.studentId,
+      xpToAward,
+      'writing_review',
+      submission.id,
+      `Teacher writing grade ${score}/10`
+    );
+
+    const xpAwarded = Number(xpResult?.xpAwarded ?? (xpResult?.xpAlreadyAwarded ? 0 : xpToAward));
+
+    if (xpAwarded > 0) {
+      await awardThresholdBadges(xpResult || student);
+    }
+
+    return res.json({
+      submission: {
+        id: updatedSubmission.id,
+        type: 'writing',
+        content: updatedSubmission.content || '',
+        feedback: updatedSubmission.feedback || '',
+        reviewStatus: normalizeWritingReviewStatus(updatedSubmission.reviewStatus),
+        score: updatedSubmission.score ?? null,
+        reviewedAt: updatedSubmission.reviewedAt || null,
+        reviewedByTeacherId: updatedSubmission.reviewedByTeacherId || null,
+        student: {
+          id: student.id,
+          name: student.name,
+          avatar: student.avatar,
+          gradeLevel: student.gradeLevel,
+          section: student.section,
+        },
+        lesson: {
+          id: lesson.id,
+          title: lesson.title,
+          subject: lesson.subject,
+          gradeLevel: lesson.gradeLevel,
+        },
+      },
+      xpAwarded,
+      xpAlreadyAwarded: Boolean(xpResult?.xpAlreadyAwarded),
+      message: `Writing grade saved. Student earned +${xpAwarded} XP.`,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+
+router.patch('/reviews/speech/:attemptId', requireRole('teacher', 'admin'), async (req, res, next) => {
+  try {
+    await ensureSpeechReviewColumns();
+
+    const attemptId = Number(req.params.attemptId);
+
+    if (!Number.isInteger(attemptId) || attemptId <= 0) {
+      return res.status(400).json({ message: 'Invalid speech attempt.' });
+    }
+
+    const rawScore = req.body?.score;
+    const hasScore = rawScore !== undefined && rawScore !== null && String(rawScore).trim() !== '';
+    const score = hasScore ? Number(rawScore) : null;
+
+    if (hasScore && (!Number.isInteger(score) || score < 1 || score > 10)) {
+      return res.status(422).json({ message: 'Score must be a whole number from 1 to 10.' });
+    }
+
+    const feedback = String(req.body?.feedback || req.body?.teacherFeedback || '').trim();
+    assertSafeText(feedback, 'teacher feedback');
+
+    if (!feedback && !hasScore) {
+      return res.status(422).json({ message: 'Add feedback or a score before saving the speech review.' });
+    }
+
+    const attempt = await SpeechAttempt.findByPk(attemptId);
+
+    if (!attempt) {
+      return res.status(404).json({ message: 'Speech attempt not found.' });
+    }
+
+    const [student, lesson] = await Promise.all([
+      Student.findByPk(attempt.studentId),
+      Lesson.findByPk(attempt.lessonId),
+    ]);
+
+    if (!student || !lesson) {
+      return res.status(404).json({ message: 'Speech attempt is missing student or lesson details.' });
+    }
+
+    const assignedStudentIds = await speechReviewAssignedStudentIds(req);
+
+    if (
+      Array.isArray(assignedStudentIds) &&
+      !assignedStudentIds.includes(Number(attempt.studentId))
+    ) {
+      return res.status(403).json({ message: 'You can only review speech attempts from your assigned students.' });
+    }
+
+    const reviewedAt = new Date();
+
+    await attempt.update({
+      score: hasScore ? score : attempt.score,
+      feedback: feedback || attempt.feedback || null,
+      reviewStatus: 'reviewed',
+      reviewedAt,
+      reviewedByTeacherId: req.teacher?.id || null,
+    });
+
+    const updatedAttempt = await SpeechAttempt.findByPk(attempt.id);
+
+    await audit(req.user.id, 'speech_attempt.review', 'speech_attempt', attempt.id, {
+      studentId: attempt.studentId,
+      lessonId: attempt.lessonId,
+      score: updatedAttempt.score ?? null,
+      reviewStatus: normalizeSpeechReviewStatus(updatedAttempt),
+    });
+
+    return res.json({
+      attempt: {
+        id: updatedAttempt.id,
+        type: 'speech',
+        score: updatedAttempt.score ?? null,
+        feedback: updatedAttempt.feedback || '',
+        reviewStatus: normalizeSpeechReviewStatus(updatedAttempt),
+        reviewedAt: updatedAttempt.reviewedAt || null,
+        reviewedByTeacherId: updatedAttempt.reviewedByTeacherId || null,
+      },
+    });
+  } catch (err) {
+    return next(err);
   }
 });
 

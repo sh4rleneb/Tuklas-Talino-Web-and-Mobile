@@ -247,6 +247,10 @@ export const WritingSubmission = sequelize.define('WritingSubmission', {
   taskId: { type: DataTypes.INTEGER, allowNull: false },
   content: { type: DataTypes.TEXT, allowNull: false },
   feedback: { type: DataTypes.TEXT, allowNull: true },
+  reviewStatus: { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'pending' },
+  score: { type: DataTypes.INTEGER, allowNull: true },
+  reviewedAt: { type: DataTypes.DATE, allowNull: true },
+  reviewedByTeacherId: { type: DataTypes.INTEGER, allowNull: true },
   submittedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, { tableName: 'writing_submissions' });
 
@@ -257,6 +261,10 @@ export const SpeechAttempt = sequelize.define('SpeechAttempt', {
   transcript: { type: DataTypes.TEXT, allowNull: true },
   audioUrl: { type: DataTypes.STRING(500), allowNull: true },
   score: { type: DataTypes.INTEGER, allowNull: true },
+  feedback: { type: DataTypes.TEXT, allowNull: true, field: 'feedback' },
+  reviewStatus: { type: DataTypes.STRING(40), allowNull: false, defaultValue: 'pending', field: 'review_status' },
+  reviewedAt: { type: DataTypes.DATE, allowNull: true, field: 'reviewed_at' },
+  reviewedByTeacherId: { type: DataTypes.INTEGER, allowNull: true, field: 'reviewed_by_teacher_id' },
   submittedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
 }, { tableName: 'speech_attempts' });
 
