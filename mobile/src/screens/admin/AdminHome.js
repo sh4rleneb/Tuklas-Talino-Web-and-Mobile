@@ -22,6 +22,8 @@ import {
   normalizeSpaces,
   studentErrors,
   teacherErrors,
+  isValidGrade,
+  isValidSection,
 } from '../../utils/accountValidation';
 
 import {
@@ -413,7 +415,22 @@ async function executeVerifiedAction() {
                 Enter a valid student name.
               </Text>
             )}
-            <Field label="Grade" value={studentForm.gradeLevel} keyboardType="numeric" onChangeText={(gradeLevel) => setStudentForm((current) => ({ ...current, gradeLevel }))} />
+            <Field
+              label="Grade"
+              value={studentForm.gradeLevel}
+              keyboardType="numeric"
+              onChangeText={(gradeLevel) =>
+                setStudentForm((current) => ({
+                  ...current,
+                  gradeLevel: String(gradeLevel || '').replace(/[^0-9]/g, '').slice(0, 1),
+                }))
+              }
+            />
+            {studentValidation.gradeLevel && (
+              <Text style={styles.errorText}>
+                Grade must be from 1 to 6.
+              </Text>
+            )}
             <Field
               label="Section"
               value={studentForm.section}
@@ -432,7 +449,19 @@ async function executeVerifiedAction() {
             <Button
               disabled={Boolean(busy) || !studentFormValid}
               onPress={async () => {
-              const saved = await run('create-student', () => createStudentAccount({ ...studentForm, gradeLevel: Number(studentForm.gradeLevel), avatar: '🧒' }), 'Student account created.');
+              const payload = {
+                ...studentForm,
+                name: normalizeSpaces(studentForm.name),
+                gradeLevel: Number(studentForm.gradeLevel),
+                section: normalizeSpaces(studentForm.section),
+                avatar: '🧒',
+              };
+
+              const saved = await run(
+                'create-student',
+                () => createStudentAccount(payload),
+                'Student account created.'
+              );
 
               if (saved) {
                 setRecentCredentials(current => [
@@ -502,7 +531,13 @@ async function executeVerifiedAction() {
             <Button
               disabled={Boolean(busy) || !teacherFormValid}
               onPress={async () => {
-              const saved = await run('create-teacher', () => createTeacherAccount(teacherForm), 'Teacher account created.');
+              const teacherPayload = {
+                ...teacherForm,
+                name: normalizeSpaces(teacherForm.name),
+                email: String(teacherForm.email || '').trim(),
+              };
+
+              const saved = await run('create-teacher', () => createTeacherAccount(teacherPayload), 'Teacher account created.');
 
               if (saved) {
                 setRecentCredentials(current => [
@@ -535,9 +570,43 @@ async function executeVerifiedAction() {
           <Text style={styles.cardTitle}>Assign Teacher</Text>
           <Text style={styles.fieldLabel}>Teacher</Text>
           <View style={styles.choiceRow}>{teachers.map((teacher) => <Button key={teacher.id} tone={Number(assignmentForm.teacherId) === Number(teacher.id) ? 'green' : 'slate'} onPress={() => setAssignmentForm((current) => ({ ...current, teacherId: teacher.id }))}>{teacher.name}</Button>)}</View>
-          <Field label="Grade" value={assignmentForm.gradeLevel} keyboardType="numeric" onChangeText={(gradeLevel) => setAssignmentForm((current) => ({ ...current, gradeLevel }))} />
-          <Field label="Section" value={assignmentForm.section} onChangeText={(section) => setAssignmentForm((current) => ({ ...current, section }))} />
-          <Button disabled={!assignmentForm.teacherId || !assignmentForm.section.trim() || Boolean(busy)} onPress={() => run('assignment', () => assignTeacher(assignmentForm.teacherId, { gradeLevel: Number(assignmentForm.gradeLevel), section: assignmentForm.section }), 'Assignment saved.')}>Save Assignment</Button>
+          <Field
+            label="Grade"
+            value={assignmentForm.gradeLevel}
+            keyboardType="numeric"
+            onChangeText={(gradeLevel) =>
+              setAssignmentForm((current) => ({
+                ...current,
+                gradeLevel: String(gradeLevel || '').replace(/[^0-9]/g, '').slice(0, 1),
+              }))
+            }
+          />
+          <Field
+            label="Section"
+            value={assignmentForm.section}
+            onChangeText={(section) => setAssignmentForm((current) => ({ ...current, section: normalizeSpaces(section) }))}
+          />
+          <Button
+            disabled={
+              !assignmentForm.teacherId ||
+              !isValidGrade(assignmentForm.gradeLevel) ||
+              !isValidSection(assignmentForm.section) ||
+              Boolean(busy)
+            }
+            onPress={() =>
+              run(
+                'assignment',
+                () =>
+                  assignTeacher(assignmentForm.teacherId, {
+                    gradeLevel: Number(assignmentForm.gradeLevel),
+                    section: normalizeSpaces(assignmentForm.section),
+                  }),
+                'Assignment saved.'
+              )
+            }
+          >
+            Save Assignment
+          </Button>
         </Card>
         <Card>
           <Text style={styles.cardTitle}>Teacher Assignments</Text>
