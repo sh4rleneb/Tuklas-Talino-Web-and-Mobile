@@ -633,37 +633,70 @@ const styles = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    rowGap: 12,
+    marginTop: 8,
   },
 
   badgeCard: {
-    flex: 1,
-    minWidth: '30%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 14,
-    marginRight: 10,
+
+    width: '48%',
+
+    backgroundColor: '#F8FAFC',
+
+    borderRadius: 26,
+
+    paddingVertical: 18,
+
+    paddingHorizontal: 12,
+
+    alignItems: 'center',
+
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+
+    borderColor: '#BBF7D0',
+
     shadowColor: '#14532D',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+
+    shadowOpacity: 0.06,
+
+    shadowRadius: 12,
+
+    shadowOffset: { width: 0, height: 6 },
+
+    elevation: 3,
+
+    minHeight: 170,
+
   },
   badgeIcon: {
-    fontSize: 22,
-    marginBottom: 10,
+    fontSize: 42,
+    backgroundColor: '#ECFDF5',
+    width: 64,
+    height: 64,
+    borderRadius: 24,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
   badgeName: {
-    fontSize: 16,
-    fontFamily: 'Fredoka_700Bold',
+    fontSize: 15,
+    fontWeight: '900',
     color: '#0F172A',
-    marginBottom: 6,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginTop: 12,
   },
   badgeMeta: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#64748B',
-    fontFamily: 'Nunito_700Bold',
+    textAlign: 'center',
+    lineHeight: 17,
+    marginTop: 6,
   },
   taskCard: {
     backgroundColor: '#FFFFFF',

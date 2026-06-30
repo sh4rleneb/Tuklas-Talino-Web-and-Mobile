@@ -151,81 +151,200 @@ export default function BadgesScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F6FFF5',
+    backgroundColor: '#F0FDF4',
   },
-  screen: { flex: 1, backgroundColor: '#F6FFF5' },
+
+  screen: {
+    flex: 1,
+    backgroundColor: '#F0FDF4',
+  },
+
   content: {
-    padding: 16,
-    paddingTop: 32,
-    paddingBottom: 44,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 140,
   },
+
   header: {
-    marginBottom: 22,
+    marginBottom: 16,
   },
 
   heroCard: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 26,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
     padding: 20,
-    marginBottom: 20,
+    marginTop: 8,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
-  title: { fontSize: 24, fontWeight: '900', color: colors.ink },
-  subtitle: { color: colors.muted, marginTop: 4 },
+
+  title: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 34,
+  },
+
+  subtitle: {
+    color: '#64748B',
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '800',
+  },
 
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 10,
     marginTop: 18,
   },
 
   statChip: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 10,
-    marginHorizontal: 4,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   statValue: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '900',
-    color: '#166534',
+    color: '#15803D',
   },
 
   statLabel: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
 
-  studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
-  studentAvatar: { fontSize: 26 },
-  studentXp: { color: colors.ink, fontWeight: '800', fontSize: 12 },
+  studentChip: {
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    borderRadius: 18,
+    padding: 8,
+  },
+
+  studentAvatar: {
+    fontSize: 26,
+  },
+
+  studentXp: {
+    color: '#0F172A',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 8,
+    justifyContent: 'space-between',
+    rowGap: 14,
+    marginTop: 4,
   },
+
   badge: {
-    width: '47%',
+    width: '48%',
     alignItems: 'center',
-    minHeight: 180,
+    minHeight: 190,
     justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
-  locked: { opacity: .45 },
-  icon: { fontSize: 54 },
+
+  locked: {
+    opacity: 0.58,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+  },
+
+  icon: {
+    fontSize: 48,
+    backgroundColor: '#ECFDF5',
+    width: 72,
+    height: 72,
+    borderRadius: 26,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
   name: {
     textAlign: 'center',
     fontWeight: '900',
-    color: colors.ink,
-    fontSize: 18,
-    marginTop: 10,
+    color: '#0F172A',
+    fontSize: 16,
+    lineHeight: 21,
+    marginTop: 12,
   },
-  muted: { color: colors.muted, marginTop: 4, textAlign: 'center' },
-  center: { paddingVertical: 50, alignItems: 'center' },
-  error: { color: '#B91C1C', textAlign: 'center', marginTop: 30 },
-  progressTrack: { height: 7, width: '100%', backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 10 },
-  progressFill: { height: '100%', backgroundColor: colors.green, borderRadius: 99 },
+
+  muted: {
+    color: '#64748B',
+    marginTop: 6,
+    textAlign: 'center',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+  },
+
+  center: {
+    paddingVertical: 50,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+
+  error: {
+    color: '#B91C1C',
+    textAlign: 'center',
+    marginTop: 30,
+    fontWeight: '800',
+    backgroundColor: '#FEF2F2',
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+
+  progressTrack: {
+    height: 8,
+    width: '100%',
+    backgroundColor: '#E2E8F0',
+    borderRadius: 99,
+    overflow: 'hidden',
+    marginTop: 12,
+  },
+
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#16A34A',
+    borderRadius: 99,
+  },
 });

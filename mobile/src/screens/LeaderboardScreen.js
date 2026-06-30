@@ -78,7 +78,13 @@ export default function LeaderboardScreen({ navigation }) {
           <Text>{error}</Text>
         ) : (
           leaderboard.map((player) => (
-            <Card key={player.id}>
+            <Card
+                key={player.id}
+                style={[
+                  styles.leaderboardCard,
+                  String(player.id) === String(student?.id) && styles.currentPlayerCard,
+                ]}
+              >
               <View style={styles.row}>
                 <Text style={styles.rank}>
                   {medal(player.rank)}
@@ -118,64 +124,124 @@ export default function LeaderboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe:{ flex:1, backgroundColor:'#F6FFF5' },
-  screen:{ flex:1, backgroundColor:'#F6FFF5' },
-  content:{ padding:16, paddingTop:32, paddingBottom:44 },
-
-  heroCard:{
-    backgroundColor:'#ECFDF5',
-    borderRadius:26,
-    padding:20,
-    marginBottom:20,
+  safe: {
+    flex: 1,
+    backgroundColor: '#F0FDF4',
   },
 
-  title:{
-    fontSize:24,
-    fontWeight:'900',
-    color:colors.ink,
+  screen: {
+    flex: 1,
+    backgroundColor: '#F0FDF4',
   },
 
-  subtitle:{
-    color:colors.muted,
-    marginTop:4,
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 140,
   },
 
-  row:{
-    flexDirection:'row',
-    alignItems:'center',
+  heroCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    paddingTop: 8,
+    paddingBottom: 12,
+    marginTop: 4,
+    marginBottom: 8,
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 
-  rank:{
-    width:52,
-    fontSize:22,
-    fontWeight:'900',
+  title: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0F172A',
+    lineHeight: 34,
   },
 
-  avatar:{
-    fontSize:28,
-    marginRight:12,
+  subtitle: {
+    color: '#64748B',
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '800',
   },
 
-  flex:{
-    flex:1,
+  leaderboardCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
 
-  name:{
-    fontWeight:'900',
-    fontSize:16,
+  currentPlayerCard: {
+    borderColor: '#16A34A',
+    backgroundColor: '#F0FDF4',
   },
 
-  meta:{
-    color:'#64748B',
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 74,
   },
 
-  xp:{
-    textAlign:'right',
-    fontWeight:'900',
+  rank: {
+    width: 50,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0F172A',
   },
 
-  streak:{
-    textAlign:'right',
-    color:'#EA580C',
+  avatar: {
+    fontSize: 30,
+    width: 52,
+    textAlign: 'center',
+    marginRight: 12,
+  },
+
+  flex: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  name: {
+    fontWeight: '900',
+    fontSize: 16,
+    color: '#0F172A',
+  },
+
+  meta: {
+    color: '#64748B',
+    fontWeight: '700',
+    marginTop: 3,
+  },
+
+  scoreBox: {
+    alignItems: 'flex-end',
+    marginLeft: 10,
+    minWidth: 58,
+  },
+
+  xp: {
+    textAlign: 'right',
+    fontWeight: '900',
+    color: '#16A34A',
+    fontSize: 15,
+  },
+
+  streak: {
+    textAlign: 'right',
+    color: '#EA580C',
+    fontWeight: '800',
+    marginTop: 4,
   },
 });

@@ -370,6 +370,36 @@ async function handleLogout() {
 
     </View>
 
+      <TouchableOpacity
+        style={styles.leaderboardNavCard}
+        activeOpacity={0.88}
+        onPress={() => {
+          const parentNav = navigation.getParent?.();
+
+          if (parentNav) {
+            parentNav.navigate('Leaderboard');
+          } else {
+            navigation.navigate('Leaderboard');
+          }
+        }}
+      >
+        <View style={styles.leaderboardNavIcon}>
+          <Text style={styles.leaderboardNavEmoji}>🏆</Text>
+        </View>
+
+        <View style={styles.leaderboardNavContent}>
+          <Text style={styles.leaderboardNavTitle}>
+            Leaderboard
+          </Text>
+
+          <Text style={styles.leaderboardNavText}>
+            See your class ranking, XP, and learning streak.
+          </Text>
+        </View>
+
+        <Text style={styles.leaderboardNavArrow}>→</Text>
+      </TouchableOpacity>
+
     <View style={styles.sectionCard}>
 
       <Text style={styles.sectionTitle}>
@@ -497,178 +527,27 @@ async function handleLogout() {
 }
 
 const styles = StyleSheet.create({
-  moreButton: {
-    marginTop: 8,
-    alignSelf: 'center',
-    backgroundColor: '#DCFCE7',
-    borderColor: '#86EFAC',
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-  },
-  moreButtonText: {
-    color: '#15803D',
-    fontWeight: '900',
-    fontSize: 15,
-  },
-  logoutModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.58)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  logoutModalCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 30,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    shadowColor: '#991B1B',
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
-  },
-  logoutModalIcon: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    backgroundColor: '#FEF2F2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
-  },
-  logoutModalIconText: {
-    fontSize: 42,
-  },
-  logoutModalTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: '#0F172A',
-    marginBottom: 8,
-  },
-  logoutModalBody: {
-    fontSize: 16,
-    lineHeight: 23,
-    color: '#475569',
-    textAlign: 'center',
-    marginBottom: 22,
-  },
-  logoutModalActions: {
-    flexDirection: 'row',
-    width: '100%',
-  },
-  logoutCancelButton: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 18,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  logoutConfirmButton: {
-    flex: 1,
-    backgroundColor: '#EF4444',
-    borderRadius: 18,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  logoutCancelText: {
-    color: '#334155',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  logoutConfirmText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  xpLogAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 18,
-    bottom: 18,
-    width: 5,
-    borderTopRightRadius: 999,
-    borderBottomRightRadius: 999,
-    backgroundColor: '#22C55E',
-  },
-  xpLogIconBubble: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  xpLogIcon: {
-    fontSize: 28,
-  },
-  xpLogContent: {
-    flex: 1,
-  },
-
-  xpDate: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 6,
-    fontWeight: '700',
-  },
-
-
-  logoutButton: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 18,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-    alignSelf: 'center',
-    width: '70%',
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#FCA5A5',
-  },
-
-  accountCard: {
-    paddingTop: 20,
-    paddingBottom: 20,
-  },
-
-  logoutButtonText: {
-    color: '#DC2626',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-
   screen: {
     flex: 1,
-    backgroundColor: '#F4FBF5',
-
+    backgroundColor: '#F0FDF4',
     paddingHorizontal: 16,
-
-    paddingTop: 50,
+    paddingTop: 42,
   },
 
   topCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 14,
-
-    marginTop: 12,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 16,
+    marginTop: 8,
     marginBottom: 16,
-
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 4,
   },
 
@@ -684,17 +563,15 @@ const styles = StyleSheet.create({
   },
 
   brand: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '900',
     color: '#16A34A',
-
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-
     marginBottom: 12,
   },
 
@@ -708,7 +585,6 @@ const styles = StyleSheet.create({
   pillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-
     marginBottom: 18,
   },
 
@@ -720,121 +596,119 @@ const styles = StyleSheet.create({
   },
 
   xpPill: {
-    backgroundColor: '#FEF3C7',
-
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 14,
     paddingVertical: 10,
-
     borderRadius: 20,
-
     marginLeft: 8,
   },
 
   infoText: {
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#334155',
   },
 
   homeButton: {
     alignSelf: 'flex-start',
-
     backgroundColor: '#FFFFFF',
-
     borderWidth: 2,
     borderColor: '#22C55E',
-
     borderRadius: 24,
-
     paddingHorizontal: 22,
     paddingVertical: 10,
   },
 
   homeButtonText: {
     color: '#16A34A',
-    fontWeight: '700',
+    fontWeight: '800',
   },
 
   profileCard: {
-    backgroundColor: '#22C55E',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#4ADE80',
-    shadowColor: '#16A34A',
-
-      shadowOffset: {
-        width: 0,
-        height: 8,
-      },
-        shadowOpacity: 0.15,
-        shadowRadius: 15,
-        elevation: 8,
-
-    borderRadius: 24,
-
+    borderColor: '#DCFCE7',
+    shadowColor: '#14532D',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.09,
+    shadowRadius: 18,
+    elevation: 5,
+    borderRadius: 32,
     paddingTop: 24,
     paddingHorizontal: 20,
     paddingBottom: 20,
-
     marginBottom: 16,
   },
 
   avatarContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 25,
-    backgroundColor: '#FFF4CC',
-
+    width: 104,
+    height: 104,
+    borderRadius: 32,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
     alignSelf: 'center',
-
     justifyContent: 'center',
     alignItems: 'center',
-
     marginBottom: 14,
   },
 
   bigAvatar: {
-    fontSize: 72,
-  },
-
-    selectedChoice: {
-    borderWidth: 3,
-    borderColor: '#22C55E',
-    backgroundColor: '#DCFCE7',
+    fontSize: 60,
   },
 
   profileTitle: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#1E293B',
-
+    fontWeight: '900',
+    color: '#0F172A',
     textAlign: 'center',
+  },
+
+  studentBadge: {
+    alignSelf: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    marginTop: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  studentBadgeText: {
+    color: '#166534',
+    fontWeight: '900',
   },
 
   profileSubtitle: {
     color: '#475569',
-    fontSize: 16,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 14,
   },
 
-    profileLevel: {
+  profileLevel: {
     fontSize: 16,
-    color: '#EFFFF4',
-    fontWeight: '600',
+    color: '#166534',
+    fontWeight: '800',
     marginBottom: 12,
   },
 
   levelCard: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#F8FAFC',
     borderRadius: 24,
     padding: 18,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   levelText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#1E293B',
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#16A34A',
     marginBottom: 14,
   },
 
@@ -847,131 +721,399 @@ const styles = StyleSheet.create({
   },
 
   progressBar: {
-    height: 10,
-    backgroundColor: '#DCFCE7',
-    borderRadius: 10,
+    height: 12,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 999,
+    overflow: 'hidden',
   },
 
   progressFill: {
-    height: 10,
-    backgroundColor: '#4ADE80',
-    borderRadius: 10,
+    height: 12,
+    backgroundColor: '#16A34A',
+    borderRadius: 999,
   },
 
   sectionCard: {
+
     backgroundColor: '#FFFFFF',
 
     borderRadius: 28,
 
-    paddingTop: 28,
-    paddingHorizontal: 20,
+    paddingTop: 22,
+
+    paddingHorizontal: 16,
+
     paddingBottom: 20,
 
     marginBottom: 16,
+
+    borderWidth: 1,
+
+    borderColor: '#DCFCE7',
+
+    shadowColor: '#14532D',
+
+    shadowOpacity: 0.05,
+
+    shadowRadius: 12,
+
+    shadowOffset: { width: 0, height: 6 },
+
+    elevation: 2,
+
   },
 
   sectionTitle: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#16A34A',
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#0F172A',
   },
 
   sectionSubtitle: {
-    color: '#475569',
+    color: '#64748B',
     marginTop: 6,
     marginBottom: 16,
-  },
-
-  studentBadge: {
-    alignSelf: 'center',
-    backgroundColor: '#FFFFFF30',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 16,
-  },
-
-  studentBadgeText: {
-    color: '#FFFFFF',
     fontWeight: '700',
+    lineHeight: 20,
+  },
+
+  leaderboardNavCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 3,
+  },
+
+  leaderboardNavIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 22,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+
+  leaderboardNavEmoji: {
+    fontSize: 30,
+  },
+
+  leaderboardNavContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  leaderboardNavTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+
+  leaderboardNavText: {
+    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+
+  leaderboardNavArrow: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#16A34A',
+    marginLeft: 10,
   },
 
   avatars: {
+
     flexDirection: 'row',
+
     flexWrap: 'wrap',
 
     justifyContent: 'space-between',
 
-    marginTop: 6,
+    rowGap: 12,
+
   },
 
   choice: {
+
     width: '23%',
 
     aspectRatio: 1,
 
+    borderRadius: 22,
+
     backgroundColor: '#F8FAFC',
 
-    borderRadius: 18,
+    borderWidth: 1,
 
-    justifyContent: 'center',
+    borderColor: '#E2E8F0',
+
     alignItems: 'center',
 
-    marginBottom: 10,
+    justifyContent: 'center',
+
+    marginBottom: 12,
+
+  },
+
+  selectedChoice: {
+
+    borderWidth: 3,
+
+    borderColor: '#16A34A',
+
+    backgroundColor: '#DCFCE7',
+
   },
 
   choiceText: {
-    fontSize: 28,
+
+    fontSize: 30,
+
   },
 
   summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    rowGap: 12,
   },
 
   summaryItem: {
     width: '48%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 22,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   summaryValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1E293B',
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0F172A',
   },
 
   summaryLabel: {
-    marginTop: 4,
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '800',
     color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
 
-
   xpLogItem: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingLeft: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    overflow: 'hidden',
+  },
+
+  xpLogAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 18,
+    bottom: 18,
+    width: 5,
+    borderTopRightRadius: 999,
+    borderBottomRightRadius: 999,
+    backgroundColor: '#22C55E',
+  },
+
+  xpLogIconBubble: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+
+  xpLogIcon: {
+    fontSize: 28,
+  },
+
+  xpLogContent: {
+    flex: 1,
   },
 
   xpLogPoints: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#16A34A',
   },
 
   xpLogNote: {
-    marginTop: 4,
-    color: '#475569',
+    marginTop: 3,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#334155',
+  },
+
+  xpDate: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 6,
+    fontWeight: '700',
   },
 
   xpLogEmpty: {
     color: '#64748B',
+    fontWeight: '700',
     textAlign: 'center',
-    marginTop: 8,
+    paddingVertical: 12,
   },
 
+  moreButton: {
+    marginTop: 8,
+    alignSelf: 'center',
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 26,
+    paddingVertical: 11,
+  },
+
+  moreButtonText: {
+    color: '#15803D',
+    fontWeight: '900',
+    fontSize: 15,
+  },
+
+  accountCard: {
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+
+  logoutButton: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    alignSelf: 'center',
+    width: '70%',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+
+  logoutButtonText: {
+    color: '#DC2626',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+
+  logoutModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+
+  logoutModalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    shadowColor: '#991B1B',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+
+  logoutModalIcon: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+
+  logoutModalIconText: {
+    fontSize: 42,
+  },
+
+  logoutModalTitle: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+
+  logoutModalBody: {
+    fontSize: 16,
+    lineHeight: 23,
+    color: '#475569',
+    textAlign: 'center',
+    marginBottom: 22,
+  },
+
+  logoutModalActions: {
+    flexDirection: 'row',
+    width: '100%',
+  },
+
+  logoutCancelButton: {
+    flex: 1,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginRight: 10,
+  },
+
+  logoutConfirmButton: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    borderRadius: 18,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+
+  logoutCancelText: {
+    color: '#334155',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  logoutConfirmText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+  },
 });

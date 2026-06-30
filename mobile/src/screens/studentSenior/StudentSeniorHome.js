@@ -483,8 +483,11 @@ export default function StudentSeniorHome({
 const styles = StyleSheet.create({
 
   safe: {
+
     flex: 1,
-    backgroundColor: '#ECFDF5',
+
+    backgroundColor: '#EAFBF1',
+
   },
 
   loadState: {
@@ -539,23 +542,29 @@ const styles = StyleSheet.create({
 
       backgroundColor: '#FFFFFF',
 
-      borderRadius: 28,
+      borderRadius: 30,
 
-      padding: 16,
+      paddingHorizontal: 18,
+
+      paddingTop: 18,
+
+      paddingBottom: 16,
+
+      marginBottom: 16,
 
       borderWidth: 1,
 
-      borderColor: '#DCFCE7',
+      borderColor: '#BBF7D0',
 
       shadowColor: '#14532D',
 
-      shadowOpacity: 0.08,
+      shadowOpacity: 0.10,
 
-      shadowRadius: 16,
+      shadowRadius: 18,
 
       shadowOffset: { width: 0, height: 8 },
 
-      elevation: 4,
+      elevation: 5,
 
     },
 
@@ -569,25 +578,31 @@ const styles = StyleSheet.create({
 
     profileChip: {
 
-      marginTop: 12,
-
       flexDirection: 'row',
 
       alignItems: 'center',
 
-      alignSelf: 'flex-start',
+      backgroundColor: '#F0FDF4',
 
-      backgroundColor: '#ECFDF5',
-
-      borderRadius: 999,
+      paddingHorizontal: 12,
 
       paddingVertical: 8,
 
-      paddingHorizontal: 12,
+      borderRadius: 999,
 
       borderWidth: 1,
 
       borderColor: '#BBF7D0',
+
+      shadowColor: '#16A34A',
+
+      shadowOpacity: 0.08,
+
+      shadowRadius: 8,
+
+      shadowOffset: { width: 0, height: 4 },
+
+      elevation: 2,
 
     },
 
@@ -626,17 +641,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_800ExtraBold',
   },
 heroCard: {
-  marginTop: 18,
-  backgroundColor: '#FFFFFF',
-  borderRadius: 32,
+  backgroundColor: '#16A34A',
+  borderRadius: 34,
   padding: 20,
+  marginBottom: 18,
   borderWidth: 1,
-  borderColor: '#DCFCE7',
+  borderColor: '#22C55E',
   shadowColor: '#14532D',
-  shadowOpacity: 0.08,
-  shadowRadius: 18,
+  shadowOpacity: 0.18,
+  shadowRadius: 20,
   shadowOffset: { width: 0, height: 10 },
-  elevation: 5,
+  elevation: 8,
 },
 
   heroTop: {
@@ -673,17 +688,22 @@ heroCard: {
   },
 
   heroTitle: {
+
     fontSize: 30,
-    fontFamily: 'Fredoka_700Bold',
-    color: '#15803D',
-    lineHeight: 36,
+
+    fontWeight: '900',
+
+    color: '#FFFFFF',
+
+    letterSpacing: -0.6,
+
   },
 
   heroSubtitle: {
 
     fontSize: 15,
 
-    color: '#334155',
+    color: '#DCFCE7',
 
     marginTop: 6,
 
@@ -698,12 +718,29 @@ heroCard: {
   },
 
   xpCard: {
-    backgroundColor: '#F8FAFC',
-    marginTop: 20,
-    borderRadius: 24,
+
+    backgroundColor: '#FFFFFF',
+
+    borderRadius: 28,
+
     padding: 18,
+
+    marginTop: 18,
+
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+
+    borderColor: '#BBF7D0',
+
+    shadowColor: '#14532D',
+
+    shadowOpacity: 0.12,
+
+    shadowRadius: 14,
+
+    shadowOffset: { width: 0, height: 7 },
+
+    elevation: 5,
+
   },
 
   xpHeader: {
@@ -714,32 +751,60 @@ heroCard: {
   },
 
   xpLabel: {
-    fontSize: 14,
-    fontFamily: 'Fredoka_600SemiBold',
+
+    fontSize: 13,
+
+    fontWeight: '900',
+
     color: '#64748B',
+
+    textTransform: 'uppercase',
+
+    letterSpacing: 0.5,
+
   },
 
   xpValue: {
-    fontSize: 32,
-    fontFamily: 'Fredoka_700Bold',
-    color: '#16A34A',
-    marginTop: 4,
+
+    fontSize: 34,
+
+    fontWeight: '900',
+
+    color: '#15803D',
+
+    marginTop: 2,
+
   },
 
   levelBadge: {
-    backgroundColor: '#DCFCE7',
+
+    backgroundColor: '#FEF3C7',
+
     paddingHorizontal: 14,
+
     paddingVertical: 9,
+
     borderRadius: 999,
+
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+
+    borderColor: '#FDE68A',
+
   },
 
 
   levelText: {
-    color: '#166534',
+
+
     fontSize: 14,
-    fontFamily: 'Fredoka_600SemiBold',
+
+
+    fontWeight: '900',
+
+
+    color: '#92400E',
+
+
   },
 
   progressBg: {
@@ -751,10 +816,13 @@ heroCard: {
   },
 
   progressFill: {
-    width: '42%',
-    height: '100%',
-    backgroundColor: '#16A34A',
+
+    height: 12,
+
+    backgroundColor: '#22C55E',
+
     borderRadius: 999,
+
   },
 
   xpSub: {
@@ -838,87 +906,223 @@ heroCard: {
   },
 
   section: {
-    marginTop: 26,
+
+    marginTop: 24,
+
+    backgroundColor: '#FFFFFF',
+
+    borderRadius: 30,
+
+    padding: 16,
+
+    borderWidth: 1,
+
+    borderColor: '#BBF7D0',
+
+    shadowColor: '#14532D',
+
+    shadowOpacity: 0.07,
+
+    shadowRadius: 14,
+
+    shadowOffset: { width: 0, height: 7 },
+
+    elevation: 3,
+
   },
 
   sectionHeader: {
+
     flexDirection: 'row',
+
     justifyContent: 'space-between',
+
     alignItems: 'center',
-    marginBottom: 2,
+
+    marginBottom: 12,
+
   },
 
   sectionTitle: {
+
     fontSize: 24,
-    fontFamily: 'Fredoka_700Bold',
+
+    fontWeight: '900',
+
     color: '#0F172A',
+
+    letterSpacing: -0.3,
+
   },
 
   allLessons: {
-    color: '#16A34A',
+
+    color: '#15803D',
+
     fontFamily: 'Fredoka_600SemiBold',
+
     fontSize: 14,
+
+    backgroundColor: '#DCFCE7',
+
+    paddingHorizontal: 12,
+
+    paddingVertical: 7,
+
+    borderRadius: 999,
+
+    borderWidth: 1,
+
+    borderColor: '#BBF7D0',
+
   },
 
   lessonGrid: {
+
     flexDirection: 'column',
-    marginTop: 2,
+
+    gap: 12,
+
+    marginTop: 4,
+
   },
 
   lessonCard: {
-    marginTop: 14,
-    borderRadius: 26,
-    padding: 20,
-    width: '100%',
-    minHeight: 176,
+
+    backgroundColor: '#F8FAFC',
+
+    borderRadius: 28,
+
+    padding: 18,
+
+    marginBottom: 0,
+
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+
+    borderColor: '#BBF7D0',
+
+    minHeight: 176,
+
     shadowColor: '#14532D',
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 7 },
+
+    shadowOpacity: 0.08,
+
+    shadowRadius: 12,
+
+    shadowOffset: { width: 0, height: 6 },
+
     elevation: 3,
+
   },
 
   lessonEmoji: {
-    fontSize: 36,
+
+    fontSize: 38,
+
+    backgroundColor: '#ECFDF5',
+
+    width: 64,
+
+    height: 64,
+
+    borderRadius: 24,
+
+    textAlign: 'center',
+
+    textAlignVertical: 'center',
+
+    overflow: 'hidden',
+
+    borderWidth: 1,
+
+    borderColor: '#BBF7D0',
+
   },
 
   lessonTag: {
-    color: '#16A34A',
+
+    alignSelf: 'flex-start',
+
+    color: '#15803D',
+
     fontFamily: 'Fredoka_600SemiBold',
-    marginTop: 12,
-    fontSize: 13,
+
+    marginTop: 14,
+
+    fontSize: 12,
+
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+
+    letterSpacing: 0.5,
+
+    backgroundColor: '#DCFCE7',
+
+    paddingHorizontal: 10,
+
+    paddingVertical: 5,
+
+    borderRadius: 999,
+
+    borderWidth: 1,
+
+    borderColor: '#BBF7D0',
+
   },
 
   lessonTitle: {
-    fontSize: 20,
-    fontFamily: 'Fredoka_700Bold',
+
+    fontSize: 18,
+
+    fontWeight: '900',
+
     color: '#0F172A',
-    marginTop: 8,
-    lineHeight: 28,
+
+    lineHeight: 24,
+
+    marginTop: 10,
+
   },
 
   startBtn: {
+
     marginTop: 16,
+
     backgroundColor: '#16A34A',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 22,
-    paddingVertical: 11,
-    borderRadius: 16,
-    shadowColor: '#15803D',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
+
+    alignSelf: 'stretch',
+
+    paddingHorizontal: 18,
+
+    paddingVertical: 13,
+
+    borderRadius: 999,
+
+    alignItems: 'center',
+
+    justifyContent: 'center',
+
+    shadowColor: '#14532D',
+
+    shadowOpacity: 0.16,
+
+    shadowRadius: 10,
+
     shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
+
+    elevation: 4,
+
   },
 
   startText: {
+
     color: '#FFFFFF',
+
     fontFamily: 'Fredoka_600SemiBold',
-    fontSize: 13,
+
+    fontSize: 14,
+
+    letterSpacing: 0.2,
+
   },
 
   badgeRow: {
@@ -972,9 +1176,25 @@ heroCard: {
   },
 
   emptyText: {
+
     color: '#64748B',
-    fontFamily: 'Nunito_700Bold',
-    marginTop: 16,
+
+    fontFamily: 'Nunito_800ExtraBold',
+
+    backgroundColor: '#F8FAFC',
+
+    borderRadius: 22,
+
+    padding: 16,
+
+    borderWidth: 1,
+
+    borderColor: '#E2E8F0',
+
+    textAlign: 'center',
+
+    lineHeight: 20,
+
   },
 
 
