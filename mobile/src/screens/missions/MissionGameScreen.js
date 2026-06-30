@@ -62,6 +62,20 @@ const SOUND_AND_SAY_LEVELS = {
   },
 };
 
+function friendlyMissionErrorMessage(message = '') {
+  const text = String(message || '').toLowerCase();
+
+  if (text.includes('already used all') && text.includes('attempt')) {
+    return 'You already used all 5 tries for this mission. Great effort! Try another mission or review what you learned.';
+  }
+
+  if (text.includes('mission not found')) {
+    return 'Oops! This mission is not ready yet. Please go back and choose another mission.';
+  }
+
+  return 'Oops! We could not save your mission right now. Please try again.';
+}
+
 function soundAndSayLevelForGrade(gradeLevel) {
   const grade = Number(gradeLevel || 1);
 
@@ -192,6 +206,7 @@ export default function MissionGameScreen({ navigation, route }) {
   const [recording, setRecording] = useState(false);
   const [recordingUri, setRecordingUri] = useState('');
   const [soundStatus, setSoundStatus] = useState('');
+  const [missionNotice, setMissionNotice] = useState(null);
 
   const stars =
     attempts <= 1 ? '⭐⭐⭐' :
@@ -218,6 +233,24 @@ export default function MissionGameScreen({ navigation, route }) {
     soundRef.current?.unloadAsync?.();
     recordingRef.current?.stopAndUnloadAsync?.();
   }, []);
+
+  useEffect(() => {
+    if (!missionNotice) return undefined;
+
+    const timer = setTimeout(() => {
+      setMissionNotice(null);
+    }, 4200);
+
+    return () => clearTimeout(timer);
+  }, [missionNotice]);
+
+  const showMissionNotice = (message, emoji = '🌈') => {
+    setMissionNotice({
+      title: 'Nice try!',
+      message,
+      emoji,
+    });
+  };
 
   const startSoundAndSayRecording = async () => {
     try {
@@ -364,9 +397,9 @@ export default function MissionGameScreen({ navigation, route }) {
 
         setCompleted(true);
       } catch (err) {
-        Alert.alert(
-          'Mission Error',
-          err.message || 'Unable to save mission progress.'
+        showMissionNotice(
+          friendlyMissionErrorMessage(err.message),
+          '🌟'
         );
       } finally {
         setSubmitting(false);
@@ -383,6 +416,36 @@ export default function MissionGameScreen({ navigation, route }) {
     );
   };
 
+  const missionNoticePopup = missionNotice ? (
+    <View style={styles.missionNoticeOverlay}>
+      <View style={styles.missionNoticeCard}>
+        <Text style={styles.missionNoticeEmoji}>
+          {missionNotice.emoji}
+        </Text>
+
+        <View style={styles.missionNoticeBody}>
+          <Text style={styles.missionNoticeTitle}>
+            {missionNotice.title}
+          </Text>
+
+          <Text style={styles.missionNoticeMessage}>
+            {missionNotice.message}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.missionNoticeButton}
+            onPress={() => setMissionNotice(null)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.missionNoticeButtonText}>
+              Got it!
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  ) : null;
+
   if (completed) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -395,11 +458,10 @@ export default function MissionGameScreen({ navigation, route }) {
           badge={badgePopup}
           onReplay={() => {
             if (missionAttemptNo >= MAX_MISSION_ATTEMPTS) {
-              Alert.alert(
-                'Mission Attempts',
-                `You already used all ${MAX_MISSION_ATTEMPTS} attempts for this mission.`
+              showMissionNotice(
+                `You already used all ${MAX_MISSION_ATTEMPTS} tries for this mission. Great effort! Try another mission or review what you learned.`,
+                '🎉'
               );
-              navigation.goBack();
               return;
             }
 
@@ -412,6 +474,8 @@ export default function MissionGameScreen({ navigation, route }) {
           }}
           onBack={() => navigation.goBack()}
         />
+
+        {missionNoticePopup}
       </SafeAreaView>
     );
   }
@@ -565,6 +629,8 @@ export default function MissionGameScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
+
+      {missionNoticePopup}
     </SafeAreaView>
   );
 }
@@ -693,6 +759,79 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 16,
   },
+  missionNoticeOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(15, 23, 42, 0.32)',
+  },
+  missionNoticeCard: {
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderRadius: 28,
+    borderWidth: 3,
+    borderColor: '#FDBA74',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    shadowColor: '#9A3412',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    elevation: 10,
+  },
+  missionNoticeEmoji: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FED7AA',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    fontSize: 34,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  missionNoticeBody: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  missionNoticeTitle: {
+    color: '#7C2D12',
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  missionNoticeMessage: {
+    color: '#9A3412',
+    fontSize: 16,
+    lineHeight: 23,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  missionNoticeButton: {
+    backgroundColor: '#FB923C',
+    borderRadius: 999,
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    marginTop: 18,
+  },
+  missionNoticeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
   secondaryButton: {
     width: '100%',
     marginTop: 14,

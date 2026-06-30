@@ -85,14 +85,6 @@ export default function WordMatchGame({
         total={items.length}
       />
 
-      {toast && (
-        <View style={styles.toastInline}>
-          <Text style={styles.toast}>
-            {toast}
-          </Text>
-        </View>
-      )}
-
       <View style={styles.boardCard}>
         <View style={styles.board}>
 
@@ -217,6 +209,20 @@ export default function WordMatchGame({
           ✅ Complete Mission
         </Text>
       </TouchableOpacity>
+
+      {toast && (
+        <View pointerEvents="none" style={styles.toastOverlay}>
+          <View style={styles.toastCard}>
+            <Text style={styles.toastEmoji}>
+              ⭐
+            </Text>
+
+            <Text style={styles.toast}>
+              {toast}
+            </Text>
+          </View>
+        </View>
+      )}
 
     </>
   );
@@ -374,24 +380,49 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  toastInline: {
-    alignSelf: 'center',
+  toastOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(15, 23, 42, 0.18)',
+  },
+
+  toastCard: {
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
     backgroundColor: '#FFF7ED',
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
+    borderRadius: 28,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderWidth: 3,
     borderColor: '#FACC15',
-    marginTop: -4,
-    marginBottom: 14,
-    maxWidth: '92%',
+    shadowColor: '#92400E',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    elevation: 10,
+  },
+
+  toastEmoji: {
+    fontSize: 36,
+    marginBottom: 10,
   },
 
   toast: {
     textAlign: 'center',
     fontWeight: '900',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 21,
+    lineHeight: 28,
     color: '#78350F',
   },
 });
