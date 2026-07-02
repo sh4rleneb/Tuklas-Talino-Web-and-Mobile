@@ -325,9 +325,7 @@ export default function QuizScreen({ navigation }) {
       <View style={styles.header}>
       <View style={styles.headerText}>
         <Text style={styles.title}>🧠 Quizzes</Text>
-        <Text style={styles.muted}>
-          Practice with questions from your published lessons.
-        </Text>
+
       </View>
     </View>
 

@@ -67,9 +67,6 @@ export default function LeaderboardScreen({ navigation }) {
 
         <View style={styles.heroCard}>
           <Text style={styles.title}>🏆 Leaderboard</Text>
-          <Text style={styles.subtitle}>
-            Top students ranked by XP and learning consistency.
-          </Text>
         </View>
 
         {loading ? (

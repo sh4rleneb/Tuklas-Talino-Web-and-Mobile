@@ -16124,37 +16124,39 @@ function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
-                  background: '#F8FAFC',
-                  borderRadius: 14,
-                  padding: '12px 14px',
-                  borderLeft: '4px solid #22C55E',
+                  gap: 16,
+                  background: '#FFFFFF',
+                  borderRadius: 18,
+                  padding: '18px 20px',
+                  borderLeft: '5px solid #22C55E',
+                  boxShadow: '0 2px 8px rgba(34,197,94,0.08)',
+                  marginBottom: 2,
                 }}
               >
                 <div
                   style={{
-                    width: 42,
-                    height: 42,
+                    width: 54,
+                    height: 54,
                     borderRadius: '50%',
                     background: '#DCFCE7',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 20,
+                    fontSize: 26,
                     flexShrink: 0,
                   }}
                 >
                   {getXpIcon(log)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 900, color: '#16A34A', fontSize: 15 }}>
+                  <div style={{ fontWeight: 900, color: '#16A34A', fontSize: 20 }}>
                     +{log.points} XP
                   </div>
-                  <div style={{ color: '#334155', fontSize: 13, marginTop: 2 }}>
+                  <div style={{ color: '#334155', fontSize: 15, marginTop: 4, fontWeight: 600 }}>
                     {log.note || 'XP earned'}
                   </div>
                   {formatXpLogDate(log) && (
-                    <div style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>
+                    <div style={{ color: '#94A3B8', fontSize: 13, marginTop: 4 }}>
                       🕒 {formatXpLogDate(log)}
                     </div>
                   )}
@@ -16246,37 +16248,39 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go, logout}) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
-                  background: '#F8FAFC',
-                  borderRadius: 14,
-                  padding: '12px 14px',
-                  borderLeft: '4px solid #22C55E',
+                  gap: 16,
+                  background: '#FFFFFF',
+                  borderRadius: 18,
+                  padding: '18px 20px',
+                  borderLeft: '5px solid #22C55E',
+                  boxShadow: '0 2px 8px rgba(34,197,94,0.08)',
+                  marginBottom: 2,
                 }}
               >
                 <div
                   style={{
-                    width: 42,
-                    height: 42,
+                    width: 54,
+                    height: 54,
                     borderRadius: '50%',
                     background: '#DCFCE7',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 20,
+                    fontSize: 26,
                     flexShrink: 0,
                   }}
                 >
                   {getXpIcon(log)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 900, color: '#16A34A', fontSize: 15 }}>
+                  <div style={{ fontWeight: 900, color: '#16A34A', fontSize: 20 }}>
                     +{log.points} XP
                   </div>
-                  <div style={{ color: '#334155', fontSize: 13, marginTop: 2 }}>
+                  <div style={{ color: '#334155', fontSize: 15, marginTop: 4, fontWeight: 600 }}>
                     {log.note || 'XP earned'}
                   </div>
                   {formatXpLogDate(log) && (
-                    <div style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>
+                    <div style={{ color: '#94A3B8', fontSize: 13, marginTop: 4 }}>
                       🕒 {formatXpLogDate(log)}
                     </div>
                   )}
