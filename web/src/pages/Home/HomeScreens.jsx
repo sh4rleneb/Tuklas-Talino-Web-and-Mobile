@@ -415,7 +415,31 @@ export function HomeScreen({ go, notify }) {
   </div>;
 }
 
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="password-eye-svg" aria-hidden="true">
+      <path d="M2.25 12s3.5-6.75 9.75-6.75S21.75 12 21.75 12s-3.5 6.75-9.75 6.75S2.25 12 2.25 12Z" />
+      <circle cx="12" cy="12" r="2.75" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="password-eye-svg" aria-hidden="true">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 5.35A9.7 9.7 0 0 1 12 5.25c6.25 0 9.75 6.75 9.75 6.75a17.8 17.8 0 0 1-3.07 3.95" />
+      <path d="M6.35 6.9C3.75 8.7 2.25 12 2.25 12s3.5 6.75 9.75 6.75c1.53 0 2.9-.4 4.08-1.02" />
+      <path d="M9.9 9.9a2.75 2.75 0 0 0 3.9 3.9" />
+    </svg>
+  );
+}
+
 export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
+  const [showCurrent, setShowCurrent] = React.useState(false);
+  const [showNew, setShowNew] = React.useState(false);
+  const [showConfirm, setShowConfirm] = React.useState(false);
+
   return (
     <>
       <div className="top-nav login-top-nav login-student-nav">
@@ -482,9 +506,17 @@ export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
               <input
                 className="input-field"
                 id="cp-current-password"
-                type="password"
+                type={showCurrent ? 'text' : 'password'}
                 placeholder="Ilagay ang temporary/current password"
               />
+              <button
+                type="button"
+                className="password-eye-btn"
+                onClick={() => setShowCurrent(v => !v)}
+                aria-label={showCurrent ? 'Hide password' : 'Show password'}
+              >
+                {showCurrent ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
             </div>
 
             <label className="login-label" htmlFor="cp-new-password">
@@ -495,9 +527,17 @@ export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
               <input
                 className="input-field"
                 id="cp-new-password"
-                type="password"
+                type={showNew ? 'text' : 'password'}
                 placeholder="Gumawa ng bagong password"
               />
+              <button
+                type="button"
+                className="password-eye-btn"
+                onClick={() => setShowNew(v => !v)}
+                aria-label={showNew ? 'Hide password' : 'Show password'}
+              >
+                {showNew ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
             </div>
 
             <label className="login-label" htmlFor="cp-confirm-password">
@@ -508,9 +548,17 @@ export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
               <input
                 className="input-field"
                 id="cp-confirm-password"
-                type="password"
+                type={showConfirm ? 'text' : 'password'}
                 placeholder="Ulitin ang bagong password"
               />
+              <button
+                type="button"
+                className="password-eye-btn"
+                onClick={() => setShowConfirm(v => !v)}
+                aria-label={showConfirm ? 'Hide password' : 'Show password'}
+              >
+                {showConfirm ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
             </div>
 
             <button className="btn btn-green login-main-btn" onClick={onSubmit}>
