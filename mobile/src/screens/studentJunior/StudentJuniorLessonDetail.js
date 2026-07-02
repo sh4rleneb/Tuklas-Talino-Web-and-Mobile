@@ -2092,11 +2092,80 @@ const stepScrollRef = useRef(null);
               🎤 {currentActivity.title}
             </Text>
           )}
-          {!littleLearnerGame && (
-            <Text style={styles.body}>
-              {currentActivity.speechTask?.targetText || currentActivity.instructions}
-            </Text>
-          )}
+
+          {/* Target text — always shown for all grades (matches web SpeechActivity) */}
+          {(() => {
+            const target =
+              currentActivity.speechTask?.targetText ||
+              currentActivity.targetText ||
+              currentActivity.instructions ||
+              '';
+            if (!target) return null;
+            return littleLearnerGame ? (
+              <View
+                style={{
+                  backgroundColor: '#FFE2EA',
+                  borderRadius: 16,
+                  padding: 16,
+                  marginBottom: 14,
+                }}
+              >
+                <Text
+                  style={{
+                    fontWeight: '900',
+                    fontSize: 15,
+                    color: '#9F1239',
+                    marginBottom: 6,
+                  }}
+                >
+                  Bibigkasin:
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 20,
+                    lineHeight: 30,
+                    color: '#1E1B4B',
+                    fontWeight: '700',
+                  }}
+                >
+                  {target}
+                </Text>
+              </View>
+            ) : (
+              <View
+                style={{
+                  backgroundColor: '#FFF7ED',
+                  borderRadius: 14,
+                  padding: 14,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: '#FED7AA',
+                }}
+              >
+                <Text
+                  style={{
+                    fontWeight: '900',
+                    fontSize: 13,
+                    color: '#92400E',
+                    marginBottom: 4,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Target:
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    lineHeight: 24,
+                    color: '#1C1917',
+                  }}
+                >
+                  {target}
+                </Text>
+              </View>
+            );
+          })()}
           {littleLearnerGame ? null : (
           <ActivityGuideCard
             activity={currentActivity}
