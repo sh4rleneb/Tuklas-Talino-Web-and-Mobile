@@ -825,7 +825,7 @@ const stepScrollRef = useRef(null);
     if (!recordingUri) {
       Alert.alert(
         'Voice Quest',
-        'Record first before continuing.'
+        'Record your voice first.'
       );
       return;
     }
@@ -1094,9 +1094,7 @@ const stepScrollRef = useRef(null);
           ))}
         </View>
 
-        <Text style={styles.juniorVisualReadHint}>
-          Tap Listen if you want the lesson read aloud.
-        </Text>
+
       </View>
     );
   }
@@ -1138,15 +1136,7 @@ const stepScrollRef = useRef(null);
               {layuninDisplayText}
             </Text>
 
-            <Text
-              style={{
-                marginTop:4,
-                fontSize:15,
-                color:'#64748B',
-              }}
-            >
-              Listen to the goal first before continuing.
-            </Text>
+
           </View>
 
           <View
@@ -1363,15 +1353,7 @@ const stepScrollRef = useRef(null);
               </Text>
             )}
 
-            <Text
-              style={{
-                marginTop:8,
-                fontSize:15,
-                color:'#64748B',
-              }}
-            >
-              Listen to the topic first before going to the lesson.
-            </Text>
+
           </View>
 
           <TouchableOpacity
