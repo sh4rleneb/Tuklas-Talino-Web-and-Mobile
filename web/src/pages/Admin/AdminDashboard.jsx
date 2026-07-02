@@ -26,6 +26,101 @@ export default function AdminDashboard({
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
+  // Add Student form state (mirrors mobile AdminHome)
+  const [stuForm, setStuForm] = useState({ name: '', gradeLevel: '', section: '' });
+  const [stuErrors, setStuErrors] = useState({});
+  const [stuSubmitting, setStuSubmitting] = useState(false);
+  const [stuCredentials, setStuCredentials] = useState(null);
+
+  // Add Teacher form state (mirrors mobile AdminHome)
+  const [tchForm, setTchForm] = useState({ name: '', email: '' });
+  const [tchErrors, setTchErrors] = useState({});
+  const [tchSubmitting, setTchSubmitting] = useState(false);
+  const [tchCredentials, setTchCredentials] = useState(null);
+
+  // Validation helpers (mirrors mobile accountValidation.js)
+  function normalizeSpaces(v = '') {
+    return String(v).replace(/\s+/g, ' ').trim();
+  }
+  function isValidName(v = '') {
+    const name = normalizeSpaces(v);
+    if (!/^(?=.*[A-Za-zÀ-ÿ])[A-Za-zÀ-ÿ'. -]+$/.test(name)) return false;
+    const parts = name.split(' ').map(p => p.trim()).filter(Boolean);
+    return parts.length >= 2 && parts.every(part => /[A-Za-zÀ-ÿ]/.test(part));
+  }
+  function isValidGrade(v) {
+    const g = Number(v);
+    return Number.isInteger(g) && g >= 1 && g <= 6;
+  }
+  function isValidEmail(v = '') {
+    const e = String(v).trim();
+    if (!e) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  }
+  function validateStudent(form) {
+    return {
+      name: !isValidName(form.name),
+      gradeLevel: !isValidGrade(form.gradeLevel),
+      section: !normalizeSpaces(form.section),
+    };
+  }
+  function validateTeacher(form) {
+    return {
+      name: !isValidName(form.name),
+      email: !isValidEmail(form.email),
+    };
+  }
+  function hasErrors(errs) {
+    return Object.values(errs).some(Boolean);
+  }
+
+  async function handleAddStudent(e) {
+    e.preventDefault();
+    const errs = validateStudent(stuForm);
+    setStuErrors(errs);
+    if (hasErrors(errs)) return;
+    setStuSubmitting(true);
+    setStuCredentials(null);
+    try {
+      const payload = {
+        name: normalizeSpaces(stuForm.name),
+        gradeLevel: Number(stuForm.gradeLevel),
+        section: normalizeSpaces(stuForm.section),
+        avatar: '🧒',
+      };
+      const saved = await addStudent(payload);
+      if (saved) {
+        setStuCredentials({ username: saved.username, pin: saved.temporaryPin });
+        setStuForm({ name: '', gradeLevel: '', section: '' });
+        setStuErrors({});
+      }
+    } finally {
+      setStuSubmitting(false);
+    }
+  }
+
+  async function handleAddTeacher(e) {
+    e.preventDefault();
+    const errs = validateTeacher(tchForm);
+    setTchErrors(errs);
+    if (hasErrors(errs)) return;
+    setTchSubmitting(true);
+    setTchCredentials(null);
+    try {
+      const teacherEmail = String(tchForm.email || '').trim();
+      const payload = { name: normalizeSpaces(tchForm.name) };
+      if (teacherEmail) payload.email = teacherEmail;
+      const saved = await addTeacher(payload);
+      if (saved) {
+        setTchCredentials({ username: saved.username, pin: saved.temporaryPin });
+        setTchForm({ name: '', email: '' });
+        setTchErrors({});
+      }
+    } finally {
+      setTchSubmitting(false);
+    }
+  }
+
   const stats = data.stats || {};
   const students = data.students || [];
   const archivedStudents = data.archivedStudents || [];
@@ -356,40 +451,64 @@ function teacherNameForAssignment(assignment) {
                     </div>
 
                     
-                    <input className="input-field" id="a-stu-name" placeholder="Student Full Name" />
-                    <div style={{ height: 10 }} />
+                    <form onSubmit={handleAddStudent} noValidate>
+                      <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Student Full Name</label>
+                      <input
+                        className="input-field"
+                        placeholder="e.g. Juan Dela Cruz"
+                        value={stuForm.name}
+                        onChange={e => setStuForm(f => ({ ...f, name: e.target.value }))}
+                      />
+                      {stuErrors.name && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Enter the student's first and last name.</p>}
 
-                    <select className="input-field" id="a-stu-grade" defaultValue="">
-                      <option value="">Select Grade</option>
-                      {[1,2,3,4,5,6].map(grade => (
-                        <option key={grade} value={grade}>Grade {grade}</option>
-                      ))}
-                    </select>
+                      <div style={{ height: 10 }} />
+                      <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Grade</label>
+                      <select
+                        className="input-field"
+                        value={stuForm.gradeLevel}
+                        onChange={e => setStuForm(f => ({ ...f, gradeLevel: e.target.value }))}
+                      >
+                        <option value="">Select Grade</option>
+                        {[1,2,3,4,5,6].map(grade => (
+                          <option key={grade} value={grade}>Grade {grade}</option>
+                        ))}
+                      </select>
+                      {stuErrors.gradeLevel && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Grade must be from 1 to 6.</p>}
 
-                    <div style={{ height: 10 }} />
+                      <div style={{ height: 10 }} />
+                      <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Section</label>
+                      <input
+                        className="input-field"
+                        placeholder="Section"
+                        value={stuForm.section}
+                        onChange={e => setStuForm(f => ({ ...f, section: e.target.value }))}
+                      />
+                      {stuErrors.section && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Section is required.</p>}
 
-                    <input className="input-field" id="a-stu-section" placeholder="Section" />
+                      <p className="add-teacher-helper-note" style={{ margin: '8px 0 18px', color: '#687a72', fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>
+                        The system automatically generates the student's username and temporary PIN.
+                        The student must change the PIN on first login.
+                      </p>
 
-                    <p
-                      className="add-teacher-helper-note"
-                      style={{
-                        margin: '8px 0 18px',
-                        color: '#687a72',
-                        fontSize: 16,
-                        fontWeight: 800,
-                        lineHeight: 1.35
-                      }}
-                    >
-                      The system automatically generates the student's username and temporary PIN.
-                      The student must change the PIN on first login.
-                    </p>
+                      {stuCredentials && (
+                        <div style={{ background: '#f0fdf4', border: '1.5px solid #22c55e', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
+                          <p style={{ fontWeight: 900, color: '#166534', marginBottom: 6 }}>✅ Student Account Created</p>
+                          <p style={{ margin: '2px 0', fontSize: 14 }}><strong>Username:</strong> {stuCredentials.username}</p>
+                          <p style={{ margin: '2px 0', fontSize: 14 }}><strong>Temporary PIN:</strong> {stuCredentials.pin}</p>
+                          <p style={{ margin: '6px 0 0', fontSize: 12, color: '#687a72' }}>Student must change this PIN on first login.</p>
+                        </div>
+                      )}
 
-                    <div className="divider" />
-
-
-                    <button className="lms-main-action full" type="button" onClick={addStudent}>
-                      Add Student
-                    </button>
+                      <div className="divider" />
+                      <button
+                        className="lms-main-action full"
+                        type="submit"
+                        disabled={stuSubmitting}
+                        style={{ opacity: stuSubmitting ? 0.6 : 1 }}
+                      >
+                        {stuSubmitting ? 'Creating...' : 'Create Student'}
+                      </button>
+                    </form>
                   </div>
 
                   <div className="teacher-workspace-card">
@@ -402,37 +521,52 @@ function teacherNameForAssignment(assignment) {
                     </div>
 
                     
-                    <input className="input-field" id="a-t-name" placeholder="Teacher Full Name" />
-                    <div style={{ height: 10 }} />
+                    <form onSubmit={handleAddTeacher} noValidate>
+                      <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Teacher Full Name</label>
+                      <input
+                        className="input-field"
+                        placeholder="e.g. Maria Santos"
+                        value={tchForm.name}
+                        onChange={e => setTchForm(f => ({ ...f, name: e.target.value }))}
+                      />
+                      {tchErrors.name && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Enter the teacher's first and last name.</p>}
 
-                    <input
-                      className="input-field"
-                      id="a-t-email"
-                      type="email"
-                      placeholder="Email (Optional)"
-                    />
+                      <div style={{ height: 10 }} />
+                      <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Email (optional)</label>
+                      <input
+                        className="input-field"
+                        type="email"
+                        placeholder="Email (Optional)"
+                        value={tchForm.email}
+                        autoComplete="off"
+                        onChange={e => setTchForm(f => ({ ...f, email: e.target.value.trim() }))}
+                      />
+                      {tchErrors.email && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Invalid email address.</p>}
 
-                    <p
-                      className="add-teacher-helper-note"
-                      style={{
-                        margin: '8px 0 18px',
-                        color: '#687a72',
-                        fontSize: 16,
-                        fontWeight: 800,
-                        lineHeight: 1.35
-                      }}
-                    >
-                      The system automatically generates the teacher username,
-                      employee code, and temporary PIN.
-                      The teacher must change the PIN on first login.
-                    </p>
+                      <p className="add-teacher-helper-note" style={{ margin: '8px 0 18px', color: '#687a72', fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>
+                        Username (TCH-YYYY-XXX) and employee code are generated automatically.
+                        The teacher must change the PIN on first login.
+                      </p>
 
-                    <div className="divider" />
+                      {tchCredentials && (
+                        <div style={{ background: '#f0fdf4', border: '1.5px solid #22c55e', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
+                          <p style={{ fontWeight: 900, color: '#166534', marginBottom: 6 }}>✅ Teacher Account Created</p>
+                          <p style={{ margin: '2px 0', fontSize: 14 }}><strong>Username:</strong> {tchCredentials.username}</p>
+                          <p style={{ margin: '2px 0', fontSize: 14 }}><strong>Temporary PIN:</strong> {tchCredentials.pin}</p>
+                          <p style={{ margin: '6px 0 0', fontSize: 12, color: '#687a72' }}>Teacher must change this PIN on first login.</p>
+                        </div>
+                      )}
 
-
-                    <button className="lms-main-action full" type="button" onClick={addTeacher}>
-                      Add Teacher
-                    </button>
+                      <div className="divider" />
+                      <button
+                        className="lms-main-action full"
+                        type="submit"
+                        disabled={tchSubmitting}
+                        style={{ opacity: tchSubmitting ? 0.6 : 1 }}
+                      >
+                        {tchSubmitting ? 'Creating...' : 'Create Teacher'}
+                      </button>
+                    </form>
                   </div>
                 </div>
               </section>

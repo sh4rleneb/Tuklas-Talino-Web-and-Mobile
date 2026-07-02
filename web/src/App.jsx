@@ -1514,39 +1514,29 @@ async function loadAdminDashboard() {
   });
 }
 
-  async function adminAddStudent() {
-    await safeRun(async () => {
+  async function adminAddStudent(payload) {
+    return await safeRun(async () => {
       const created = await api('/students', {
         method: 'POST',
-        body: {
-          name: read('a-stu-name'),
-          gradeLevel: Number(read('a-stu-grade')),
-          section: read('a-stu-section'),
-          avatar: ''
-        }
+        body: payload,
       });
-
-      console.log('[ADMIN] Student created:', created);
 
       notify('Student added.');
       await loadAdminDashboard();
+      return created;
     });
   }
 
-  async function adminAddTeacher() {
-    await safeRun(async () => {
+  async function adminAddTeacher(payload) {
+    return await safeRun(async () => {
       const created = await api('/teachers', {
         method: 'POST',
-        body: {
-          name: read('a-t-name'),
-          email: read('a-t-email') || null
-        }
+        body: payload,
       });
-
-      console.log('[ADMIN] Teacher created:', created);
 
       notify('Teacher added.');
       await loadAdminDashboard();
+      return created;
     });
   }
 
