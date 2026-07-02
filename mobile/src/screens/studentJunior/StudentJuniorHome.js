@@ -242,7 +242,7 @@ export default function StudentJuniorHome({ navigation }) {
 
                   <View style={styles.continueButton}>
                     <Text style={styles.continueButtonText}>
-                      Continue →
+                      Tap to open lesson →
                     </Text>
                   </View>
                 </View>

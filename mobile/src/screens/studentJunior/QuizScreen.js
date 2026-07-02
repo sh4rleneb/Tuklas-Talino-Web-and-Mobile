@@ -5,6 +5,7 @@ import StudentScreenHeader from '../../components/StudentScreenHeader';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   ScrollView,
   StyleSheet,
   Text,
@@ -75,12 +76,25 @@ export default function QuizScreen({ navigation }) {
     setResult(null);
   }
 
-  function closeQuiz() {
+  const closeQuiz = useCallback(() => {
     setActiveQuiz(null);
     setQuestionIndex(0);
     setAnswers({});
     setResult(null);
-  }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!activeQuiz) return undefined;
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        closeQuiz();
+        return true;
+      });
+
+      return () => subscription.remove();
+    }, [activeQuiz, closeQuiz])
+  );
 
   async function submitQuiz() {
     if (!activeQuiz || submitting) return;
@@ -159,11 +173,16 @@ export default function QuizScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
 
-          <StudentScreenHeader
-            navigation={navigation}
-            avatar={student?.avatar}
-            gradeLevel={student?.gradeLevel}
-          />
+          <View style={styles.quizBackHeader}>
+            <TouchableOpacity
+              style={styles.quizBackButton}
+              onPress={closeQuiz}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.quizBackButtonText}>← Back to Quiz List</Text>
+            </TouchableOpacity>
+          </View>
+
         <View style={{ height: 12 }} />
         <Text style={styles.title}>{activeQuiz.title}</Text>
         <Text style={styles.muted}>{activeQuiz.lessonTitle}</Text>
@@ -233,7 +252,7 @@ export default function QuizScreen({ navigation }) {
               onPress={closeQuiz}
             >
               <Text style={styles.primaryButtonText}>
-                Back to Quizzes
+                Back to Quiz List
               </Text>
             </TouchableOpacity>
           </View>
@@ -361,6 +380,26 @@ const styles = StyleSheet.create({
   headerText: { flex: 1, paddingRight: 12 },
   title: { color: colors.ink, fontSize: 24, fontWeight: '900', marginBottom: 4 },
   back: { color: colors.green, fontWeight: '900', marginBottom: 14 },
+  quizBackHeader: {
+    marginBottom: 4,
+    alignItems: 'flex-start',
+  },
+
+  quizBackButton: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+
+  quizBackButtonText: {
+    color: colors.green,
+    fontWeight: '900',
+  },
+
+
   muted: { color: colors.muted, marginTop: 4 },
   error: { color: '#B91C1C', textAlign: 'center', marginTop: 30 },
   quizTitle: { color: colors.ink, fontSize: 20, fontWeight: '900' },

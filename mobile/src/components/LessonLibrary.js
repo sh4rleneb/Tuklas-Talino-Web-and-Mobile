@@ -241,7 +241,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
   const lessons = useMemo(() => {
     const grade = Number(dashboard?.student?.gradeLevel || 0);
-    const enforceSequential = grade > 0 && grade <= 2;
+    const enforceSequential = false;
     return withUnlockStates(dashboard?.lessons || [], enforceSequential);
   }, [dashboard]);
 

@@ -1516,17 +1516,17 @@ async function loadAdminDashboard() {
 
   async function adminAddStudent() {
     await safeRun(async () => {
-      await api('/students', {
+      const created = await api('/students', {
         method: 'POST',
         body: {
-          studentCode: read('a-stu-id'),
           name: read('a-stu-name'),
           gradeLevel: Number(read('a-stu-grade')),
           section: read('a-stu-section'),
-          avatar: '',
-          password: read('a-stu-password') || 'student123'
+          avatar: ''
         }
       });
+
+      console.log('[ADMIN] Student created:', created);
 
       notify('Student added.');
       await loadAdminDashboard();
@@ -1535,15 +1535,15 @@ async function loadAdminDashboard() {
 
   async function adminAddTeacher() {
     await safeRun(async () => {
-      await api('/teachers', {
+      const created = await api('/teachers', {
         method: 'POST',
         body: {
-          username: read('a-t-username'),
           name: read('a-t-name'),
-          employeeCode: read('a-t-code') || read('a-t-username'),
-          password: read('a-t-password') || 'teach123'
+          email: read('a-t-email') || null
         }
       });
+
+      console.log('[ADMIN] Teacher created:', created);
 
       notify('Teacher added.');
       await loadAdminDashboard();
@@ -4045,7 +4045,7 @@ function saveQuizAttempts(studentId, attempts) {
 function appendQuizAttempt(studentId, attempts, quizId, result) {
   const next = {
     ...(attempts || {}),
-    [quizId]: [result, ...asArray(attempts?.[quizId])].slice(0, 5)
+    [quizId]: [result, ...asArray(attempts?.[quizId])].slice(0, 2)
   };
   saveQuizAttempts(studentId, next);
   return next;
@@ -9011,6 +9011,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
   );
   const theme = subjectTheme(lesson?.subject);
   const [missionStep, setMissionStep] = useState(0);
+  const [maxUnlockedStep, setMaxUnlockedStep] = useState(0);
   const [rewardModal, setRewardModal] = useState(null);
   const [rewardClaimed, setRewardClaimed] = useState(Boolean(lesson?.completed));
   const [lessonGateToast, setLessonGateToast] = useState('');
@@ -9034,6 +9035,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     };
 
     setMissionStep(savedStep);
+    setMaxUnlockedStep(savedStep);
     setRewardModal(null);
     setRewardClaimed(Boolean(lesson?.completed));
     setLessonGateToast('');
@@ -9079,6 +9081,8 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     if (!lesson?.id || isReviewMode) return;
 
     const safeTargetIndex = Math.max(0, Math.min(targetStepIndex, missionSteps.length - 1));
+
+    setMaxUnlockedStep(previous => Math.max(previous, safeTargetIndex));
 
     try {
       await api(`/lessons/${lesson.id}/progress`, {
@@ -10326,11 +10330,11 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <button
                 type="button"
                 key={`${step.type}-${index}`}
-                className={`g12-mission-dot ${index < safeStep ? 'done' : ''} ${index === safeStep ? 'active' : ''}`}
-                disabled={rewardClaimed || rewardModal || index > safeStep}
-                aria-disabled={rewardClaimed || rewardModal || index > safeStep}
+                className={`g12-mission-dot ${index < maxUnlockedStep && index !== safeStep ? 'done' : ''} ${index === safeStep ? 'active' : ''}`}
+                disabled={rewardClaimed || rewardModal || index > maxUnlockedStep}
+                aria-disabled={rewardClaimed || rewardModal || index > maxUnlockedStep}
                 onClick={() => {
-                  if (!rewardClaimed && !rewardModal && index <= safeStep) {
+                  if (!rewardClaimed && !rewardModal && index <= maxUnlockedStep) {
                     setMissionStep(index);
                   }
                 }}

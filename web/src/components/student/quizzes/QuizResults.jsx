@@ -1,10 +1,86 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   masteryFromPercent,
   QuizSharedStyles,
   QuizResultCard,
 } from "./QuizUI";
+
+function list(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function sameId(left, right) {
+  return String(left ?? "") === String(right ?? "");
+}
+
+function optionText(option, fallback = "") {
+  return String(
+    option?.text ??
+    option?.optionText ??
+    option?.label ??
+    option?.value ??
+    fallback ??
+    ""
+  ).trim();
+}
+
+function questionPrompt(question, fallback = "") {
+  return String(
+    question?.prompt ??
+    question?.question ??
+    question?.text ??
+    question?.title ??
+    fallback ??
+    ""
+  ).trim();
+}
+
+function hydrateAttemptReview(attempt = {}, quiz = {}) {
+  const questions = list(quiz?.questions);
+  const reviewItems = list(attempt?.review?.length ? attempt.review : attempt?.details);
+
+  return reviewItems.map((item = {}, index) => {
+    const question =
+      questions.find((candidate) => sameId(candidate?.id, item.questionId)) ||
+      questions[index] ||
+      null;
+
+    const options = list(question?.options);
+    const selectedOption =
+      options.find((candidate) => sameId(candidate?.id, item.selectedOptionId)) ||
+      null;
+
+    const correctOption =
+      options.find((candidate) => sameId(candidate?.id, item.correctOptionId)) ||
+      options.find((candidate) => Boolean(candidate?.isCorrect || candidate?.correct)) ||
+      null;
+
+    const correct =
+      item.correct !== undefined
+        ? Boolean(item.correct)
+        : item.isCorrect !== undefined
+          ? Boolean(item.isCorrect)
+          : Boolean(
+              selectedOption &&
+              correctOption &&
+              sameId(selectedOption.id, correctOption.id)
+            );
+
+    return {
+      ...item,
+      index: item.index || index + 1,
+      questionId: item.questionId || question?.id || index + 1,
+      prompt: item.prompt || questionPrompt(question, `Question ${index + 1}`),
+      selectedOptionId: item.selectedOptionId || selectedOption?.id || null,
+      selectedText: item.selectedText || optionText(selectedOption, "No answer"),
+      correctOptionId: item.correctOptionId || correctOption?.id || null,
+      correctText: item.correctText || optionText(correctOption, "—"),
+      correct,
+      isCorrect: correct,
+    };
+  });
+}
 
 export default function QuizResults({
   data,
@@ -28,10 +104,28 @@ export default function QuizResults({
   const sourceQuiz = quizzes.find((quiz) => quiz.id === result?.quizId);
   const attemptNo = Number(result?.attemptNo || 1);
   const maxAttempts = Number(result?.maxAttempts || 2);
-  const attemptHistory = Array.isArray(result?.attemptHistory) && result.attemptHistory.length
+  const rawAttemptHistory = Array.isArray(result?.attemptHistory) && result.attemptHistory.length
     ? result.attemptHistory
     : [result].filter(Boolean);
-  const [selectedReviewIndex, setSelectedReviewIndex] = useState(0);
+  const attemptHistory = rawAttemptHistory.map((attempt) => ({
+    ...attempt,
+    review: hydrateAttemptReview(attempt, sourceQuiz),
+  }));
+  const highestAttemptNo = Math.max(
+    0,
+    ...attemptHistory.map((attempt) => Number(attempt?.attemptNo || 0))
+  );
+  const preferredAttemptNo = attemptNo || highestAttemptNo;
+  const preferredReviewIndex = Math.max(
+    0,
+    attemptHistory.findIndex((attempt) => Number(attempt?.attemptNo || 0) === preferredAttemptNo)
+  );
+  const [selectedReviewIndex, setSelectedReviewIndex] = useState(preferredReviewIndex);
+
+  useEffect(() => {
+    setSelectedReviewIndex(preferredReviewIndex);
+  }, [result?.id, result?.attemptNo, result?.submittedAt, preferredReviewIndex]);
+
   const canRetake = Boolean(sourceQuiz && attemptHistory.length < maxAttempts);
   const showReview = !canRetake;
   const activeReviewIndex = Math.min(selectedReviewIndex, Math.max(0, attemptHistory.length - 1));

@@ -351,20 +351,41 @@ function teacherNameForAssignment(assignment) {
                       <div>
                         <div className="lms-section-label">Student Account</div>
                         <h2>Add Student</h2>
-                        <p>Create a learner account with grade and section details.</p>
+                        <p>Create a learner account. The system automatically generates the username and temporary PIN.</p>
                       </div>
                     </div>
 
-                    <input className="input-field" id="a-stu-id" placeholder="Student ID (unique)" />
+                    
+                    <input className="input-field" id="a-stu-name" placeholder="Student Full Name" />
                     <div style={{ height: 10 }} />
-                    <input className="input-field" id="a-stu-name" placeholder="Name" />
+
+                    <select className="input-field" id="a-stu-grade" defaultValue="">
+                      <option value="">Select Grade</option>
+                      {[1,2,3,4,5,6].map(grade => (
+                        <option key={grade} value={grade}>Grade {grade}</option>
+                      ))}
+                    </select>
+
                     <div style={{ height: 10 }} />
-                    <input className="input-field" id="a-stu-grade" type="number" min="1" max="6" placeholder="Grade (1-6)" />
-                    <div style={{ height: 10 }} />
+
                     <input className="input-field" id="a-stu-section" placeholder="Section" />
-                    <div style={{ height: 10 }} />
-                    <input className="input-field" id="a-stu-password" placeholder="Password (default student123)" />
+
+                    <p
+                      className="add-teacher-helper-note"
+                      style={{
+                        margin: '8px 0 18px',
+                        color: '#687a72',
+                        fontSize: 16,
+                        fontWeight: 800,
+                        lineHeight: 1.35
+                      }}
+                    >
+                      The system automatically generates the student's username and temporary PIN.
+                      The student must change the PIN on first login.
+                    </p>
+
                     <div className="divider" />
+
 
                     <button className="lms-main-action full" type="button" onClick={addStudent}>
                       Add Student
@@ -376,15 +397,21 @@ function teacherNameForAssignment(assignment) {
                       <div>
                         <div className="lms-section-label">Teacher Account</div>
                         <h2>Add Teacher</h2>
-                        <p>Create a teacher login, then assign handled classes in the next section.</p>
+                        <p>Create a teacher account. The system automatically generates the username, employee code, and temporary PIN.</p>
                       </div>
                     </div>
 
-                    <input className="input-field" id="a-t-username" placeholder="Username (unique)" />
+                    
+                    <input className="input-field" id="a-t-name" placeholder="Teacher Full Name" />
                     <div style={{ height: 10 }} />
-                    <input className="input-field" id="a-t-name" placeholder="Teacher Name" />
-                    <div style={{ height: 10 }} />
-                    <input className="input-field" id="a-t-password" placeholder="Password" />
+
+                    <input
+                      className="input-field"
+                      id="a-t-email"
+                      type="email"
+                      placeholder="Email (Optional)"
+                    />
+
                     <p
                       className="add-teacher-helper-note"
                       style={{
@@ -395,9 +422,13 @@ function teacherNameForAssignment(assignment) {
                         lineHeight: 1.35
                       }}
                     >
-                      Employee code will be generated automatically from the username.
+                      The system automatically generates the teacher username,
+                      employee code, and temporary PIN.
+                      The teacher must change the PIN on first login.
                     </p>
+
                     <div className="divider" />
+
 
                     <button className="lms-main-action full" type="button" onClick={addTeacher}>
                       Add Teacher
