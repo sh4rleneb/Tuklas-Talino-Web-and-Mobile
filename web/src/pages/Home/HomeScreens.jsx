@@ -439,6 +439,9 @@ export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
   const [showCurrent, setShowCurrent] = React.useState(false);
   const [showNew, setShowNew] = React.useState(false);
   const [showConfirm, setShowConfirm] = React.useState(false);
+  const [currentVal, setCurrentVal] = React.useState('');
+  const [newVal, setNewVal] = React.useState('');
+  const [confirmVal, setConfirmVal] = React.useState('');
 
   return (
     <>
@@ -508,6 +511,8 @@ export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
                 id="cp-current-password"
                 type={showCurrent ? 'text' : 'password'}
                 placeholder="Ilagay ang temporary/current password"
+                value={currentVal}
+                onChange={e => setCurrentVal(e.target.value)}
               />
               <button
                 type="button"
@@ -529,6 +534,8 @@ export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
                 id="cp-new-password"
                 type={showNew ? 'text' : 'password'}
                 placeholder="Gumawa ng bagong password"
+                value={newVal}
+                onChange={e => setNewVal(e.target.value)}
               />
               <button
                 type="button"
@@ -550,6 +557,8 @@ export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
                 id="cp-confirm-password"
                 type={showConfirm ? 'text' : 'password'}
                 placeholder="Ulitin ang bagong password"
+                value={confirmVal}
+                onChange={e => setConfirmVal(e.target.value)}
               />
               <button
                 type="button"

@@ -8581,10 +8581,10 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
                           display: 'flex',
                           alignItems: 'center',
                           gap: 10,
-                          marginBottom: 8,
+                          marginBottom: 10,
                           color: '#0F8F57',
                           fontWeight: 1000,
-                          fontSize: 18
+                          fontSize: 22
                         }}
                       >
                         <span>{section.icon}</span>
@@ -8593,8 +8593,8 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
 
                       <div
                         style={{
-                          lineHeight: 1.75,
-                          fontSize: 16,
+                          lineHeight: 1.8,
+                          fontSize: 20,
                           color: '#17324D',
                           fontWeight: 800
                         }}
@@ -9259,7 +9259,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
       return '';
     }
 
-    return 'Piliin ang tamang sagot. Makikita mo agad ang feedback pagkatapos.';
+    return '';
   }
 
   function goNext() {
@@ -10952,8 +10952,8 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
             ? 'Done! Your answer is saved.'
             : 'This quiz is already submitted.'
           : isEarlyGrade
-            ? 'Choose your answer first. Tap See Score when done.'
-            : 'Choose your answers first. Feedback appears after you click See Score.'}
+            ? ''
+            : ''}
       </div>
 
       <div className="divider" />
@@ -11294,15 +11294,16 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
       {!isEarlyGrade && (
         <div
           style={{
-            padding: 14,
+            padding: 18,
             borderRadius: 16,
             background: '#FFF8CF',
             lineHeight: 1.6,
             marginBottom: 12,
-            fontSize: 14,
+            fontSize: 18,
+            fontWeight: 700,
           }}
         >
-          <b>Prompt:</b> {prompt}
+          <b style={{ fontWeight: 900 }}>Prompt:</b> {prompt}
         </div>
       )}
 
@@ -11476,13 +11477,15 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
         <>
           <div
             style={{
-              padding: isEarlyGrade ? 16 : 12,
-              borderRadius: isEarlyGrade ? 20 : 14,
-              background: isEarlyGrade ? '#FFF8CF' : '#F8FAFF',
+              padding: 16,
+              borderRadius: 16,
+              background: '#F8FAFF',
               border: '1px solid #E1E7FF',
-              marginBottom: 12,
-              fontWeight: 800,
-              lineHeight: 1.45,
+              marginBottom: 14,
+              fontWeight: 900,
+              lineHeight: 1.55,
+              fontSize: 18,
+              color: '#1E3A5F',
             }}
           >
             <strong>Gabay:</strong> Sumagot nang malinaw gamit ang buong pangungusap.
@@ -11495,10 +11498,11 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
             onChange={(e) => setWritingText(e.target.value)}
             placeholder="Type your answer here..."
             style={{
-              minHeight: 130,
+              minHeight: 160,
               resize: 'vertical',
-              fontSize: 15,
-              lineHeight: 1.6,
+              fontSize: 18,
+              lineHeight: 1.7,
+              padding: '14px 16px',
             }}
           />
 
@@ -11620,39 +11624,37 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
         </div>
       )}
 
-      <div className="muted">
-        {isEarlyGrade
-          ? 'Pakinggan muna, pagkatapos pindutin ang Magsalita. Iche-check ng AI speech support ang bigkas mo.'
-          : 'Listen to the target text, then speak it aloud. Your answer will be scored using edit distance.'}
-      </div>
-
       <div
         style={{
-          padding: 16,
-          borderRadius: 16,
+          padding: isEarlyGrade ? 20 : 16,
+          borderRadius: 18,
           background: '#FFE2EA',
           marginTop: 12,
-          fontSize: isEarlyGrade ? 20 : 16,
+          fontSize: isEarlyGrade ? 26 : 20,
           lineHeight: 1.7,
+          fontWeight: 800,
         }}
       >
-        <b>{isEarlyGrade ? 'Bibigkasin:' : 'Target:'}</b> {target}
+        <span style={{ fontWeight: 900, fontSize: isEarlyGrade ? 18 : 15, color: '#9F1239', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          {isEarlyGrade ? 'Bibigkasin:' : 'Target:'}
+        </span>
+        <span style={{ color: '#1E1B4B', fontSize: isEarlyGrade ? 28 : 22 }}>{target}</span>
       </div>
 
       <div className="divider" />
 
-      <div className="row">
-        <button className="btn btn-purple" onClick={speakTarget}>
+      <div className="row" style={{ gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+        <button className="btn btn-purple" onClick={speakTarget} style={{ minHeight: isEarlyGrade ? 56 : 48, fontSize: isEarlyGrade ? 18 : 16, padding: '12px 24px', borderRadius: 999 }}>
           {isEarlyGrade ? '🔊 Pakinggan' : '🔊 Listen'}
         </button>
 
-        <button className="btn btn-blue" onClick={startSpeechRecognition} disabled={isListening}>
+        <button className="btn btn-blue" onClick={startSpeechRecognition} disabled={isListening} style={{ minHeight: isEarlyGrade ? 56 : 48, fontSize: isEarlyGrade ? 18 : 16, padding: '12px 24px', borderRadius: 999 }}>
           {isListening
             ? (isEarlyGrade ? '🎙️ Nakikinig...' : '🎙️ Listening...')
             : (isEarlyGrade ? '🎙️ Magsalita' : '🎙️ Start Speaking')}
         </button>
 
-        <button className="btn btn-outline" onClick={() => stopSpeech()}>
+        <button className="btn btn-outline" onClick={() => stopSpeech()} style={{ minHeight: isEarlyGrade ? 56 : 48, fontSize: isEarlyGrade ? 18 : 16, padding: '12px 24px', borderRadius: 999 }}>
           {isEarlyGrade ? '⏹ Stop' : '⏹ Stop Audio'}
         </button>
       </div>
@@ -16239,12 +16241,12 @@ function StudentLeaderboard({ data, go, logout }) {
                 const c = cfgs[player.rank];
                 const delay = col===1?'0.04s':col===0?'0.12s':'0.20s';
                 return (
-                  <div key={player.id} className="lb-pod lb-a" style={{animationDelay:delay,width:player.rank===1?120:110}}>
-                    {c.crown && <div style={{background:'#FBBF24',borderRadius:'50%',width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,marginBottom:4,boxShadow:'0 2px 8px rgba(251,191,36,.4)'}}>👑</div>}
-                    <div style={{fontSize:c.av,marginBottom:6}}>{player.avatar||'🦊'}</div>
-                    <div style={{fontWeight:900,fontSize:player.rank===1?15:14,color:isMe?'#16A34A':'#0F172A',textAlign:'center',marginBottom:3}}>{player.name.split(' ')[0]}</div>
-                    <div style={{fontSize:13,color:'#16A34A',fontWeight:800,marginBottom:8}}>⚡ {player.xp} XP</div>
-                    <div style={{background:c.bg,borderRadius:'12px 12px 0 0',height:c.h,width:'100%',display:'flex',alignItems:'center',justifyContent:'center',border:`2px solid ${c.border}`,borderBottom:'none',fontSize:player.rank===1?34:26}}>{c.medal}</div>
+                  <div key={player.id} className="lb-pod lb-a" style={{animationDelay:delay,width:player.rank===1?160:140}}>
+                    {c.crown && <div style={{background:'#FBBF24',borderRadius:'50%',width:36,height:36,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,marginBottom:6,boxShadow:'0 2px 8px rgba(251,191,36,.4)'}}>👑</div>}
+                    <div style={{fontSize:c.av+12,marginBottom:8}}>{player.avatar||'🦊'}</div>
+                    <div style={{fontWeight:900,fontSize:player.rank===1?18:16,color:isMe?'#16A34A':'#0F172A',textAlign:'center',marginBottom:4}}>{player.name.split(' ')[0]}</div>
+                    <div style={{fontSize:15,color:'#16A34A',fontWeight:800,marginBottom:10}}>⚡ {player.xp} XP</div>
+                    <div style={{background:c.bg,borderRadius:'14px 14px 0 0',height:c.h+20,width:'100%',display:'flex',alignItems:'center',justifyContent:'center',border:`2px solid ${c.border}`,borderBottom:'none',fontSize:player.rank===1?44:34}}>{c.medal}</div>
                   </div>
                 );
               })}
@@ -16256,8 +16258,8 @@ function StudentLeaderboard({ data, go, logout }) {
               {rest.map((player, i) => {
                 const isMe = String(player.id) === String(currentStudentId);
                 return (
-                  <div key={player.id} className="lb-row lb-a" style={{animationDelay:`${0.28+i*0.05}s`,display:'flex',alignItems:'center',gap:14,background:isMe?'#F0FDF4':'#FFFFFF',borderRadius:18,padding:'14px 18px',border:isMe?'2px solid #22C55E':'1.5px solid #E2E8F0',boxShadow:isMe?'0 2px 12px rgba(34,197,94,.12)':'0 1px 4px rgba(0,0,0,.04)'}}>
-                    <div style={{width:38,height:38,borderRadius:'50%',background:'#F1F5F9',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:14,color:'#64748B',flexShrink:0}}>#{player.rank}</div>
+                  <div key={player.id} className="lb-row lb-a" style={{animationDelay:`${0.28+i*0.05}s`,display:'flex',alignItems:'center',gap:16,background:isMe?'#F0FDF4':'#FFFFFF',borderRadius:20,padding:'18px 22px',border:isMe?'2px solid #22C55E':'1.5px solid #E2E8F0',boxShadow:isMe?'0 2px 12px rgba(34,197,94,.12)':'0 1px 4px rgba(0,0,0,.04)'}}>
+                    <div style={{width:48,height:48,borderRadius:'50%',background:'#F1F5F9',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:17,color:'#64748B',flexShrink:0}}>#{player.rank}</div>
                     <div style={{fontSize:30,flexShrink:0}}>{player.avatar||'🦊'}</div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontWeight:900,fontSize:16,color:isMe?'#16A34A':'#0F172A'}}>
