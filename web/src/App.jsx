@@ -744,7 +744,7 @@ setAdminData({
       let password = '';
       if (role === 'student') {
         identifier = read('stu-id');
-        password = read('stu-password') || 'student123';
+        password = read('stu-password');
       }
       if (role === 'teacher') {
         identifier = read('t-username');

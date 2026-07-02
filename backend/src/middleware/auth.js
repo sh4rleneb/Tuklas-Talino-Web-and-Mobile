@@ -102,10 +102,6 @@ export function requirePasswordChanged(req, res, next) {
     });
   }
 
-  // TEMPORARY DEVELOPMENT BYPASS
-  // Remove this once the mobile Change Password flow is implemented.
-  return next();
-
   if (req.user.mustChangePassword) {
     return res.status(403).json({
       message: 'Password change required before accessing this resource.',

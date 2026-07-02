@@ -178,9 +178,11 @@ export default function StudentLogin({
         ? 'StudentTabs'
         : 'StudentSeniorTabs';
 
-      // TEMPORARY:
-      // Skip forced password change on mobile until the
-      // mobile Change Password flow is implemented.
+      if (user?.mustChangePassword) {
+        navigation.replace('ChangePassword', { homeRoute });
+        return;
+      }
+
       navigation.reset({
         index: 0,
         routes: [{ name: homeRoute }],
