@@ -268,10 +268,18 @@ const stepScrollRef = useRef(null);
   }, [xpCounter]);
 
 
-  const activities = useMemo(
-    () => Array.isArray(lesson?.activities) ? lesson.activities : [],
-    [lesson]
-  );
+  const activities = useMemo(() => {
+    const source = Array.isArray(lesson?.activities) ? lesson.activities : [];
+    const gradeLevel = Number(student?.gradeLevel || lesson?.gradeLevel || 0);
+
+    if (gradeLevel > 0 && gradeLevel <= 3) {
+      return source.filter(
+        (activity) => String(activity?.type || '').toLowerCase() !== 'material'
+      );
+    }
+
+    return source;
+  }, [lesson?.activities, lesson?.gradeLevel, student?.gradeLevel]);
 
   const missionSteps = useMemo(() => [
     {
@@ -2542,7 +2550,7 @@ const stepScrollRef = useRef(null);
       >
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.back}>← Lesson Library</Text>
+            <Text style={styles.back}>← Back</Text>
           </TouchableOpacity>
           <View style={styles.studentChip}>
             <Text style={styles.avatar}>{student?.avatar || '🧒'}</Text>
