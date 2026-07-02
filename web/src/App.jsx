@@ -16032,6 +16032,31 @@ function StudentBadges({ data, go, logout}) {
 }
 
 
+
+function getXpIcon(log) {
+  if (log.sourceType === 'lesson') return '📚';
+  if (log.sourceType === 'quiz') return '📝';
+  if (log.sourceType === 'mcq') return '🧠';
+  if (log.sourceType === 'writing') return '✍️';
+  if (log.sourceType === 'speech') return '🎤';
+  if (log.sourceType === 'mission') return '🚀';
+  return '⭐';
+}
+
+function formatXpLogDate(log) {
+  const raw = log.createdAt || log.created_at || log.awardedAt || log.awarded_at;
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-PH', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
   const s = data?.student || {};
 
@@ -16081,6 +16106,67 @@ function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
           <div className="g12-summary-box"><span>🌸</span><div><b>{s.section || '—'}</b><small>Section</small></div></div>
           <div className="g12-summary-box"><span>⚡</span><div><b>{s.xp || 0} XP</b><small>XP</small></div></div>
         </div>
+      </section>
+
+      <section className="g12-section-card">
+        <div className="g12-section-head">
+          <div>
+            <h2 className="g12-section-title">⭐ XP History</h2>
+            <p className="g12-section-subtitle">Lahat ng XP na iyong natanggap.</p>
+          </div>
+        </div>
+
+        {(data?.xpLogs || []).length ? (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {(data.xpLogs || []).map((log, index) => (
+              <div
+                key={log.id || index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  background: '#F8FAFC',
+                  borderRadius: 14,
+                  padding: '12px 14px',
+                  borderLeft: '4px solid #22C55E',
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: '50%',
+                    background: '#DCFCE7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 20,
+                    flexShrink: 0,
+                  }}
+                >
+                  {getXpIcon(log)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 900, color: '#16A34A', fontSize: 15 }}>
+                    +{log.points} XP
+                  </div>
+                  <div style={{ color: '#334155', fontSize: 13, marginTop: 2 }}>
+                    {log.note || 'XP earned'}
+                  </div>
+                  {formatXpLogDate(log) && (
+                    <div style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>
+                      🕒 {formatXpLogDate(log)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="g12-section-subtitle">
+            Kumpletuhin ang mga aralin, quiz, at misyon para kumita ng XP.
+          </p>
+        )}
       </section>
     </EarlyStudentChrome>
   );
@@ -16142,6 +16228,67 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go, logout}) {
           <div className="g46-ref-card blue"><span className="g46-ref-card-icon">🌸</span><h4>{s.section || '—'}</h4><p>Section</p></div>
           <div className="g46-ref-card purple"><span className="g46-ref-card-icon">⚡</span><h4>{s.xp || 0} XP</h4><p>XP</p></div>
         </div>
+      </section>
+
+      <section className="g46-ref-panel">
+        <div className="g46-ref-panel-head">
+          <div>
+            <h2>⭐ XP History</h2>
+            <p className="g46-ref-muted">Lahat ng XP na iyong natanggap.</p>
+          </div>
+        </div>
+
+        {(data?.xpLogs || []).length ? (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {(data.xpLogs || []).map((log, index) => (
+              <div
+                key={log.id || index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  background: '#F8FAFC',
+                  borderRadius: 14,
+                  padding: '12px 14px',
+                  borderLeft: '4px solid #22C55E',
+                }}
+              >
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: '50%',
+                    background: '#DCFCE7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 20,
+                    flexShrink: 0,
+                  }}
+                >
+                  {getXpIcon(log)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 900, color: '#16A34A', fontSize: 15 }}>
+                    +{log.points} XP
+                  </div>
+                  <div style={{ color: '#334155', fontSize: 13, marginTop: 2 }}>
+                    {log.note || 'XP earned'}
+                  </div>
+                  {formatXpLogDate(log) && (
+                    <div style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>
+                      🕒 {formatXpLogDate(log)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="g46-ref-muted">
+            Kumpletuhin ang mga aralin, quiz, at misyon para kumita ng XP.
+          </p>
+        )}
       </section>
     </Grade46StudentChrome>
   );
