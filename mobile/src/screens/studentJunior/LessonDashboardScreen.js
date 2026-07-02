@@ -24,11 +24,6 @@ export default function LessonDashboardScreen({ navigation, route }) {
       .then((data) => {
         if (!active) return;
 
-        console.log(
-          '[LESSON_DASHBOARD]',
-          JSON.stringify(data.lesson, null, 2)
-        );
-
         setLesson(data.lesson || null);
       })
       .catch((err) => {

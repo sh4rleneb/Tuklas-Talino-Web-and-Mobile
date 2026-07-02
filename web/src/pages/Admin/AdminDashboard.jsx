@@ -191,6 +191,14 @@ const filteredLogs = logs.filter(log => {
       .filter(Boolean)
   )];
 
+  // Sections filtered by the currently selected grade in the Add Student form
+  const stuSectionOptions = [...new Set(
+    classOptions
+      .filter(option => !stuForm.gradeLevel || Number(option.gradeLevel) === Number(stuForm.gradeLevel))
+      .map(option => option.section)
+      .filter(Boolean)
+  )];
+
   function scrollTo(id) {
     document.getElementById(id)?.scrollIntoView({
       behavior: 'smooth',
@@ -479,10 +487,19 @@ function teacherNameForAssignment(assignment) {
                       <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Section</label>
                       <input
                         className="input-field"
-                        placeholder="Section"
+                        placeholder={stuSectionOptions.length ? 'Pumili o mag-type ng section' : 'Type section name'}
+                        list="stu-section-list"
                         value={stuForm.section}
                         onChange={e => setStuForm(f => ({ ...f, section: e.target.value }))}
+                        autoComplete="off"
                       />
+                      {stuSectionOptions.length > 0 && (
+                        <datalist id="stu-section-list">
+                          {stuSectionOptions.map(sec => (
+                            <option key={sec} value={sec} />
+                          ))}
+                        </datalist>
+                      )}
                       {stuErrors.section && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Section is required.</p>}
 
                       <p className="add-teacher-helper-note" style={{ margin: '8px 0 18px', color: '#687a72', fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>
