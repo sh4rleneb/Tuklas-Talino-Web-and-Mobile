@@ -191,13 +191,17 @@ const filteredLogs = logs.filter(log => {
       .filter(Boolean)
   )];
 
-  // Sections filtered by the currently selected grade in the Add Student form
-  const stuSectionOptions = [...new Set(
-    classOptions
-      .filter(option => !stuForm.gradeLevel || Number(option.gradeLevel) === Number(stuForm.gradeLevel))
-      .map(option => option.section)
-      .filter(Boolean)
-  )];
+  // Sections filtered by the currently selected grade in the Add Student form.
+  // Sources: teacher assignments (class structure) + existing students (classOptions).
+  // Teacher assignments are set up before students exist, so this works on fresh systems too.
+  const stuSectionOptions = [...new Set([
+    ...teacherAssignments
+      .filter(a => !stuForm.gradeLevel || Number(a.gradeLevel) === Number(stuForm.gradeLevel))
+      .map(a => a.section),
+    ...classOptions
+      .filter(o => !stuForm.gradeLevel || Number(o.gradeLevel) === Number(stuForm.gradeLevel))
+      .map(o => o.section),
+  ].filter(Boolean))].sort();
 
   function scrollTo(id) {
     document.getElementById(id)?.scrollIntoView({
