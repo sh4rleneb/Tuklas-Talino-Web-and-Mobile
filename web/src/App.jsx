@@ -3924,6 +3924,14 @@ async function archiveTeacher(id) {
         />
       </Screen>
 
+      <Screen id="screen-stu-leaderboard" active={screen === 'screen-stu-leaderboard'}>
+        <StudentLeaderboard
+          data={studentDash}
+          go={go}
+          logout={doLogout}
+        />
+      </Screen>
+
       <Screen id="screen-stu-profile" active={screen === 'screen-stu-profile'}>
         <StudentProfile
           data={studentDash}
@@ -4212,6 +4220,7 @@ function StudentDashboard({ data, lessonsBySubject, go, logout, refresh, openLes
     if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'badges') return go('screen-stu-badges');
+    if (tab === 'leaderboard') return go('screen-stu-leaderboard');
     if (tab === 'profile') return go('screen-stu-profile');
   };
 
@@ -6838,6 +6847,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
     if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'badges') return go('screen-stu-badges');
+    if (tab === 'leaderboard') return go('screen-stu-leaderboard');
     if (tab === 'profile') return go('screen-stu-profile');
   };
 
@@ -6848,6 +6858,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
     { id: 'missions', icon: '🎮', label: 'Missions' },
     { id: 'groups', icon: '👥', label: 'Groups' },
     { id: 'badges', icon: '🏅', label: 'Badges' },
+    { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
     { id: 'profile', icon: '👤', label: 'Profile' }
   ];
 
@@ -7744,6 +7755,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
     if (tab === 'missions') return go('screen-stu-missions');
     if (tab === 'groups') return go('screen-stu-groups');
     if (tab === 'badges') return go('screen-stu-badges');
+    if (tab === 'leaderboard') return go('screen-stu-leaderboard');
     if (tab === 'profile') return go('screen-stu-profile');
   };
 
@@ -7798,6 +7810,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
           <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
           <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
           <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
+          <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
           <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
         </nav>
       </div>
@@ -16171,6 +16184,107 @@ function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
         )}
       </section>
     </EarlyStudentChrome>
+  );
+}
+
+
+function StudentLeaderboard({ data, go, logout }) {
+  const [leaderboard, setLeaderboard] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const currentStudentId = data?.student?.id;
+  const early = Number(data?.student?.gradeLevel || 4) <= 2;
+
+  React.useEffect(() => {
+    let active = true;
+    setLoading(true);
+    api('/leaderboard')
+      .then(res => { if (!active) return; setLeaderboard(res.leaderboard || []); })
+      .catch(err => { if (!active) return; setError(err.message || 'Unable to load leaderboard.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const top3 = leaderboard.slice(0, 3);
+  const rest = leaderboard.slice(3);
+  const ChromeComponent = early ? EarlyStudentChrome : Grade46StudentChrome;
+
+  return (
+    <ChromeComponent data={data} activeTab="leaderboard" go={go} logout={logout} icon="🏆" title="Leaderboard" subtitle="Pinakamataas na mag-aaral batay sa XP.">
+      <style>{`
+        @keyframes lb-in { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
+        .lb-a { opacity:0; animation:lb-in 0.42s cubic-bezier(.22,1,.36,1) forwards; }
+        .lb-pod { display:flex; flex-direction:column; align-items:center; transition:transform .18s; cursor:default; }
+        .lb-pod:hover { transform:translateY(-5px); }
+        .lb-row { transition:all .15s cubic-bezier(.22,1,.36,1); cursor:default; }
+        .lb-row:hover { background:#F0FDF4!important; transform:translateX(4px); box-shadow:0 4px 18px rgba(34,197,94,.13)!important; }
+      `}</style>
+
+      {loading && <div style={{textAlign:'center',padding:'60px 0',color:'#64748B',fontSize:18,fontWeight:800}}>🏆 Loading leaderboard...</div>}
+      {error && <div style={{textAlign:'center',padding:'40px 0',color:'#EF4444',fontWeight:700}}>{error}</div>}
+
+      {!loading && !error && (
+        <>
+          {top3.length > 0 && (
+            <div style={{display:'flex',justifyContent:'center',alignItems:'flex-end',gap:16,padding:'32px 16px 0',background:'linear-gradient(160deg,#ECFDF5,#F0FFF4)',borderRadius:24,marginBottom:24,boxShadow:'0 2px 16px rgba(34,197,94,.08)'}}>
+              {[top3[1], top3[0], top3[2]].map((player, col) => {
+                if (!player) return <div key={col} style={{width:110}} />;
+                const isMe = String(player.id) === String(currentStudentId);
+                const cfgs = {
+                  1: {medal:'🥇', bg:'linear-gradient(135deg,#FEF3C7,#FDE68A)', border:'#F59E0B', h:100, av:46, crown:true},
+                  2: {medal:'🥈', bg:'linear-gradient(135deg,#F1F5F9,#E2E8F0)', border:'#94A3B8', h:70, av:38, crown:false},
+                  3: {medal:'🥉', bg:'linear-gradient(135deg,#FEF0E7,#FDE3C8)', border:'#F97316', h:55, av:36, crown:false},
+                };
+                const c = cfgs[player.rank];
+                const delay = col===1?'0.04s':col===0?'0.12s':'0.20s';
+                return (
+                  <div key={player.id} className="lb-pod lb-a" style={{animationDelay:delay,width:player.rank===1?120:110}}>
+                    {c.crown && <div style={{background:'#FBBF24',borderRadius:'50%',width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,marginBottom:4,boxShadow:'0 2px 8px rgba(251,191,36,.4)'}}>👑</div>}
+                    <div style={{fontSize:c.av,marginBottom:6}}>{player.avatar||'🦊'}</div>
+                    <div style={{fontWeight:900,fontSize:player.rank===1?15:14,color:isMe?'#16A34A':'#0F172A',textAlign:'center',marginBottom:3}}>{player.name.split(' ')[0]}</div>
+                    <div style={{fontSize:13,color:'#16A34A',fontWeight:800,marginBottom:8}}>⚡ {player.xp} XP</div>
+                    <div style={{background:c.bg,borderRadius:'12px 12px 0 0',height:c.h,width:'100%',display:'flex',alignItems:'center',justifyContent:'center',border:`2px solid ${c.border}`,borderBottom:'none',fontSize:player.rank===1?34:26}}>{c.medal}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {rest.length > 0 && (
+            <div style={{display:'grid',gap:10}}>
+              {rest.map((player, i) => {
+                const isMe = String(player.id) === String(currentStudentId);
+                return (
+                  <div key={player.id} className="lb-row lb-a" style={{animationDelay:`${0.28+i*0.05}s`,display:'flex',alignItems:'center',gap:14,background:isMe?'#F0FDF4':'#FFFFFF',borderRadius:18,padding:'14px 18px',border:isMe?'2px solid #22C55E':'1.5px solid #E2E8F0',boxShadow:isMe?'0 2px 12px rgba(34,197,94,.12)':'0 1px 4px rgba(0,0,0,.04)'}}>
+                    <div style={{width:38,height:38,borderRadius:'50%',background:'#F1F5F9',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:14,color:'#64748B',flexShrink:0}}>#{player.rank}</div>
+                    <div style={{fontSize:30,flexShrink:0}}>{player.avatar||'🦊'}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:900,fontSize:16,color:isMe?'#16A34A':'#0F172A'}}>
+                        {player.name}
+                        {isMe && <span style={{marginLeft:8,fontSize:11,background:'#DCFCE7',color:'#16A34A',borderRadius:999,padding:'2px 8px',fontWeight:800}}>Ikaw</span>}
+                      </div>
+                      <div style={{color:'#94A3B8',fontSize:13,marginTop:2,fontWeight:700}}>Grade {player.gradeLevel}</div>
+                    </div>
+                    <div style={{textAlign:'right',flexShrink:0}}>
+                      <div style={{fontWeight:900,color:'#16A34A',fontSize:16}}>⚡ {player.xp}</div>
+                      {player.currentStreak > 0 && <div style={{color:'#EA580C',fontWeight:800,fontSize:13,marginTop:2}}>🔥 {player.currentStreak}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {leaderboard.length === 0 && (
+            <div style={{textAlign:'center',padding:'60px 0',color:'#64748B'}}>
+              <div style={{fontSize:48,marginBottom:12}}>🏆</div>
+              <div style={{fontWeight:900,fontSize:18}}>Walang data pa.</div>
+              <div style={{marginTop:6,fontSize:14}}>Kumpletuhin ang mga aralin para makita ang leaderboard.</div>
+            </div>
+          )}
+        </>
+      )}
+    </ChromeComponent>
   );
 }
 
