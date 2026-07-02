@@ -43,6 +43,8 @@ import {
   getReportSummary,
   getSummaryReportCsv,
   getSummaryReportPdf,
+  getStudentReportCsv,
+  getActivityLogsCsv,
   reactivateStudent,
   reactivateTeacher,
   removeTeacherAssignment,
@@ -1010,6 +1012,38 @@ function renderLogs() {
             }
           >
             {busy === 'admin-summary-pdf' ? 'Preparing Summary PDF...' : 'Download Summary PDF'}
+          </Button>
+
+          <Button
+            disabled={Boolean(busy)}
+            onPress={() =>
+              runExport('admin-student-csv', () =>
+                downloadTextReport({
+                  title: 'Student Report CSV',
+                  filename: 'student-report.csv',
+                  mimeType: 'text/csv',
+                  loader: getStudentReportCsv,
+                })
+              )
+            }
+          >
+            {busy === 'admin-student-csv' ? 'Preparing Student CSV...' : 'Download Student Report CSV'}
+          </Button>
+
+          <Button
+            disabled={Boolean(busy)}
+            onPress={() =>
+              runExport('admin-activity-csv', () =>
+                downloadTextReport({
+                  title: 'Activity Logs CSV',
+                  filename: 'activity-logs.csv',
+                  mimeType: 'text/csv',
+                  loader: getActivityLogsCsv,
+                })
+              )
+            }
+          >
+            {busy === 'admin-activity-csv' ? 'Preparing Activity CSV...' : 'Download Activity Logs CSV'}
           </Button>
         </Card>
         <Card>

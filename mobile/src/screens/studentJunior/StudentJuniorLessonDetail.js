@@ -1603,9 +1603,9 @@ const stepScrollRef = useRef(null);
               {littleLearnerGame ? (
                 <View
                   style={{
-                    backgroundColor:'#ECFDF5',
+                    backgroundColor:'#EFF6FF',
                     borderWidth:2,
-                    borderColor:'#86EFAC',
+                    borderColor:'#93C5FD',
                     borderRadius:22,
                     padding:18,
                     marginBottom:18,
@@ -1614,13 +1614,15 @@ const stepScrollRef = useRef(null);
                 >
                   <Text
                     style={{
-                      fontSize:18,
+                      fontSize:14,
                       fontWeight:'900',
-                      color:'#15803D',
+                      color:'#1D4ED8',
                       marginBottom:8,
+                      textTransform:'uppercase',
+                      letterSpacing:0.5,
                     }}
                   >
-                    🤔 Choose the correct answer!
+                    🤔 Tanong
                   </Text>
 
                   <Text
@@ -1629,15 +1631,39 @@ const stepScrollRef = useRef(null);
                       fontWeight:'900',
                       textAlign:'center',
                       color:'#0F172A',
+                      lineHeight:32,
                     }}
                   >
                     {question.question}
                   </Text>
                 </View>
               ) : (
-                <Text style={styles.question}>
-                  {question.question}
-                </Text>
+                <View
+                  style={{
+                    backgroundColor:'#EFF6FF',
+                    borderWidth:2,
+                    borderColor:'#93C5FD',
+                    borderRadius:16,
+                    padding:16,
+                    marginBottom:12,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize:13,
+                      fontWeight:'900',
+                      color:'#1D4ED8',
+                      marginBottom:6,
+                      textTransform:'uppercase',
+                      letterSpacing:0.5,
+                    }}
+                  >
+                    Tanong
+                  </Text>
+                  <Text style={styles.question}>
+                    {question.question}
+                  </Text>
+                </View>
               )}
               {(question.options || []).map((option) => {
                 const answer = mcqAnswers[question.id];
