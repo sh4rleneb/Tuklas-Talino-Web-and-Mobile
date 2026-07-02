@@ -4768,8 +4768,8 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         min-height: 74px;
         padding: 8px 14px;
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 6px;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 4px;
         border-radius: 30px;
         background: rgba(255, 255, 255, 0.96);
         border: 1px solid rgba(39, 174, 96, 0.08);
@@ -6191,8 +6191,8 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
           min-height: 82px !important;
           padding: 8px 14px !important;
           display: grid !important;
-          grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
-          gap: 7px !important;
+          grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+          gap: 4px !important;
           align-items: center !important;
           overflow: hidden !important;
         }
