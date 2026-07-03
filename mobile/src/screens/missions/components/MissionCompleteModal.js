@@ -36,7 +36,7 @@ export default function MissionCompleteModal({
 
       {typeof attempts === 'number' ? (
         <Text style={styles.attempts}>
-          Attempts: {attempts}
+          Mga Pagsubok: {attempts}
         </Text>
       ) : null}
 
@@ -48,11 +48,11 @@ export default function MissionCompleteModal({
 
           <View style={{ flex: 1 }}>
             <Text style={styles.badgeLabel}>
-              Badge Unlocked!
+              Bagong Badge!
             </Text>
 
             <Text style={styles.badgeName}>
-              {badge.name || 'New Achievement'}
+              {badge.name || 'Bagong Tagumpay'}
             </Text>
           </View>
         </View>
@@ -75,7 +75,7 @@ export default function MissionCompleteModal({
         onPress={onReplay}
       >
         <Text style={styles.buttonText}>
-          🔄 Play Again
+          🔄 Maglaro Muli
         </Text>
       </TouchableOpacity>
 
@@ -84,7 +84,7 @@ export default function MissionCompleteModal({
         onPress={onBack}
       >
         <Text style={styles.secondaryText}>
-          ← Back to Missions
+          ← Bumalik sa mga Misyon
         </Text>
       </TouchableOpacity>
     </View>

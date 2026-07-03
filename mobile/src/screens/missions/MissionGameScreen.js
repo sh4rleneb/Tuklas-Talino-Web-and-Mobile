@@ -31,34 +31,34 @@ const MAX_MISSION_ATTEMPTS = 5;
 
 const SOUND_AND_SAY_LEVELS = {
   1: {
-    difficulty: 'Junior • Grade 1',
+    difficulty: 'Junior • Baitang 1',
     prompt: 'Magandang umaga po.',
-    guide: 'Say one polite sentence clearly.',
+    guide: 'Bigkasin nang malinaw ang isang magalang na pangungusap.',
   },
   2: {
-    difficulty: 'Junior • Grade 2',
+    difficulty: 'Junior • Baitang 2',
     prompt: 'Ako ay batang masipag magbasa.',
-    guide: 'Say one complete sentence with clear pronunciation.',
+    guide: 'Bigkasin nang malinaw ang isang buong pangungusap.',
   },
   3: {
-    difficulty: 'Junior • Grade 3',
+    difficulty: 'Junior • Baitang 3',
     prompt: 'Malinaw kong binibigkas ang mga salita sa Filipino.',
-    guide: 'Say a longer sentence with smooth pacing.',
+    guide: 'Bigkasin nang maayos ang isang mas mahabang pangungusap.',
   },
   4: {
-    difficulty: 'Senior • Grade 4',
+    difficulty: 'Senior • Baitang 4',
     prompt: 'Ang pagbabasa ay susi sa mas malawak na kaalaman.',
-    guide: 'Say the sentence with proper pacing and confidence.',
+    guide: 'Bigkasin ang pangungusap nang may tamang bilis at kumpiyansa.',
   },
   5: {
-    difficulty: 'Senior • Grade 5',
+    difficulty: 'Senior • Baitang 5',
     prompt: 'Ipinapahayag ko nang malinaw ang aking opinyon at dahilan.',
-    guide: 'Say the sentence clearly and emphasize the main idea.',
+    guide: 'Bigkasin nang malinaw ang pangungusap at bigyang-diin ang pangunahing diwa.',
   },
   6: {
-    difficulty: 'Senior • Grade 6',
+    difficulty: 'Senior • Baitang 6',
     prompt: 'Mahusay akong makinig, magsalita, at magpaliwanag nang may tiwala sa sarili.',
-    guide: 'Say the sentence with confidence, expression, and steady pacing.',
+    guide: 'Bigkasin ang pangungusap nang may kumpiyansa, tamang damdamin, at maayos na bilis.',
   },
 };
 
@@ -66,14 +66,14 @@ function friendlyMissionErrorMessage(message = '') {
   const text = String(message || '').toLowerCase();
 
   if (text.includes('already used all') && text.includes('attempt')) {
-    return 'You already used all 5 tries for this mission. Great effort! Try another mission or review what you learned.';
+    return 'Naubos mo na ang 5 pagsubok para sa misyong ito. Magaling! Subukan ang ibang misyon o balikan ang iyong natutuhan.';
   }
 
   if (text.includes('mission not found')) {
-    return 'Oops! This mission is not ready yet. Please go back and choose another mission.';
+    return 'Hindi pa handa ang misyong ito. Bumalik at pumili ng ibang misyon.';
   }
 
-  return 'Oops! We could not save your mission right now. Please try again.';
+  return 'Hindi namin maisave ang iyong misyon sa ngayon. Subukan muli.';
 }
 
 function soundAndSayLevelForGrade(gradeLevel) {
@@ -89,7 +89,7 @@ const DEMOS = {
   'word-match': {
     id: 'word-match',
     module: 'Bokabularyo',
-    title: 'Word Match',
+    title: 'Pagtutugma ng Salita',
     sample: 'aso → larawan ng aso, bahay → larawan ng bahay',
     prompt: 'Piliin ang tamang pares: aso → ?',
     options: [
@@ -105,7 +105,7 @@ const DEMOS = {
   'letter-pop': {
     id: 'letter-pop',
     module: 'Pagbasa',
-    title: 'Letter Pop',
+    title: 'Pagpili ng Titik',
     sample: 'ba + ___ = bata',
     prompt: 'ba + ___ = bata',
     options: ['ta', 'sa', 'la'],
@@ -117,7 +117,7 @@ const DEMOS = {
   'picture-guess': {
     id: 'picture-guess',
     module: 'Bokabularyo',
-    title: 'Picture Guess',
+    title: 'Paghula sa Larawan',
     sample: 'larawan ng pusa → pusa',
     prompt: 'larawan ng pusa → pusa',
     options: ['pusa', 'aso', 'ibon'],
@@ -129,7 +129,7 @@ const DEMOS = {
   'sentence-builder': {
     id: 'sentence-builder',
     module: 'Pagsulat',
-    title: 'Sentence Builder',
+    title: 'Pagbuo ng Pangungusap',
     sample: 'Ako / ay / bata.',
     prompt: 'Ako / ay / bata.',
     options: [
@@ -145,7 +145,7 @@ const DEMOS = {
   'story-quest': {
     id: 'story-quest',
     module: 'Panitikan',
-    title: 'Story Quest',
+    title: 'Pag-unawa sa Kuwento',
     sample: 'Sino ang pangunahing tauhan?',
     prompt: 'Si Milo ay isang mabait na pusa. Mahilig siyang matulog sa tabi ng bintana. Sino ang pangunahing tauhan?',
     options: ['Milo', 'Ana', 'Payong'],
@@ -157,7 +157,7 @@ const DEMOS = {
   'sound-and-say': {
     id: 'sound-and-say',
     module: 'Oral Comm',
-    title: 'Sound and Say',
+    title: 'Pakikinig at Pagbigkas',
     sample: 'Magandang umaga po.',
     prompt: 'Magandang umaga po.',
     options: ['Nasabi ko na!', 'Ulitin ko muna'],
@@ -216,17 +216,17 @@ export default function MissionGameScreen({ navigation, route }) {
   const achievement =
     attempts <= 1
       ? {
-          title: '🏅 Perfect Explorer',
-          message: 'Answered correctly on the first try!',
+          title: '🏅 Mahusay na Manlalaro',
+          message: 'Nasagot nang tama sa unang pagsubok!',
         }
       : attempts === 2
       ? {
-          title: '🌟 Learning Star',
-          message: 'You learned from a mistake and succeeded.',
+          title: '🌟 Bituin sa Pag-aaral',
+          message: 'Natuto ka sa iyong pagkakamali at nagtagumpay!',
         }
       : {
-          title: '💪 Never Give Up',
-          message: 'Persistence leads to mastery.',
+          title: '💪 Hindi Sumusuko',
+          message: 'Ang pagtitiyaga ay susi sa tagumpay.',
         };
 
   useEffect(() => () => {
@@ -246,7 +246,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
   const showMissionNotice = (message, emoji = '🌈') => {
     setMissionNotice({
-      title: 'Nice try!',
+      title: 'Magaling!',
       message,
       emoji,
     });
@@ -261,8 +261,8 @@ export default function MissionGameScreen({ navigation, route }) {
 
       if (!permission.granted) {
         Alert.alert(
-          'Microphone',
-          'Microphone permission is needed to record your Sound and Say mission.'
+          'Mikropono',
+          'Kailangan ang pahintulot sa mikropono upang maitala ang iyong pagbigkas.'
         );
         return;
       }
@@ -279,13 +279,13 @@ export default function MissionGameScreen({ navigation, route }) {
       recordingRef.current = result.recording;
       setRecording(true);
       setRecordingUri('');
-      setSoundStatus('Recording... speak clearly.');
+      setSoundStatus('Nagre-record... magsalita nang malinaw.');
     } catch (err) {
       setRecording(false);
       setSoundStatus('');
       Alert.alert(
-        'Recording Error',
-        err.message || 'Unable to start recording.'
+        'May Problema sa Pagre-record',
+        err.message || 'Hindi masimulan ang pagre-record.'
       );
     }
   };
@@ -305,20 +305,20 @@ export default function MissionGameScreen({ navigation, route }) {
       recordingRef.current = null;
       setRecording(false);
       setRecordingUri(uri || '');
-      setSoundStatus(uri ? 'Recording saved. You can play it back or complete the mission.' : '');
+      setSoundStatus(uri ? 'Naitala na ang iyong boses. Maaari mo itong pakinggan o tapusin ang misyon.' : '');
     } catch (err) {
       recordingRef.current = null;
       setRecording(false);
       Alert.alert(
-        'Recording Error',
-        err.message || 'Unable to stop recording.'
+        'May Problema sa Pagre-record',
+        err.message || 'Hindi matapos ang pagre-record.'
       );
     }
   };
 
   const playSoundAndSayRecording = async () => {
     if (!recordingUri) {
-      Alert.alert('Sound and Say', 'Record your voice first.');
+      Alert.alert('Sound and Say', 'I-record muna ang iyong boses.');
       return;
     }
 
@@ -331,11 +331,11 @@ export default function MissionGameScreen({ navigation, route }) {
       );
 
       soundRef.current = result.sound;
-      setSoundStatus('Playing your recording...');
+      setSoundStatus('Pinapatugtog ang iyong naitalang boses...');
     } catch (err) {
       Alert.alert(
-        'Playback Error',
-        err.message || 'Unable to play your recording.'
+        'May Problema sa Pagpapatugtog',
+        err.message || 'Hindi mapatugtog ang iyong naitalang boses.'
       );
     }
   };
@@ -377,7 +377,7 @@ export default function MissionGameScreen({ navigation, route }) {
           method: 'POST',
           body: {
             challengeId: `attempt-${missionAttemptNo}-${Date.now()}`,
-            challengeTitle: `Attempt ${missionAttemptNo} of ${MAX_MISSION_ATTEMPTS}`,
+            challengeTitle: `Pagsubok ${missionAttemptNo} of ${MAX_MISSION_ATTEMPTS}`,
             attemptNo: missionAttemptNo,
           },
         });
@@ -411,7 +411,7 @@ export default function MissionGameScreen({ navigation, route }) {
     setAttempts((a) => a + 1);
 
     Alert.alert(
-      'Incorrect Answer',
+      'Maling Sagot',
       `❌ Mali ang sagot.\n\n✅ Tamang sagot: ${mission.correct}`
     );
   };
@@ -450,7 +450,7 @@ export default function MissionGameScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <MissionCompleteModal
-          title="🎉 Mission Complete!"
+          title="🎉 Natapos ang Gawain!"
           xp={mission.xp}
           stars={stars}
           attempts={attempts}
@@ -487,7 +487,7 @@ export default function MissionGameScreen({ navigation, route }) {
         <MissionHeader
           icon="🎮"
           title={mission.title}
-          subtitle={`Attempt ${missionAttemptNo}/${MAX_MISSION_ATTEMPTS} • Complete the activity and earn XP.`}
+          subtitle={`Pagsubok ${missionAttemptNo}/${MAX_MISSION_ATTEMPTS} • Tapusin ang gawain upang makakuha ng XP.`}
         />
 
         {missionId === 'word-match' && (
@@ -544,7 +544,7 @@ export default function MissionGameScreen({ navigation, route }) {
         {missionId === 'sound-and-say' && (
           <View style={styles.soundCard}>
             <Text style={styles.soundEyebrow}>
-              🔊 Sound and Say
+              🔊 Pakikinig at Pagbigkas
             </Text>
 
             <Text style={styles.soundDifficulty}>
@@ -576,7 +576,7 @@ export default function MissionGameScreen({ navigation, route }) {
                 activeOpacity={0.85}
               >
                 <Text style={styles.recordButtonText}>
-                  {recording ? '⏹ Stop Recording' : '🎤 Start Recording'}
+                  {recording ? '⏹ Ihinto' : '🎤 Simulan'}
                 </Text>
               </TouchableOpacity>
 
@@ -623,7 +623,7 @@ export default function MissionGameScreen({ navigation, route }) {
               activeOpacity={0.85}
             >
               <Text style={styles.soundButtonText}>
-                {submitting ? 'Saving...' : 'Complete Sound and Say'}
+                {submitting ? 'Sine-save...' : 'Tapusin ang Gawain'}
               </Text>
             </TouchableOpacity>
           </View>

@@ -42,11 +42,11 @@ export default function XPHistoryScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back to Profile</Text>
+          <Text style={styles.backText}>← Bumalik sa Profile</Text>
         </TouchableOpacity>
 
         <View style={styles.headerCard}>
-          <Text style={styles.title}>⭐ XP History</Text>
+          <Text style={styles.title}>⭐ Kasaysayan ng XP</Text>
           <Text style={styles.subtitle}>All XP rewards and activity records.</Text>
         </View>
 

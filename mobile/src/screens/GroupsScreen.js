@@ -27,12 +27,12 @@ const HIDDEN_GROUP_STATUSES = new Set([
 
 const FILTERS = [
   { key: 'all', label: 'All' },
-  { key: 'todo', label: 'To Do' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'done', label: 'Done' },
+  { key: 'todo', label: 'Gagawin' },
+  { key: 'pending', label: 'Nakabinbin' },
+  { key: 'done', label: 'Tapos' },
 ];
 
-function isVisibleGroupRecord(item) {
+function isVisibleGrupoRecord(item) {
   if (!item) return false;
 
   const status = String(
@@ -59,11 +59,11 @@ function isVisibleGroupRecord(item) {
 
 function getVisibleGroups(rawGroups = []) {
   return (Array.isArray(rawGroups) ? rawGroups : [])
-    .filter(isVisibleGroupRecord)
+    .filter(isVisibleGrupoRecord)
     .map((group) => ({
       ...group,
       tasks: (Array.isArray(group.tasks) ? group.tasks : [])
-        .filter(isVisibleGroupRecord),
+        .filter(isVisibleGrupoRecord),
     }));
 }
 
@@ -74,10 +74,10 @@ function getTaskBucket(task) {
 }
 
 function taskStatus(task) {
-  if (task.completed) return 'Approved';
-  if (task.pendingTeacherCheck) return 'Pending teacher review';
-  if (task.returnedByTeacher) return 'Returned for revision';
-  return 'Not submitted';
+  if (task.completed) return 'Inaprubahan';
+  if (task.pendingTeacherCheck) return 'Nakabinbin para sa pagsusuri ng guro';
+  if (task.returnedByTeacher) return 'Ibinalik upang itama';
+  return 'Hindi pa naipapasa';
 }
 
 function normalizeText(value) {
@@ -103,7 +103,7 @@ export default function GroupsScreen({ navigation }) {
   const [notice, setNotice] = useState(null);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedGroupId, setSelectedGroupId] = useState(null);
+  const [selectedGrupoId, setSelectedGrupoId] = useState(null);
   const [missionStep, setMissionStep] = useState('choose');
   const [selectedRole, setSelectedRole] = useState(null);
   const [completedTaskId, setCompletedTaskId] = useState(null);
@@ -145,7 +145,7 @@ export default function GroupsScreen({ navigation }) {
       setGroups(getVisibleGroups(dashboard.groups));
       setStudent(dashboard.student || null);
     } catch (err) {
-      setError(err.message || 'Unable to load group tasks.');
+      setError(err.message || 'Hindi ma-load ang mga gawain ng grupo.');
     } finally {
       if (!quiet) setLoading(false);
       setRefreshing(false);
@@ -169,7 +169,7 @@ export default function GroupsScreen({ navigation }) {
       const data = await api(`/groups/tasks/${taskId}/complete`, { method: 'POST' });
       setNotice({
         tone: 'success',
-        message: data.message || 'Submitted for teacher review.',
+        message: data.message || 'Naipasa na para sa pagsusuri ng guro.',
       });
 
       setCompletedTaskId(taskId);
@@ -179,7 +179,7 @@ export default function GroupsScreen({ navigation }) {
     } catch (err) {
       setNotice({
         tone: 'error',
-        message: err.message || 'Unable to submit this task.',
+        message: err.message || 'Hindi maipasa ang gawaing ito.',
       });
     } finally {
       setBusyTaskId(null);
@@ -232,9 +232,9 @@ export default function GroupsScreen({ navigation }) {
 
   const hasFilters = Boolean(query.trim()) || statusFilter !== 'all';
 
-  const selectedGroup =
+  const selectedGrupo =
     filteredGroups.find(
-      (group) => Number(group.id) === Number(selectedGroupId)
+      (group) => Number(group.id) === Number(selectedGrupoId)
     ) || null;
 
   function clearFilters() {
@@ -268,8 +268,8 @@ export default function GroupsScreen({ navigation }) {
       <Card key={task.id} style={styles.inner}>
         <View style={styles.taskHeader}>
           <Text style={styles.task}>{task.title}</Text>
-          <View style={[styles.statusPill, bucket === 'done' && styles.statusDone, bucket === 'pending' && styles.statusPending]}>
-            <Text style={[styles.statusPillText, bucket === 'done' && styles.statusDoneText, bucket === 'pending' && styles.statusPendingText]}>
+          <View style={[styles.statusPill, bucket === 'done' && styles.statusTapos, bucket === 'pending' && styles.statusNakabinbin]}>
+            <Text style={[styles.statusPillText, bucket === 'done' && styles.statusTaposText, bucket === 'pending' && styles.statusNakabinbinText]}>
               {taskStatus(task)}
             </Text>
           </View>
@@ -279,20 +279,20 @@ export default function GroupsScreen({ navigation }) {
           <Text style={styles.taskDescription}>{task.description}</Text>
         ) : (
           <Text style={styles.muted}>
-            Complete this group activity with your teammates.
+            Tapusin ang gawaing ito kasama ang iyong mga kagrupo.
           </Text>
         )}
 
         <View style={styles.taskFooter}>
           <Text style={styles.taskXp}>+{task.xpReward || 0} XP</Text>
           {task.returnedByTeacher ? (
-            <Text style={styles.revisionText}>Needs revision</Text>
+            <Text style={styles.revisionText}>Kailangang Ayusin</Text>
           ) : null}
         </View>
 
         {canSubmit && (
           <PrimaryButton variant="secondary" onPress={() => complete(task.id)}>
-            {isBusy ? 'Submitting...' : task.returnedByTeacher ? 'I helped my team!' : 'I helped my team!'}
+            {isBusy ? 'Isinusumite...' : task.returnedByTeacher ? 'Nakatulong ako sa aming pangkat!' : 'Nakatulong ako sa aming pangkat!'}
           </PrimaryButton>
         )}
       </Card>
@@ -300,15 +300,15 @@ export default function GroupsScreen({ navigation }) {
   }
 
 
-  function renderJobSelection(group) {
+  function renderTrabahoSelection(group) {
     return (
       <Card style={styles.jobScreen}>
         <Text style={styles.jobTitle}>
-          Choose your job
+          Pumili ng Tungkulin
         </Text>
 
         <Text style={styles.jobSubtitle}>
-          Every teammate has a special role.
+          Bawat kasapi ng pangkat ay may mahalagang tungkulin.
         </Text>
 
         <View style={styles.jobGrid}>
@@ -348,28 +348,28 @@ export default function GroupsScreen({ navigation }) {
         </Text>
 
         <Text style={styles.waitingTitle}>
-          Waiting for Teacher
+          Naghihintay sa Guro
         </Text>
 
         <Text style={styles.waitingSubtitle}>
-          Your teacher will check your team's work.
+          Susuriin ng iyong guro ang ginawa ng inyong pangkat.
         </Text>
 
         <PrimaryButton
           onPress={() => {
             setMissionStep('choose');
             setSelectedRole(null);
-            setSelectedGroupId(null);
+            setSelectedGrupoId(null);
             setCompletedTaskId(null);
           }}
         >
-          Back to Teams
+          Bumalik sa mga Pangkat
         </PrimaryButton>
       </Card>
     );
   }
 
-  function renderGroup(group) {
+  function renderGrupo(group) {
     const tasks = Array.isArray(group.tasks) ? group.tasks : [];
     const memberCount = Array.isArray(group.members) ? group.members.length : 0;
 
@@ -383,37 +383,37 @@ export default function GroupsScreen({ navigation }) {
           <View style={styles.groupTitleBlock}>
             <Text style={styles.group}>{group.name}</Text>
             <Text style={styles.muted}>
-              {group.description || 'Your assigned learning group.'}
+              {group.description || 'Ang iyong nakatalagang pangkat sa pag-aaral.'}
             </Text>
           </View>
         </View>
 
         <View style={styles.metaRow}>
           <View style={styles.metaPill}>
-            <Text style={styles.metaText}>{tasks.length} task{tasks.length === 1 ? '' : 's'}</Text>
+            <Text style={styles.metaText}>{tasks.length} gawain</Text>
           </View>
           {memberCount > 0 ? (
             <View style={styles.metaPill}>
-              <Text style={styles.metaText}>{memberCount} member{memberCount === 1 ? '' : 's'}</Text>
+              <Text style={styles.metaText}>{memberCount} miyembro</Text>
             </View>
           ) : null}
         </View>
 
         <Text style={styles.role}>
           {group.currentStudentIsLeader
-            ? 'You are the group leader. Submit finished tasks for teacher review.'
-            : 'Work with your teammates. Your group leader submits tasks.'}
+            ? 'Ikaw ang pinuno ng pangkat. Ipasa ang mga natapos na gawain para sa pagsusuri ng guro.'
+            : 'Makipagtulungan sa iyong mga kagrupo. Ang pinuno ng pangkat ang magsusumite ng mga gawain.'}
         </Text>
 
         {tasks.map((task) => renderTask(group, task))}
 
         {tasks.length === 0 && (
           <View style={styles.emptyMini}>
-            <Text style={styles.emptyMiniTitle}>No tasks here yet</Text>
+            <Text style={styles.emptyMiniTitle}>Wala pang gawain rito.</Text>
             <Text style={styles.muted}>
               {hasFilters
-                ? 'Try another search or filter.'
-                : 'No tasks have been assigned to this group yet.'}
+                ? 'Subukan ang ibang paghahanap o filter.'
+                : 'Wala pang nakatalagang gawain sa grupong ito.'}
             </Text>
           </View>
         )}
@@ -443,27 +443,27 @@ export default function GroupsScreen({ navigation }) {
 
         <View style={styles.header}>
           <View style={styles.heroCard}>
-            <Text style={styles.title}>👥 Group Tasks</Text>
+            <Text style={styles.title}>👥 Mga Gawain ng Grupo</Text>
             <Text style={styles.muted}>
-              Work together, track progress, and submit tasks for teacher approval.
+              Makipagtulungan, subaybayan ang progreso, at isumite ang mga gawain para sa pag-apruba ng guro.
             </Text>
 
             <View style={styles.summaryRow}>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryValue}>{summary.groups}</Text>
-                <Text style={styles.summaryLabel}>Groups</Text>
+                <Text style={styles.summaryLabel}>Mga Grupo</Text>
               </View>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryValue}>{summary.todo}</Text>
-                <Text style={styles.summaryLabel}>To Do</Text>
+                <Text style={styles.summaryLabel}>Gagawin</Text>
               </View>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryValue}>{summary.pending}</Text>
-                <Text style={styles.summaryLabel}>Pending</Text>
+                <Text style={styles.summaryLabel}>Nakabinbin</Text>
               </View>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryValue}>{summary.done}</Text>
-                <Text style={styles.summaryLabel}>Done</Text>
+                <Text style={styles.summaryLabel}>Tapos</Text>
               </View>
             </View>
           </View>
@@ -473,7 +473,7 @@ export default function GroupsScreen({ navigation }) {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search groups or tasks"
+            placeholder="Maghanap ng grupo o gawain"
             placeholderTextColor={colors.muted}
             style={styles.searchInput}
             autoCapitalize="none"
@@ -500,42 +500,42 @@ export default function GroupsScreen({ navigation }) {
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.secondary} />
-            <Text style={styles.muted}>Loading group tasks...</Text>
+            <Text style={styles.muted}>Naglo-load ng mga gawain ng grupo...</Text>
           </View>
         ) : error ? (
           <Card style={styles.errorCard}>
             <Text style={styles.error}>{error}</Text>
             <PrimaryButton variant="secondary" onPress={() => load()}>
-              Try Again
+              Subukan Muli
             </PrimaryButton>
           </Card>
         ) : filteredGroups.length ? (
           <>
             <Card style={styles.teamMissionCard}>
               <Text style={styles.teamMissionTitle}>
-                👥 Team Mission
+                👥 Misyon ng Pangkat
               </Text>
 
               <Text style={styles.teamMissionSubtitle}>
-                Choose. Help. Done.
+                Pumili. Tumulong. Isumite.
               </Text>
 
               <View style={styles.stepRow}>
                 <View style={styles.stepPill}>
-                  <Text style={styles.stepText}>Choose</Text>
+                  <Text style={styles.stepText}>Pumili</Text>
                 </View>
 
                 <View style={styles.stepPill}>
-                  <Text style={styles.stepText}>Job</Text>
+                  <Text style={styles.stepText}>Trabaho</Text>
                 </View>
 
                 <View style={styles.stepPill}>
-                  <Text style={styles.stepText}>Task</Text>
+                  <Text style={styles.stepText}>Gawain</Text>
                 </View>
 
-                <View style={styles.stepDone}>
-                  <Text style={styles.stepDoneText}>
-                    Done ({summary.done})
+                <View style={styles.stepTapos}>
+                  <Text style={styles.stepTaposText}>
+                    Tapos ({summary.done})
                   </Text>
                 </View>
               </View>
@@ -545,7 +545,7 @@ export default function GroupsScreen({ navigation }) {
                   key={group.id}
                   style={styles.teamCard}
                   onPress={() => {
-                    setSelectedGroupId(group.id);
+                    setSelectedGrupoId(group.id);
                     setMissionStep('job');
                   }}
                 >
@@ -557,7 +557,7 @@ export default function GroupsScreen({ navigation }) {
                     <Text style={styles.muted}>
                       {(group.tasks || []).filter(
                         (task) => !task.completed
-                      ).length} missions left
+                      ).length} natitirang gawain
                     </Text>
                   </View>
 
@@ -566,12 +566,12 @@ export default function GroupsScreen({ navigation }) {
               ))}
             </Card>
 
-            {missionStep === 'job' && selectedGroup
-              ? renderJobSelection(selectedGroup)
+            {missionStep === 'job' && selectedGrupo
+              ? renderTrabahoSelection(selectedGrupo)
               : null}
 
-            {missionStep === 'task' && selectedGroup
-              ? renderGroup(selectedGroup)
+            {missionStep === 'task' && selectedGrupo
+              ? renderGrupo(selectedGrupo)
               : null}
 
             {missionStep === 'done'
@@ -582,17 +582,17 @@ export default function GroupsScreen({ navigation }) {
           <Card style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>🔎</Text>
             <Text style={styles.emptyTitle}>
-              {groups.length ? 'No matching group tasks' : 'No group assigned yet'}
+              {groups.length ? 'Walang katugmang gawain ng grupo.' : 'Wala ka pang nakatalagang grupo.'}
             </Text>
             <Text style={styles.muted}>
               {groups.length
-                ? 'Try a different search or filter to find your group activity.'
-                : 'Your teacher can add you to a group and assign collaborative tasks.'}
+                ? 'Subukan ang ibang paghahanap o filter upang makita ang gawain ng inyong grupo.'
+                : 'Maaaring idagdag ka ng iyong guro sa isang grupo at bigyan ng mga gawaing pangkatan.'}
             </Text>
 
             {hasFilters ? (
               <TouchableOpacity style={styles.clearButton} onPress={clearFilters} activeOpacity={0.85}>
-                <Text style={styles.clearButtonText}>Clear search and filters</Text>
+                <Text style={styles.clearButtonText}>I-clear ang paghahanap at mga filter</Text>
               </TouchableOpacity>
             ) : null}
           </Card>
@@ -799,10 +799,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  statusPending: {
+  statusNakabinbin: {
     backgroundColor: '#FEF3C7',
   },
-  statusDone: {
+  statusTapos: {
     backgroundColor: '#DCFCE7',
   },
   statusPillText: {
@@ -810,10 +810,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
   },
-  statusPendingText: {
+  statusNakabinbinText: {
     color: '#B45309',
   },
-  statusDoneText: {
+  statusTaposText: {
     color: '#166534',
   },
   emptyMini: {
@@ -976,14 +976,14 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
 
-  stepDone: {
+  stepTapos: {
     backgroundColor: '#FEF3C7',
     borderRadius: 14,
     paddingHorizontal: 12,
     justifyContent: 'center',
   },
 
-  stepDoneText: {
+  stepTaposText: {
     fontWeight: '900',
     color: '#166534',
   },

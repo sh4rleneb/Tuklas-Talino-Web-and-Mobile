@@ -87,7 +87,7 @@ export default function LetterPopGame({
         </Text>
 
         <Text style={styles.completeSubtext}>
-          Natapos mo ang lahat ng Letter Pop challenges.
+          Natapos mo ang lahat ng hamon sa Pagpili ng Titik.
         </Text>
       </View>
     );
@@ -100,13 +100,13 @@ export default function LetterPopGame({
   return (
     <View style={styles.container}>
       <MissionProgressCard
-        label="Question"
+        label="Tanong"
         current={index + 1}
         total={questions.length}
       />
 
       <MissionQuestionCard
-        title="Complete the Word"
+        title="Kumpletuhin ang Salita"
       >
         {question.prompt}
       </MissionQuestionCard>

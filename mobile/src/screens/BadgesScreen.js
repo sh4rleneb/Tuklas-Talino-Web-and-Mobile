@@ -64,14 +64,14 @@ export default function BadgesScreen({ navigation }) {
     if (earned) {
       const awardedAt = earned.awardedAt ? new Date(earned.awardedAt) : null;
       return awardedAt && !Number.isNaN(awardedAt.getTime())
-        ? `Unlocked ${awardedAt.toLocaleDateString()}`
-        : 'Unlocked';
+        ? `Na-unlock ${awardedAt.toLocaleDateString()}`
+        : 'Na-unlock';
     }
 
     const progress = progressByCode.get(badge.code);
     if (progress) return `${progress.current}/${progress.target} complete`;
     if (badge.xpThreshold != null && Number.isFinite(Number(badge.xpThreshold))) return `${badge.xpThreshold} XP`;
-    return 'Locked';
+    return 'Naka-lock';
   }
 
   return (
@@ -85,7 +85,7 @@ export default function BadgesScreen({ navigation }) {
 
       <View style={styles.header}>
         <View style={styles.heroCard}>
-          <Text style={styles.title}>🏅 Badges</Text>
+          <Text style={styles.title}>🏅 Mga Badge</Text>
           <Text style={styles.subtitle}>
             Your learning milestones and progress.
           </Text>
@@ -93,17 +93,17 @@ export default function BadgesScreen({ navigation }) {
           <View style={styles.statsRow}>
             <View style={styles.statChip}>
               <Text style={styles.statValue}>{earnedCount}</Text>
-              <Text style={styles.statLabel}>Earned</Text>
+              <Text style={styles.statLabel}>Nakamit</Text>
             </View>
 
             <View style={styles.statChip}>
               <Text style={styles.statValue}>{lockedCount}</Text>
-              <Text style={styles.statLabel}>Locked</Text>
+              <Text style={styles.statLabel}>Naka-lock</Text>
             </View>
 
             <View style={styles.statChip}>
               <Text style={styles.statValue}>{completionPercent}%</Text>
-              <Text style={styles.statLabel}>Complete</Text>
+              <Text style={styles.statLabel}>Kumpleto</Text>
             </View>
           </View>
 
@@ -114,7 +114,7 @@ export default function BadgesScreen({ navigation }) {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.green} />
-          <Text style={styles.muted}>Loading badges...</Text>
+          <Text style={styles.muted}>Naglo-load ng mga badge...</Text>
         </View>
       ) : error ? (
         <Text style={styles.error}>{error}</Text>
@@ -141,7 +141,7 @@ export default function BadgesScreen({ navigation }) {
       )}
 
       {!loading && !error && allBadges.length === 0 && (
-        <Text style={styles.muted}>No badge definitions are available yet.</Text>
+        <Text style={styles.muted}>Wala pang mga badge na available.</Text>
       )}
           </ScrollView>
     </SafeAreaView>

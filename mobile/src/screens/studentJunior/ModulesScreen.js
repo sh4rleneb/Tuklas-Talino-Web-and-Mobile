@@ -188,7 +188,7 @@ export default function ModulesScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={styles.backText}>← Bumalik</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Mga Aralin</Text>

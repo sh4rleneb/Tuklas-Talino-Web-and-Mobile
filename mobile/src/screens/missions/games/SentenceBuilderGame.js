@@ -147,13 +147,13 @@ export default function SentenceBuilderGame({
     <View>
 
       <MissionProgressCard
-        label="Question"
+        label="Tanong"
         current={index + 1}
         total={questions.length}
       />
 
       <MissionQuestionCard
-        title="🧱 Sentence Builder"
+        title="🧱 Pagbuo ng Pangungusap"
       >
         {question.prompt || "Buuin ang tamang pangungusap."}
       </MissionQuestionCard>

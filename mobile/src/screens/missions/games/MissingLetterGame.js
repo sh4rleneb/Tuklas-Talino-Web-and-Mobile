@@ -44,7 +44,7 @@ export default function MissingLetterGame({
     const correct = current.word[current.missingIndex];
 
     if (selectedLetter === correct) {
-      setToast('🎉 Correct!');
+      setToast('🎉 Tama!');
 
       setTimeout(() => {
         if (index === questions.length - 1) {
@@ -58,7 +58,7 @@ export default function MissingLetterGame({
         setToast(null);
       }, 700);
     } else {
-      setToast('❌ Try again!');
+      setToast('❌ Subukan muli!');
 
       setTimeout(() => {
         setSelectedLetter(null);
@@ -71,12 +71,12 @@ export default function MissingLetterGame({
   return (
     <View>
       <MissionProgressCard
-        label="Missing Letter"
+        label="Nawawalang Titik"
         current={index + 1}
         total={questions.length}
       />
 
-      <MissionQuestionCard title="Fill in the Missing Letter">
+      <MissionQuestionCard title="Punan ang Nawawalang Titik">
         <Text style={styles.word}>
           {letters.join(' ')}
         </Text>

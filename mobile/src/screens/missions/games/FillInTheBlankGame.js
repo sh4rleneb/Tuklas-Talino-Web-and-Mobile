@@ -138,15 +138,15 @@ export default function SentenceBuilderGame({
     <View>
 
       <MissionProgressCard
-        label="Question"
+        label="Tanong"
         current={index + 1}
         total={questions.length}
       />
 
       <MissionQuestionCard
-        title="Build the Sentence"
+        title="Buuin ang Pangungusap"
       >
-        {builtSentence || 'Tap the words below'}
+        {builtSentence || 'Piliin ang mga salita sa ibaba'}
       </MissionQuestionCard>
 
       <View style={styles.words}>

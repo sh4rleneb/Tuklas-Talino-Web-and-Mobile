@@ -145,7 +145,7 @@ export default function StoryQuestGame({
       <View>
 
         <MissionProgressCard
-          label="Story Page"
+          label="Pahina"
           current={pageIndex + 1}
           total={totalPages}
         />
@@ -176,7 +176,7 @@ export default function StoryQuestGame({
             marginBottom:16,
           }}
         >
-          Page {pageIndex + 1} of {totalPages}
+          Pahina {pageIndex + 1} ng {totalPages}
         </Text>
 
         <View style={styles.navigationRow}>
@@ -191,7 +191,7 @@ export default function StoryQuestGame({
             onPress={previousPage}
           >
             <Text style={styles.secondaryText}>
-              ⬅ Previous Page
+              ⬅ Nakaraang Pahina
             </Text>
           </TouchableOpacity>
 
@@ -205,7 +205,7 @@ export default function StoryQuestGame({
             onPress={nextPage}
           >
             <Text style={styles.secondaryText}>
-              Next Page ➡
+              Susunod ➡
             </Text>
           </TouchableOpacity>
 
@@ -218,7 +218,7 @@ export default function StoryQuestGame({
             onPress={beginQuiz}
           >
             <Text style={styles.primaryText}>
-              🎯 Start Quiz
+              🎯 Simulan ang Pagsusulit
             </Text>
           </TouchableOpacity>
 
@@ -231,7 +231,7 @@ export default function StoryQuestGame({
     <ScrollView>
 
       <MissionProgressCard
-        label="Question"
+        label="Tanong"
         current={questionIndex + 1}
         total={totalQuestions}
       />

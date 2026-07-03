@@ -83,7 +83,7 @@ export const lessonMcqBank = {
     }
   ],
 
-  "Oral Comm 1: Pagbati at Pagpapakilala": [
+  "Komunikasyong Pasalita 1: Pagbati at Pagpapakilala": [
     {
       question: "Ano ang unang sinasabi kapag bumabati?",
       options: ["Magandang araw", "Paalam", "Ayoko po", "Bukas na lang"],
@@ -223,7 +223,7 @@ export const lessonMcqBank = {
     }
   ],
 
-  "Oral Comm 2: Pagsunod sa Panuto": [
+  "Komunikasyong Pasalita 2: Pagsunod sa Panuto": [
     {
       question: "Sa panutong 'Kunin ang lapis at isulat ang pangalan,' ano ang unang gagawin?",
       options: ["Kunin ang lapis", "Maglaro", "Kumain", "Matulog"],
@@ -363,7 +363,7 @@ export const lessonMcqBank = {
     }
   ],
 
-  "Oral Comm 3: Pagkukuwento ng Karanasan": [
+  "Komunikasyong Pasalita 3: Pagkukuwento ng Karanasan": [
     {
       question: "Ano ang mahalagang sabihin kapag nagkukuwento ng karanasan?",
       options: ["Saan nangyari at ano ang nangyari", "Presyo ng pagkain", "Laki ng sapatos", "Bilang ng upuan"],
@@ -503,7 +503,7 @@ export const lessonMcqBank = {
     }
   ],
 
-  "Oral Comm 4: Pakikipanayam": [
+  "Komunikasyong Pasalita 4: Pakikipanayam": [
     {
       question: "Alin ang magalang na panimula sa pakikipanayam?",
       options: ["Maaari po ba akong magtanong?", "Sagutin mo ako ngayon!", "Bakit ayaw mo magsalita?", "Bilisan mo ang sagot!"],
@@ -643,7 +643,7 @@ export const lessonMcqBank = {
     }
   ],
 
-  "Oral Comm 5: Pagpapahayag ng Opinyon": [
+  "Komunikasyong Pasalita 5: Pagpapahayag ng Opinyon": [
     {
       question: "Alin ang pariralang ginagamit sa pagpapahayag ng opinyon?",
       options: ["Para sa akin", "Noong unang panahon", "Minsan sa gubat", "Sila ay tumakbo"],
@@ -783,7 +783,7 @@ export const lessonMcqBank = {
     }
   ],
 
-  "Oral Comm 6: Maikling Talumpati": [
+  "Komunikasyong Pasalita 6: Maikling Talumpati": [
     {
       question: "Ano ang bahagi ng maikling talumpati?",
       options: ["simula, katawan, at wakas", "kulay, hugis, at bilang", "laro, pagkain, at tulog", "lapis, papel, at bag"],

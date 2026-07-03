@@ -12572,7 +12572,7 @@ function getLetterPopItemsForGrade(gradeLevel = 4) {
       id: 'g1-pusa',
       prompt: 'pu + ___ = 🐱',
       sample: 'Clue: Hayop na mahilig umakyat at umingiyaw.',
-      options: ['sa', 'ta', 'pa'],
+      options: ['sa', 'la', 'pa'],
       correct: 'sa',
       success: 'Tama! pu + sa = pusa.'
     },
@@ -12588,7 +12588,7 @@ function getLetterPopItemsForGrade(gradeLevel = 4) {
       id: 'g2-puno',
       prompt: 'pu + ___ = 🌳',
       sample: 'Clue: Halamang may katawan, sanga, at dahon.',
-      options: ['no', 'ta', 'sa'],
+      options: ['no', 'la', 'sa'],
       correct: 'no',
       success: 'Tama! pu + no = puno.'
     },
@@ -12631,7 +12631,7 @@ function getLetterPopItemsForGrade(gradeLevel = 4) {
       id: 'g4-kalikasan',
       prompt: 'ka + li + ___ + san = 🌳',
       sample: 'Clue: Mundo ng halaman, hayop, hangin, lupa, at tubig.',
-      options: ['ka', 'pa', 'ta'],
+      options: ['ka', 'pa', 'la'],
       correct: 'ka',
       success: 'Tama! ka + li + ka + san = kalikasan.'
     },

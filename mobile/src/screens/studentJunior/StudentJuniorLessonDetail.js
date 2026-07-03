@@ -284,15 +284,15 @@ const stepScrollRef = useRef(null);
   const missionSteps = useMemo(() => [
     {
       type: 'listen',
-      title: 'Goal',
+      title: 'Layunin',
     },
     {
       type: 'know',
-      title: 'Learn',
+      title: 'Alamin',
     },
     {
       type: 'read',
-      title: 'Read Lesson',
+      title: 'Basahin ang Aralin',
     },
     ...activities.map(activity => ({
       type: 'activity',
@@ -300,7 +300,7 @@ const stepScrollRef = useRef(null);
     })),
     {
       type: 'finish',
-      title: 'Complete Lesson',
+      title: 'Tapusin ang Aralin',
     },
   ], [activities]);
 
@@ -372,14 +372,14 @@ const stepScrollRef = useRef(null);
     if (stepItem?.title) return stepItem.title;
 
     const activityType = stepItem?.activity?.type;
-    if (activityType === 'mcq') return 'Quiz Time';
-    if (activityType === 'writing') return 'Activity';
-    if (activityType === 'speech') return 'Speech Practice';
-    if (activityType === 'vocabulary') return 'Words';
-    if (activityType === 'matching') return 'Matching';
-    if (activityType === 'infographic') return 'Material';
+    if (activityType === 'mcq') return 'Oras ng Pagsusulit';
+    if (activityType === 'writing') return 'Gawain';
+    if (activityType === 'speech') return 'Pagsasanay sa Pagbigkas';
+    if (activityType === 'vocabulary') return 'Mga Salita';
+    if (activityType === 'matching') return 'Pagtutugma';
+    if (activityType === 'infographic') return 'Materyal';
 
-    return 'Activity';
+    return 'Gawain';
   }
 
   const littleLearnerGame = Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 2;
@@ -469,9 +469,9 @@ const stepScrollRef = useRef(null);
       return {
         icon: '👆',
         title: 'Tap the Answer Game',
-        mission: 'Choose the correct answer tile. Correct answers move you closer to the finish flag.',
-        steps: ['Read', 'Tap', 'Win'],
-        button: '🚀 Continue',
+        mission: 'Piliin ang tamang sagot. Ang bawat tamang sagot ay maglalapit sa iyo sa pagtatapos.',
+        steps: ['Basahin', 'Tap', 'Win'],
+        button: '🚀 Magpatuloy',
       };
     }
 
@@ -479,8 +479,8 @@ const stepScrollRef = useRef(null);
       icon: '🎮',
       title: 'Learning Game',
       mission: 'Complete the challenge, collect stars, and unlock the next activity.',
-      steps: ['Look', 'Play', 'Win'],
-      button: '🚀 Continue',
+      steps: ['Look', 'Patugtugin', 'Win'],
+      button: '🚀 Magpatuloy',
     };
   };
 
@@ -998,7 +998,7 @@ const stepScrollRef = useRef(null);
       : `Magkasamang nagbabasa sina Mia at Leo sa klase. Mukhang nag-aalala si Leo dahil nahirapan siya sa aralin tungkol sa ${topic.tagalog}. Sinabi ni Mia, “Basahin natin ito nang paisa-isang pangungusap.” Dahan-dahan silang nagbasa, hinanap ang mahalagang ideya, at pinag-usapan ito. Maya-maya, ngumiti si Leo dahil mas naunawaan niya ang aralin.`;
 
     return {
-      title: 'Read this short story',
+      title: 'Basahin ang maikling kuwento',
       story: englishStory,
       storyTranslation: tagalogStory,
       task: 'Write 2 short sentences about what Mia and Leo did in the story.',
@@ -1011,17 +1011,17 @@ const stepScrollRef = useRef(null);
 
     return (
       <View style={styles.studentStoryCard}>
-        <Text style={styles.studentStoryEyebrow}>📖 Story Time</Text>
+        <Text style={styles.studentStoryEyebrow}>📖 Oras ng Kuwento</Text>
         <Text style={styles.studentStoryTitle}>{story.title}</Text>
 
-        <Text style={styles.studentStoryLanguageLabel}>English</Text>
+        <Text style={styles.studentStoryLanguageLabel}>Ingles</Text>
         <Text style={styles.studentStoryBody}>{story.story}</Text>
 
-        <Text style={styles.studentStoryLanguageLabel}>Tagalog Translation</Text>
+        <Text style={styles.studentStoryLanguageLabel}>Salin sa Tagalog</Text>
         <Text style={styles.studentStoryBodyTranslation}>{story.storyTranslation}</Text>
 
         <View style={styles.studentStoryTaskBox}>
-          <Text style={styles.studentStoryTaskLabel}>Your task</Text>
+          <Text style={styles.studentStoryTaskLabel}>Iyong Gawain</Text>
           <Text style={styles.studentStoryTask}>{story.task}</Text>
           <Text style={styles.studentStoryTaskTranslation}>{story.taskTranslation}</Text>
         </View>
@@ -1081,8 +1081,8 @@ const stepScrollRef = useRef(null);
 
     return (
       <View style={styles.juniorVisualReadCard}>
-        <Text style={styles.juniorVisualReadEyebrow}>📖 Read with pictures</Text>
-        <Text style={styles.juniorVisualReadTitle}>Look, think, remember.</Text>
+        <Text style={styles.juniorVisualReadEyebrow}>📖 Basahin gamit ang mga larawan</Text>
+        <Text style={styles.juniorVisualReadTitle}>Tingnan, isipin, at tandaan.</Text>
 
         <View style={styles.juniorVisualReadGrid}>
           {cards.map((item, index) => (
@@ -1234,10 +1234,10 @@ const stepScrollRef = useRef(null);
           >
             {
               lessonListening
-                ? '🎧 Playing lesson...'
+                ? '🎧 Pinapatugtog ang aralin...'
                 : lessonListened
-                  ? '✅ Good job! Tap Continue to Learn.'
-                  : '👆 Tap Play to start.'
+                  ? '✅ Magaling! Pindutin ang Magpatuloy.'
+                  : '👆 Pindutin ang Play upang magsimula.'
             }
           </Text>
 
@@ -1301,14 +1301,14 @@ const stepScrollRef = useRef(null);
             onPress={() => {
               if (lessonListening) return;
               if (!lessonListened) {
-                setGateToast('Listen to the goal first.');
+                setGateToast('Makinig muna sa layunin.');
                 return;
               }
               advance('listen');
             }}
           >
             <Text style={styles.primaryText}>
-              {lessonListened ? 'Continue' : 'Listen first'}
+              {lessonListened ? 'Magpatuloy' : 'Makinig muna'}
             </Text>
           </TouchableOpacity>
 
@@ -1364,7 +1364,7 @@ const stepScrollRef = useRef(null);
             }}
           >
             <Text style={styles.secondaryText}>
-              {knowListened ? '🔁 Listen Again' : '🔊 Listen'}
+              {knowListened ? '🔁 Makinig Muli' : '🔊 Listen'}
             </Text>
           </TouchableOpacity>
 
@@ -1385,21 +1385,21 @@ const stepScrollRef = useRef(null);
               style={[styles.secondaryButton, { flex: 1 }]}
               onPress={goToPreviousStep}
             >
-              <Text style={styles.secondaryText}>← Back</Text>
+              <Text style={styles.secondaryText}>← Bumalik</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.primaryButton, { flex: 1 }, !knowListened && styles.disabledButton]}
               onPress={() => {
                 if (!knowListened) {
-                  setGateToast('Listen to this step first.');
+                  setGateToast('Makinig muna sa hakbang na ito.');
                   return;
                 }
                 advance('know');
               }}
             >
               <Text style={styles.primaryText}>
-                {knowListened ? 'Read Lesson →' : 'Listen first'}
+                {knowListened ? 'Basahin ang Aralin →' : 'Makinig muna'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1452,7 +1452,7 @@ const stepScrollRef = useRef(null);
                         flexShrink: 1,
                       }}
                     >
-                      Read Lesson
+                      Basahin ang Aralin
                     </Text>
                   </View>
 
@@ -1498,7 +1498,7 @@ const stepScrollRef = useRef(null);
               </>
             ) : (
               <>
-                <Text style={styles.title}>📖 Read Lesson</Text>
+                <Text style={styles.title}>📖 Basahin ang Aralin</Text>
 
                 {!!aralinDisplayText && (
                   Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 3 ? (
@@ -1521,7 +1521,7 @@ const stepScrollRef = useRef(null);
               }}
             >
               <Text style={styles.secondaryText}>
-                {readListened ? '🔁 Listen Again' : '🔊 Listen'}
+                {readListened ? '🔁 Makinig Muli' : '🔊 Listen'}
               </Text>
             </TouchableOpacity>
 
@@ -1535,7 +1535,7 @@ const stepScrollRef = useRef(null);
               style={[styles.primaryButton, !readListened && styles.disabledButton]}
               onPress={() => {
                 if (!readListened) {
-                  setGateToast('Listen to the lesson first.');
+                  setGateToast('Makinig muna sa aralin.');
                   return;
                 }
                 advance('read');
@@ -1543,8 +1543,8 @@ const stepScrollRef = useRef(null);
             >
               <Text style={styles.primaryText}>
                 {!readListened
-                  ? 'Listen first'
-                  : littleLearnerGame ? '⭐ I Understand!' : 'Continue'}
+                  ? 'Makinig muna'
+                  : littleLearnerGame ? '⭐ I Understand!' : 'Magpatuloy'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1729,7 +1729,7 @@ const stepScrollRef = useRef(null);
                 setCurrentQuestionIndex(i => Math.max(0, i - 1))
               }
             >
-              <Text style={styles.secondaryText}>← Previous</Text>
+              <Text style={styles.secondaryText}>← Nakaraan</Text>
             </TouchableOpacity>
 
             <Text
@@ -1761,8 +1761,8 @@ const stepScrollRef = useRef(null);
                 if (!mcqAnswers[current.id]) {
                   setActivityNotice({
                     type: 'warning',
-                    title: 'Answer Needed',
-                    message: 'Choose an answer before continuing.',
+                    title: 'Kailangan ng Sagot',
+                    message: 'Pumili muna ng tamang sagot bago magpatuloy.',
                   });
                   return;
                 }
@@ -1772,7 +1772,7 @@ const stepScrollRef = useRef(null);
                 );
               }}
             >
-              <Text style={styles.primaryText}>Next →</Text>
+              <Text style={styles.primaryText}>Susunod →</Text>
             </TouchableOpacity>
           </View>
           ) : (
@@ -1838,13 +1838,13 @@ const stepScrollRef = useRef(null);
               </View>
             )
           ) : null}
-          {!questions.length && <Text style={styles.body}>No quiz questions are published for this activity yet.</Text>}
+          {!questions.length && <Text style={styles.body}>Wala pang mga tanong na inilathala para sa gawaing ito.</Text>}
           <TouchableOpacity
             style={[styles.primaryButton, !allAnswered && styles.disabledButton]}
             onPress={() => advance('mcq')}
             disabled={!allAnswered || submitting}
           >
-            <Text style={styles.primaryText}>Continue</Text>
+            <Text style={styles.primaryText}>Magpatuloy</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1976,10 +1976,10 @@ const stepScrollRef = useRef(null);
           >
             <Text style={styles.primaryText}>
               {submitting
-                ? 'Saving...'
+                ? 'Sine-save...'
                 : littleLearnerGame
                   ? game.button
-                  : 'Save and Continue'}
+                  : 'Save and Magpatuloy'}
             </Text>
           </TouchableOpacity>
             </>
@@ -2055,7 +2055,7 @@ const stepScrollRef = useRef(null);
             <Text style={styles.primaryText}>
               {littleLearnerGame
                 ? '🌟 Kunin ang Iyong Gantimpala!'
-                : '⭐ Complete Lesson'}
+                : '⭐ Tapusin ang Aralin'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -2198,7 +2198,7 @@ const stepScrollRef = useRef(null);
           >
             <AudioPlayerButton
               icon="🔊"
-              label={littleLearnerGame ? "Listen" : "Listen Target"}
+              label="Pakinggan"
               onPress={() =>
                 speakText(
                   currentActivity.speechTask?.targetText ||
@@ -2212,7 +2212,7 @@ const stepScrollRef = useRef(null);
               icon={recording ? '⏹' : '🎤'}
               label={
                 littleLearnerGame
-                  ? (recording ? 'Stop' : 'Record')
+                  ? (recording ? 'Itigil' : 'Record')
                   : (recording ? 'Stop Recording' : 'Start Recording')
               }
               danger={recording}
@@ -2224,8 +2224,8 @@ const stepScrollRef = useRef(null);
                 icon="▶️"
                 label={
                   littleLearnerGame
-                    ? "Play"
-                    : (playing ? "Playing..." : "Replay")
+                    ? "Patugtugin"
+                    : (playing ? "Pinapatugtog..." : "Ulitin")
                 }
                 disabled={playing}
                 onPress={playRecording}
@@ -2234,7 +2234,7 @@ const stepScrollRef = useRef(null);
 
             <AudioPlayerButton
               icon="⏹"
-              label={littleLearnerGame ? "Stop" : "Stop Audio"}
+              label={littleLearnerGame ? "Itigil" : "Itigil ang Audio"}
               danger
               onPress={async () => {
                 await stopSpeech();
@@ -2268,11 +2268,11 @@ const stepScrollRef = useRef(null);
             multiline
             value={speechTranscript}
             onChangeText={setSpeechTranscript}
-            placeholder="Type what you practiced saying..."
+            placeholder="Isulat ang iyong binigkas..."
           />
           )}
           <TouchableOpacity style={styles.primaryButton} onPress={submitSpeech} disabled={submitting}>
-            <Text style={styles.primaryText}>{submitting ? 'Saving...' : littleLearnerGame ? game.button : 'Save Speech Attempt'}</Text>
+            <Text style={styles.primaryText}>{submitting ? 'Sine-save...' : littleLearnerGame ? game.button : 'Isumite ang Pagbigkas'}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -2338,7 +2338,7 @@ const stepScrollRef = useRef(null);
             <Text style={styles.primaryText}>
               {littleLearnerGame
                 ? '⭐ I Understand!'
-                : 'Continue'}
+                : 'Magpatuloy'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -2352,7 +2352,7 @@ const stepScrollRef = useRef(null);
     return (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{currentActivity.title || 'Lesson Activity'}</Text>
-        <Text style={styles.body}>{currentActivity.instructions || currentActivity.dataJson?.content || 'Review this activity before continuing.'}</Text>
+        <Text style={styles.body}>{currentActivity.instructions || currentActivity.dataJson?.content || 'Basahin muna ang gawaing ito bago magpatuloy.'}</Text>
         <ActivityGuideCard
             activity={currentActivity}
             littleLearnerGame={littleLearnerGame}
@@ -2531,7 +2531,7 @@ const stepScrollRef = useRef(null);
                           setActivityNotice({
                             type: 'success',
                             title: complete
-                              ? '🏆 Matching Complete!'
+                              ? '🏆 Tapos na ang Pagtutugma!'
                               : '⭐ Magaling!',
                             message: complete
                               ? 'You finished the matching game!'
@@ -2573,7 +2573,7 @@ const stepScrollRef = useRef(null);
         )}
         {fileUrl ? (
           <TouchableOpacity style={styles.secondaryButton} onPress={() => Linking.openURL(fileUrl)}>
-            <Text style={styles.secondaryText}>📎 Open Lesson Material</Text>
+            <Text style={styles.secondaryText}>📎 Buksan ang Materyal</Text>
           </TouchableOpacity>
         ) : null}
         <TouchableOpacity
@@ -2581,7 +2581,7 @@ const stepScrollRef = useRef(null);
           onPress={() => advance(currentActivity.type || 'activity')}
           disabled={submitting}
         >
-          <Text style={styles.primaryText}>Continue</Text>
+          <Text style={styles.primaryText}>Magpatuloy</Text>
         </TouchableOpacity>
       </View>
     );
@@ -2592,7 +2592,7 @@ const stepScrollRef = useRef(null);
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#22C55E" />
-          <Text style={styles.body}>Loading lesson...</Text>
+          <Text style={styles.body}>Inaayos ang aralin...</Text>
         </View>
       </SafeAreaView>
     );
@@ -2602,13 +2602,13 @@ const stepScrollRef = useRef(null);
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.error}>{error || 'Lesson was not found.'}</Text>
+          <Text style={styles.error}>{error || 'Hindi nakita ang aralin.'}</Text>
           <TouchableOpacity
                 style={styles.primaryButton}
                 onPress={() =>
                   navigation.popToTop()
                 }>
-            <Text style={styles.primaryText}>Go Back</Text>
+            <Text style={styles.primaryText}>Bumalik</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -2627,7 +2627,7 @@ const stepScrollRef = useRef(null);
       >
         <View style={styles.topBar}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.back}>← Back</Text>
+            <Text style={styles.back}>← Bumalik</Text>
           </TouchableOpacity>
           <View style={styles.studentChip}>
             <Text style={styles.avatar}>{student?.avatar || '🧒'}</Text>
@@ -2636,7 +2636,7 @@ const stepScrollRef = useRef(null);
         </View>
 
         <Text style={styles.title}>📖 {lesson.title}</Text>
-        <Text style={styles.stepText}>Step {Math.min(step, totalSteps)} of {totalSteps} • +{lesson.xpReward || 0} XP</Text>
+        <Text style={styles.stepText}>Hakbang {Math.min(step, totalSteps)} sa {totalSteps} • +{lesson.xpReward || 0} XP</Text>
 
         {littleLearnerGame ? (
           <View
@@ -2662,21 +2662,21 @@ const stepScrollRef = useRef(null);
                 : currentStep?.type === 'know'
                 ? '💡 Learn'
                 : currentStep?.type === 'read'
-                ? '📖 Read Lesson'
+                ? '📖 Basahin ang Aralin'
                 : currentStep?.type === 'finish'
-                ? '🏁 Lesson Complete'
+                ? '🏁 Tapos na ang Aralin'
                 : currentActivity?.type === 'mcq'
-                ? '🎮 Quiz Time'
+                ? '🎮 Oras ng Pagsusulit'
                 : currentActivity?.type === 'writing'
                 ? '🧩 Fill in the Blank'
                 : currentActivity?.type === 'speech'
-                ? '🎤 Speech Practice'
+                ? '🎤 Pagsasanay sa Pagbigkas'
                 : currentActivity?.type === 'vocabulary'
                 ? '📚 Words'
                 : currentActivity?.type === 'matching'
                 ? '🧩 Matching Game'
                 : currentActivity?.type === 'infographic'
-                ? '📖 Read First'
+                ? '📖 Basahin Muna'
                 : '🚀 Mission') + ' ⭐'}
             </Text>
 
@@ -2687,7 +2687,7 @@ const stepScrollRef = useRef(null);
                 fontWeight:'700',
               }}
             >
-              Step {Math.min(step, totalSteps)} of {totalSteps}
+              Hakbang {Math.min(step, totalSteps)} sa {totalSteps}
             </Text>
 
             <View
@@ -2782,7 +2782,7 @@ const stepScrollRef = useRef(null);
             onPress={goToPreviousStep}
             disabled={submitting}
           >
-            <Text style={styles.previousStepText}>← Previous Step</Text>
+            <Text style={styles.previousStepText}>← Nakaraang Hakbang</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -2862,7 +2862,7 @@ const stepScrollRef = useRef(null);
                     marginTop:4,
                   }}
                 >
-                  Lesson Complete!
+                  Tapos na ang Aralin!
                 </Text>
 
                 <Text
@@ -3043,11 +3043,11 @@ const stepScrollRef = useRef(null);
 
                     <View style={styles.finishHeroTextWrap}>
                       <Text style={styles.finishHeroTitle}>
-                        Next Lesson
+                        Susunod na Aralin
                       </Text>
 
                       <Text style={styles.finishHeroSubtitle}>
-                        Continue your learning adventure!
+                        Magpatuloy your learning adventure!
                       </Text>
                     </View>
 
@@ -3067,11 +3067,11 @@ const stepScrollRef = useRef(null);
 
                     <View style={styles.finishCardTextWrap}>
                       <Text style={styles.finishCardTitle}>
-                        Back to Lesson Library
+                        Bumalik sa mga Aralin
                       </Text>
 
                       <Text style={styles.finishCardSubtitle}>
-                        Choose another lesson
+                        Pumili ng ibang aralin
                       </Text>
                     </View>
 
@@ -3090,7 +3090,7 @@ const stepScrollRef = useRef(null);
 
                     <View style={styles.finishCardTextWrap}>
                       <Text style={styles.finishCardTitle}>
-                        Back to Home
+                        Bumalik sa Tahanan
                       </Text>
 
                       <Text style={styles.finishCardSubtitle}>

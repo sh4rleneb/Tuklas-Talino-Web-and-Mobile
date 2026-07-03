@@ -25,7 +25,7 @@ import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
 import { assertSafeContentPayload, assertSafeText } from '../validators/contentSafety.js';
-const MAX_QUIZ_ATTEMPTS = 5;
+const MAX_QUIZ_ATTEMPTS = 2;
 
 const router = Router();
 
@@ -972,6 +972,36 @@ function quizMasteryLabel(percent = 0) {
   return 'Needs Practice';
 }
 
+function quizPlain(row) {
+  return row?.toJSON ? row.toJSON() : (row || {});
+}
+
+function quizTextValue(value, fallback = '') {
+  const text = String(value ?? '').trim();
+  return text || fallback;
+}
+
+function quizQuestionPrompt(question, fallback = '') {
+  const row = quizPlain(question);
+  return quizTextValue(
+    row.prompt ?? row.question ?? row.text ?? row.title,
+    fallback
+  );
+}
+
+function quizOptionLabel(option, fallback = '') {
+  const row = quizPlain(option);
+  return quizTextValue(
+    row.text ?? row.optionText ?? row.label ?? row.value,
+    fallback
+  );
+}
+
+function quizOptionId(option) {
+  const row = quizPlain(option);
+  return row.id ?? null;
+}
+
 function formatQuizAttempt(attempt) {
   const row = attempt.toJSON ? attempt.toJSON() : attempt;
 
@@ -1013,9 +1043,11 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       order: [['attemptNo', 'ASC'], ['id', 'ASC']],
     });
 
-    if (existingAttempts.length >= 2) {
+    if (existingAttempts.length >= MAX_QUIZ_ATTEMPTS) {
       return res.status(409).json({
-        message: 'Maximum quiz attempts reached.',
+        message: `Maximum quiz attempts reached. Review your saved Try 1 and Try 2 answers instead.`,
+        maxAttempts: MAX_QUIZ_ATTEMPTS,
+        attemptsUsed: existingAttempts.length,
         quizAttempts: existingAttempts.map(formatQuizAttempt),
       });
     }
@@ -1079,17 +1111,32 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       });
     }
 
-    const optionIds = [...new Set(normalizedReview.map((item) => item.selectedOptionId))];
-    const options = optionIds.length
-      ? await MCQOption.findAll({ where: { id: optionIds } })
+    const expectedQuestionIdList = [...expectedQuestionIds];
+    const allOptions = expectedQuestionIdList.length
+      ? await MCQOption.findAll({ where: { questionId: expectedQuestionIdList } })
       : [];
 
     const questionById = new Map(
       expectedQuestions.map((question) => [Number(question.id), question])
     );
     const optionById = new Map(
-      options.map((option) => [Number(option.id), option])
+      allOptions.map((option) => [Number(option.id), option])
     );
+    const optionsByQuestionId = new Map();
+
+    for (const option of allOptions) {
+      const optionRow = quizPlain(option);
+      const questionId = Number(optionRow.questionId || 0);
+
+      if (!questionId) continue;
+
+      if (!optionsByQuestionId.has(questionId)) {
+        optionsByQuestionId.set(questionId, []);
+      }
+
+      optionsByQuestionId.get(questionId).push(option);
+    }
+
     const historyRows = [];
 
     for (const item of normalizedReview) {
@@ -1238,11 +1285,50 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
     }
 
     const savedAnswers = historyRows.length;
-    const reviewJson = historyRows.map((row) => ({
-      questionId: row.questionId,
-      selectedOptionId: row.selectedOptionId,
-      isCorrect: row.isCorrect,
-    }));
+    const submittedReviewByQuestionId = new Map(
+      review
+        .map((item) => ({
+          ...item,
+          questionId: Number(item?.questionId || 0),
+        }))
+        .filter((item) => item.questionId)
+        .map((item) => [item.questionId, item])
+    );
+
+    const reviewJson = historyRows.map((row, index) => {
+      const question = questionById.get(Number(row.questionId));
+      const selectedOption = optionById.get(Number(row.selectedOptionId));
+      const questionOptions = optionsByQuestionId.get(Number(row.questionId)) || [];
+      const correctOption =
+        questionOptions.find((option) => Boolean(quizPlain(option).isCorrect)) ||
+        null;
+      const submitted = submittedReviewByQuestionId.get(Number(row.questionId)) || {};
+      const correct = Boolean(row.isCorrect);
+      const points = Number(quizPlain(question).points || submitted.points || 1);
+
+      return {
+        index: Number(submitted.index || index + 1),
+        questionId: row.questionId,
+        prompt: quizTextValue(
+          submitted.prompt,
+          quizQuestionPrompt(question, `Question ${index + 1}`)
+        ),
+        selectedOptionId: row.selectedOptionId,
+        selectedText: quizTextValue(
+          submitted.selectedText,
+          quizOptionLabel(selectedOption, 'No answer')
+        ),
+        correctOptionId: submitted.correctOptionId || quizOptionId(correctOption),
+        correctText: quizTextValue(
+          submitted.correctText,
+          quizOptionLabel(correctOption, '—')
+        ),
+        correct,
+        isCorrect: correct,
+        pointsEarned: correct ? points : 0,
+        points,
+      };
+    });
 
     const existingQuizAttempts = await QuizAttempt.findAll({
       where: {
@@ -1258,7 +1344,7 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
         message: `You already used all ${MAX_QUIZ_ATTEMPTS} quiz attempts. Review your answers instead.`,
         maxAttempts: MAX_QUIZ_ATTEMPTS,
         attemptsUsed: existingQuizAttempts.length,
-        quizAttempts: existingQuizAttempts
+        quizAttempts: existingQuizAttempts.map(formatQuizAttempt)
       });
     }
 

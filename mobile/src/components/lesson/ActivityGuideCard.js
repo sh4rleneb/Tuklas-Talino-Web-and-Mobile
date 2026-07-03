@@ -32,7 +32,7 @@ function getActivityGuide(activity = {}, littleLearnerGame = false) {
       icon: '👂',
       title: 'What to do',
       body: 'Listen first. Then answer the activity.',
-      steps: ['Listen', 'Answer', 'Continue'],
+      steps: ['Makinig', 'Sumagot', 'Magpatuloy'],
     };
   }
 
@@ -41,7 +41,7 @@ function getActivityGuide(activity = {}, littleLearnerGame = false) {
       icon: '✍️',
       title: 'What to do',
       body: 'Read the prompt. Type a short answer.',
-      steps: ['Read', 'Type', 'Save'],
+      steps: ['Basahin', 'Mag-type', 'I-save'],
     };
   }
 
@@ -50,7 +50,7 @@ function getActivityGuide(activity = {}, littleLearnerGame = false) {
       icon: '🎙️',
       title: 'What to do',
       body: 'Listen or read the target. Record your voice.',
-      steps: ['Listen', 'Record', 'Save'],
+      steps: ['Makinig', 'Mag-record', 'I-save'],
     };
   }
 
@@ -69,7 +69,7 @@ function getActivityGuide(activity = {}, littleLearnerGame = false) {
       body: littleLearnerGame
         ? 'Tap the correct answer.'
         : 'Read the question. Choose one answer.',
-      steps: littleLearnerGame ? ['Read', 'Tap', 'Win'] : ['Read', 'Choose', 'Continue'],
+      steps: littleLearnerGame ? ['Basahin', 'Pindutin', 'Manalo'] : ['Basahin', 'Pumili', 'Magpatuloy'],
     };
   }
 
@@ -77,7 +77,7 @@ function getActivityGuide(activity = {}, littleLearnerGame = false) {
     icon: '🧭',
     title: 'What to do',
     body: 'Read the task. Do the activity.',
-    steps: ['Read', 'Do', 'Continue'],
+    steps: ['Basahin', 'Gawin', 'Magpatuloy'],
   };
 }
 

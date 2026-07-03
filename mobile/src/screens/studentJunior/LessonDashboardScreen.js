@@ -53,7 +53,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
         <View style={styles.center}>
           <Text style={styles.errorText}>{error || 'Lesson not found.'}</Text>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtnText}>← Go Back</Text>
+            <Text style={styles.backBtnText}>← Bumalik</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -77,7 +77,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
 
         <View style={styles.pill}>
           <Text style={styles.pillText}>
-            Grade {lesson.gradeLevel} • {lesson.subject || 'Filipino'}
+            Baitang {lesson.gradeLevel} • {lesson.subject || 'Filipino'}
           </Text>
         </View>
 

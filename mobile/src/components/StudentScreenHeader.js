@@ -18,7 +18,7 @@ export default function StudentScreenHeader({
         onPress={() => navigation.goBack()}
       >
         <Text style={styles.backText}>
-          ← Back
+          ← Bumalik
         </Text>
       </TouchableOpacity>
 
@@ -28,7 +28,7 @@ export default function StudentScreenHeader({
         </Text>
 
         <Text style={styles.studentChipText}>
-          Grade {gradeLevel || '—'}
+          Baitang {gradeLevel || '—'}
         </Text>
       </View>
     </View>

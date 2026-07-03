@@ -88,13 +88,13 @@ export default function PictureGuessGame({
   return (
     <View style={styles.container}>
       <MissionProgressCard
-        label="Question"
+        label="Tanong"
         current={index + 1}
         total={questions.length}
       />
 
       <MissionQuestionCard
-        title="Picture Guess"
+        title="Paghula sa Larawan"
       >
         {question.emoji}
       </MissionQuestionCard>

@@ -27,13 +27,14 @@ function quizCatalog(dashboard) {
         quizId: `lesson-${lesson.id}`,
         lessonId: lesson.id,
         lessonTitle: lesson.title,
-        title: activity.title || `${lesson.title} Quiz`,
+        title: activity.title || `Pagsusulit sa ${lesson.title}`,
         questions: activity.questions || [],
       }))
   );
 }
 
 export default function QuizScreen({ navigation }) {
+
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -105,7 +106,7 @@ export default function QuizScreen({ navigation }) {
     }));
 
     if (review.some((item) => !item.selectedOptionId)) {
-      Alert.alert('Quiz', 'Answer every question before submitting.');
+      Alert.alert('Pagsusulit', 'Sagutin muna ang lahat ng tanong bago ipasa ang pagsusulit.');
       return;
     }
 
@@ -135,7 +136,7 @@ export default function QuizScreen({ navigation }) {
       setResult(quizResult ? { ...quizResult, review: reviewItems } : null);
       await load();
     } catch (err) {
-      Alert.alert('Quiz', err.message || 'Unable to submit this quiz.');
+      Alert.alert('Pagsusulit', err.message || 'Hindi maipasa ang pagsusulit.');
     } finally {
       setSubmitting(false);
     }
@@ -143,7 +144,7 @@ export default function QuizScreen({ navigation }) {
 
   function continueQuiz() {
     if (!selectedOptionId) {
-      Alert.alert('Quiz', 'Choose an answer before continuing.');
+      Alert.alert('Pagsusulit', 'Pumili muna ng sagot bago magpatuloy.');
       return;
     }
 
@@ -159,7 +160,7 @@ export default function QuizScreen({ navigation }) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.green} />
-        <Text style={styles.muted}>Loading quizzes...</Text>
+        <Text style={styles.muted}>Kinukuha ang mga pagsusulit...</Text>
       </View>
     );
   }
@@ -179,7 +180,7 @@ export default function QuizScreen({ navigation }) {
               onPress={closeQuiz}
               activeOpacity={0.85}
             >
-              <Text style={styles.quizBackButtonText}>← Back to Quiz List</Text>
+              <Text style={styles.quizBackButtonText}>← Bumalik sa mga Pagsusulit</Text>
             </TouchableOpacity>
           </View>
 
@@ -189,10 +190,10 @@ export default function QuizScreen({ navigation }) {
 
         {result ? (
           <View style={styles.hero}>
-            <Text style={styles.eyebrow}>QUIZ COMPLETE</Text>
+            <Text style={styles.eyebrow}>NATAPOS ANG PAGSUSULIT</Text>
 
             <Text style={styles.resultTitle}>
-              🎉 Great Job!
+              🎉 Magaling!
             </Text>
 
             <Text style={styles.resultScore}>
@@ -200,7 +201,7 @@ export default function QuizScreen({ navigation }) {
             </Text>
 
             <Text style={styles.resultMeta}>
-              Score: {result.score}/{result.total}
+              Iskor: {result.score}/{result.total}
             </Text>
 
             <Text style={styles.heroStat}>
@@ -208,13 +209,13 @@ export default function QuizScreen({ navigation }) {
             </Text>
 
             <Text style={styles.heroStat}>
-              ⭐ +{result.xpAwarded || 0} XP Earned
+              ⭐ +{result.xpAwarded || 0} XP ang Nakuha
             </Text>
 
             {(result.review || []).length > 0 && (
               <View style={{ width: '100%', marginTop: 18 }}>
                 <Text style={{ color: '#166534', fontWeight: '900', fontSize: 15, marginBottom: 8 }}>
-                  📝 Review Your Answers
+                  📝 Balikan ang Iyong mga Sagot
                 </Text>
                 {(result.review || []).map((item, index) => (
                   <View
@@ -229,7 +230,7 @@ export default function QuizScreen({ navigation }) {
                     }}
                   >
                     <Text style={{ fontWeight: '900', color: '#0F172A', fontSize: 14 }}>
-                      {index + 1}. {item.isCorrect ? '✅ Correct' : '❌ Incorrect'}
+                      {index + 1}. {item.isCorrect ? '✅ Tama' : '❌ Mali'}
                     </Text>
                   </View>
                 ))}
@@ -244,7 +245,7 @@ export default function QuizScreen({ navigation }) {
                   setQuestionIndex(0);
                 }}
               >
-                <Text style={styles.primaryButtonText}>🔄 Try Again</Text>
+                <Text style={styles.primaryButtonText}>🔄 Subukan Muli</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -252,14 +253,14 @@ export default function QuizScreen({ navigation }) {
               onPress={closeQuiz}
             >
               <Text style={styles.primaryButtonText}>
-                Back to Quiz List
+                Bumalik sa mga Pagsusulit
               </Text>
             </TouchableOpacity>
           </View>
         ) : question ? (
           <>
             <Text style={styles.progress}>
-              Question {questionIndex + 1} of {activeQuiz.questions.length}
+              Tanong {questionIndex + 1} sa {activeQuiz.questions.length}
             </Text>
             <Card>
               <Text style={styles.question}>{question.question}</Text>
@@ -282,7 +283,7 @@ export default function QuizScreen({ navigation }) {
                   style={[styles.primaryButton, { backgroundColor: '#64748B', marginBottom: 8 }]}
                   onPress={() => setQuestionIndex((i) => Math.max(0, i - 1))}
                 >
-                  <Text style={styles.primaryButtonText}>← Previous</Text>
+                  <Text style={styles.primaryButtonText}>← Nakaraan</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -292,10 +293,10 @@ export default function QuizScreen({ navigation }) {
               >
                 <Text style={styles.primaryButtonText}>
                   {submitting
-                    ? 'Submitting...'
+                    ? 'Ipinapasa...'
                     : questionIndex === activeQuiz.questions.length - 1
-                      ? 'Submit Quiz'
-                      : 'Next Question'}
+                      ? 'Ipasa ang Pagsusulit'
+                      : 'Susunod na Tanong'}
                 </Text>
               </TouchableOpacity>
             </Card>
@@ -324,7 +325,7 @@ export default function QuizScreen({ navigation }) {
 
       <View style={styles.header}>
       <View style={styles.headerText}>
-        <Text style={styles.title}>🧠 Quizzes</Text>
+        <Text style={styles.title}>🧠 Mga Pagsusulit</Text>
 
       </View>
     </View>
@@ -341,20 +342,20 @@ export default function QuizScreen({ navigation }) {
             <Card key={quiz.quizId}>
               <Text style={styles.quizTitle}>{quiz.title}</Text>
               <Text style={styles.muted}>{quiz.lessonTitle}</Text>
-              <Text style={styles.quizMeta}>{quiz.questions.length} questions • {quizAttempts.length}/{MAX_QUIZ_ATTEMPTS} attempts</Text>
-              {quizAttempts.length > 0 && <Text style={styles.quizBest}>Best score: {best}%</Text>}
+              <Text style={styles.quizMeta}>{quiz.questions.length} tanong • {quizAttempts.length}/{MAX_QUIZ_ATTEMPTS} pagsubok</Text>
+              {quizAttempts.length > 0 && <Text style={styles.quizBest}>Pinakamataas na Iskor: {best}%</Text>}
               <TouchableOpacity
                 style={[styles.primaryButton, limitReached && styles.buttonDisabled]}
                 onPress={() => startQuiz(quiz)}
                 disabled={limitReached}
               >
-                <Text style={styles.primaryButtonText}>{limitReached ? '5 Attempts Used' : 'Start Quiz'}</Text>
+                <Text style={styles.primaryButtonText}>{limitReached ? 'Naubos na ang 5 Pagsubok' : 'Simulan ang Pagsusulit'}</Text>
               </TouchableOpacity>
             </Card>
           );
         })
       ) : (
-        <Text style={styles.muted}>No published lesson quizzes are available yet.</Text>
+        <Text style={styles.muted}>Wala pang magagamit na pagsusulit.</Text>
       )}
     </ScrollView>
   </SafeAreaView>
@@ -468,7 +469,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
-  resultScore: {
+  resultIskor: {
     color: '#22C55E',
     fontSize: 52,
     fontWeight: '900',

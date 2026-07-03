@@ -48,7 +48,7 @@ export default function FillInBlankGame({
       setLocked(true);
       setStatus('🎉 Correct!');
     } else {
-      setStatus('❌ Try again');
+      setStatus('❌ Subukan muli');
     }
 
     onSubmit?.(selected);

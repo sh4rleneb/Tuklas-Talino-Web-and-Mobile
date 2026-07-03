@@ -17,7 +17,7 @@ const colors = {
 const MISSION_GAMES = [
   {
     id: 'word-match',
-    title: 'Word Match',
+    title: 'Pagtutugma ng Salita',
     icon: '🧩',
     module: 'Bokabularyo',
     xp: 15,
@@ -26,7 +26,7 @@ const MISSION_GAMES = [
   },
   {
     id: 'letter-pop',
-    title: 'Letter Pop',
+    title: 'Pagpili ng Titik',
     icon: '🎈',
     module: 'Pagbasa',
     xp: 12,
@@ -35,7 +35,7 @@ const MISSION_GAMES = [
   },
   {
     id: 'picture-guess',
-    title: 'Picture Guess',
+    title: 'Paghula sa Larawan',
     icon: '🖼️',
     module: 'Bokabularyo',
     xp: 12,
@@ -44,7 +44,7 @@ const MISSION_GAMES = [
   },
   {
     id: 'sentence-builder',
-    title: 'Sentence Builder',
+    title: 'Pagbuo ng Pangungusap',
     icon: '🧱',
     module: 'Pagsulat',
     xp: 18,
@@ -53,7 +53,7 @@ const MISSION_GAMES = [
   },
   {
     id: 'story-quest',
-    title: 'Story Quest',
+    title: 'Pag-unawa sa Kuwento',
     icon: '📖',
     module: 'Panitikan',
     xp: 20,
@@ -61,9 +61,9 @@ const MISSION_GAMES = [
   },
   {
     id: 'sound-and-say',
-    title: 'Sound and Say',
+    title: 'Pakikinig at Pagbigkas',
     icon: '🎙️',
-    module: 'Oral Comm',
+    module: 'Komunikasyong Pasalita',
     xp: 15,
     instruction: 'Makinig muna, pagkatapos bigkasin nang malinaw ang ipinakitang salita o pangungusap.'
   }
@@ -94,12 +94,14 @@ export default function MissionScreen({ navigation }) {
         );
 
         return {
-          ...mission,
           ...(backend || {}),
+          ...mission,
         };
       });
 
 
+      console.log("MISSION MERGED:");
+      console.log(JSON.stringify(merged, null, 2));
       setMissions(merged);
       setStudent(dashboard.student || null);
     } catch (err) {
@@ -121,24 +123,24 @@ export default function MissionScreen({ navigation }) {
       const data = await api(`/missions/${missionId}/claim`, {
         method: 'POST',
       });
-      Alert.alert('Mission Claimed', data.message || `+${data.xpAwarded} XP earned!`);
+      Alert.alert('Nakuha ang Gantimpala', data.message || `+${data.xpAwarded} XP ang nakuha!`);
       load();
     } catch (err) {
-      Alert.alert('Mission Error', err.message || 'Unable to claim mission.');
+      Alert.alert('May Problema', err.message || 'Hindi makuha ang gantimpala.');
     } finally {
       setSubmittingId(null);
     }
   }
 
   function statusLabel(state) {
-    if (state === 'claimed') return 'Completed';
-    return 'Available';
+    if (state === 'claimed') return 'Natapos';
+    return 'Handa';
 }
 
   function buttonLabel(mission) {
-    if (submittingId === mission.missionId) return 'Claiming...';
-    if (mission.state === 'claimed') return 'Already Claimed';
-    if (mission.state === 'ready_to_claim') return 'Claim XP';
+    if (submittingId === mission.missionId) return 'Kinukuha...';
+    if (mission.state === 'claimed') return 'Nakuha na';
+    if (mission.state === 'ready_to_claim') return 'Kunin ang XP';
     return 'Keep Learning';
   }
 
@@ -153,9 +155,9 @@ export default function MissionScreen({ navigation }) {
 
       <View style={styles.header}>
         <View style={styles.heroCard}>
-          <Text style={styles.heading}>🎮 Available Learning Games</Text>
+          <Text style={styles.heading}>🎮 Mga Misyon</Text>
           <Text style={styles.subtitle}>
-            Tap Play and Earn XP points!
+            Maglaro at kumita ng XP!
           </Text>
 
           {!!student && (
@@ -168,8 +170,8 @@ export default function MissionScreen({ navigation }) {
               }}
             >
               <Text>⚡ {student.xp || 0} XP</Text>
-              <Text>🔥 {student.currentStreak || 0} Day Streak</Text>
-              <Text>🏆 Best {student.longestStreak || 0}</Text>
+              <Text>🔥 {student.currentStreak || 0} Araw na Sunod-sunod</Text>
+              <Text>🏆 Pinakamahabang {student.longestStreak || 0}</Text>
             </View>
           )}
         </View>
@@ -179,7 +181,7 @@ export default function MissionScreen({ navigation }) {
       {loading ? (
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading missions...</Text>
+          <Text style={styles.loadingText}>Inaayos ang mga misyon...</Text>
         </View>
       ) : error ? (
         <Text style={styles.error}>{error}</Text>
@@ -226,7 +228,7 @@ export default function MissionScreen({ navigation }) {
 
             {mission.sample ? (
               <Text style={styles.progressText}>
-                Example: {mission.sample}
+                Halimbawa: {mission.sample}
               </Text>
             ) : null}
 
@@ -247,8 +249,8 @@ export default function MissionScreen({ navigation }) {
             >
               <Text style={styles.buttonText}>
                 {mission.state === 'claimed'
-                  ? '✓ Completed'
-                  : '▶ Play Now'}
+                  ? '✓ Natapos'
+                  : '▶ Maglaro'}
               </Text>
             </TouchableOpacity>
 
@@ -257,7 +259,7 @@ export default function MissionScreen({ navigation }) {
       )}
 
       {!loading && !error && missions.length === 0 && (
-        <Text style={styles.empty}>No missions are available at the moment.</Text>
+        <Text style={styles.empty}>Wala pang misyon sa ngayon.</Text>
       )}
           </ScrollView>
     </SafeAreaView>
@@ -281,18 +283,45 @@ const styles = StyleSheet.create({
 
   heroCard: {
     backgroundColor: '#ECFDF5',
-    borderRadius: 26,
-    padding: 20,
-    marginBottom: 20,
-    flex: 1,
+    borderRadius: 28,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   headerText: { flex: 1, paddingRight: 12 },
-  heading: { fontSize: 24, fontWeight: '900', color: colors.ink, marginBottom: 6 },
-  subtitle: { color: colors.muted },
+  heading: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.ink,
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '700',
+  },
   studentChip: { alignItems: 'center', backgroundColor: '#DCFCE7', borderRadius: 18, padding: 8 },
   studentAvatar: { fontSize: 26 },
   studentXp: { color: colors.ink, fontWeight: '800', fontSize: 12 },
-  card: { marginBottom: 16 },
+  card: {
+    marginBottom: 18,
+    borderRadius: 28,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
   cardHeader: {
@@ -301,13 +330,15 @@ const styles = StyleSheet.create({
     marginBottom:14,
   },
   iconBox:{
-    width:62,
-    height:62,
-    borderRadius:18,
-    backgroundColor:'#F8FAFC',
+    width:68,
+    height:68,
+    borderRadius:22,
+    backgroundColor:'#ECFDF5',
+    borderWidth:1,
+    borderColor:'#BBF7D0',
     alignItems:'center',
     justifyContent:'center',
-    marginRight:14,
+    marginRight:16,
   },
   icon:{
     fontSize:34,
@@ -329,34 +360,66 @@ const styles = StyleSheet.create({
   },
 
   cardText: { flex: 1, paddingRight: 10 },
-  missionTitle: { fontSize: 20, fontWeight: '900', color: colors.ink },
-  missionMeta: { color: colors.muted, marginTop: 4 },
+  missionTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.ink,
+  },
+  missionMeta: {
+    color: colors.muted,
+    marginTop: 6,
+    fontSize: 13,
+  },
   statusPill: (state) => ({
     backgroundColor:
       state === 'claimed'
         ? '#DCFCE7'
         : '#DBEAFE',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 999,
   }),
   statusText: { color: colors.ink, fontWeight: '700' },
-  description: { color: colors.muted, marginTop: 12, marginBottom: 16 },
+  description: {
+    color: colors.muted,
+    marginTop: 14,
+    marginBottom: 18,
+    lineHeight: 22,
+    fontSize: 14,
+  },
   progressTrack: { height: 8, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: colors.green, borderRadius: 99 },
-  progressText: { color: colors.muted, fontSize: 12, marginTop: 7, marginBottom: 12 },
+  progressText: {
+    color: colors.muted,
+    fontSize: 13,
+    marginTop: 10,
+    marginBottom: 14,
+    fontStyle: 'italic',
+  },
   button: {
     backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 999,
+    paddingVertical: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
   },
   buttonDisabled: {
     backgroundColor: '#CBD5E1',
   },
-  buttonText: { color: '#FFF', fontWeight: '900' },
+  buttonText: {
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 15,
+  },
   loading: { paddingVertical: 40, alignItems: 'center' },
   loadingText: { marginTop: 12, color: colors.muted },
   error: { color: '#B91C1C', textAlign: 'center', marginTop: 20 },
-  empty: { color: colors.muted, textAlign: 'center', marginTop: 20 },
+  empty: {
+    color: colors.muted,
+    textAlign: 'center',
+    marginTop: 36,
+    fontSize: 15,
+    lineHeight: 22,
+  },
 });

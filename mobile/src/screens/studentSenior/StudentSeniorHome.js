@@ -64,11 +64,11 @@ export default function StudentSeniorHome({
         <View style={styles.loadState}>
           {loading ? <ActivityIndicator size="large" color="#22C55E" /> : null}
           <Text style={error ? styles.loadError : styles.loadText}>
-            {error || 'Loading your dashboard...'}
+            {error || 'Ina-load ang iyong dashboard...'}
           </Text>
           {error ? (
             <TouchableOpacity style={styles.retryButton} onPress={load}>
-              <Text style={styles.retryText}>Try Again</Text>
+              <Text style={styles.retryText}>Subukang Muli</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -176,7 +176,7 @@ export default function StudentSeniorHome({
               </Text>
 
               <Text style={styles.profileText}>
-                {name} • Grade {grade}
+                {name} • Baitang {grade}
               </Text>
 
             </TouchableOpacity>
@@ -403,7 +403,7 @@ export default function StudentSeniorHome({
 
                     <View style={styles.startBtn}>
                       <Text style={styles.startText}>
-                        {lesson.completed ? 'Review' : 'Start'}
+                        {lesson.completed ? 'Balikan' : 'Simulan'}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -413,7 +413,7 @@ export default function StudentSeniorHome({
 
               {!featuredLessons.length && (
                 <Text style={styles.emptyText}>
-                  No published lessons are available for your grade yet.
+                  Wala pang nailalathalang mga aralin para sa iyong baitang.
                 </Text>
               )}
 
@@ -463,7 +463,7 @@ export default function StudentSeniorHome({
 
               {!allBadges.length && (
                 <Text style={styles.emptyText}>
-                  Badge progress will appear after you start learning.
+                  Lalabas ang progreso ng iyong mga badge kapag nagsimula ka nang mag-aral.
                 </Text>
               )}
 

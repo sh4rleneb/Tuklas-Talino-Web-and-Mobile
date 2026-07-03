@@ -34,7 +34,7 @@ export default function LeaderboardScreen({ navigation }) {
           setStudent(dashboard.student || null);
         } catch (err) {
           if (!active) return;
-          setError(err.message || 'Unable to load leaderboard.');
+          setError(err.message || 'Hindi ma-load ang talaan ng ranggo.');
         } finally {
           if (active) setLoading(false);
         }
@@ -66,7 +66,7 @@ export default function LeaderboardScreen({ navigation }) {
         />
 
         <View style={styles.heroCard}>
-          <Text style={styles.title}>🏆 Leaderboard</Text>
+          <Text style={styles.title}>🏆 Talaan ng Ranggo</Text>
         </View>
 
         {loading ? (
@@ -97,7 +97,7 @@ export default function LeaderboardScreen({ navigation }) {
                   </Text>
 
                   <Text style={styles.meta}>
-                    Grade {player.gradeLevel}
+                    Baitang {player.gradeLevel}
                   </Text>
                 </View>
 

@@ -214,7 +214,7 @@ function getTeacherLessonBuilderValidationMessage(draft = {}, activities = [], a
   const gradeLevel = Number(draft.gradeLevel ?? draft.grade ?? 0);
 
   if (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 6) {
-    return 'Select a valid Grade 1 to Grade 6 level.';
+    return 'Select a valid Baitang 1 to Baitang 6 level.';
   }
 
   const assignedGrades = Array.isArray(assignedGradeLevels)
@@ -566,7 +566,7 @@ async function handleLogout() {
           <Text style={styles.cardTitle}>Assigned Classes</Text>
           {(dashboard?.assignedClasses || []).map((item) => (
             <View key={item.id} style={styles.softRow}>
-              <Text style={styles.rowTitle}>Grade {item.gradeLevel} • {item.section}</Text>
+              <Text style={styles.rowTitle}>Baitang {item.gradeLevel} • {item.section}</Text>
             </View>
           ))}
           {!dashboard?.assignedClasses?.length && (
@@ -676,7 +676,7 @@ async function handleLogout() {
           <SectionCard>
             <Text style={styles.cardTitle}>Preview</Text>
             <Text style={styles.previewTitle}>{draft.title || 'Untitled lesson'}</Text>
-            <Text style={styles.muted}>Grade {draft.gradeLevel} • {draft.subject} • +{draft.xpReward || 0} XP</Text>
+            <Text style={styles.muted}>Baitang {draft.gradeLevel} • {draft.subject} • +{draft.xpReward || 0} XP</Text>
             <Text style={styles.body}>{draft.passage || 'No reading passage added.'}</Text>
             <Text style={styles.rowTitle}>{draft.activities.length} learning activit{draft.activities.length === 1 ? 'y' : 'ies'}</Text>
             <View style={styles.buttonRow}>
@@ -693,7 +693,7 @@ async function handleLogout() {
               <View key={lesson.id} style={styles.actionRow}>
                 <View style={styles.flex}>
                   <Text style={styles.rowTitle}>{lesson.title}</Text>
-                  <Text style={styles.muted}>Grade {lesson.gradeLevel} • {lesson.subject} • {lesson.status}</Text>
+                  <Text style={styles.muted}>Baitang {lesson.gradeLevel} • {lesson.subject} • {lesson.status}</Text>
                 </View>
                 {lesson.status === 'draft' ? <SmallButton disabled={Boolean(busy)} onPress={() => run(`publish-${lesson.id}`, () => updateLesson(lesson.id, { status: 'published' }), 'Lesson published.')}>Publish</SmallButton> : null}
                 {lesson.status !== 'archived' ? <SmallButton tone="red" disabled={Boolean(busy)} onPress={() => run(`archive-${lesson.id}`, () => archiveLesson(lesson.id), 'Lesson archived.')}>Archive</SmallButton> : null}
@@ -847,7 +847,7 @@ async function handleLogout() {
     const student = getReviewStudent(item);
     const grade = item.gradeLevel || student.gradeLevel || '—';
     const section = item.section || student.section || 'No section';
-    return `Grade ${grade} • ${section}`;
+    return `Baitang ${grade} • ${section}`;
   }
 
   function getReviewPrompt(item, type) {
@@ -1048,7 +1048,7 @@ async function handleLogout() {
     const subject = getReviewSubject(item);
     const status = item.status || item.reviewStatus || 'pending';
     const submittedAt = item.submittedAt || item.createdAt || item.updatedAt;
-    const canGrade = getReviewCanGrade(item, type);
+    const canBaitang = getReviewCanGrade(item, type);
 
     return (
       <View key={`${type}-${getReviewSubmissionId(item) || item.createdAt}`} style={styles.canvasSubmissionCard}>
@@ -1079,7 +1079,7 @@ async function handleLogout() {
           onPress={() => setReviewModal({ type, item })}
         >
           <Text style={styles.canvasOpenButtonText}>
-            {canGrade ? 'Open Grading' : isSpeech ? 'Open Review' : 'View Submission'}
+            {canBaitang ? 'Open Grading' : isSpeech ? 'Open Review' : 'View Submission'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1101,7 +1101,7 @@ async function handleLogout() {
     const submissionId = getReviewSubmissionId(item);
     const actionKey = `writing-review-${submissionId}`;
     const draft = getReviewDraft(type, item);
-    const canGrade = getReviewCanGrade(item, type);
+    const canBaitang = getReviewCanGrade(item, type);
     const isGraded = isWriting && (status === 'graded' || item.score === 0 || item.score);
     const isAutoChecked = isWriting && status === 'auto_checked';
 
@@ -1167,7 +1167,7 @@ async function handleLogout() {
                         <Text style={styles.canvasBlockText}>{item.feedback || item.teacherFeedback}</Text>
                       ) : null}
                     </>
-                  ) : canGrade ? (
+                  ) : canBaitang ? (
                     <>
                       <View style={styles.canvasScoreRow}>
                         <Text style={styles.canvasScoreLabel}>Score /10</Text>
@@ -1383,7 +1383,7 @@ async function handleLogout() {
             <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
             <View style={styles.flex}>
               <Text style={styles.rowTitle}>{student.name}</Text>
-              <Text style={styles.muted}>Grade {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
+              <Text style={styles.muted}>Baitang {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
               <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${student.percent || 0}%` }]} /></View>
             </View>
             <Text style={styles.statusText}>{student.percent || 0}%</Text>

@@ -88,7 +88,7 @@ async function handleLogout() {
 
   async function choose(avatar) {
     await api(`/students/${dashboard.student.id}/avatar`, { method: 'PATCH', body: { avatar } });
-    Alert.alert('Avatar', 'Updated!');
+    Alert.alert('Avatar', 'Na-update na ang iyong avatar!');
     load();
   }
 
@@ -132,7 +132,7 @@ async function handleLogout() {
                 color: '#16213E',
               }}
             >
-              ⏳ Loading...
+              ⏳ Naglo-load...
             </Text>
           </View>
         </View>
@@ -165,7 +165,7 @@ async function handleLogout() {
 
         <View style={styles.infoPill}>
           <Text style={styles.infoText}>
-            🌸 Grade {dashboard.student.gradeLevel} • {dashboard.student.section}
+            🌸 Baitang {dashboard.student.gradeLevel} • {dashboard.student.section}
           </Text>
         </View>
 
@@ -182,7 +182,7 @@ async function handleLogout() {
         onPress={() => navigation.goBack()}
       >
         <Text style={styles.homeButtonText}>
-          🏠 Home
+          🏠 Tahanan
         </Text>
       </TouchableOpacity>
 
@@ -202,18 +202,18 @@ async function handleLogout() {
 
       <View style={styles.studentBadge}>
         <Text style={styles.studentBadgeText}>
-          🌟 Masipag na Grade {dashboard.student.gradeLevel} Learner
+          🌟 Masipag na Baitang {dashboard.student.gradeLevel} Mag-aaral
         </Text>
       </View>
 
       <Text style={styles.profileSubtitle}>
         Piliin ang avatar mo at tingnan
-        ang learning summary.
+        ang buod ng iyong pag-aaral.
       </Text>
 
       <View style={styles.levelCard}>
         <Text style={styles.levelText}>
-          🪙 {dashboard.student.xp || 0} XP • Level {Math.floor((dashboard.student.xp || 0) / 100) + 1}
+          🪙 {dashboard.student.xp || 0} XP • Antas {Math.floor((dashboard.student.xp || 0) / 100) + 1}
         </Text>
 
         <View style={styles.progressBar}>
@@ -266,7 +266,7 @@ async function handleLogout() {
     <View style={styles.sectionCard}>
 
       <Text style={styles.sectionTitle}>
-        📊 Summary
+        📊 Buod
       </Text>
 
       <Text style={styles.sectionSubtitle}>
@@ -297,11 +297,11 @@ async function handleLogout() {
           ]}
         >
           <Text style={styles.summaryValue}>
-            Grade {dashboard.student.gradeLevel}
+            Baitang {dashboard.student.gradeLevel}
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Grade
+            Baitang
           </Text>
         </View>
 
@@ -316,7 +316,7 @@ async function handleLogout() {
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Section
+            Seksyon
           </Text>
         </View>
 
@@ -347,7 +347,7 @@ async function handleLogout() {
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Day Streak
+            Sunod-sunod na Araw
           </Text>
         </View>
 
@@ -362,7 +362,7 @@ async function handleLogout() {
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Best Streak
+            Pinakamahabang Sunod-sunod
           </Text>
         </View>
 
@@ -389,11 +389,11 @@ async function handleLogout() {
 
         <View style={styles.leaderboardNavContent}>
           <Text style={styles.leaderboardNavTitle}>
-            Leaderboard
+            Talaan ng Ranggo
           </Text>
 
           <Text style={styles.leaderboardNavText}>
-            See your class ranking, XP, and learning streak.
+            Tingnan ang ranggo mo sa klase, XP, at sunod-sunod na araw ng pagkatuto.
           </Text>
         </View>
 
@@ -403,11 +403,11 @@ async function handleLogout() {
     <View style={styles.sectionCard}>
 
       <Text style={styles.sectionTitle}>
-        ⭐ XP History
+        ⭐ Kasaysayan ng XP
       </Text>
 
       <Text style={styles.sectionSubtitle}>
-        See where your XP comes from.
+        Tingnan kung saan nanggaling ang iyong XP.
       </Text>
 
         {(dashboard?.xpLogs || []).length ? (
@@ -436,7 +436,7 @@ async function handleLogout() {
                     </Text>
 
                     <Text style={styles.xpLogNote}>
-                      {log.note || 'XP earned'}
+                      {log.note || 'Nakuhang XP'}
                     </Text>
 
                     <Text style={styles.xpDate}>
@@ -458,7 +458,7 @@ async function handleLogout() {
           </>
         ) : (
         <Text style={styles.xpLogEmpty}>
-          No XP activity yet.
+          Wala ka pang kasaysayan ng XP.
         </Text>
       )}
 
@@ -467,11 +467,11 @@ async function handleLogout() {
     <View style={[styles.sectionCard, styles.accountCard]}>
 
       <Text style={styles.sectionTitle}>
-        🚪 Account
+        🚪 Iyong Account
       </Text>
 
       <Text style={styles.sectionSubtitle}>
-        Ready to leave? Tap Logout below.
+        Kung tapos ka na, pindutin ang Mag-log Out sa ibaba.
       </Text>
 
       <TouchableOpacity
@@ -479,7 +479,7 @@ async function handleLogout() {
         onPress={confirmLogout}
       >
         <Text style={styles.logoutButtonText}>
-          Logout
+          Mag-log Out
         </Text>
       </TouchableOpacity>
 
@@ -498,24 +498,24 @@ async function handleLogout() {
             <Text style={styles.logoutModalIconText}>🚪</Text>
           </View>
 
-          <Text style={styles.logoutModalTitle}>Logout?</Text>
+          <Text style={styles.logoutModalTitle}>Mag-log Out?</Text>
           <Text style={styles.logoutModalBody}>
-            Naka-save ang iyong progreso. Maaari kang bumalik anumang oras para magpatuloy.
+            Naka-save ang iyong progreso. Maaari kang bumalik anumang oras upang ipagpatuloy ang iyong pag-aaral.
           </Text>
 
           <View style={styles.logoutModalActions}>
             <TouchableOpacity
-              style={styles.logoutCancelButton}
+              style={styles.logoutKanselahinButton}
               onPress={() => setLogoutVisible(false)}
             >
-              <Text style={styles.logoutCancelText}>Kanselahin</Text>
+              <Text style={styles.logoutKanselahinText}>Kanselahin</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.logoutConfirmButton}
               onPress={handleLogout}
             >
-              <Text style={styles.logoutConfirmText}>Mag-logout</Text>
+              <Text style={styles.logoutConfirmText}>Mag-log Out</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  profileLevel: {
+  profileAntas: {
     fontSize: 16,
     color: '#166534',
     fontWeight: '800',
@@ -1087,7 +1087,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  logoutCancelButton: {
+  logoutKanselahinButton: {
     flex: 1,
     backgroundColor: '#F1F5F9',
     borderRadius: 18,
@@ -1105,7 +1105,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
 
-  logoutCancelText: {
+  logoutKanselahinText: {
     color: '#334155',
     fontSize: 16,
     fontWeight: '900',

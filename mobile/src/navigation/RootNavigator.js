@@ -66,8 +66,6 @@ from '../screens/XPHistoryScreen';
 import MissionScreen
 from '../screens/MissionScreen';
 
-import NotificationsScreen
-from '../screens/NotificationsScreen';
 
 import StudentSeniorHome
 from '../screens/studentSenior/StudentSeniorHome';
@@ -234,13 +232,7 @@ export default function RootNavigator() {
           name="MissionScreen"
           component={MissionScreen}
         />
-
-        <Stack.Screen
-          name="NotificationsScreen"
-          component={NotificationsScreen}
-        />
-
-        <Stack.Screen
+<Stack.Screen
           name="ProfileScreen"
           component={ProfileScreen}
         />

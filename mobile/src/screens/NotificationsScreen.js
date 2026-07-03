@@ -15,7 +15,7 @@ import { api } from '../api/client';
 import Card from '../components/Card';
 import { colors } from '../styles/theme';
 
-export default function NotificationsScreen({ navigation }) {
+export default function Mga AbisoScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export default function NotificationsScreen({ navigation }) {
       setNotifications(notificationData.notifications || []);
       setStudent(dashboard.student || null);
     } catch (err) {
-      setError(err.message || 'Unable to load notifications.');
+      setError(err.message || 'Hindi ma-load ang mga abiso.');
     } finally {
       setLoading(false);
     }
@@ -52,7 +52,7 @@ export default function NotificationsScreen({ navigation }) {
       });
       setNotifications((items) => items.filter((item) => item.id !== notificationId));
     } catch (err) {
-      Alert.alert('Notifications', err.message || 'Unable to mark notification as read.');
+      Alert.alert('Mga Abiso', err.message || 'Hindi mamarkahan bilang nabasa ang abiso.');
     } finally {
       setReadingId(null);
     }
@@ -64,9 +64,9 @@ export default function NotificationsScreen({ navigation }) {
         <View style={styles.header}>
           <View>
             <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.back}>← Back</Text>
+              <Text style={styles.back}>← Bumalik</Text>
             </TouchableOpacity>
-            <Text style={styles.title}>🔔 Notifications</Text>
+            <Text style={styles.title}>🔔 Mga Abiso</Text>
             <Text style={styles.subtitle}>Updates from your teacher and learning activities.</Text>
           </View>
           {student && (
@@ -80,13 +80,13 @@ export default function NotificationsScreen({ navigation }) {
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.green} />
-            <Text style={styles.subtitle}>Loading notifications...</Text>
+            <Text style={styles.subtitle}>Ina-load ang mga abiso...</Text>
           </View>
         ) : error ? (
           <Card>
             <Text style={styles.error}>{error}</Text>
             <TouchableOpacity style={styles.button} onPress={load}>
-              <Text style={styles.buttonText}>Try Again</Text>
+              <Text style={styles.buttonText}>Subukang Muli</Text>
             </TouchableOpacity>
           </Card>
         ) : notifications.length ? (
@@ -103,14 +103,14 @@ export default function NotificationsScreen({ navigation }) {
                 disabled={Boolean(readingId)}
               >
                 <Text style={styles.buttonText}>
-                  {readingId === notification.id ? 'Saving...' : 'Mark as Read'}
+                  {readingId === notification.id ? 'Sine-save...' : 'Markahan bilang Nabasa'}
                 </Text>
               </TouchableOpacity>
             </Card>
           ))
         ) : (
           <Card>
-            <Text style={styles.notificationTitle}>You are all caught up.</Text>
+            <Text style={styles.notificationTitle}>Wala ka nang bagong abiso.</Text>
             <Text style={styles.message}>New learning updates will appear here.</Text>
           </Card>
         )}

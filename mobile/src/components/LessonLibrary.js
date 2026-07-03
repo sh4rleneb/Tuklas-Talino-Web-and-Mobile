@@ -14,11 +14,11 @@ import StudentScreenHeader from './StudentScreenHeader';
 import { api } from '../api/client';
 
 const CATEGORIES = [
-  { key: 'ALL', label: 'All', icon: '🌎', accent: '#22C55E', soft: '#ECFDF5' },
+  { key: 'ALL', label: 'Lahat', icon: '🌎', accent: '#22C55E', soft: '#ECFDF5' },
   { key: 'Pagbasa', label: 'Pagbasa', icon: '📖', accent: '#22C55E', soft: '#DCFCE7' },
   { key: 'Bokabularyo', label: 'Bokabularyo', icon: '🔤', accent: '#3B82F6', soft: '#DBEAFE' },
   { key: 'Panitikan', label: 'Panitikan', icon: '📜', accent: '#A855F7', soft: '#F3E8FF' },
-  { key: 'Oral Communication', label: 'Oral Communication', icon: '🎙️', accent: '#F59E0B', soft: '#FEF3C7' },
+  { key: 'Oral Communication', label: 'Komunikasyong Pasalita', icon: '🎙️', accent: '#F59E0B', soft: '#FEF3C7' },
   { key: 'Pagsulat', label: 'Pagsulat', icon: '✍️', accent: '#EC4899', soft: '#FCE7F3' },
 ];
 
@@ -45,35 +45,35 @@ function gameQuestMeta(subject) {
   const games = {
     Pagbasa: {
       element: 'Pagbasa',
-      title: '📖 Read & Match Game',
-      mission: 'Read the clue, tap the right answer, and collect stars for every correct match.',
+      title: '📖 Laro ng Pagbasa at Pagtutugma',
+      mission: 'Basahin ang pahiwatig, piliin ang tamang sagot, at mangolekta ng mga bituin sa bawat tamang tugma.',
     },
     Bokabularyo: {
       element: 'Bokabularyo',
-      title: '🔤 Word Match Game',
-      mission: 'Match words with pictures or meanings to build your Filipino vocabulary.',
+      title: '🔤 Laro ng Pagtutugma ng Salita',
+      mission: 'Itugma ang mga salita sa tamang larawan o kahulugan upang mapalawak ang iyong bokabularyo.',
     },
     Panitikan: {
       element: 'Panitikan',
-      title: '📜 Story Adventure Game',
-      mission: 'Explore the story, answer fun challenges, and unlock the next story adventure.',
+      title: '📜 Laro ng Pakikipagsapalaran sa Kuwento',
+      mission: 'Basahin ang kuwento, sagutin ang mga hamon, at i-unlock ang susunod na pakikipagsapalaran.',
     },
     'Oral Communication': {
       element: 'Pagsasalita',
-      title: '🎙️ Speak Aloud Game',
-      mission: 'Say the target words aloud, practice clear speech, and earn stars as you improve.',
+      title: '🎙️ Laro ng Malinaw na Pagbigkas',
+      mission: 'Bigkasin nang malinaw ang mga salita at kumita ng mga bituin habang humuhusay.',
     },
     Pagsulat: {
       element: 'Pagsulat',
-      title: '✍️ Trace & Write Game',
-      mission: 'Practice writing words or short answers, then complete the challenge to earn XP.',
+      title: '✍️ Laro sa Pagsulat',
+      mission: 'Magsanay sa pagsulat ng mga salita o maiikling sagot upang makakuha ng XP.',
     },
   };
 
   return games[key] || {
     element: key || 'Filipino',
-    title: '🎮 Learning Game',
-    mission: 'Read, tap, speak, or write to collect stars and unlock the next game.',
+    title: '🎮 Laro sa Pagkatuto',
+    mission: 'Magbasa, pumili, magsalita, o magsulat upang mangolekta ng mga bituin at ma-unlock ang susunod na laro.',
   };
 }
 
@@ -94,80 +94,80 @@ function lessonDifficulty(lesson = {}, student = {}) {
 
   if (rawDifficulty.includes('beginner') || rawDifficulty.includes('easy')) {
     return {
-      label: rawDifficulty.includes('beginner') ? 'Beginner' : 'Easy',
+      label: rawDifficulty.includes('beginner') ? 'Baguhan' : 'Madali',
       icon: rawDifficulty.includes('beginner') ? '🌱' : '😊',
       color: '#16A34A',
       soft: '#DCFCE7',
-      helper: 'Short, friendly, and easy to finish.',
+      helper: 'Maikli, masaya, at madaling tapusin.',
     };
   }
 
   if (rawDifficulty.includes('medium') || rawDifficulty.includes('normal')) {
     return {
-      label: 'Medium',
+      label: 'Katamtaman',
       icon: '⚡',
       color: '#2563EB',
       soft: '#DBEAFE',
-      helper: 'A balanced challenge for steady practice.',
+      helper: 'Isang balanseng hamon para sa tuloy-tuloy na pagsasanay.',
     };
   }
 
   if (rawDifficulty.includes('hard') || rawDifficulty.includes('advanced')) {
     return {
-      label: rawDifficulty.includes('advanced') ? 'Advanced' : 'Hard',
+      label: rawDifficulty.includes('advanced') ? 'Dalubhasa' : 'Mahirap',
       icon: rawDifficulty.includes('advanced') ? '🏆' : '🔥',
       color: '#DC2626',
       soft: '#FEE2E2',
-      helper: 'A stronger challenge with more thinking.',
+      helper: 'Mas mapaghamong gawain na nangangailangan ng masusing pag-iisip.',
     };
   }
 
   if (grade <= 1) {
     return {
-      label: 'Beginner',
+      label: 'Baguhan',
       icon: '🌱',
       color: '#16A34A',
       soft: '#DCFCE7',
-      helper: 'Made for first steps: read, tap, and win stars.',
+      helper: 'Idinisenyo para sa mga nagsisimula: magbasa, pumili, at mangolekta ng mga bituin.',
     };
   }
 
   if (grade === 2) {
     return {
-      label: 'Easy Quest',
+      label: 'Madaling Hamon',
       icon: '⭐',
       color: '#F59E0B',
       soft: '#FEF3C7',
-      helper: 'A playful quest with simple challenges.',
+      helper: 'Isang masayang hamon na may mga simpleng gawain.',
     };
   }
 
   if (grade <= 4 || xp <= 20) {
     return {
-      label: 'Medium',
+      label: 'Katamtaman',
       icon: '⚡',
       color: '#2563EB',
       soft: '#DBEAFE',
-      helper: 'A balanced challenge for steady practice.',
+      helper: 'Isang balanseng hamon para sa tuloy-tuloy na pagsasanay.',
     };
   }
 
   if (grade === 5 || xp <= 30) {
     return {
-      label: 'Hard',
+      label: 'Mahirap',
       icon: '🔥',
       color: '#EA580C',
       soft: '#FFEDD5',
-      helper: 'A stronger challenge with more thinking.',
+      helper: 'Mas mapaghamong gawain na nangangailangan ng masusing pag-iisip.',
     };
   }
 
   return {
-    label: 'Advanced',
+    label: 'Dalubhasa',
     icon: '🏆',
     color: '#7C3AED',
     soft: '#EDE9FE',
-    helper: 'A boss-level lesson for confident learners.',
+    helper: 'Isang pinakamataas na antas ng aralin para sa mga handa sa malaking hamon.',
   };
 }
 
@@ -229,7 +229,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     try {
       setDashboard(await api('/dashboard'));
     } catch (err) {
-      setError(err.message || 'Unable to load the lesson library.');
+      setError(err.message || 'Hindi ma-load ang aklatan ng mga aralin.');
     } finally {
       setLoading(false);
     }
@@ -284,7 +284,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#22C55E" />
-          <Text style={styles.muted}>Loading your lesson library...</Text>
+          <Text style={styles.muted}>Ina-load ang iyong mga aralin...</Text>
         </View>
       </SafeAreaView>
     );
@@ -301,15 +301,15 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
         <View style={[styles.hero, playful && styles.heroPlayful]}>
           <Text style={styles.eyebrow}>
-            {playful ? 'GAME QUEST MAP' : 'FILIPINO LEARNING HUB'}
+            {playful ? 'MAPA NG MGA HAMON' : 'SENTRO NG PAG-AARAL NG FILIPINO'}
           </Text>
           <Text style={styles.title}>
-            📚 Lesson Library
+            📚 Aklatan ng mga Aralin
           </Text>
           <Text style={styles.subtitle}>
             {playful
-              ? 'Play Filipino learning games, collect stars, earn XP, and unlock the next challenge.'
-              : 'Choose a category, earn XP, and continue where you stopped.'}
+              ? 'Maglaro ng mga larong pang-Filipino, mangolekta ng mga bituin, kumita ng XP, at i-unlock ang susunod na hamon.'
+              : 'Pumili ng kategorya, kumita ng XP, at ipagpatuloy ang iyong pag-aaral.'}
           </Text>
 
           <View style={styles.heroStats}>
@@ -322,7 +322,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
           </View>
 
           <Text style={styles.progressCount}>
-            {progress.completedLessons || 0}/{progress.totalLessons || lessons.length} lessons completed
+            {progress.completedLessons || 0}/{progress.totalLessons || lessons.length} aralin ang natapos
           </Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
@@ -370,7 +370,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
           <View style={styles.messageCard}>
             <Text style={styles.error}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={load}>
-              <Text style={styles.retryText}>Try Again</Text>
+              <Text style={styles.retryText}>Subukan Muli</Text>
             </TouchableOpacity>
           </View>
         ) : filteredLessons.length ? (
@@ -384,7 +384,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
             let action = lesson.completed
               ? '✅ Done'
               : lesson.unlocked
-                ? lesson.progressPercent > 0 ? '▶ Resume' : '▶ Start'
+                ? lesson.progressPercent > 0 ? '▶ Magpatuloy' : '▶ Simulan'
                 : '🔒 Locked';
 
             if (littleQuest) {
@@ -447,7 +447,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
                     {!littleQuest && (
                     <Text style={styles.lessonMeta}>
-                      {meta.label} • Grade {lesson.gradeLevel || student.gradeLevel || '—'} • {lesson.xpReward || 0} XP
+                      {meta.label} • Baitang {lesson.gradeLevel || student.gradeLevel || '—'} • {lesson.xpReward || 0} XP
                     </Text>
                     )}
 
@@ -589,7 +589,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
           })
         ) : (
           <View style={styles.messageCard}>
-            <Text style={styles.muted}>No published lessons are available in this category yet.</Text>
+            <Text style={styles.muted}>Wala pang nailalathalang aralin sa kategoryang ito.</Text>
           </View>
         )}
       </ScrollView>

@@ -3,7 +3,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/client';
 import Card from '../../components/Card';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import logo from '../../../assets/icons/tuklas-logo.png';
 
 const HIDDEN_GROUP_STATUSES = new Set([
   'archived',
@@ -74,8 +75,8 @@ export default function StudentJuniorHome({ navigation }) {
   const lessons = dashboard?.lessons || [];
   const groups = getVisibleGroups(dashboard?.groups || []);
   const badges = dashboard?.badges || [];
-  const completedLessons = lessons.filter((lesson) => lesson?.completed).length;
-  const totalLessons = lessons.length;
+  const completedAralin = lessons.filter((lesson) => lesson?.completed).length;
+  const totalAralin = lessons.length;
   const nextLesson = lessons.find((lesson) => !lesson?.completed) || lessons[0];
   const badgePreview = badges.slice(-2).reverse();
   const activeGroupTask = groups.flatMap((group) => group.tasks || []).find((task) => !task.completed) || groups.flatMap((group) => group.tasks || [])[0];
@@ -101,6 +102,26 @@ export default function StudentJuniorHome({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.brandCard}>
+          <View style={styles.brandRow}>
+            <Image
+              source={logo}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.brandTitle}>
+                Tuklas-Talino
+              </Text>
+
+              <Text style={styles.brandSubtitle}>
+                Matuto ng Filipino habang naglalaro.
+              </Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.header}>
         <View style={styles.userSection}>
 
@@ -111,12 +132,14 @@ export default function StudentJuniorHome({ navigation }) {
           </View>
 
           <View>
+            <Text style={styles.profileGreeting}>Magandang araw! 👋</Text>
+
             <Text style={styles.profileName}>
               {name}
             </Text>
 
             <Text style={styles.profileGrade}>
-              Grade {grade}
+              Baitang {grade}
             </Text>
           </View>
 
@@ -143,8 +166,8 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.heroCard}>
           <View style={styles.heroHeader}>
             <View style={styles.heroTextBlock}>
-              <Text style={styles.greeting}>Hi {name}! 👋</Text>
-              <Text style={styles.subtitle}>Ready ka na ba sa learning adventure today?</Text>
+              <Text style={styles.greeting}>Ipagpatuloy ang iyong pag-aaral</Text>
+              <Text style={styles.subtitle}>Tuloy lang sa iyong pag-aaral at kumita ng mas maraming XP!</Text>
             </View>
           </View>
 
@@ -173,21 +196,21 @@ export default function StudentJuniorHome({ navigation }) {
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, { width: `${Math.min((xp % 100), 100)}%` }]} />
             </View>
-            <Text style={styles.progressInfo}>🌟 {100 - (xp % 100)} XP to Level {level + 1}</Text>
+            <Text style={styles.progressInfo}>🌟 {100 - (xp % 100)} XP bago ang Level {level + 1}</Text>
           </View>
 
           <View style={styles.quickStatsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{totalLessons}</Text>
-              <Text style={styles.statLabel}>Lessons</Text>
+              <Text style={styles.statValue}>{totalAralin}</Text>
+              <Text style={styles.statLabel}>Aralin</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{completedLessons}</Text>
-              <Text style={styles.statLabel}>Finished</Text>
+              <Text style={styles.statValue}>{completedAralin}</Text>
+              <Text style={styles.statLabel}>Natapos</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{badges.length}</Text>
-              <Text style={styles.statLabel}>Badges</Text>
+              <Text style={styles.statLabel}>Mga Badge</Text>
             </View>
           </View>
         </View>
@@ -195,17 +218,17 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Your Lessons
+              Iyong mga Aralin
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Lessons')}>
-              <Text style={styles.sectionLink}>All lessons →</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Aralin')}>
+              <Text style={styles.sectionLink}>Tingnan lahat →</Text>
             </TouchableOpacity>
           </View>
 
           {nextLesson ? (
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate('Lessons', {
+                  navigation.navigate('Aralin', {
                     screen: 'StudentJuniorLessonDetail',
                     params: {
                       lessonId: nextLesson.id,
@@ -229,7 +252,7 @@ export default function StudentJuniorHome({ navigation }) {
                       </Text>
 
                       <Text style={styles.cardMeta}>
-                        Grade {nextLesson.gradeLevel || '—'}
+                        Baitang {nextLesson.gradeLevel || '—'}
                       </Text>
                     </View>
 
@@ -242,7 +265,7 @@ export default function StudentJuniorHome({ navigation }) {
 
                   <View style={styles.continueButton}>
                     <Text style={styles.continueButtonText}>
-                      Tap to open lesson →
+                      Buksan ang aralin →
                     </Text>
                   </View>
                 </View>
@@ -260,9 +283,9 @@ export default function StudentJuniorHome({ navigation }) {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Badges</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Badges')}>
-              <Text style={styles.sectionLink}>View all →</Text>
+            <Text style={styles.sectionTitle}>Mga Badge</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Badge')}>
+              <Text style={styles.sectionLink}>Tingnan lahat →</Text>
             </TouchableOpacity>
           </View>
 
@@ -288,17 +311,17 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Your Group Tasks
+              Mga Gawain ng Grupo
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Groups')}>
-              <Text style={styles.sectionLink}>Open groups →</Text>
+              <Text style={styles.sectionLink}>Buksan →</Text>
             </TouchableOpacity>
           </View>
 
           {activeGroupTask ? (
             <Card style={styles.taskCard}>
               <Text style={styles.taskTitle}>{activeGroupTask.title}</Text>
-              <Text style={styles.taskMeta}>{activeGroupTask.description || 'Group activity available'}</Text>
+              <Text style={styles.taskMeta}>{activeGroupTask.description || 'May nakahandang gawain para sa inyong grupo.'}</Text>
               <Text style={styles.taskXp}>+{activeGroupTask.xpReward || 0} XP</Text>
             </Card>
           ) : (
@@ -337,17 +360,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loaderText: {
-    marginTop: 12,
+    marginTop: 10,
     color: '#475569',
     fontFamily: 'Nunito_800ExtraBold',
   },
+
+  brandCard: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 28,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  brandLogo: {
+    width: 56,
+    height: 56,
+    marginRight: 14,
+  },
+
+  brandTitle: {
+    fontSize: 22,
+    fontFamily: 'Fredoka_700Bold',
+    color: '#16A34A',
+  },
+
+  brandSubtitle: {
+    marginTop: 4,
+    color: '#64748B',
+    fontSize: 12,
+    fontFamily: 'Nunito_700Bold',
+  },
+
+  profileGreeting: {
+    color: '#16A34A',
+    fontSize: 12,
+    fontFamily: 'Nunito_800ExtraBold',
+    marginBottom: 2,
+  },
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ECFDF5',
     borderRadius: 28,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#DCFCE7',
     shadowColor: '#14532D',
@@ -363,9 +432,9 @@ const styles = StyleSheet.create({
   },
 
   avatarBubble: {
-    width: 58,
-    height: 58,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 18,
     backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
@@ -375,11 +444,11 @@ const styles = StyleSheet.create({
   },
 
   avatarBubbleText: {
-    fontSize: 26,
+    fontSize: 24,
   },
 
   profileName: {
-    fontSize: 20,
+    fontSize: 17,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
   },
@@ -397,7 +466,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECFDF5',
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     marginLeft: 8,
   },
 
@@ -408,10 +477,10 @@ const styles = StyleSheet.create({
   },
 
   heroCard: {
-    marginTop: 18,
+    marginTop: 10,
     backgroundColor: '#FFFFFF',
-    borderRadius: 30,
-    padding: 20,
+    borderRadius: 26,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#DCFCE7',
     shadowColor: '#14532D',
@@ -437,7 +506,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 6,
-    fontSize: 14,
+    fontSize: 13,
     color: '#334155',
     lineHeight: 22,
     fontFamily: 'Nunito_700Bold',
@@ -447,7 +516,7 @@ const styles = StyleSheet.create({
   avatarCircle: {
     width: 54,
     height: 54,
-    borderRadius: 20,
+    borderRadius: 18,
     backgroundColor: '#ECFDF5',
     justifyContent: 'center',
     alignItems: 'center',
@@ -458,10 +527,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   xpCard: {
-    marginTop: 20,
+    marginTop: 12,
     backgroundColor: '#F8FAFC',
-    borderRadius: 24,
-    padding: 18,
+    borderRadius: 20,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -479,29 +548,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   xpValue: {
-    fontSize: 32,
+    fontSize: 28,
     fontFamily: 'Fredoka_700Bold',
     color: '#16A34A',
     marginTop: 4,
   },
   levelBadge: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#BBF7D0',
   },
   levelText: {
     color: '#166534',
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Fredoka_600SemiBold',
   },
   progressBar: {
-    height: 14,
+    height: 8,
     backgroundColor: '#E2E8F0',
     borderRadius: 999,
-    marginTop: 16,
+    marginTop: 12,
     overflow: 'hidden',
   },
   progressFill: {
@@ -510,22 +579,22 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   progressInfo: {
-    marginTop: 10,
+    marginTop: 8,
     color: '#64748B',
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Nunito_700Bold',
   },
   quickStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 12,
     gap: 10,
   },
   statCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingVertical: 14,
+    borderRadius: 18,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: '#DCFCE7',
@@ -536,7 +605,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: 'Fredoka_700Bold',
     color: '#16A34A',
   },
@@ -546,28 +615,28 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_800ExtraBold',
   },
   section: {
-    marginTop: 24,
+    marginTop: 14,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 23,
+    fontSize: 21,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
   },
   sectionLink: {
     color: '#16A34A',
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Fredoka_600SemiBold',
   },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    padding: 20,
+    padding: 14,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#DCFCE7',
@@ -580,13 +649,13 @@ const styles = StyleSheet.create({
   cardTag: {
     color: '#16A34A',
     fontFamily: 'Fredoka_600SemiBold',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   cardMeta: {
     color: '#64748B',
@@ -610,8 +679,8 @@ const styles = StyleSheet.create({
   },
   emptyStateSmall: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 18,
+    borderRadius: 20,
+    padding: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#DCFCE7',
@@ -621,7 +690,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
     marginBottom: 6,
@@ -675,7 +744,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECFDF5',
     width: 64,
     height: 64,
-    borderRadius: 24,
+    borderRadius: 20,
     textAlign: 'center',
     textAlignVertical: 'center',
     overflow: 'hidden',
@@ -701,7 +770,7 @@ const styles = StyleSheet.create({
   taskCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    padding: 20,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#DCFCE7',
     shadowColor: '#14532D',
@@ -711,10 +780,10 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   taskTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   taskMeta: {
     color: '#64748B',
@@ -781,7 +850,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 18,
 
-    paddingVertical: 14,
+    paddingVertical: 10,
 
     alignItems: 'center',
 

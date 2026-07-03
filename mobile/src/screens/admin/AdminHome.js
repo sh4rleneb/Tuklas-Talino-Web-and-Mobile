@@ -430,7 +430,7 @@ async function executeVerifiedAction() {
             />
             {studentValidation.gradeLevel && (
               <Text style={styles.errorText}>
-                Grade must be from 1 to 6.
+                Baitang must be from 1 to 6.
               </Text>
             )}
             <Field
@@ -620,7 +620,7 @@ async function executeVerifiedAction() {
             <View key={assignment.id} style={styles.actionRow}>
               <View style={styles.flex}>
                 <Text style={styles.rowTitle}>{assignment.Teacher?.name || 'Teacher'}</Text>
-                <Text style={styles.muted}>Grade {assignment.gradeLevel} • {assignment.section}</Text>
+                <Text style={styles.muted}>Baitang {assignment.gradeLevel} • {assignment.section}</Text>
               </View>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`remove-assignment-${assignment.id}`, () => removeTeacherAssignment(assignment.id), 'Assignment removed.')}>Remove</Button>
             </View>
@@ -637,7 +637,7 @@ async function executeVerifiedAction() {
         {students.map((student) => (
           <View key={student.id} style={styles.recordCard}>
             <Text style={styles.rowTitle}>{student.avatar || '🧒'} {student.name}</Text>
-            <Text style={styles.muted}>{student.studentCode} • Grade {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
+            <Text style={styles.muted}>{student.studentCode} • Baitang {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
             <View style={styles.choiceRow}>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'STUDENTPIN',
@@ -932,9 +932,9 @@ function renderLogs() {
                 </Text>
 
                 <Text style={styles.muted}>
-                  Grade {log.metadata.oldGrade}
+                  Baitang {log.metadata.oldGrade}
                   {' → '}
-                  Grade {log.metadata.newGrade}
+                  Baitang {log.metadata.newGrade}
                 </Text>
               </>
             ) : null}

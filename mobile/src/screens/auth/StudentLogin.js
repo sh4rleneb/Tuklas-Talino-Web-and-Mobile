@@ -170,8 +170,8 @@ export default function StudentLogin({
       );
 
       /*
-        Grade 1-2 = Junior tabs
-        Grade 3-6 = Senior tabs
+        Baitang 1-2 = Junior tabs
+        Baitang 3-6 = Senior tabs
       */
 
       const homeRoute = gradeLevel <= 2
@@ -355,7 +355,7 @@ export default function StudentLogin({
               onChangeText={
                 handleStudentIdChange
               }
-              placeholder="Ex: STU-2025-001"
+              placeholder="Hal.: STU-2025-001"
               placeholderTextColor="#64748B"
               autoCapitalize="characters"
               autoCorrect={false}

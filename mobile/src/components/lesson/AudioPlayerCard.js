@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 
 export default function AudioPlayerCard({
-  title = '🎵 Lesson Audio',
+  title = '🎵 Audio ng Aralin',
   icon = '▶️',
   playing = false,
   progress = 0,

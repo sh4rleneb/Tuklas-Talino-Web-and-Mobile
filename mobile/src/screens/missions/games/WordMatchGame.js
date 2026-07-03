@@ -74,13 +74,13 @@ export default function WordMatchGame({
   return (
     <>
       <MissionQuestionCard
-        title="Word Match"
+        title="Pagtutugma ng Salita"
       >
         Piliin ang salitang Filipino sa kaliwa, pagkatapos piliin ang tamang larawan sa kanan.
       </MissionQuestionCard>
 
       <MissionProgressCard
-        label="Matched Pairs"
+        label="Magkapares"
         current={matchedCount}
         total={items.length}
       />
@@ -163,7 +163,7 @@ export default function WordMatchGame({
 
                   setWrongWordId(selectedWordId);
                   setWrongPictureId(item.id);
-                  setToast('Hindi pa tugma. Try ulit!');
+                  setToast('Hindi pa tugma. Subukan muli!');
 
                   setTimeout(() => {
                     setWrongWordId('');
@@ -206,7 +206,7 @@ export default function WordMatchGame({
         }
       >
         <Text style={styles.completeButtonText}>
-          ✅ Complete Mission
+          ✅ Tapusin ang Gawain
         </Text>
       </TouchableOpacity>
 

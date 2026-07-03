@@ -15,13 +15,13 @@ export default function LessonHero({
       </Text>
 
       <Text style={styles.title}>
-        {playful ? '🎮 Game Quest Map' : '📚 Lesson Library'}
+        {playful ? '🎮 Mapa ng Hamon' : '📚 Aklatan ng mga Aralin'}
       </Text>
 
       <Text style={styles.subtitle}>
         {playful
           ? 'Play Filipino learning games, collect stars, earn XP, and unlock the next challenge.'
-          : 'Choose a category, earn XP, and continue where you stopped.'}
+          : 'Pumili ng paksa, kumita ng XP, at ipagpatuloy ang iyong huling aralin.'}
       </Text>
 
       <View style={styles.heroStats}>
@@ -40,7 +40,7 @@ export default function LessonHero({
 
       <Text style={styles.progressCount}>
         {progress.completedLessons || 0}/
-        {progress.totalLessons || lessonsLength} lessons completed
+        {progress.totalLessons || lessonsLength} aralin ang natapos
       </Text>
     </View>
   );
