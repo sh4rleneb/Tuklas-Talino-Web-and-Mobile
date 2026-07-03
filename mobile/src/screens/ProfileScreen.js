@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { AVATARS } from '../config/avatars';
 
 import {
   Alert,
@@ -23,20 +24,7 @@ import Card from '../components/Card';
 import PrimaryButton from '../components/PrimaryButton';
 import { colors } from '../styles/theme';
 
-const avatars = [
-  '🦋',
-  '🐸',
-  '🦊',
-  '🐨',
-  '🦁',
-  '🐼',
-  '🐯',
-  '🐙',
-  '🦉',
-  '🐢',
-  '🧒',
-  '👧',
-];
+const avatars = AVATARS;
 
 function formatXpLogDate(log) {
   const rawDate =
@@ -202,7 +190,7 @@ async function handleLogout() {
 
       <View style={styles.studentBadge}>
         <Text style={styles.studentBadgeText}>
-          🌟 Masipag na Baitang {dashboard.student.gradeLevel} Student
+          🌟 Masipag na Mag-aaral • Baitang {dashboard.student.gradeLevel}
         </Text>
       </View>
 
@@ -316,7 +304,7 @@ async function handleLogout() {
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Section
+            Seksyon
           </Text>
         </View>
 

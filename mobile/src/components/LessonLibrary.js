@@ -18,7 +18,7 @@ const CATEGORIES = [
   { key: 'Pagbasa', label: 'Pagbasa', icon: '📖', accent: '#22C55E', soft: '#DCFCE7' },
   { key: 'Bokabularyo', label: 'Bokabularyo', icon: '🔤', accent: '#3B82F6', soft: '#DBEAFE' },
   { key: 'Panitikan', label: 'Panitikan', icon: '📜', accent: '#A855F7', soft: '#F3E8FF' },
-  { key: 'Oral Communication', label: 'Komunikasyong Pasalita', icon: '🎙️', accent: '#F59E0B', soft: '#FEF3C7' },
+  { key: 'Oral Communication', label: 'Komunikasyong Pagsasalita', icon: '🎙️', accent: '#F59E0B', soft: '#FEF3C7' },
   { key: 'Pagsulat', label: 'Pagsulat', icon: '✍️', accent: '#EC4899', soft: '#FCE7F3' },
 ];
 
@@ -181,7 +181,7 @@ function questStarCount(lesson = {}) {
   return 0;
 }
 
-function isLittleQuestLesson(lesson = {}, student = {}, playful = false) {
+function isLittleQuestAralin(lesson = {}, student = {}, playful = false) {
   const grade = Number(lesson.gradeLevel || student.gradeLevel || 0);
   return playful && grade > 0 && grade <= 2;
 }
@@ -212,7 +212,7 @@ function withUnlockStates(lessons = [], enforceSequential = false) {
   });
 }
 
-export default function LessonLibrary({ navigation, variant = 'junior' }) {
+export default function AralinLibrary({ navigation, variant = 'junior' }) {
   const [dashboard, setDashboard] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [loading, setLoading] = useState(true);
@@ -245,7 +245,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     return withUnlockStates(dashboard?.lessons || [], enforceSequential);
   }, [dashboard]);
 
-  const filteredLessons = useMemo(
+  const filteredAralins = useMemo(
     () => selectedCategory === 'ALL'
       ? lessons
       : lessons.filter((lesson) => lesson.subjectKey === selectedCategory),
@@ -255,7 +255,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
   const student = dashboard?.student || {};
   const progress = dashboard?.progress || {};
 
-  function openLesson(lesson) {
+  function openAralin(lesson) {
 
 
     if (!lesson.unlocked) {
@@ -263,15 +263,15 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     }
 
     if (variant === 'senior') {
-      navigation.navigate('LessonDashboardScreen', {
+      navigation.navigate('AralinDashboardScreen', {
         lessonId: lesson.id,
         homeRoute: 'StudentSeniorTabs',
       });
       return;
     }
 
-    navigation.navigate('Lessons', {
-      screen: 'LessonDashboardScreen',
+    navigation.navigate('Aralins', {
+      screen: 'AralinDashboardScreen',
       params: {
         lessonId: lesson.id,
         homeRoute: 'StudentTabs',
@@ -304,7 +304,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
             {playful ? 'MAPA NG MGA HAMON' : 'SENTRO NG PAG-AARAL NG FILIPINO'}
           </Text>
           <Text style={styles.title}>
-            📚 Aklatan ng mga Lesson
+            📚 Aklatan ng mga Aralin
           </Text>
           <Text style={styles.subtitle}>
             {playful
@@ -322,7 +322,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
           </View>
 
           <Text style={styles.progressCount}>
-            {progress.completedLessons || 0}/{progress.totalLessons || lessons.length} aralin ang natapos
+            {progress.completedAralins || 0}/{progress.totalAralins || lessons.length} aralin ang natapos
           </Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
@@ -373,12 +373,12 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
               <Text style={styles.retryText}>Subukan Muli</Text>
             </TouchableOpacity>
           </View>
-        ) : filteredLessons.length ? (
-          filteredLessons.map((lesson) => {
+        ) : filteredAralins.length ? (
+          filteredAralins.map((lesson) => {
             const meta = categoryMeta(lesson.subject);
             const game = gameQuestMeta(lesson.subject);
             const difficulty = lessonDifficulty(lesson, student);
-            const littleQuest = isLittleQuestLesson(lesson, student, playful);
+            const littleQuest = isLittleQuestAralin(lesson, student, playful);
             const stars = questStarCount(lesson);
 
             let action = lesson.completed
@@ -420,7 +420,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                   littleQuest && styles.questCard,
                   !lesson.unlocked && styles.lockedCard,
                 ]}
-                onPress={() => openLesson(lesson)}
+                onPress={() => openAralin(lesson)}
               >
                 <View style={styles.lessonTop}>
                   {!littleQuest && (

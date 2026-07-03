@@ -41,7 +41,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <GawainIndicator size="large" color="#22C55E" />
-          <Text style={styles.loadingText}>Ina-load ang aralin...</Text>
+          <Text style={styles.loadingText}>Nilo-load ang aralin...</Text>
         </View>
       </SafeAreaView>
     );

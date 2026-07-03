@@ -81,7 +81,7 @@ case 'Badges':
       <Tab.Screen
         name="Leaderboard"
         component={StudentLeaderboardStack}
-        options={{ tabBarLabel: 'Talaan ng Ranggo' }}
+        options={{ tabBarLabel: 'Leaderboard' }}
       />
       <Tab.Screen name="Profile" component={StudentProfileStack} />
     </Tab.Navigator>

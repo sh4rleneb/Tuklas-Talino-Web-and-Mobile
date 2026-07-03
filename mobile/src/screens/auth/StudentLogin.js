@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { api, setToken } from '../../api/client';
+import { AVATARS } from '../../config/avatars';
 
 function sanitizeStudentLoginIdInput(value) {
   return String(value || '')
@@ -87,7 +88,7 @@ export default function StudentLogin({
     let active = true;
     setStudentValid(false);
     setStudentChecking(true);
-    setStudentValidationMessage('Sinusuri ang Student ID...');
+    setStudentValidationMessage('Sinusuri ang Mag-aaral ID...');
 
     const timer = setTimeout(async () => {
       try {
@@ -97,12 +98,12 @@ export default function StudentLogin({
 
         setStudentValid(Boolean(data.exists));
         setStudentValidationMessage(
-          data.exists ? '' : 'Hindi nakita o hindi aktibo ang Student ID.'
+          data.exists ? '' : 'Hindi nakita o hindi aktibo ang Mag-aaral ID.'
         );
       } catch (error) {
         if (!active) return;
         setStudentValid(false);
-        setStudentValidationMessage(error.message || 'Hindi masuri ang Student ID.');
+        setStudentValidationMessage(error.message || 'Hindi masuri ang Mag-aaral ID.');
       } finally {
         if (active) setStudentChecking(false);
       }
@@ -128,7 +129,7 @@ export default function StudentLogin({
       if (!studentId || !password || !studentValid) {
         Alert.alert(
           'May Kulang',
-          'Pakilagay ang wastong Student ID at password.'
+          'Pakilagay ang wastong Mag-aaral ID at password.'
         );
 
         return;
@@ -193,7 +194,7 @@ export default function StudentLogin({
       Alert.alert(
         'Hindi Makapasok',
         error.message ||
-          'Hindi nakita ang Student ID o mali ang password.'
+          'Hindi nakita ang Mag-aaral ID o mali ang password.'
       );
 
     } finally {
@@ -239,7 +240,7 @@ export default function StudentLogin({
           </TouchableOpacity>
 
           <Text style={styles.title}>
-            🎒 Student
+            🎒 Mag-aaral
           </Text>
 
         </View>
@@ -286,7 +287,7 @@ export default function StudentLogin({
 
           <View style={styles.avatarGrid}>
 
-            {avatars.map(
+            {AVATARS.map(
               (avatar, index) => {
 
                 const selected =
@@ -328,9 +329,9 @@ export default function StudentLogin({
 
           <View style={styles.divider} />
 
-          {/* STUDENT ID */}
+          {/* MAG-AARAL ID */}
           <Text style={styles.label}>
-            🪪 Student ID
+            🪪 Mag-aaral ID
           </Text>
 
           <View
@@ -446,7 +447,7 @@ export default function StudentLogin({
             <Text style={styles.loginText}>
               {loading
                 ? '⏳ Naglo-log in...'
-                : '✨ Mag-login'}
+                : '✨ Login'}
             </Text>
 
           </TouchableOpacity>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ROLE_TITLES } from '../config/roleTitles';
 import { getToken, api } from '../api/client';
 
 
@@ -161,16 +162,25 @@ export default function RootNavigator() {
         <Stack.Screen
           name="StudentLogin"
           component={StudentLogin}
+          options={{
+            title: ROLE_TITLES.StudentLogin
+          }}
         />
 
         <Stack.Screen
           name="TeacherLogin"
           component={TeacherLogin}
+          options={{
+            title: ROLE_TITLES.TeacherLogin
+          }}
         />
 
         <Stack.Screen
           name="AdminLogin"
           component={AdminLogin}
+          options={{
+            title: ROLE_TITLES.AdminLogin
+          }}
         />
 
         <Stack.Screen

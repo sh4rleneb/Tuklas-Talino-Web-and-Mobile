@@ -63,7 +63,7 @@ const MISSION_GAMES = [
     id: 'sound-and-say',
     title: 'Pakikinig at Pagbigkas',
     icon: '🎙️',
-    module: 'Komunikasyong Pasalita',
+    module: 'Komunikasyong Pagsasalita',
     xp: 15,
     instruction: 'Makinig muna, pagkatapos bigkasin nang malinaw ang ipinakitang salita o pangungusap.'
   }

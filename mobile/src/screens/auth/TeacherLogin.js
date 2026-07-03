@@ -15,10 +15,10 @@ import {
 import { Ionicons }
 from '@expo/vector-icons';
 
-import { loginTeacher }
+import { loginGuro }
 from '../../api/auth';
 
-function cleanLoginIdentifierInput(value, shouldUppercase = false) {
+function cleanTeacherLoginIdentifierInput(value, shouldUppercase = false) {
   const cleaned = String(value || '')
     .replace(/\s+/g, '')
     .replace(/[^A-Za-z0-9._@-]/g, '');
@@ -30,7 +30,7 @@ function cleanLoginPasswordInput(value) {
   return String(value || '').replace(/\s+/g, '');
 }
 
-export default function TeacherLogin({
+export default function GuroLogin({
   navigation,
 }) {
 
@@ -62,7 +62,7 @@ export default function TeacherLogin({
 
       setLoading(true);
 
-      const data = await loginTeacher(
+      const data = await loginGuro(
         identifier,
         password
       );
@@ -70,13 +70,13 @@ export default function TeacherLogin({
       if (data.user?.mustChangePassword) {
         navigation.replace(
           'ChangePassword',
-          { homeRoute: 'TeacherHome' }
+          { homeRoute: 'GuroHome' }
         );
         return;
       }
 
       navigation.replace(
-        'TeacherHome'
+        'GuroHome'
       );
 
     } catch (error) {
@@ -131,7 +131,7 @@ export default function TeacherLogin({
           </TouchableOpacity>
 
           <Text style={styles.title}>
-            👩‍🏫 Teacher
+            👩‍🏫 Guro
           </Text>
 
         </View>
@@ -149,11 +149,11 @@ export default function TeacherLogin({
           </View>
 
           <Text style={styles.heading}>
-            Maligayang Pagdating, Teacher!
+            Maligayang Pagdating, Guro!
           </Text>
 
           <Text style={styles.sub}>
-            Mag-login upang pamahalaan
+            Login upang pamahalaan
             ang mga aralin,
             subaybayan ang mga mag-aaral,
             at suriin ang kanilang pag-unlad.
@@ -174,8 +174,8 @@ export default function TeacherLogin({
             <TextInput
               style={styles.input}
               value={identifier}
-              onChangeText={(value) => setIdentifier(cleanLoginIdentifierInput(value, true))}
-              placeholder="Ilagay ang username"
+              onChangeText={(value) => setIdentifier(cleanTeacherLoginIdentifierInput(value, true))}
+              placeholder="Halimbawa: TCH-2026-001"
               placeholderTextColor="#94A3B8"
               spellCheck={false}
               autoCorrect={false}
@@ -249,7 +249,7 @@ export default function TeacherLogin({
             >
               {loading
                 ? 'Naglo-load...'
-                : '✨ Mag-login'}
+                : '✨ Login'}
             </Text>
 
           </TouchableOpacity>

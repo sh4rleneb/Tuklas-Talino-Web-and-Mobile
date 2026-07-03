@@ -592,7 +592,7 @@ export default function GroupsScreen({ navigation }) {
 
             {hasFilters ? (
               <TouchableOpacity style={styles.clearButton} onPress={clearFilters} activeOpacity={0.85}>
-                <Text style={styles.clearButtonText}>I-clear ang paghahanap at mga filter</Text>
+                <Text style={styles.clearButtonText}>I-reset ang paghahanap at mga filter</Text>
               </TouchableOpacity>
             ) : null}
           </Card>

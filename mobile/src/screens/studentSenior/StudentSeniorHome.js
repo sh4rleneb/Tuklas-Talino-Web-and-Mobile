@@ -115,7 +115,53 @@ export default function StudentSeniorHome({
     const featuredLessons =
       lessons.slice(0, 4);
 
-    const lessonColors = [
+    
+
+function categoryKey(subject = '') {
+  const value = String(subject).trim().toLowerCase();
+
+  if (value === 'oral comm' || value === 'oral communication' || value === 'pagsasalita') {
+    return 'Oral Communication';
+  }
+
+  const map = {
+    'pagbasa': 'Pagbasa',
+    'bokabularyo': 'Bokabularyo',
+    'panitikan': 'Panitikan',
+    'pagsulat': 'Pagsulat',
+  };
+
+  return map[value] || String(subject || 'General');
+}
+
+function categoryMeta(subject) {
+  const key = categoryKey(subject);
+
+  const meta = {
+    Pagbasa: {
+      label: 'Pagbasa',
+    },
+    Bokabularyo: {
+      label: 'Bokabularyo',
+    },
+    Panitikan: {
+      label: 'Panitikan',
+    },
+    'Oral Communication': {
+      label: 'Komunikasyong Pagsasalita',
+    },
+    Pagsulat: {
+      label: 'Pagsulat',
+    },
+  };
+
+  return meta[key] || {
+    label: key,
+  };
+}
+
+
+const lessonColors = [
       '#EEF4FF',
       '#FFF0F7',
       '#F3F0FF',
@@ -192,11 +238,11 @@ export default function StudentSeniorHome({
                 <View style={styles.heroTextBlock}>
 
                   <Text style={styles.heroTitle}>
-                    Hi {name}!
+                    Magandang araw, {name}!
                   </Text>
 
                   <Text style={styles.heroSubtitle}>
-                    Ready ka na ba sa learning adventure today?
+                    Handa ka na bang matuto at magsaya ngayon?
                   </Text>
 
                 </View>
@@ -212,7 +258,7 @@ export default function StudentSeniorHome({
                   <View>
 
                     <Text style={styles.xpLabel}>
-                      XP Points
+                      ⭐ XP
                     </Text>
 
                     <Text style={styles.xpValue}>
@@ -224,7 +270,7 @@ export default function StudentSeniorHome({
                   <View style={styles.levelBadge}>
 
                     <Text style={styles.levelText}>
-                      Level {level}
+                      Antas {level}
                     </Text>
 
                   </View>
@@ -249,7 +295,7 @@ export default function StudentSeniorHome({
                 </View>
 
                 <Text style={styles.xpSub}>
-                  {100 - (xp % 100)} XP pa bago ang next level.
+                  {100 - (xp % 100)} XP na lang bago umangat sa susunod na antas.
                 </Text>
 
               
@@ -259,22 +305,22 @@ export default function StudentSeniorHome({
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>🔥 {student?.currentStreak || 0}</Text>
-                <Text style={styles.achievementLabel}>Current Streak</Text>
+                <Text style={styles.achievementLabel}>Kasalukuyang Streak</Text>
               </View>
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>🏆 {student?.longestStreak || 0}</Text>
-                <Text style={styles.achievementLabel}>Best Streak</Text>
+                <Text style={styles.achievementLabel}>Pinakamahabang Streak</Text>
               </View>
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>🏅 {badges.length}</Text>
-                <Text style={styles.achievementLabel}>Badges</Text>
+                <Text style={styles.achievementLabel}>🏅 Mga Badge</Text>
               </View>
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>⭐ {level}</Text>
-                <Text style={styles.achievementLabel}>Level</Text>
+                <Text style={styles.achievementLabel}>⭐ Antas</Text>
               </View>
 
             </View>
@@ -296,7 +342,7 @@ export default function StudentSeniorHome({
                 <Text
                   style={styles.quickLabel}
                 >
-                  Lessons
+                  Mga Aralin
                 </Text>
 
               </View>
@@ -326,7 +372,7 @@ export default function StudentSeniorHome({
                 <Text
                   style={styles.quickLabel}
                 >
-                  Badges
+                  🏅 Mga Badge
                 </Text>
 
               </View>
@@ -346,7 +392,7 @@ export default function StudentSeniorHome({
                     styles.sectionTitle
                   }
                 >
-                  Your Lessons
+                  📚 Mga Aralin
                 </Text>
 
                 <TouchableOpacity
@@ -359,7 +405,7 @@ export default function StudentSeniorHome({
                   <Text
                     style={styles.allLessons}
                   >
-                    All Lessons →
+                    Tingnan ang Lahat →
                   </Text>
                 </TouchableOpacity>
 
@@ -394,7 +440,7 @@ export default function StudentSeniorHome({
                     </Text>
 
                     <Text style={styles.lessonTag}>
-                      {lesson.subject}
+                      {categoryMeta(lesson.subject).label}
                     </Text>
 
                     <Text style={styles.lessonTitle}>
@@ -424,7 +470,7 @@ export default function StudentSeniorHome({
             <View style={styles.section}>
 
               <Text style={styles.sectionTitle}>
-                Badges
+                🏅 Mga Badge
               </Text>
 
               <View style={styles.badgeRow}>

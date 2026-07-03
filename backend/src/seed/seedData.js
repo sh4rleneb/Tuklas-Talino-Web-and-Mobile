@@ -48,7 +48,7 @@ const lessonBank = {
       teacherNote: 'Panatilihing konkreto ang bugtong para madaling maunawaan ng Grade 1.'
     },
     'Oral Comm': {
-      title: 'Komunikasyong Pasalita 1: Pagbati at Pagpapakilala',
+      title: 'Komunikasyong Pagsasalita 1: Pagbati at Pagpapakilala',
       duration: '10 minuto',
       passage: 'Layunin: Makapagpapakilala ka gamit ang simpleng pangungusap.\n\nPanimula: Kapag may bagong kakilala, maaari tayong bumati.\n\nAralin: Magandang araw. Ako si Ana. Ako ay nasa Unang Baitang.\n\nGawain: Pakinggan muna. Pagkatapos, bigkasin nang malinaw.',
       instructions: 'Pindutin ang Pakinggan. Ulitin ang pangungusap at i-record ang iyong boses.',
@@ -110,7 +110,7 @@ const lessonBank = {
       teacherNote: 'Ipaliwanag na ang tula ay maaaring may tugma at damdamin.'
     },
     'Oral Comm': {
-      title: 'Komunikasyong Pasalita 2: Pagsunod sa Panuto',
+      title: 'Komunikasyong Pagsasalita 2: Pagsunod sa Panuto',
       duration: '10 minuto',
       passage: 'Layunin: Makasusunod ka sa simple at dalawang hakbang na panuto.\n\nPanimula: Mahalaga ang pakikinig upang makasunod sa panuto.\n\nAralin: Kunin ang lapis at isulat ang iyong pangalan. Buksan ang aklat at basahin ang unang pangungusap.\n\nGawain: Pakinggan ang panuto at sabihin kung ano ang unang gagawin.',
       instructions: 'Pakinggan ang panuto. Piliin ang unang dapat gawin.',
@@ -172,7 +172,7 @@ const lessonBank = {
       teacherNote: 'Iugnay ang aral sa paghahanda ng gamit bago pumasok sa paaralan.'
     },
     'Oral Comm': {
-      title: 'Komunikasyong Pasalita 3: Pagkukuwento ng Karanasan',
+      title: 'Komunikasyong Pagsasalita 3: Pagkukuwento ng Karanasan',
       duration: '12 minuto',
       passage: 'Layunin: Makapagsasalaysay ka ng maikling karanasan gamit ang dalawa hanggang tatlong pangungusap.\n\nPanimula: Kapag nagkukuwento, sabihin kung saan nangyari, sino ang kasama, at ano ang nangyari.\n\nAralin: Kahapon, pumunta ako sa parke. Kasama ko ang aking kapatid. Masaya kaming naglaro.\n\nGawain: I-record ang iyong boses habang nagsasalaysay ng isang masayang karanasan.',
       instructions: 'Sabihin ang iyong karanasan gamit ang malinaw na boses.',
@@ -234,7 +234,7 @@ const lessonBank = {
       teacherNote: 'Ipaliwanag ang pagkakaiba ng alamat at karaniwang kuwento.'
     },
     'Oral Comm': {
-      title: 'Komunikasyong Pasalita 4: Pakikipanayam',
+      title: 'Komunikasyong Pagsasalita 4: Pakikipanayam',
       duration: '12 minuto',
       passage: 'Layunin: Makabubuo ka ng angkop at magalang na tanong sa pakikipanayam.\n\nPanimula: Ang pakikipanayam ay pagtatanong upang makakuha ng impormasyon.\n\nAralin: Dapat magalang ang tono at malinaw ang tanong. Halimbawa: Magandang araw po. Maaari po ba akong magtanong?\n\nGawain: Piliin ang magalang na tanong sa pakikipanayam.',
       instructions: 'Basahin ang sitwasyon. Piliin ang angkop na tanong.',
@@ -296,7 +296,7 @@ const lessonBank = {
       teacherNote: 'Iugnay ang tula sa group tasks ng Tuklas Talino.'
     },
     'Oral Comm': {
-      title: 'Komunikasyong Pasalita 5: Pagpapahayag ng Opinyon',
+      title: 'Komunikasyong Pagsasalita 5: Pagpapahayag ng Opinyon',
       duration: '15 minuto',
       passage: 'Layunin: Makapagpapahayag ka ng sariling opinyon gamit ang magalang na pananalita.\n\nPanimula: Sa pagbibigay ng opinyon, mahalagang malinaw ang paninindigan at may dahilan.\n\nAralin: Maaaring gamitin ang: Para sa akin, Sa aking palagay, Naniniwala ako na. Paksa: Mahalaga ba ang pagbabasa araw-araw?\n\nGawain: Magbigay ng dalawang pangungusap na opinyon tungkol sa pagbabasa.',
       instructions: 'Basahin ang paksa. I-record ang iyong opinyon.',
@@ -358,7 +358,7 @@ const lessonBank = {
       teacherNote: 'Gabayan ang mag-aaral na ibukod ang tema sa simpleng pangyayari lamang.'
     },
     'Oral Comm': {
-      title: 'Komunikasyong Pasalita 6: Maikling Talumpati',
+      title: 'Komunikasyong Pagsasalita 6: Maikling Talumpati',
       duration: '15 minuto',
       passage: 'Layunin: Makapaghahanda ka ng maikling talumpati na may malinaw na mensahe.\n\nPanimula: Ang talumpati ay pagsasalita sa harap ng tagapakinig tungkol sa isang paksa.\n\nAralin: Sa talumpati, mahalaga ang malinaw na simula, katawan, at wakas. Paksa: Bakit mahalaga ang respeto sa paaralan?\n\nGawain: Bumuo at bigkasin ang tatlo hanggang apat na pangungusap tungkol sa respeto.',
       instructions: 'I-record ang maikling talumpati gamit ang malinaw na boses.',
