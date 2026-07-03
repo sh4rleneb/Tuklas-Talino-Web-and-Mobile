@@ -76,17 +76,17 @@ export default function PowerUpTray({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>📝 Word Bank</Text>
+      <Text style={styles.title}>📝 Bangko ng mga Salita</Text>
 
       <Text style={styles.subtitle}>
-        Tap a word to drop it into your answer.
+        Pindutin ang salita upang maidagdag ito sa iyong sagot.
       </Text>
 
       <View style={styles.progressCard}>
-        <Text style={styles.progressTitle}>📈 Your Progress</Text>
+        <Text style={styles.progressTitle}>📈 Iyong Pag-unlad</Text>
 
         <Text style={styles.progressSubtitle}>
-          Choose 3 words to complete the sentence.
+          Pumili ng 3 salita upang mabuo ang pangungusap.
         </Text>
 
         <View style={styles.progressBar}>
@@ -104,7 +104,7 @@ export default function PowerUpTray({
         </View>
 
         <Text style={styles.progressText}>
-          📝 {selectedWords.length}/3 Words Chosen
+          📝 {selectedWords.length}/3 Salitang Napili
         </Text>
       </View>
 

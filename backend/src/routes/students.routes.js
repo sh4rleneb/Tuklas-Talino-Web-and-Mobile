@@ -64,8 +64,8 @@ const CORE_BADGE_DEFINITIONS = [
   },
   {
     code: 'quiz_perfect',
-    name: 'Quiz Bayani',
-    description: 'Makakuha ng perfect score sa quiz.',
+    name: 'Henyo sa Pagsusulit',
+    description: 'Makakuha ng perpektong iskor sa isang pagsusulit.',
     icon: '🧠',
     xpThreshold: null,
     target: 1,
@@ -73,7 +73,7 @@ const CORE_BADGE_DEFINITIONS = [
   },
   {
     code: 'writing_3',
-    name: 'Sagot Star',
+    name: 'Bituin sa Pagsagot',
     description: 'Complete 3 Punan ang Patlang or writing activities.',
     icon: '✍️',
     xpThreshold: null,
@@ -100,7 +100,7 @@ const CORE_BADGE_DEFINITIONS = [
   },
   {
     code: 'xp_100',
-    name: 'Sipag Star',
+    name: 'Bituin ng Kasipagan',
     description: 'Makaipon ng 100 XP.',
     icon: '⭐',
     xpThreshold: 100,

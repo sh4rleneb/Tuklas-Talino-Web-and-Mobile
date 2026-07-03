@@ -31,7 +31,7 @@ function getActivityGuide(activity = {}, littleLearnerGame = false) {
     return {
       icon: '👂',
       title: 'What to do',
-      body: 'Listen first. Then answer the activity.',
+      body: 'Makinig muna. Pagkatapos ay sagutan ang gawain.',
       steps: ['Makinig', 'Sumagot', 'Magpatuloy'],
     };
   }
@@ -49,7 +49,7 @@ function getActivityGuide(activity = {}, littleLearnerGame = false) {
     return {
       icon: '🎙️',
       title: 'What to do',
-      body: 'Listen or read the target. Record your voice.',
+      body: 'Makinig o basahin ang teksto. Pagkatapos ay i-record ang iyong boses.',
       steps: ['Makinig', 'Mag-record', 'I-save'],
     };
   }
@@ -67,8 +67,8 @@ function getActivityGuide(activity = {}, littleLearnerGame = false) {
       icon: '👆',
       title: 'What to do',
       body: littleLearnerGame
-        ? 'Tap the correct answer.'
-        : 'Read the question. Choose one answer.',
+        ? 'Pindutin ang tamang sagot.'
+        : 'Basahin ang tanong at pumili ng isang sagot.',
       steps: littleLearnerGame ? ['Basahin', 'Pindutin', 'Manalo'] : ['Basahin', 'Pumili', 'Magpatuloy'],
     };
   }

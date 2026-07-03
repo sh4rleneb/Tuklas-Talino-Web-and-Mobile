@@ -42,7 +42,7 @@ const DATA = {
     {
       emoji: "✏️",
       answer: "Lapis",
-      choices: ["Lapis", "Papel", "Teacher"],
+      choices: ["Lapis", "Papel", "Guro"],
     },
   ],
 
@@ -60,7 +60,7 @@ const DATA = {
     {
       emoji: "🩺",
       answer: "Manggagamot",
-      choices: ["Manggagamot", "Teacher", "Magsasaka"],
+      choices: ["Manggagamot", "Guro", "Magsasaka"],
     },
   ],
 

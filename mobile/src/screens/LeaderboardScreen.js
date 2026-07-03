@@ -70,7 +70,12 @@ export default function LeaderboardScreen({ navigation }) {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="large" color={colors.green} />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.green} />
+            <Text style={styles.loadingText}>
+              Ina-load ang talaan ng ranggo...
+            </Text>
+          </View>
         ) : error ? (
           <Text>{error}</Text>
         ) : (
@@ -233,6 +238,20 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#16A34A',
     fontSize: 15,
+  },
+
+
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+
+  loadingText: {
+    marginTop: 14,
+    color: '#64748B',
+    fontWeight: '700',
+    fontSize: 14,
   },
 
   streak: {

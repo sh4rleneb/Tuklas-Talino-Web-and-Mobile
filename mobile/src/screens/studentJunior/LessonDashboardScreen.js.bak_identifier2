@@ -72,7 +72,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={styles.page}>
 
         <TouchableOpacity style={styles.backRow} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Aklatan ng mga Lesson</Text>
+          <Text style={styles.backText}>← Aklatan ng mga Aralin</Text>
         </TouchableOpacity>
 
         <View style={styles.pill}>
@@ -116,7 +116,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
 
         {!layunin && !!lesson.description && (
           <View style={styles.card}>
-            <Text style={styles.cardHeading}>📖 Tungkol sa Lesson</Text>
+            <Text style={styles.cardHeading}>📖 Tungkol sa Aralin</Text>
             <Text style={styles.cardBody}>{lesson.description}</Text>
           </View>
         )}
@@ -126,7 +126,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
           onPress={() => navigation.navigate('StudentJuniorLessonDetail', { lessonId, homeRoute })}
         >
           <Text style={styles.buttonText}>
-            {isCompleted ? '🔁 Balikan ang Lesson' : progressPercent > 0 ? '▶ Ipagpatuloy ang Lesson' : '▶ Simulan ang Lesson'}
+            {isCompleted ? '🔁 Balikan ang Aralin' : progressPercent > 0 ? '▶ Ipagpatuloy ang Aralin' : '▶ Simulan ang Aralin'}
           </Text>
         </TouchableOpacity>
 

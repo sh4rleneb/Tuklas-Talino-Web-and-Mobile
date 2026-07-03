@@ -15659,7 +15659,7 @@ function badgeDisplayName(badge = {}) {
   const name = String(badge.name || '').trim();
 
   if (code === 'writing_3' || /manunulat|writer/i.test(name)) {
-    return 'Sagot Star';
+    return 'Bituin sa Pagsagot';
   }
 
   return name;
@@ -15679,7 +15679,7 @@ function badgeDisplayDescription(badge = {}) {
   }
 
   if (code === 'first_lesson') return 'Completed your first lesson.';
-  if (code === 'quiz_perfect') return 'Completed a quiz with a perfect score.';
+  if (code === 'quiz_perfect') return 'Nakakuha ng perpektong iskor sa isang pagsusulit.';
   if (code === 'speech_3') return 'Completed 3 speech attempts.';
   if (code === 'group_1') return 'Completed 1 approved group task.';
   if (code === 'xp_100') return 'Reached 100 XP.';
@@ -15708,7 +15708,7 @@ function badgeAchievementReason(badge = {}) {
   }
 
   if (normalizedCode === 'quiz_perfect' || value.includes('quiz') || value.includes('perfect') || value.includes('bayani')) {
-    return 'Completed a quiz with a perfect score.';
+    return 'Nakakuha ng perpektong iskor sa isang pagsusulit.';
   }
 
   if (normalizedCode === 'speech_3' || value.includes('speaker') || value.includes('speech') || value.includes('magsalita') || value.includes('boses')) {
@@ -15752,14 +15752,14 @@ const GRADE12_BADGE_GOALS = [
   {
     code: 'quiz_perfect',
     icon: '🧠',
-    name: 'Quiz Bayani',
-    howToUnlock: 'Get a perfect score on a quiz.'
+    name: 'Henyo sa Pagsusulit',
+    howToUnlock: 'Makakuha ng perpektong iskor sa isang pagsusulit.'
   },
   {
     code: 'writing_3',
     icon: '✍️',
-    name: 'Sagot Star',
-    howToUnlock: 'Complete 3 Gawain activities.'
+    name: 'Bituin sa Pagsagot',
+    howToUnlock: 'Makatapos ng 3 gawain.'
   },
   {
     code: 'speech_3',
@@ -15776,7 +15776,7 @@ const GRADE12_BADGE_GOALS = [
   {
     code: 'xp_100',
     icon: '⭐',
-    name: 'Sipag Star',
+    name: 'Bituin ng Kasipagan',
     howToUnlock: 'Reach 100 XP.'
   },
   {

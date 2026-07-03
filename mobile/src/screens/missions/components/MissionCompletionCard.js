@@ -6,8 +6,8 @@ import {
 } from 'react-native';
 
 export default function MissionCompletionCard({
-  title = '🎉 Great Job!',
-  message = 'Mission completed successfully.',
+  title = '🎉 Magaling!',
+  message = 'Matagumpay mong natapos ang misyon.',
 }) {
   return (
     <View style={styles.card}>

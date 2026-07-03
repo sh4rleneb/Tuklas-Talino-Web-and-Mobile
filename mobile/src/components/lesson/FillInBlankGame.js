@@ -42,11 +42,11 @@ export default function FillInBlankGame({
   }
 
   function submit() {
-    setStatus('Submitting...');
+    setStatus('Isinusumite...');
 
     if (correct) {
       setLocked(true);
-      setStatus('🎉 Correct!');
+      setStatus('🎉 Tamang Sagot!');
     } else {
       setStatus('❌ Subukan muli');
     }

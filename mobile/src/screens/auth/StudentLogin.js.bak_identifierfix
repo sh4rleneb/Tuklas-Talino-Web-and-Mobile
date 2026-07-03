@@ -239,7 +239,7 @@ export default function StudentLogin({
           </TouchableOpacity>
 
           <Text style={styles.title}>
-            🎒 Student
+            🎒 Mag-aaral
           </Text>
 
         </View>

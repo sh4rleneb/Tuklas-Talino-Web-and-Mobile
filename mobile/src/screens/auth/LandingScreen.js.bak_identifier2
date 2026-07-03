@@ -242,7 +242,7 @@ export default function LandingScreen({
             />
 
             <Text style={styles.teacherTitle}>
-              Teacher
+              Guro
             </Text>
 
             <Text
@@ -266,7 +266,7 @@ export default function LandingScreen({
             >
 
               <Text style={styles.buttonText}>
-                Teacher →
+                Guro →
               </Text>
 
             </TouchableOpacity>

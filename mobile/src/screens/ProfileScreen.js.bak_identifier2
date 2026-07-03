@@ -316,7 +316,7 @@ async function handleLogout() {
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Section
+            Seksyon
           </Text>
         </View>
 

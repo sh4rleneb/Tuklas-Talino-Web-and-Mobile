@@ -15,7 +15,7 @@ export function getWordMatchItemsForGrade(gradeLevel = 1) {
     { id: 'aso', word: 'aso', picture: '🐶', label: 'Aso' },
     { id: 'aklat', word: 'aklat', picture: '📚', label: 'Aklat' },
     { id: 'lapis', word: 'lapis', picture: '✏️', label: 'Lapis' },
-    { id: 'guro', word: 'guro', picture: '👩‍🏫', label: 'Teacher' },
+    { id: 'guro', word: 'guro', picture: '👩‍🏫', label: 'Guro' },
     { id: 'pusa', word: 'pusa', picture: '🐱', label: 'Pusa' },
     { id: 'isda', word: 'isda', picture: '🐟', label: 'Isda' },
     { id: 'puno', word: 'puno', picture: '🌳', label: 'Puno' },

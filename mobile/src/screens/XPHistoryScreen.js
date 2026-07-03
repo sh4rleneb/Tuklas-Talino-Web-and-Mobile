@@ -11,10 +11,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 function formatXpLogDate(log) {
   const raw = log.createdAt || log.created_at || log.awardedAt || log.awarded_at;
-  if (!raw) return 'No date';
+  if (!raw) return 'Walang Petsa';
 
   const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return 'No date';
+  if (Number.isNaN(date.getTime())) return 'Walang Petsa';
 
   return date.toLocaleString('en-PH', {
     day: '2-digit',
@@ -47,7 +47,7 @@ export default function XPHistoryScreen({ navigation, route }) {
 
         <View style={styles.headerCard}>
           <Text style={styles.title}>⭐ Kasaysayan ng XP</Text>
-          <Text style={styles.subtitle}>All XP rewards and activity records.</Text>
+          <Text style={styles.subtitle}>Lahat ng natanggap na XP at tala ng mga gawain.</Text>
         </View>
 
         {logs.length ? (
@@ -61,15 +61,15 @@ export default function XPHistoryScreen({ navigation, route }) {
 
               <View style={styles.xpLogContent}>
                 <Text style={styles.xpLogPoints}>+{log.points} XP</Text>
-                <Text style={styles.xpLogNote}>{log.note || 'XP earned'}</Text>
+                <Text style={styles.xpLogNote}>{log.note || 'Nakuhang XP'}</Text>
                 <Text style={styles.xpDate}>🕒 {formatXpLogDate(log)}</Text>
               </View>
             </View>
           ))
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No XP activity yet.</Text>
-            <Text style={styles.emptyText}>Complete lessons, quizzes, and missions to earn XP.</Text>
+            <Text style={styles.emptyTitle}>Wala ka pang kasaysayan ng XP.</Text>
+            <Text style={styles.emptyText}>Tapusin ang mga aralin, pagsusulit, at misyon upang makakuha ng XP.</Text>
           </View>
         )}
       </ScrollView>

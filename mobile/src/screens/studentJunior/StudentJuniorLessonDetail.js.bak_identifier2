@@ -38,7 +38,7 @@ import FillInBlankGame from '../../components/lesson/FillInBlankGame';
 import {
   getStructuredLessonSectionText,
   getStructuredLessonKnowAudioText,
-  getStructuredLessonLessonAudioText,
+  getStructuredLessonAralinAudioText,
 } from '../../utils/structuredLesson';
 
 function optionalProgressRequest(request, fallback) {
@@ -187,7 +187,7 @@ const stepScrollRef = useRef(null);
           : (progressData.progress?.currentStep || 1);
 
         // Pre-unlock gates for steps the student already passed (mirrors web reachedPast).
-        // Step 1 = Layunin, Step 2 = Alamin, Step 3 = Lesson.
+        // Step 1 = Layunin, Step 2 = Alamin, Step 3 = Aralin.
         setLessonListened(lessonCompleted || restoredStep > 1);
         setKnowListened(lessonCompleted || restoredStep > 2);
         setReadListened(lessonCompleted || restoredStep > 3);
@@ -292,7 +292,7 @@ const stepScrollRef = useRef(null);
     },
     {
       type: 'read',
-      title: 'Basahin ang Lesson',
+      title: 'Basahin ang Aralin',
     },
     ...activities.map(activity => ({
       type: 'activity',
@@ -300,7 +300,7 @@ const stepScrollRef = useRef(null);
     })),
     {
       type: 'finish',
-      title: 'Tapusin ang Lesson',
+      title: 'Tapusin ang Aralin',
     },
   ], [activities]);
 
@@ -338,7 +338,7 @@ const stepScrollRef = useRef(null);
     );
 
   const aralinAudioText =
-    getStructuredLessonLessonAudioText(
+    getStructuredLessonAralinAudioText(
       lessonText,
     );
 
@@ -697,7 +697,7 @@ const stepScrollRef = useRef(null);
       await stopSpeech();
       await saveNextStep(activityType);
     } catch (err) {
-      Alert.alert('Lesson', err.message || 'Hindi maisave ang progreso ng aralin.');
+      Alert.alert('Aralin', err.message || 'Hindi maisave ang progreso ng aralin.');
     } finally {
       setSubmitting(false);
     }
@@ -937,7 +937,7 @@ const stepScrollRef = useRef(null);
         ? { ...current, xp: Number(current.xp || 0) + Number(data.xpAwarded || 0) }
         : current);
     } catch (err) {
-      Alert.alert('Lesson', err.message || 'Hindi makumpleto ang aralin.');
+      Alert.alert('Aralin', err.message || 'Hindi makumpleto ang aralin.');
     } finally {
       setSubmitting(false);
     }
@@ -1031,7 +1031,7 @@ const stepScrollRef = useRef(null);
 
   function cleanVisualReadText(value = '') {
     return String(value || '')
-      .replace(/\b(Layunin|Panimula|Lesson|Gawain)\s*:/gi, '')
+      .replace(/\b(Layunin|Panimula|Aralin|Gawain)\s*:/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -1054,7 +1054,7 @@ const stepScrollRef = useRef(null);
     const topic = cleanVisualReadText(
       lessonData?.title ||
       lessonData?.subject ||
-      'Lesson'
+      'Aralin'
     );
 
     return [
@@ -1399,7 +1399,7 @@ const stepScrollRef = useRef(null);
               }}
             >
               <Text style={styles.primaryText}>
-                {knowListened ? 'Basahin ang Lesson →' : 'Makinig muna'}
+                {knowListened ? 'Basahin ang Aralin →' : 'Makinig muna'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1452,7 +1452,7 @@ const stepScrollRef = useRef(null);
                         flexShrink: 1,
                       }}
                     >
-                      Basahin ang Lesson
+                      Basahin ang Aralin
                     </Text>
                   </View>
 
@@ -1498,7 +1498,7 @@ const stepScrollRef = useRef(null);
               </>
             ) : (
               <>
-                <Text style={styles.title}>📖 Basahin ang Lesson</Text>
+                <Text style={styles.title}>📖 Basahin ang Aralin</Text>
 
                 {!!aralinDisplayText && (
                   Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 3 ? (
@@ -2039,7 +2039,7 @@ const stepScrollRef = useRef(null);
             </>
           ) : (
             <>
-              <Text style={styles.title}>🏁 Tapusin ang Lesson</Text>
+              <Text style={styles.title}>🏁 Tapusin ang Aralin</Text>
 
               <Text style={styles.body}>
                 Magaling! Natapos mo ang lahat ng hamon sa araling ito.
@@ -2055,7 +2055,7 @@ const stepScrollRef = useRef(null);
             <Text style={styles.primaryText}>
               {littleLearnerGame
                 ? '🌟 Kunin ang Iyong Gantimpala!'
-                : '⭐ Tapusin ang Lesson'}
+                : '⭐ Tapusin ang Aralin'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -2351,7 +2351,7 @@ const stepScrollRef = useRef(null);
 
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{currentActivity.title || 'Gawain sa Lesson'}</Text>
+        <Text style={styles.cardTitle}>{currentActivity.title || 'Gawain sa Aralin'}</Text>
         <Text style={styles.body}>{currentActivity.instructions || currentActivity.dataJson?.content || 'Basahin muna ang gawaing ito bago magpatuloy.'}</Text>
         <ActivityGuideCard
             activity={currentActivity}
@@ -2662,9 +2662,9 @@ const stepScrollRef = useRef(null);
                 : currentStep?.type === 'know'
                 ? '💡 Learn'
                 : currentStep?.type === 'read'
-                ? '📖 Basahin ang Lesson'
+                ? '📖 Basahin ang Aralin'
                 : currentStep?.type === 'finish'
-                ? '🏁 Tapos na ang Lesson'
+                ? '🏁 Tapos na ang Aralin'
                 : currentActivity?.type === 'mcq'
                 ? '🎮 Oras ng Pagsusulit'
                 : currentActivity?.type === 'writing'
@@ -2862,7 +2862,7 @@ const stepScrollRef = useRef(null);
                     marginTop:4,
                   }}
                 >
-                  Tapos na ang Lesson!
+                  Tapos na ang Aralin!
                 </Text>
 
                 <Text
@@ -3043,7 +3043,7 @@ const stepScrollRef = useRef(null);
 
                     <View style={styles.finishHeroTextWrap}>
                       <Text style={styles.finishHeroTitle}>
-                        Susunod na Lesson
+                        Susunod na Aralin
                       </Text>
 
                       <Text style={styles.finishHeroSubtitle}>
@@ -3067,7 +3067,7 @@ const stepScrollRef = useRef(null);
 
                     <View style={styles.finishCardTextWrap}>
                       <Text style={styles.finishCardTitle}>
-                        Bumalik sa mga Lesson
+                        Bumalik sa mga Aralin
                       </Text>
 
                       <Text style={styles.finishCardSubtitle}>

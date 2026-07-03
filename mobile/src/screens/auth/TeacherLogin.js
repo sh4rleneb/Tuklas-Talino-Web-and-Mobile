@@ -51,8 +51,8 @@ export default function TeacherLogin({
     if (!identifier || !password) {
 
       Alert.alert(
-        'Missing Fields',
-        'Please complete all fields.'
+        'May Kulang',
+        'Pakikumpleto ang lahat ng field.'
       );
 
       return;
@@ -82,7 +82,7 @@ export default function TeacherLogin({
     } catch (error) {
 
       Alert.alert(
-        'Login Failed',
+        'Hindi Makapasok',
         error.message
       );
 
@@ -125,13 +125,13 @@ export default function TeacherLogin({
           >
 
             <Text style={styles.homeText}>
-              ← Home
+              ← Bumalik
             </Text>
 
           </TouchableOpacity>
 
           <Text style={styles.title}>
-            👩‍🏫 Teacher Login
+            👩‍🏫 Teacher
           </Text>
 
         </View>
@@ -149,13 +149,14 @@ export default function TeacherLogin({
           </View>
 
           <Text style={styles.heading}>
-            Welcome, Teacher!
+            Maligayang Pagdating, Teacher!
           </Text>
 
           <Text style={styles.sub}>
-            Login to manage lessons,
-            monitor students, and
-            review progress.
+            Mag-login upang pamahalaan
+            ang mga aralin,
+            subaybayan ang mga mag-aaral,
+            at suriin ang kanilang pag-unlad.
           </Text>
 
           {/* USERNAME */}
@@ -174,7 +175,7 @@ export default function TeacherLogin({
               style={styles.input}
               value={identifier}
               onChangeText={(value) => setIdentifier(cleanLoginIdentifierInput(value, true))}
-              placeholder="Enter your username"
+              placeholder="Ilagay ang username"
               placeholderTextColor="#94A3B8"
               spellCheck={false}
               autoCorrect={false}
@@ -204,7 +205,7 @@ export default function TeacherLogin({
               }
               value={password}
               onChangeText={(value) => setPassword(cleanLoginPasswordInput(value))}
-              placeholder="Enter your password"
+              placeholder="Ilagay ang password"
               placeholderTextColor="#94A3B8"
               spellCheck={false}
               autoCorrect={false}
@@ -247,8 +248,8 @@ export default function TeacherLogin({
               }
             >
               {loading
-                ? 'Loading...'
-                : '✨ Login'}
+                ? 'Naglo-load...'
+                : '✨ Mag-login'}
             </Text>
 
           </TouchableOpacity>

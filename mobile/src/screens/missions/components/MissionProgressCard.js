@@ -8,7 +8,7 @@ import {
 export default function MissionProgressCard({
   current,
   total,
-  label = 'Progress',
+  label = 'Pag-unlad',
 }) {
   const progress =
     Math.max(

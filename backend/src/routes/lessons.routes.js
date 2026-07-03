@@ -63,7 +63,7 @@ function normalizeBadgeResponse(badge = {}) {
     return {
       ...plain,
       code: 'writing_3',
-      name: 'Sagot Star',
+      name: 'Bituin sa Pagsagot',
       description: 'Complete 3 Punan ang Patlang or writing activities.',
       icon: plain?.icon || '✍️'
     };

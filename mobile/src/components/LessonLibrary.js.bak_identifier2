@@ -304,7 +304,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
             {playful ? 'MAPA NG MGA HAMON' : 'SENTRO NG PAG-AARAL NG FILIPINO'}
           </Text>
           <Text style={styles.title}>
-            📚 Aklatan ng mga Lesson
+            📚 Aklatan ng mga Aralin
           </Text>
           <Text style={styles.subtitle}>
             {playful

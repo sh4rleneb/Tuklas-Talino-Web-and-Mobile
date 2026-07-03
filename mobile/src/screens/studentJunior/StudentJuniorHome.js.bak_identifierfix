@@ -75,8 +75,8 @@ export default function StudentJuniorHome({ navigation }) {
   const lessons = dashboard?.lessons || [];
   const groups = getVisibleGroups(dashboard?.groups || []);
   const badges = dashboard?.badges || [];
-  const completedLesson = lessons.filter((lesson) => lesson?.completed).length;
-  const totalLesson = lessons.length;
+  const completedAralin = lessons.filter((lesson) => lesson?.completed).length;
+  const totalAralin = lessons.length;
   const nextLesson = lessons.find((lesson) => !lesson?.completed) || lessons[0];
   const badgePreview = badges.slice(-2).reverse();
   const activeGroupTask = groups.flatMap((group) => group.tasks || []).find((task) => !task.completed) || groups.flatMap((group) => group.tasks || [])[0];
@@ -84,7 +84,7 @@ export default function StudentJuniorHome({ navigation }) {
   const xp = student?.xp || 0;
   const level = Math.max(1, Math.floor(xp / 100) + 1);
   const avatar = student?.avatar || '🧒';
-  const name = student?.name || 'Student';
+  const name = student?.name || 'Mag-aaral';
   const grade = student?.gradeLevel || 1;
 
 
@@ -201,16 +201,16 @@ export default function StudentJuniorHome({ navigation }) {
 
           <View style={styles.quickStatsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{totalLesson}</Text>
-              <Text style={styles.statLabel}>Lesson</Text>
+              <Text style={styles.statValue}>{totalAralin}</Text>
+              <Text style={styles.statLabel}>Aralin</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{completedLesson}</Text>
+              <Text style={styles.statValue}>{completedAralin}</Text>
               <Text style={styles.statLabel}>Natapos</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{badges.length}</Text>
-              <Text style={styles.statLabel}>Badges</Text>
+              <Text style={styles.statLabel}>Mga Badge</Text>
             </View>
           </View>
         </View>
@@ -218,9 +218,9 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Iyong mga Lesson
+              Iyong mga Aralin
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Lesson')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Aralin')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
             </TouchableOpacity>
           </View>
@@ -228,7 +228,7 @@ export default function StudentJuniorHome({ navigation }) {
           {nextLesson ? (
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate('Lesson', {
+                  navigation.navigate('Aralin', {
                     screen: 'StudentJuniorLessonDetail',
                     params: {
                       lessonId: nextLesson.id,
@@ -244,7 +244,7 @@ export default function StudentJuniorHome({ navigation }) {
 
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardTag}>
-                        {nextLesson.subject || 'Lesson'}
+                        {nextLesson.subject || 'Aralin'}
                       </Text>
 
                       <Text style={styles.cardTitle}>
@@ -283,7 +283,7 @@ export default function StudentJuniorHome({ navigation }) {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Badges</Text>
+            <Text style={styles.sectionTitle}>Mga Badge</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Badge')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
             </TouchableOpacity>

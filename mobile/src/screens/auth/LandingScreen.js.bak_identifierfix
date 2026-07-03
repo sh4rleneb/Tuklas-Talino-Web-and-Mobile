@@ -95,7 +95,7 @@ export default function LandingScreen({
                 styles.heroDescription
               }
             >
-              Para sa mga Student
+              Para sa mga Mag-aaral
               sa Baitang 1–6:
               mga aralin,
               pagsusulit,
@@ -197,7 +197,7 @@ export default function LandingScreen({
             />
 
             <Text style={styles.studentTitle}>
-              Student
+              Mag-aaral
             </Text>
 
             <Text
@@ -221,7 +221,7 @@ export default function LandingScreen({
             >
 
               <Text style={styles.buttonText}>
-                Student →
+                Mag-aaral →
               </Text>
 
             </TouchableOpacity>
@@ -242,7 +242,7 @@ export default function LandingScreen({
             />
 
             <Text style={styles.teacherTitle}>
-              Teacher
+              Guro
             </Text>
 
             <Text
@@ -266,7 +266,7 @@ export default function LandingScreen({
             >
 
               <Text style={styles.buttonText}>
-                Teacher →
+                Guro →
               </Text>
 
             </TouchableOpacity>

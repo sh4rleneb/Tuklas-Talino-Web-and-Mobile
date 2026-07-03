@@ -70,7 +70,7 @@ export default function ModulesScreen({ navigation }) {
       const data = await api('/dashboard');
       setModules(data.lessons || []);
     } catch (error) {
-      Alert.alert('May Error', error.message);
+      Alert.alert('May May Error', error.message);
     } finally {
       setLoading(false);
     }
@@ -133,7 +133,7 @@ export default function ModulesScreen({ navigation }) {
         ]}
         activeOpacity={0.9}
         onPress={() =>
-          navigation.navigate('Lessons', {
+          navigation.navigate('Mga Aralin', {
             screen: 'StudentJuniorLessonDetail',
             params: {
               lessonId: lesson.id,
@@ -191,7 +191,7 @@ export default function ModulesScreen({ navigation }) {
           <Text style={styles.backText}>← Bumalik</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>Lessons</Text>
+        <Text style={styles.title}>Mga Aralin</Text>
 
         <View style={styles.spacer} />
       </View>
@@ -210,7 +210,7 @@ export default function ModulesScreen({ navigation }) {
           contentContainerStyle={styles.container}
           ListHeaderComponent={
             <View style={styles.listHeader}>
-              <Text style={styles.subtitle}>📚 Aklatan ng mga Lesson</Text>
+              <Text style={styles.subtitle}>📚 Aklatan ng mga Aralin</Text>
               <FlatList
                 data={subjects}
                 horizontal

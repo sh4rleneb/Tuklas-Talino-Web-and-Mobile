@@ -6,8 +6,8 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   Alert,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -15,7 +15,7 @@ import {
 import { Ionicons }
 from '@expo/vector-icons';
 
-import { loginAdmin }
+import { loginTeacher }
 from '../../api/auth';
 
 function cleanLoginIdentifierInput(value, shouldUppercase = false) {
@@ -30,7 +30,7 @@ function cleanLoginPasswordInput(value) {
   return String(value || '').replace(/\s+/g, '');
 }
 
-export default function AdminLogin({
+export default function TeacherLogin({
   navigation,
 }) {
 
@@ -62,7 +62,7 @@ export default function AdminLogin({
 
       setLoading(true);
 
-      const data = await loginAdmin(
+      const data = await loginTeacher(
         identifier,
         password
       );
@@ -70,13 +70,13 @@ export default function AdminLogin({
       if (data.user?.mustChangePassword) {
         navigation.replace(
           'ChangePassword',
-          { homeRoute: 'AdminHome' }
+          { homeRoute: 'TeacherHome' }
         );
         return;
       }
 
       navigation.replace(
-        'AdminHome'
+        'TeacherHome'
       );
 
     } catch (error) {
@@ -131,7 +131,7 @@ export default function AdminLogin({
           </TouchableOpacity>
 
           <Text style={styles.title}>
-            🛡️ Admin
+            👩‍🏫 Guro
           </Text>
 
         </View>
@@ -143,20 +143,20 @@ export default function AdminLogin({
           <View style={styles.headerIconBox}>
 
             <Text style={styles.headerEmoji}>
-              🛡️
+              👩‍🏫
             </Text>
 
           </View>
 
           <Text style={styles.heading}>
-            Maligayang Pagdating, Admin!
+            Maligayang Pagdating, Guro!
           </Text>
 
           <Text style={styles.sub}>
             Mag-login upang pamahalaan
-            ang mga account,
-            mga ulat, analytics,
-            at mga setting ng sistema.
+            ang mga aralin,
+            subaybayan ang mga mag-aaral,
+            at suriin ang kanilang pag-unlad.
           </Text>
 
           {/* USERNAME */}
@@ -174,7 +174,7 @@ export default function AdminLogin({
             <TextInput
               style={styles.input}
               value={identifier}
-              onChangeText={(value) => setIdentifier(cleanLoginIdentifierInput(value, false))}
+              onChangeText={(value) => setIdentifier(cleanLoginIdentifierInput(value, true))}
               placeholder="Ilagay ang username"
               placeholderTextColor="#94A3B8"
               spellCheck={false}
@@ -227,14 +227,14 @@ export default function AdminLogin({
                     : 'eye-off'
                 }
                 size={22}
-                color="#7C3AED"
+                color="#16A34A"
               />
 
             </TouchableOpacity>
 
           </View>
 
-          {/* LOGIN */}
+          {/* LOGIN BUTTON */}
 
           <TouchableOpacity
             style={styles.loginButton}
@@ -254,13 +254,6 @@ export default function AdminLogin({
 
           </TouchableOpacity>
 
-          {/* FOOTER */}
-
-          <Text style={styles.footer}>
-            🔒 Para lamang sa mga
-            awtorisadong administrator.
-          </Text>
-
         </View>
 
       </ScrollView>
@@ -273,7 +266,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: '#ECFDF5',
   },
 
   topBar: {
@@ -288,7 +281,7 @@ const styles = StyleSheet.create({
 
   homeButton: {
     borderWidth: 2,
-    borderColor: '#7C3AED',
+    borderColor: '#22C55E',
 
     paddingHorizontal: 18,
     paddingVertical: 8,
@@ -297,7 +290,7 @@ const styles = StyleSheet.create({
   },
 
   homeText: {
-    color: '#7C3AED',
+    color: '#16A34A',
 
     fontFamily: 'Fredoka_600SemiBold',
   },
@@ -307,7 +300,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#7C3AED',
+    color: '#16A34A',
   },
 
   card: {
@@ -332,7 +325,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 100,
 
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#DCFCE7',
 
     justifyContent: 'center',
     alignItems: 'center',
@@ -353,7 +346,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#6D28D9',
+    color: '#16A34A',
   },
 
   sub: {
@@ -376,7 +369,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_600SemiBold',
 
-    color: '#5B21B6',
+    color: '#166534',
 
     marginBottom: 12,
   },
@@ -386,7 +379,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
 
     borderWidth: 2,
-    borderColor: '#C4B5FD',
+    borderColor: '#A7F3D0',
 
     borderRadius: 24,
 
@@ -416,7 +409,7 @@ const styles = StyleSheet.create({
 
   passwordContainer: {
     borderWidth: 2,
-    borderColor: '#C4B5FD',
+    borderColor: '#A7F3D0',
 
     borderRadius: 24,
 
@@ -438,12 +431,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
 
     color: '#0F172A',
-
-    fontFamily: 'Nunito_700Bold',
   },
 
   loginButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#22C55E',
 
     paddingVertical: 20,
 
@@ -460,20 +451,6 @@ const styles = StyleSheet.create({
     fontSize: 21,
 
     fontFamily: 'Fredoka_700Bold',
-  },
-
-  footer: {
-    marginTop: 22,
-
-    textAlign: 'center',
-
-    color: '#64748B',
-
-    fontSize: 14,
-
-    lineHeight: 24,
-
-    fontFamily: 'Nunito_700Bold',
   },
 
 });

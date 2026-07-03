@@ -26,12 +26,12 @@ function gameQuestMeta(subject) {
     },
     Bokabularyo: {
       element: 'Bokabularyo',
-      title: '🔤 Word Match Game',
+      title: '🔤 Laro sa Pagtutugma ng mga Salita',
       mission: 'Match words with pictures or meanings to build your Filipino vocabulary.',
     },
     Panitikan: {
       element: 'Panitikan',
-      title: '📜 Story Adventure Game',
+      title: '📜 Pakikipagsapalaran sa Kuwento',
       mission: 'Explore the story, answer fun challenges, and unlock the next story adventure.',
     },
     'Oral Communication': {
@@ -42,7 +42,7 @@ function gameQuestMeta(subject) {
     Pagsulat: {
       element: 'Pagsulat',
       title: '✍️ Trace & Write Game',
-      mission: 'Practice writing words or short answers, then complete the challenge to earn XP.',
+      mission: 'Magsanay sa pagsulat ng mga salita o maiikling sagot, pagkatapos ay tapusin ang hamon upang kumita ng XP.',
     },
   };
 

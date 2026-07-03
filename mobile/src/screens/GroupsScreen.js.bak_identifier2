@@ -348,7 +348,7 @@ export default function GroupsScreen({ navigation }) {
         </Text>
 
         <Text style={styles.waitingTitle}>
-          Naghihintay sa Teacher
+          Naghihintay sa Guro
         </Text>
 
         <Text style={styles.waitingSubtitle}>

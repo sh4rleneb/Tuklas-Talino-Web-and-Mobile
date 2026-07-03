@@ -85,7 +85,7 @@ export default function BadgesScreen({ navigation }) {
 
       <View style={styles.header}>
         <View style={styles.heroCard}>
-          <Text style={styles.title}>🏅 Badges</Text>
+          <Text style={styles.title}>🏅 Mga Badge</Text>
           <Text style={styles.subtitle}>
             Your learning milestones and progress.
           </Text>

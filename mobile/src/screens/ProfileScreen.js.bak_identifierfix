@@ -202,7 +202,7 @@ async function handleLogout() {
 
       <View style={styles.studentBadge}>
         <Text style={styles.studentBadgeText}>
-          🌟 Masipag na Baitang {dashboard.student.gradeLevel} Student
+          🌟 Masipag na Baitang {dashboard.student.gradeLevel} Mag-aaral
         </Text>
       </View>
 
@@ -316,7 +316,7 @@ async function handleLogout() {
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Section
+            Seksyon
           </Text>
         </View>
 

@@ -438,7 +438,7 @@ export default function MissionGameScreen({ navigation, route }) {
             activeOpacity={0.85}
           >
             <Text style={styles.missionNoticeButtonText}>
-              Got it!
+              Nauunawaan Ko!
             </Text>
           </TouchableOpacity>
         </View>
@@ -459,7 +459,7 @@ export default function MissionGameScreen({ navigation, route }) {
           onReplay={() => {
             if (missionAttemptNo >= MAX_MISSION_ATTEMPTS) {
               showMissionNotice(
-                `You already used all ${MAX_MISSION_ATTEMPTS} tries for this mission. Great effort! Try another mission or review what you learned.`,
+                `Naubos mo na ang lahat ng ${MAX_MISSION_ATTEMPTS} pagsubok para sa misyong ito. Magaling! Subukan ang ibang misyon o balikan ang iyong mga natutuhan.`,
                 '🎉'
               );
               return;
@@ -589,7 +589,7 @@ export default function MissionGameScreen({ navigation, route }) {
                     activeOpacity={0.85}
                   >
                     <Text style={styles.secondarySoundButtonText}>
-                      ▶ Play
+                      ▶ Pakinggan
                     </Text>
                   </TouchableOpacity>
 
@@ -600,7 +600,7 @@ export default function MissionGameScreen({ navigation, route }) {
                     activeOpacity={0.85}
                   >
                     <Text style={styles.secondarySoundButtonText}>
-                      ↺ Record Again
+                      ↺ Mag-record Muli
                     </Text>
                   </TouchableOpacity>
                 </View>
