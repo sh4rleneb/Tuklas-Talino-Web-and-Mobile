@@ -189,7 +189,7 @@ const filteredLogs = logs.filter(log => {
       .filter(option => !assignGradeFilter || Number(option.gradeLevel) === Number(assignGradeFilter))
       .map(option => option.section)
       .filter(Boolean)
-  )];
+  )].sort();
 
   // Sections filtered by the currently selected grade in the Add Student form.
   // Sources: teacher assignments (class structure) + existing students (classOptions).
@@ -599,7 +599,7 @@ function teacherNameForAssignment(assignment) {
                   <div>
                     <div className="lms-section-label">Teacher Assignment</div>
                     <h2>Assign Teacher to Class</h2>
-                    <p>Choose which grade and section each teacher handles. This controls their monitoring, reports, quiz attempts, and student lists.</p>
+                    <p>Choose which grade each teacher handles, then pick a matching section. This controls their monitoring, reports, quiz attempts, and student lists.</p>
                   </div>
                 </div>
 
@@ -612,7 +612,7 @@ function teacherNameForAssignment(assignment) {
                       ))}
                     </select>
 
-                    <select className="input-field" id="a-assign-grade" value={assignGradeFilter} onChange={(event) => setAssignGradeFilter(event.target.value)}>
+                    <select className="input-field" id="a-assign-grade" value={assignGradeFilter} onChange={e => { setAssignGradeFilter(e.target.value); const section = document.getElementById('a-assign-section'); if (section) section.value = ''; }}>
                       <option value="">Grade</option>
                       {[1, 2, 3, 4, 5, 6].map(grade => (
                         <option key={grade} value={grade}>Grade {grade}</option>

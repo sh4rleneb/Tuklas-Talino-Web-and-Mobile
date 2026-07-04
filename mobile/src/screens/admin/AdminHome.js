@@ -178,6 +178,7 @@ const [auditSearch, setAuditSearch] = useState('');
   const assignmentSectionOptions = [
     ...new Set(
       classOptions
+        .filter((item) => !assignmentForm.gradeLevel || Number(item.gradeLevel || item.grade) === Number(assignmentForm.gradeLevel))
         .map((item) => normalizeSpaces(item.section || item.sectionName || item.classSection || ''))
         .filter(Boolean)
     ),
@@ -649,7 +650,7 @@ async function executeVerifiedAction() {
                   key={`assignment-grade-${grade}`}
                   tone={Number(assignmentForm.gradeLevel) === Number(grade) ? 'green' : 'slate'}
                   disabled={Boolean(busy)}
-                  onPress={() => setAssignmentForm((current) => ({ ...current, gradeLevel: grade }))}
+                  onPress={() => setAssignmentForm((current) => ({ ...current, gradeLevel: grade, section: '' }))}
                 >
                   G{grade}
                 </Button>
