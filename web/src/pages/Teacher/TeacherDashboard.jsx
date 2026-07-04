@@ -2160,6 +2160,7 @@ export default function TeacherDashboard({
 
 function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedClasses = [] }) {
   const [builderTab, setBuilderTab] = useState('source');
+  const [editingLesson, setEditingLesson] = useState(null);
   const [lessonDraft, setLessonDraft] = useState({
     gradeLevel: 1,
     subject: 'Reading',
@@ -2207,6 +2208,72 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       ...prev,
       [field]: value
     }));
+  }
+
+  function normalizeLessonForEditing(lesson = {}) {
+    const lessonActivities = Array.isArray(lesson.activities) ? lesson.activities : [];
+    const materialActivity = lessonActivities.find(activity => activity.type === 'material') || null;
+
+    return {
+      gradeLevel: Number(lesson.gradeLevel || 1),
+      subject: lesson.subject || 'Reading',
+      title: lesson.title || '',
+      xpReward: Number(lesson.xpReward || 25),
+      duration: lesson.duration || '10 minuto',
+      instructions: lesson.instructions || materialActivity?.instructions || '',
+      passage: lesson.passage || '',
+      layunin: lesson.layunin || '',
+      alamin: lesson.alamin || '',
+      aralin: lesson.aralin || lesson.lesson || lesson.passage || ''
+    };
+  }
+
+  function editExistingLesson(lesson) {
+    const materialActivity = Array.isArray(lesson.activities)
+      ? lesson.activities.find(activity => activity.type === 'material')
+      : null;
+
+    setEditingLesson(lesson);
+    setLessonDraft(normalizeLessonForEditing(lesson));
+    setActivities(Array.isArray(lesson.activities) ? lesson.activities.filter(activity => activity.type !== 'material') : []);
+
+    if (materialActivity) {
+      setLessonPlanFile({
+        name: materialActivity.fileName || materialActivity.name || 'Lesson Material',
+        size: materialActivity.size || 0,
+        type: materialActivity.fileType || materialActivity.mimeType || '',
+        url: materialActivity.url || materialActivity.fileUrl || materialActivity.materialUrl || ''
+      });
+      setLessonPlanFileStatus('Existing lesson material loaded.');
+    } else {
+      setLessonPlanFile(null);
+      setLessonPlanFileStatus('');
+    }
+
+    setBuilderTab('source');
+    setAiDraftNotice(`Editing ${lesson.status === 'published' ? 'published lesson' : 'draft'}: ${lesson.title || 'Untitled Lesson'}`);
+  }
+
+  function resetLessonBuilder() {
+    setEditingLesson(null);
+    setLessonDraft({
+      gradeLevel: assignedGrades[0] || 1,
+      subject: 'Reading',
+      title: '',
+      xpReward: 25,
+      duration: '10 minuto',
+      instructions: '',
+      passage: '',
+      layunin: '',
+      alamin: '',
+      aralin: ''
+    });
+    setActivities([]);
+    setLessonPlanFile(null);
+    setLessonPlanFilePreview('');
+    setLessonPlanFileStatus('');
+    setAiDraftNotice('');
+    setBuilderTab('source');
   }
 
   function addActivity(type) {
@@ -2900,8 +2967,21 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       activities: preparedActivities
     };
 
-    await createLesson(payload);
+    if (editingLesson?.id) {
+      await api(`/lessons/${editingLesson.id}`, {
+        method: 'PATCH',
+        body: {
+          ...payload,
+          status: editingLesson.status || 'draft'
+        }
+      });
+      setAiDraftNotice(editingLesson.status === 'published' ? 'Published lesson updated successfully.' : 'Draft lesson updated successfully.');
+    } else {
+      await createLesson(payload);
+      setAiDraftNotice('Lesson published successfully.');
+    }
 
+    setEditingLesson(null);
     setLessonDraft({
       gradeLevel: 1,
       subject: 'Reading',
@@ -2912,7 +2992,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       passage: '',
       layunin: '',
       alamin: '',
-      lesson: ''
+      aralin: ''
     });
 
     setActivities([]);
@@ -3640,7 +3720,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
               <div>
                 <h2>My Created Lessons</h2>
-                <p>Your most recent published lessons.</p>
+                <p>Edit draft or published lessons from your list.</p>
               </div>
               <button className="lms-view-lessons-btn" type="button" onClick={toggleShowAllLessons}>
                 {showAllLessons ? 'Show Less' : 'View All Lessons'}
@@ -3680,6 +3760,13 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                       </td>
                       <td>{fmtDate(lesson.updatedAt || lesson.createdAt)}</td>
                       <td>
+                        <button
+                          className="lms-action-secondary"
+                          type="button"
+                          onClick={() => editExistingLesson(lesson)}
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           className="lms-outline-action"
@@ -3795,8 +3882,13 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
               ← Back to Activities
             </button>
             <button className="lms-action-primary" type="button" onClick={submitLessonBuilder}>
-              🚀 Create Lesson
+              {editingLesson?.id ? '💾 Save Changes' : '🚀 Create Lesson'}
             </button>
+            {editingLesson?.id && (
+              <button className="lms-action-secondary" type="button" onClick={resetLessonBuilder}>
+                Cancel Edit
+              </button>
+            )}
           </>
         )}
 

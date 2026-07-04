@@ -290,6 +290,7 @@ export default function TeacherHome({ navigation }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [builderStep, setBuilderStep] = useState(0);
+  const [editingLesson, setEditingLesson] = useState(null);
   const [draft, setDraft] = useState(emptyLessonDraft);
   const [newActivity, setNewActivity] = useState({
     type: 'infographic',
@@ -469,6 +470,49 @@ async function handleLogout() {
     });
   }
 
+  function normalizeLessonForEditing(lesson = {}) {
+    const activities = Array.isArray(lesson.activities) ? lesson.activities : [];
+    const materialActivity = activities.find((activity) => activity.type === 'material') || null;
+    const editableActivities = activities.filter((activity) => activity.type !== 'material');
+
+    return {
+      gradeLevel: String(lesson.gradeLevel || '1'),
+      subject: lesson.subject || 'Reading',
+      title: lesson.title || '',
+      duration: lesson.duration || '10 minuto',
+      xpReward: String(lesson.xpReward || 20),
+      passage: lesson.passage || '',
+      instructions: lesson.instructions || materialActivity?.instructions || '',
+      speechTarget: lesson.speechTarget || '',
+      material: materialActivity
+        ? {
+            fileName: materialActivity.fileName || materialActivity.name || 'Lesson Material',
+            fileType: materialActivity.fileType || materialActivity.mimeType || '',
+            size: materialActivity.size || 0,
+            url: materialActivity.url || materialActivity.fileUrl || materialActivity.materialUrl || '',
+            ...materialActivity,
+          }
+        : null,
+      activities: editableActivities,
+    };
+  }
+
+  function editLessonDraft(lesson) {
+    setEditingLesson(lesson);
+    setDraft(normalizeLessonForEditing(lesson));
+    setBuilderStep(0);
+    setWorkspaceNotice({
+      type: 'success',
+      text: `Editing ${lesson.status === 'published' ? 'published lesson' : 'draft'}: ${lesson.title || 'Untitled Lesson'}`,
+    });
+  }
+
+  function resetLessonBuilder() {
+    setEditingLesson(null);
+    setDraft(emptyLessonDraft());
+    setBuilderStep(0);
+  }
+
   async function saveLesson(status) {
     const derivedAssignedGrades = [
       ...new Set([
@@ -524,8 +568,17 @@ async function handleLogout() {
       activities,
     };
 
-    const saved = await run('lesson-save', () => createLesson(payload), status === 'draft' ? 'Draft saved.' : 'Lesson published.');
+    const targetStatus = status || editingLesson?.status || 'draft';
+    const nextPayload = { ...payload, status: targetStatus };
+    const saved = await run(
+      'lesson-save',
+      () => editingLesson?.id ? updateLesson(editingLesson.id, nextPayload) : createLesson(nextPayload),
+      editingLesson?.id
+        ? (targetStatus === 'published' ? 'Published lesson updated.' : 'Draft lesson updated.')
+        : (targetStatus === 'draft' ? 'Draft saved.' : 'Lesson published.')
+    );
     if (saved) {
+      setEditingLesson(null);
       setDraft(emptyLessonDraft());
       setBuilderStep(4);
     }
@@ -677,14 +730,15 @@ async function handleLogout() {
 
         {builderStep === 3 && (
           <SectionCard>
-            <Text style={styles.cardTitle}>Preview</Text>
+            <Text style={styles.cardTitle}>{editingLesson?.id ? 'Edit Lesson Preview' : 'Preview'}</Text>
             <Text style={styles.previewTitle}>{draft.title || 'Untitled Lesson'}</Text>
             <Text style={styles.muted}>Grade {draft.gradeLevel} • {draft.subject} • +{draft.xpReward || 0} XP</Text>
             <Text style={styles.body}>{draft.passage || 'No reading material has been added yet.'}</Text>
             <Text style={styles.rowTitle}>{draft.activities.length} learning activit{draft.activities.length === 1 ? 'y' : 'ies'}</Text>
             <View style={styles.buttonRow}>
-              <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson('draft')}>Save Draft</SmallButton>
-              <SmallButton disabled={Boolean(busy)} onPress={() => saveLesson('published')}>Publish</SmallButton>
+              {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson(editingLesson.status || 'draft')}>Save Changes</SmallButton> : <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson('draft')}>Save Draft</SmallButton>}
+              {editingLesson?.status !== 'published' ? <SmallButton disabled={Boolean(busy)} onPress={() => saveLesson('published')}>Publish</SmallButton> : null}
+              {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={resetLessonBuilder}>Cancel Edit</SmallButton> : null}
             </View>
           </SectionCard>
         )}
