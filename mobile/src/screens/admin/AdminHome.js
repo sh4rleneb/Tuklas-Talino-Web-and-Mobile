@@ -158,6 +158,31 @@ const [auditSearch, setAuditSearch] = useState('');
   const studentFormValid = !Object.values(studentValidation).some(Boolean);
   const teacherFormValid = !Object.values(teacherValidation).some(Boolean);
 
+  const classOptions = [
+    ...(enrollments.classOptions || []),
+    ...(enrollments.teacherAssignments || []),
+    ...students,
+  ];
+
+  const gradeOptions = ['1', '2', '3', '4', '5', '6'];
+
+  const studentSectionOptions = [
+    ...new Set(
+      classOptions
+        .filter((item) => !studentForm.gradeLevel || Number(item.gradeLevel || item.grade) === Number(studentForm.gradeLevel))
+        .map((item) => normalizeSpaces(item.section || item.sectionName || item.classSection || ''))
+        .filter(Boolean)
+    ),
+  ].sort((first, second) => first.localeCompare(second));
+
+  const assignmentSectionOptions = [
+    ...new Set(
+      classOptions
+        .map((item) => normalizeSpaces(item.section || item.sectionName || item.classSection || ''))
+        .filter(Boolean)
+    ),
+  ].sort((first, second) => first.localeCompare(second));
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -417,17 +442,19 @@ async function executeVerifiedAction() {
                 Enter the student's first and last name.
               </Text>
             )}
-            <Field
-              label="Grade"
-              value={studentForm.gradeLevel}
-              keyboardType="numeric"
-              onChangeText={(gradeLevel) =>
-                setStudentForm((current) => ({
-                  ...current,
-                  gradeLevel: String(gradeLevel || '').replace(/[^0-9]/g, '').slice(0, 1),
-                }))
-              }
-            />
+              <Text style={styles.fieldLabel}>Grade</Text>
+              <View style={styles.choiceRow}>
+                {gradeOptions.map((grade) => (
+                  <Button
+                    key={`student-grade-${grade}`}
+                    tone={Number(studentForm.gradeLevel) === Number(grade) ? 'green' : 'slate'}
+                    disabled={Boolean(busy)}
+                    onPress={() => setStudentForm((current) => ({ ...current, gradeLevel: grade }))}
+                  >
+                    G{grade}
+                  </Button>
+                ))}
+              </View>
             {studentValidation.gradeLevel && (
               <Text style={styles.errorText}>
                 Baitang must be from 1 to 6.
@@ -443,6 +470,23 @@ async function executeVerifiedAction() {
                 }))
               }
             />
+              {studentSectionOptions.length ? (
+                <>
+                  <Text style={styles.helperText}>Section suggestions for selected grade:</Text>
+                  <View style={styles.choiceRow}>
+                    {studentSectionOptions.map((sectionOption) => (
+                      <Button
+                        key={`student-section-${sectionOption}`}
+                        tone={normalizeSpaces(studentForm.section) === sectionOption ? 'green' : 'slate'}
+                        disabled={Boolean(busy)}
+                        onPress={() => setStudentForm((current) => ({ ...current, section: sectionOption }))}
+                      >
+                        {sectionOption}
+                      </Button>
+                    ))}
+                  </View>
+                </>
+              ) : null}
             {studentValidation.section && (
               <Text style={styles.errorText}>
                 Section is required.
@@ -466,6 +510,17 @@ async function executeVerifiedAction() {
               );
 
               if (saved) {
+                  setStudents((current) => [
+                    {
+                      ...(saved.student || saved),
+                      ...payload,
+                      id: saved.student?.id || saved.id || `${payload.name}-${payload.gradeLevel}-${payload.section}`,
+                      name: saved.student?.name || payload.name,
+                      studentCode: saved.student?.studentCode || saved.username,
+                    },
+                    ...current.filter((student) => String(student.id || student.studentCode) !== String(saved.student?.id || saved.id || saved.username)),
+                  ]);
+
                 setRecentCredentials(current => [
                   {
                     type: 'Student',
@@ -546,6 +601,17 @@ async function executeVerifiedAction() {
               const saved = await run('create-teacher', () => createTeacherAccount(teacherPayload), 'Teacher account created.');
 
               if (saved) {
+                  setTeachers((current) => [
+                    {
+                      ...(saved.teacher || saved),
+                      ...teacherPayload,
+                      id: saved.teacher?.id || saved.id || saved.username,
+                      name: saved.teacher?.name || teacherPayload.name,
+                      employeeCode: saved.teacher?.employeeCode || saved.username,
+                    },
+                    ...current.filter((teacher) => String(teacher.id || teacher.employeeCode) !== String(saved.teacher?.id || saved.id || saved.username)),
+                  ]);
+
                 setRecentCredentials(current => [
                   {
                     type: 'Teacher',
@@ -576,22 +642,41 @@ async function executeVerifiedAction() {
           <Text style={styles.cardTitle}>Assign Teacher</Text>
           <Text style={styles.fieldLabel}>Teacher</Text>
           <View style={styles.choiceRow}>{teachers.map((teacher) => <Button key={teacher.id} tone={Number(assignmentForm.teacherId) === Number(teacher.id) ? 'green' : 'slate'} onPress={() => setAssignmentForm((current) => ({ ...current, teacherId: teacher.id }))}>{teacher.name}</Button>)}</View>
-          <Field
-            label="Grade"
-            value={assignmentForm.gradeLevel}
-            keyboardType="numeric"
-            onChangeText={(gradeLevel) =>
-              setAssignmentForm((current) => ({
-                ...current,
-                gradeLevel: String(gradeLevel || '').replace(/[^0-9]/g, '').slice(0, 1),
-              }))
-            }
-          />
+            <Text style={styles.fieldLabel}>Grade</Text>
+            <View style={styles.choiceRow}>
+              {gradeOptions.map((grade) => (
+                <Button
+                  key={`assignment-grade-${grade}`}
+                  tone={Number(assignmentForm.gradeLevel) === Number(grade) ? 'green' : 'slate'}
+                  disabled={Boolean(busy)}
+                  onPress={() => setAssignmentForm((current) => ({ ...current, gradeLevel: grade }))}
+                >
+                  G{grade}
+                </Button>
+              ))}
+            </View>
           <Field
             label="Section"
             value={assignmentForm.section}
             onChangeText={(section) => setAssignmentForm((current) => ({ ...current, section: normalizeSpaces(section) }))}
           />
+            {assignmentSectionOptions.length ? (
+              <>
+                <Text style={styles.helperText}>Section suggestions for selected grade:</Text>
+                <View style={styles.choiceRow}>
+                  {assignmentSectionOptions.map((sectionOption) => (
+                    <Button
+                      key={`assignment-section-${sectionOption}`}
+                      tone={normalizeSpaces(assignmentForm.section) === sectionOption ? 'green' : 'slate'}
+                      disabled={Boolean(busy)}
+                      onPress={() => setAssignmentForm((current) => ({ ...current, section: sectionOption }))}
+                    >
+                      {sectionOption}
+                    </Button>
+                  ))}
+                </View>
+              </>
+            ) : null}
           <Button
             disabled={
               !assignmentForm.teacherId ||

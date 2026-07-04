@@ -28,6 +28,7 @@ import {
   createGroup,
   createLesson,
   createStudentAccount,
+  getActiveStudents,
   getPendingGroupChecks,
   getReportSummary,
   getStudentReport,
@@ -98,6 +99,46 @@ function getXpRewardValue(value) {
 
   return Math.min(500, Math.max(1, Math.round(parsed)));
 }
+
+function normalizeStudentRows(payload = []) {
+  if (Array.isArray(payload)) return payload;
+
+  if (Array.isArray(payload?.students)) return payload.students;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.data)) return payload.data;
+
+  return [];
+}
+
+function normalizeSectionName(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function getStudentStableId(student = {}) {
+  return student.id || student.studentId || student.studentCode || `${student.name || 'Student'}-${student.gradeLevel || student.grade || ''}-${student.section || ''}`;
+}
+
+function mergeStudentRows(rows = []) {
+  const studentMap = new Map();
+
+  rows.forEach((student) => {
+    if (!student) return;
+    studentMap.set(String(getStudentStableId(student)), student);
+  });
+
+  return Array.from(studentMap.values()).sort((first, second) => String(first.name || '').localeCompare(String(second.name || '')));
+}
+
+function getStudentGradeValue(student = {}) {
+  const grade = Number(student.gradeLevel || student.grade || student.Student?.gradeLevel || student.student?.gradeLevel || 0);
+
+  return [1, 2, 3, 4, 5, 6].includes(grade) ? grade : null;
+}
+
+function getStudentSectionValue(student = {}) {
+  return normalizeSectionName(student.section || student.sectionName || student.classSection || student.Student?.section || student.student?.section);
+}
+
 
 function emptyLessonDraft() {
   return {
@@ -413,6 +454,7 @@ export default function TeacherHome({ navigation }) {
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [dashboard, setDashboard] = useState(null);
   const [monitoring, setMonitoring] = useState({ rows: [] });
+  const [allStudents, setAllStudents] = useState([]);
   const [quizPerformance, setQuizPerformance] = useState({ summary: {}, rows: [] });
   const [workspaceNotice, setWorkspaceNotice] = useState(null);
   const [pendingChecks, setPendingChecks] = useState({ summary: {}, rows: [] });
@@ -453,7 +495,7 @@ export default function TeacherHome({ navigation }) {
     setLoading(true);
     setError('');
     try {
-      const [dash, monitor, quiz, pending, groupData, lessonData, summary, reviews, students, logs] = await Promise.all([
+      const [dash, monitor, quiz, pending, groupData, lessonData, summary, reviews, activeStudentsData, students] = await Promise.all([
         getTeacherDashboard(),
         getTeacherMonitoringStats(),
         getTeacherQuizPerformance(),
@@ -462,10 +504,12 @@ export default function TeacherHome({ navigation }) {
         getTeacherLessons(),
         getReportSummary(),
         getTeacherReviews(),
+        getActiveStudents(),
         getStudentReport(),
       ]);
       setDashboard(dash);
       setMonitoring(monitor);
+      setAllStudents(normalizeStudentRows(activeStudentsData));
       setQuizPerformance(quiz);
       setPendingChecks(pending);
       setGroups((groupData.groups || []).filter((group) => group.status !== 'archived'));
@@ -496,69 +540,90 @@ export default function TeacherHome({ navigation }) {
   }), [lessons]);
   const quizRows = (quizPerformance.rows || []).filter((row) => quizFilter === 'All' || row.status === quizFilter);
 
-  const lessonGradeOptions = GRADE_SELECT_OPTIONS;
+  const assignedClassRules = useMemo(() => {
+    const rules = [];
+
+    function addRule(item = {}) {
+      const gradeLevel = Number(item.gradeLevel || item.grade || item.yearLevel || 0);
+      const section = normalizeSectionName(item.section || item.sectionName || item.classSection || item.name);
+
+      if ([1, 2, 3, 4, 5, 6].includes(gradeLevel) || section) {
+        rules.push({
+          gradeLevel: [1, 2, 3, 4, 5, 6].includes(gradeLevel) ? gradeLevel : null,
+          section,
+        });
+      }
+    }
+
+    (dashboard?.assignedClasses || []).forEach(addRule);
+    (monitoring?.assignedClasses || []).forEach(addRule);
+    (dashboard?.classes || []).forEach(addRule);
+
+    return rules;
+  }, [dashboard, monitoring?.assignedClasses]);
+
+  const assignedGradeOptions = useMemo(() => {
+    const assignedGrades = Array.from(new Set(assignedClassRules.map((rule) => rule.gradeLevel).filter(Boolean)));
+
+    return GRADE_SELECT_OPTIONS.filter((option) => assignedGrades.includes(Number(option.value)));
+  }, [assignedClassRules]);
+
+  const usableGradeOptions = assignedGradeOptions.length ? assignedGradeOptions : GRADE_SELECT_OPTIONS;
+  const lessonGradeOptions = usableGradeOptions;
+
+  const currentStudents = useMemo(() => mergeStudentRows([
+    ...normalizeStudentRows(allStudents),
+    ...normalizeStudentRows(studentReport),
+    ...normalizeStudentRows(monitoring.rows),
+  ]), [allStudents, monitoring.rows, studentReport]);
+
+  const canUseGradeSection = useCallback((gradeLevel, section) => {
+    if (!assignedClassRules.length) return true;
+
+    const grade = Number(gradeLevel);
+    const normalizedSection = normalizeSectionName(section);
+
+    return assignedClassRules.some((rule) => {
+      if (rule.gradeLevel && grade !== rule.gradeLevel) return false;
+      if (rule.section && normalizedSection !== rule.section) return false;
+
+      return true;
+    });
+  }, [assignedClassRules]);
+
+  const usableStudents = useMemo(() => currentStudents.filter((student) => (
+    canUseGradeSection(getStudentGradeValue(student), getStudentSectionValue(student))
+  )), [canUseGradeSection, currentStudents]);
 
   const studentSectionOptions = useMemo(() => {
     const sections = new Set();
 
     function addSection(value) {
-      const section = String(value || '').replace(/\s+/g, ' ').trim();
+      const section = normalizeSectionName(value);
 
       if (section) {
         sections.add(section);
       }
     }
 
-    function collectSectionFromStudent(student = {}) {
-      addSection(student.section);
-      addSection(student.sectionName);
-      addSection(student.classSection);
-      addSection(student.Student?.section);
-      addSection(student.Student?.sectionName);
-      addSection(student.student?.section);
-      addSection(student.student?.sectionName);
+    if (assignedClassRules.length) {
+      assignedClassRules.forEach((rule) => addSection(rule.section));
+    } else {
+      currentStudents.forEach((student) => addSection(getStudentSectionValue(student)));
+
+      groups.forEach((group) => {
+        addSection(group.section);
+        addSection(group.sectionName);
+        addSection(group.classSection);
+        addSection(group.description);
+      });
     }
-
-    (dashboard?.assignedClasses || []).forEach((item) => {
-      addSection(item.section);
-      addSection(item.sectionName);
-      addSection(item.classSection);
-      addSection(item.name);
-      addSection(item.description);
-    });
-
-    (dashboard?.classes || []).forEach((item) => {
-      addSection(item.section);
-      addSection(item.sectionName);
-      addSection(item.classSection);
-      addSection(item.name);
-      addSection(item.description);
-    });
-
-    (dashboard?.sections || []).forEach((item) => {
-      if (typeof item === 'string') {
-        addSection(item);
-      } else {
-        addSection(item.section);
-        addSection(item.sectionName);
-        addSection(item.name);
-      }
-    });
-
-    (monitoring.rows || []).forEach(collectSectionFromStudent);
-    (studentReport || []).forEach(collectSectionFromStudent);
-
-    groups.forEach((group) => {
-      addSection(group.section);
-      addSection(group.sectionName);
-      addSection(group.classSection);
-      addSection(group.description);
-    });
 
     return Array.from(sections)
       .sort((first, second) => first.localeCompare(second))
       .map((section) => ({ value: section, label: section }));
-  }, [dashboard, groups, monitoring.rows, studentReport]);
+  }, [assignedClassRules, currentStudents, groups]);
+
   const stats = dashboard?.stats || {};
 
   async function run(action, work, success) {
@@ -1259,7 +1324,7 @@ async function handleLogout() {
           <SelectMenu
             label="Group Grade Level"
             value={groupForm.gradeLevel}
-            options={GRADE_SELECT_OPTIONS}
+            options={usableGradeOptions}
             disabled={Boolean(busy)}
             onSelect={(gradeLevel) => setGroupForm((current) => ({ ...current, gradeLevel }))}
           />
@@ -1462,7 +1527,7 @@ async function handleLogout() {
                     </Text>
 
                     <View style={styles.choiceRow}>
-                      {(monitoring.rows || [])
+                      {usableStudents
                         .filter((student) => {
                           const studentGrade = getStudentGradeLevelValue(student);
                           return !groupGrade || studentGrade === groupGrade;
@@ -1487,7 +1552,7 @@ async function handleLogout() {
                         ))}
                     </View>
 
-                    {!(monitoring.rows || []).some((student) => {
+                    {!usableStudents.some((student) => {
                       const studentGrade = getStudentGradeLevelValue(student);
                       return !groupGrade || studentGrade === groupGrade;
                     }) ? (
@@ -1516,7 +1581,7 @@ async function handleLogout() {
           {[
             ['✅', activityCoverage.filter((lesson) => lesson.quizCount).length, 'Quiz Ready Lessons'],
             ['❓', activityCoverage.reduce((total, lesson) => total + lesson.quizCount, 0), 'Total Questions'],
-            ['🎓', monitoring.rows?.length || 0, 'Students to Monitor'],
+            ['🎓', currentStudents.length || 0, 'Current Students'],
             ['🎯', '75%', 'Passing Target'],
           ].map(([icon, value, label]) => <SectionCard key={label} style={styles.statCard}><Text style={styles.statIcon}>{icon}</Text><Text style={styles.statValue}>{value}</Text><Text style={styles.muted}>{label}</Text></SectionCard>)}
         </View>
@@ -2150,6 +2215,11 @@ async function handleLogout() {
       return;
     }
 
+    if (!canUseGradeSection(gradeLevel, section)) {
+      Alert.alert('Student Account', 'You can only create students for your assigned grade level or section.');
+      return;
+    }
+
     setBusy('student-create');
     try {
       const data = await createStudentAccount({ name, gradeLevel, section });
@@ -2177,6 +2247,7 @@ async function handleLogout() {
       }));
 
       setStudentReport((current) => mergeCreatedStudentRows(current || []));
+      setAllStudents((current) => mergeCreatedStudentRows(current || []));
       Alert.alert('Student Account', `Created account for ${createdStudent.name || name}. Temporary password: ${data?.temporaryPassword || 'Not returned'}`);
       setStudentForm({ name: '', gradeLevel: String(gradeLevel), section });
       Alert.alert(
@@ -2206,7 +2277,7 @@ async function handleLogout() {
             <SelectMenu
               label="Student Grade"
               value={studentForm.gradeLevel}
-              options={GRADE_SELECT_OPTIONS}
+              options={usableGradeOptions}
               disabled={busy === 'student-create'}
               onSelect={(gradeLevel) => setStudentForm((current) => ({ ...current, gradeLevel }))}
             />
@@ -2247,7 +2318,7 @@ async function handleLogout() {
 
         <SectionCard>
           <Text style={styles.cardTitle}>Student Monitoring</Text>
-        {(monitoring.rows || []).map((student) => (
+        {currentStudents.map((student) => (
           <View key={student.id} style={styles.studentCard}>
             <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
             <View style={styles.flex}>
@@ -2258,7 +2329,7 @@ async function handleLogout() {
             <Text style={styles.statusText}>{student.percent || 0}%</Text>
           </View>
         ))}
-        {!monitoring.rows?.length && <Text style={styles.muted}>No assigned learners yet.</Text>}
+        {!currentStudents.length && <Text style={styles.muted}>No current students yet.</Text>}
         </SectionCard>
       </>
     );
