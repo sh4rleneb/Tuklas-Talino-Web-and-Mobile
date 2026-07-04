@@ -3248,7 +3248,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
           <section className="teacher-design-card soft">
             <div className="teacher-design-heading">
-              
+
               <div>
                 <h2>Lesson Information</h2>
                 <p>Provide the basic details for your lesson.</p>
@@ -3318,7 +3318,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
           <section className="teacher-design-card soft">
             <div className="teacher-design-heading">
-              
+
               <div>
                 <h2>Learning Content</h2>
               </div>
@@ -3469,7 +3469,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
           <section className="teacher-design-card soft">
             <div className="teacher-design-heading">
-              
+
               <div>
                 <h2>Activity Builder</h2>
                 <p>Add activity blocks to build your lesson structure.</p>
@@ -3521,7 +3521,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                     {builderTab === 'lessons' && (
 <section className="teacher-design-card soft builder-panel builder-panel-lessons" id="teacher-recent-lessons">
             <div className="teacher-design-heading">
-              
+
               <div>
                 <h2>My Created Lessons</h2>
                 <p>Your most recent published lessons.</p>
