@@ -598,7 +598,7 @@ async function handleLogout() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.builderTabs}>
           {BUILDER_STEPS.map((label, index) => (
             <TouchableOpacity key={label} style={[styles.stepChip, builderStep === index && styles.stepChipActive]} onPress={() => setBuilderStep(index)}>
-              <Text style={builderStep === index ? styles.stepTextActive : styles.stepText}>{index + 1}. {label}</Text>
+              <Text style={builderStep === index ? styles.stepTextActive : styles.stepText}>{label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
