@@ -59,11 +59,11 @@ const NAV_ITEMS = [
 const BUILDER_STEPS = ['📎 Lesson Material', '📝 Lesson Details', '🧩 Activities', '👁 Preview', '📚 My Lessons'];
 const QUIZ_FILTERS = ['All', 'Needs Support', 'Developing', 'Proficient', 'Advanced'];
 const SUBJECT_OPTIONS = [
-  { name: 'Reading', icon: '📖' },
-  { name: 'Vocabulary', icon: '🧠' },
-  { name: 'Literature', icon: '📚' },
-  { name: 'Oral Communication', icon: '🎙️' },
-  { name: 'Writing', icon: '✍️' },
+  { name: 'Pagbasa', icon: '📖' },
+  { name: 'Bokabularyo', icon: '🔤' },
+  { name: 'Panitikan', icon: '📜' },
+  { name: 'Oral Comm', icon: '🎙️' },
+  { name: 'Pagsulat', icon: '✍️' },
 ];
 const SUBJECTS = SUBJECT_OPTIONS.map((subject) => subject.name);
 const SUBJECT_SELECT_OPTIONS = SUBJECT_OPTIONS.map((subject) => ({
