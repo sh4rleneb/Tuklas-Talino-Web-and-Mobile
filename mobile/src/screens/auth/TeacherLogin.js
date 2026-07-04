@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   View,
@@ -10,6 +10,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 import { Ionicons }
@@ -17,6 +18,9 @@ from '@expo/vector-icons';
 
 import { loginTeacher }
 from '../../api/auth';
+
+import { api }
+from '../../api/client';
 
 function cleanTeacherLoginIdentifierInput(value, shouldUppercase = false) {
   const cleaned = String(value || '')
@@ -46,13 +50,81 @@ export default function GuroLogin({
   const [showPassword, setShowPassword] =
     useState(false);
 
+  const [accountValid, setAccountValid] =
+    useState(false);
+
+  const [accountChecking, setAccountChecking] =
+    useState(false);
+
+  const [accountValidationMessage, setAccountValidationMessage] =
+    useState('');
+
+
+  useEffect(() => {
+    const value = identifier.trim();
+
+    if (!value) {
+      setAccountValid(false);
+      setAccountChecking(false);
+      setAccountValidationMessage('');
+      return undefined;
+    }
+
+    if (value.length < 3) {
+      setAccountValid(false);
+      setAccountChecking(false);
+      setAccountValidationMessage('Ilagay ang username o ID.');
+      return undefined;
+    }
+
+    let active = true;
+    setAccountValid(false);
+    setAccountChecking(true);
+    setAccountValidationMessage('Sinusuri ang guro account...');
+
+    const timer = setTimeout(async () => {
+      try {
+        const data = await api(`/auth/check-teacher/${encodeURIComponent(value)}`);
+
+        if (!active) return;
+
+        setAccountValid(Boolean(data.exists));
+        setAccountValidationMessage(
+          data.exists
+            ? `Natagpuan: ${data.name || 'Guro account'}`
+            : 'Hindi nakita o hindi aktibo ang guro account.'
+        );
+      } catch (error) {
+        if (!active) return;
+
+        setAccountValid(false);
+        setAccountValidationMessage(
+          error.message || 'Hindi masuri ang account.'
+        );
+      } finally {
+        if (active) setAccountChecking(false);
+      }
+    }, 350);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [identifier]);
+
+  function handleIdentifierChange(value) {
+    setIdentifier(cleanTeacherLoginIdentifierInput(value, true));
+  }
+
   const handleLogin = async () => {
 
-    if (!identifier || !password) {
+    if (loading) return;
+
+    if (!identifier || !password || !accountValid) {
 
       Alert.alert(
         'May Kulang',
-        'Pakikumpleto ang lahat ng field.'
+        'Pakilagay ang wastong teacher username/ID at password.'
       );
 
       return;
@@ -165,7 +237,15 @@ export default function GuroLogin({
             👤 Username
           </Text>
 
-          <View style={styles.inputBox}>
+          <View
+            style={[
+              styles.inputBox,
+              identifier.length > 0 &&
+                !accountChecking &&
+                !accountValid &&
+                styles.invalidInput,
+            ]}
+          >
 
             <Text style={styles.icon}>
               👤
@@ -174,7 +254,7 @@ export default function GuroLogin({
             <TextInput
               style={styles.input}
               value={identifier}
-              onChangeText={(value) => setIdentifier(cleanTeacherLoginIdentifierInput(value, true))}
+              onChangeText={handleIdentifierChange}
               placeholder="Halimbawa: TCH-2026-001"
               placeholderTextColor="#94A3B8"
               spellCheck={false}
@@ -182,7 +262,33 @@ export default function GuroLogin({
               autoCapitalize="none"
             />
 
+            {accountValid && (
+              <View style={styles.validCircle}>
+                <Text style={styles.validIcon}>
+                  ✔
+                </Text>
+              </View>
+            )}
+
+            {accountChecking && (
+              <ActivityIndicator
+                size="small"
+                color="#16A34A"
+              />
+            )}
+
           </View>
+
+          {accountValidationMessage ? (
+            <Text
+              style={[
+                styles.accountValidationText,
+                accountValid && styles.accountSuccessText,
+              ]}
+            >
+              {accountValidationMessage}
+            </Text>
+          ) : null}
 
           {/* PASSWORD */}
 
@@ -237,9 +343,23 @@ export default function GuroLogin({
           {/* LOGIN BUTTON */}
 
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[
+              styles.loginButton,
+              (
+                loading ||
+                accountChecking ||
+                !accountValid ||
+                !password.trim()
+              ) &&
+              styles.disabledButton,
+            ]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={
+              loading ||
+              accountChecking ||
+              !accountValid ||
+              !password.trim()
+            }
           >
 
             <Text
@@ -451,6 +571,43 @@ const styles = StyleSheet.create({
     fontSize: 21,
 
     fontFamily: 'Fredoka_700Bold',
+  },
+
+
+  invalidInput: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+
+  accountValidationText: {
+    marginTop: 8,
+    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#DC2626',
+  },
+
+  accountSuccessText: {
+    color: '#16A34A',
+  },
+
+  validCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  validIcon: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 14,
+  },
+
+  disabledButton: {
+    opacity: 0.55,
   },
 
 });
