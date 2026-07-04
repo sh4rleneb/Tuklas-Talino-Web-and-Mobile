@@ -134,7 +134,7 @@ export default function AdminDashboard({
     logs.map(log => log.action).filter(Boolean)
   )];
 
-  
+
   const now = new Date();
 
   const todayLogs = logs.filter(log => {
@@ -284,8 +284,8 @@ const filteredLogs = logs.filter(log => {
     }
   }
 
-  
-  
+
+
   function hasActiveVerificationSession() {
     return (
       verificationExpiresAt &&
@@ -478,7 +478,7 @@ function teacherNameForAssignment(assignment) {
                       </div>
                     </div>
 
-                    
+
                     <form onSubmit={handleAddStudent} noValidate>
                       <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Student Full Name</label>
                       <input
@@ -557,7 +557,7 @@ function teacherNameForAssignment(assignment) {
                       </div>
                     </div>
 
-                    
+
                     <form onSubmit={handleAddTeacher} noValidate>
                       <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Teacher Full Name</label>
                       <input
@@ -699,7 +699,7 @@ function teacherNameForAssignment(assignment) {
                     <span>Actions</span>
                   </div>
 
-                  
+
                     <div className="teacher-tool-box" style={{ marginBottom: 16 }}>
                       <div className="teacher-form-grid">
                         <select
@@ -875,7 +875,7 @@ function teacherNameForAssignment(assignment) {
                   </div>
                 </div>
 
-                
+
                 <div
                   style={{
                     display:'grid',
@@ -1053,7 +1053,7 @@ function teacherNameForAssignment(assignment) {
             )}
           </div>
         </div>
-      
+
       {passwordVerifyOpen && (
         <div
           className="vault-overlay"
