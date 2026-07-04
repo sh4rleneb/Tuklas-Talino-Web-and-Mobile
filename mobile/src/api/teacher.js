@@ -67,6 +67,20 @@ export async function addGroupMember(groupId, studentId) {
   });
 }
 
+export async function setGroupLeader(groupId, studentId) {
+  return api(`/groups/${groupId}/members/${studentId}/leader`, {
+    method: 'POST',
+    body: {},
+  });
+}
+
+export async function deleteGroup(groupId) {
+  return api(`/groups/${groupId}`, {
+    method: 'DELETE',
+  });
+}
+
+
 export async function getTeacherLessons() {
   return api('/lessons/mine');
 }

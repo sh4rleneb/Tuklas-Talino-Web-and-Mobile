@@ -58,7 +58,46 @@ const NAV_ITEMS = [
 ];
 const BUILDER_STEPS = ['📎 Lesson Material', '📝 Lesson Details', '🧩 Activities', '👁 Preview', '📚 My Lessons'];
 const QUIZ_FILTERS = ['All', 'Needs Support', 'Developing', 'Proficient', 'Advanced'];
-const SUBJECTS = ['Reading', 'Vocabulary', 'Literature', 'Oral Communication', 'Writing'];
+const SUBJECT_OPTIONS = [
+  { name: 'Reading', icon: '📖' },
+  { name: 'Vocabulary', icon: '🧠' },
+  { name: 'Literature', icon: '📚' },
+  { name: 'Oral Communication', icon: '🎙️' },
+  { name: 'Writing', icon: '✍️' },
+];
+const SUBJECTS = SUBJECT_OPTIONS.map((subject) => subject.name);
+const SUBJECT_SELECT_OPTIONS = SUBJECT_OPTIONS.map((subject) => ({
+  value: subject.name,
+  label: `${subject.icon} ${subject.name}`,
+}));
+const GRADE_SELECT_OPTIONS = ['1', '2', '3', '4', '5', '6'].map((grade) => ({
+  value: grade,
+  label: `Grade ${grade}`,
+}));
+const ACTIVITY_TYPE_OPTIONS = [
+  { value: 'mcq', label: '? Quiz' },
+  { value: 'writing', label: '✎ Writing' },
+  { value: 'speech', label: '🎙️ Speech' },
+  { value: 'infographic', label: 'Info Card' },
+];
+const WRITING_ACTIVITY_TYPE_OPTIONS = [
+  { value: 'complete_sentence', label: 'Complete the Sentence' },
+  { value: 'writing_task', label: 'Writing Task' },
+];
+
+function normalizeXpRewardInput(value) {
+  const digits = String(value || '').replace(/[^0-9]/g, '');
+  if (!digits) return '';
+
+  return String(Math.min(500, Number(digits)));
+}
+
+function getXpRewardValue(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 25;
+
+  return Math.min(500, Math.max(1, Math.round(parsed)));
+}
 
 function emptyLessonDraft() {
   return {
@@ -66,7 +105,7 @@ function emptyLessonDraft() {
     subject: 'Reading',
     title: '',
     duration: '10 minuto',
-    xpReward: '20',
+    xpReward: '25',
     passage: '',
     layunin: '',
     alamin: '',
@@ -95,6 +134,63 @@ function Field({ label, value, onChangeText, multiline = false, keyboardType = '
         placeholder={placeholder}
         placeholderTextColor="#94A3B8"
       />
+    </View>
+  );
+}
+
+
+function SelectMenu({ label, value, options = [], onSelect, disabled = false, placeholder = 'Select an option' }) {
+  const [visible, setVisible] = useState(false);
+  const normalizedOptions = options.map((option) => (
+    typeof option === 'string'
+      ? { value: option, label: option }
+      : { value: String(option.value), label: option.label || String(option.value) }
+  ));
+  const selected = normalizedOptions.find((option) => String(option.value) === String(value));
+  const displayValue = selected?.label || placeholder;
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TouchableOpacity
+        style={[styles.selectTrigger, disabled && styles.selectTriggerDisabled]}
+        disabled={disabled}
+        onPress={() => setVisible(true)}
+      >
+        <Text style={styles.selectValue}>{displayValue}</Text>
+        <Text style={styles.selectChevron}>⌄</Text>
+      </TouchableOpacity>
+
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <View style={styles.selectOverlay}>
+          <View style={styles.selectSheet}>
+            <Text style={styles.selectTitle}>{label}</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {normalizedOptions.map((option) => {
+                const active = String(option.value) === String(value);
+
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[styles.selectOption, active && styles.selectOptionActive]}
+                    onPress={() => {
+                      onSelect(option.value);
+                      setVisible(false);
+                    }}
+                  >
+                    <Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity style={styles.selectClose} onPress={() => setVisible(false)}>
+              <Text style={styles.selectCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -272,7 +368,7 @@ function getTeacherLessonBuilderValidationMessage(draft = {}, activities = [], a
     return 'Add a lesson title.';
   }
 
-  const xpReward = Number(draft.xpReward ?? draft.xp ?? 20);
+  const xpReward = Number(draft.xpReward ?? draft.xp ?? 25);
 
   if (!Number.isFinite(xpReward) || xpReward < 1 || xpReward > 500) {
     return 'Enter an XP reward from 1 to 500.';
@@ -336,6 +432,7 @@ export default function TeacherHome({ navigation }) {
   const [draft, setDraft] = useState(emptyLessonDraft);
   const [newActivity, setNewActivity] = useState({
     type: 'infographic',
+      gawainType: 'writing_task',
     title: '',
     instructions: '',
     content: '',
@@ -344,9 +441,10 @@ export default function TeacherHome({ navigation }) {
     optionB: '',
     correctOption: 'A',
   });
-  const [groupForm, setGroupForm] = useState({ name: '', description: '' });
+  const [groupForm, setGroupForm] = useState({ name: '', description: '', gradeLevel: '1' });
   const [selectedGroupId, setSelectedGroupId] = useState(null);
-  const [taskForm, setTaskForm] = useState({ title: '', description: '', xpReward: '10' });
+  const [openGroupTools, setOpenGroupTools] = useState({});
+  const [taskForm, setTaskForm] = useState({ title: '', description: '', deadline: '', xpReward: '10' });
   const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
   const [createdStudentAccount, setCreatedStudentAccount] = useState(null);
   const [quizFilter, setQuizFilter] = useState('All');
@@ -397,6 +495,27 @@ export default function TeacherHome({ navigation }) {
     };
   }), [lessons]);
   const quizRows = (quizPerformance.rows || []).filter((row) => quizFilter === 'All' || row.status === quizFilter);
+
+  const lessonGradeOptions = GRADE_SELECT_OPTIONS;
+
+  const studentSectionOptions = useMemo(() => {
+    const sections = [
+      ...(Array.isArray(dashboard?.assignedClasses)
+        ? dashboard.assignedClasses.map((item) => item.section)
+        : []),
+      ...(Array.isArray(monitoring?.rows)
+        ? monitoring.rows.map((student) => student.section)
+        : []),
+      ...studentReport.map((student) => student.section),
+    ]
+      .map((sectionName) => String(sectionName || '').trim())
+      .filter(Boolean);
+
+    return [...new Set(sections)].sort().map((sectionName) => ({
+      value: sectionName,
+      label: sectionName,
+    }));
+  }, [dashboard?.assignedClasses, monitoring?.rows, studentReport]);
   const stats = dashboard?.stats || {};
 
   async function run(action, work, success) {
@@ -484,7 +603,7 @@ async function handleLogout() {
         setWorkspaceNotice({ type: 'warning', text: 'Add a writing prompt first.' });
         return;
       }
-      activity = { type, title, instructions: newActivity.instructions, prompt: newActivity.content };
+      activity = { type, title, instructions: newActivity.instructions, prompt: newActivity.content, gawainType: newActivity.gawainType || 'writing_task' };
     } else if (type === 'speech') {
       if (!newActivity.content.trim()) {
         setWorkspaceNotice({ type: 'warning', text: 'Add the exact words students should say in Speech Target Only.' });
@@ -502,6 +621,7 @@ async function handleLogout() {
     setDraft((current) => ({ ...current, activities: [...current.activities, activity] }));
     setNewActivity({
       type: 'infographic',
+      gawainType: 'writing_task',
       title: '',
       instructions: '',
       content: '',
@@ -522,7 +642,7 @@ async function handleLogout() {
       subject: lesson.subject || 'Reading',
       title: lesson.title || '',
       duration: lesson.duration || '10 minuto',
-      xpReward: String(lesson.xpReward || 20),
+      xpReward: String(lesson.xpReward || 25),
       passage: lesson.passage || '',
       ...splitStructuredLessonPassage(lesson.passage || ''),
       instructions: lesson.instructions || materialActivity?.instructions || '',
@@ -615,7 +735,7 @@ async function handleLogout() {
     const lessonValidationMessage = getTeacherLessonBuilderValidationMessage(
       draft,
       Array.isArray(draft.activities) ? draft.activities : [],
-      derivedAssignedGrades
+      []
     );
     if (lessonValidationMessage) {
       return Alert.alert('Lesson Builder', lessonValidationMessage);
@@ -636,7 +756,7 @@ async function handleLogout() {
       subject: draft.subject,
       title: draft.title,
       duration: draft.duration,
-      xpReward: Number(draft.xpReward || 20),
+      xpReward: getXpRewardValue(draft.xpReward),
       passage: buildStructuredLessonPassage(draft) || null,
       instructions: draft.instructions || null,
       speechTarget: draft.speechTarget || null,
@@ -751,30 +871,86 @@ async function handleLogout() {
           </SectionCard>
         )}
 
-        {builderStep === 1 && (
-          <SectionCard>
-            <Text style={styles.cardTitle}>Lesson Information</Text>
-            <Text style={styles.fieldLabel}>Grade</Text>
-            <View style={styles.choiceRow}>{['1', '2', '3', '4', '5', '6'].map((grade) => <SmallButton key={grade} tone={draft.gradeLevel === grade ? 'green' : 'slate'} onPress={() => setDraft((current) => ({ ...current, gradeLevel: grade }))}>{grade}</SmallButton>)}</View>
-            <Text style={styles.fieldLabel}>Subject Area</Text>
-            <View style={styles.choiceRow}>{SUBJECTS.map((subject) => <SmallButton key={subject} tone={draft.subject === subject ? 'green' : 'slate'} onPress={() => setDraft((current) => ({ ...current, subject }))}>{subject}</SmallButton>)}</View>
-            <Field label="Lesson Title" value={draft.title} onChangeText={(value) => setDraft((current) => ({ ...current, title: value }))} placeholder="e.g. Nouns and Examples" />
-            <Field label="Duration" value={draft.duration} onChangeText={(value) => setDraft((current) => ({ ...current, duration: value }))} />
-            <Field label="XP Reward" value={draft.xpReward} keyboardType="numeric" onChangeText={(value) => setDraft((current) => ({ ...current, xpReward: value }))} />
-            <Text style={styles.fieldLabel}>Learning Content</Text>
-            <Text style={styles.muted}>{draft.material ? 'You uploaded a material. Add a short Objective, Background, and Lesson summary so students still have readable lesson cards.' : 'No uploaded material yet. Fill in the Lesson content manually.'}</Text>
-            <Field label="Layunin — Goal ng lesson" value={draft.layunin} onChangeText={(value) => setDraft((current) => ({ ...current, layunin: value }))} multiline placeholder="What will students learn? Example: Students identify words that start with the letter M." />
-            <Field label="Alamin — Short topic explanation" value={draft.alamin} onChangeText={(value) => setDraft((current) => ({ ...current, alamin: value }))} multiline placeholder="What should students know first about the topic?" />
-            <Field label="Lesson — Main lesson content" value={draft.aralin} onChangeText={(value) => setDraft((current) => ({ ...current, aralin: value }))} multiline placeholder="What will students read or study?" />
-            <SmallButton onPress={() => setBuilderStep(2)}>Next: Activities →</SmallButton>
-          </SectionCard>
-        )}
+          {builderStep === 1 && (
+            <>
+              <SectionCard>
+                <Text style={styles.cardTitle}>Lesson Information</Text>
+                <Text style={styles.muted}>Provide the basic details for your lesson.</Text>
+
+                <SelectMenu
+                  label="Grade Level"
+                  value={draft.gradeLevel}
+                  options={lessonGradeOptions}
+                  onSelect={(gradeLevel) => setDraft((current) => ({ ...current, gradeLevel }))}
+                />
+
+                <SelectMenu
+                  label="Subject Area"
+                  value={draft.subject}
+                  options={SUBJECT_SELECT_OPTIONS}
+                  onSelect={(subject) => setDraft((current) => ({ ...current, subject }))}
+                />
+
+                <Field
+                  label="XP Reward"
+                  value={draft.xpReward}
+                  keyboardType="numeric"
+                  onChangeText={(value) => setDraft((current) => ({ ...current, xpReward: normalizeXpRewardInput(value) }))}
+                />
+
+                <Field
+                  label="Lesson Title"
+                  value={draft.title}
+                  onChangeText={(value) => setDraft((current) => ({ ...current, title: value }))}
+                  placeholder="e.g. Nouns and Examples"
+                />
+              </SectionCard>
+
+              <SectionCard>
+                <Text style={styles.cardTitle}>Learning Content</Text>
+                <Text style={styles.muted}>
+                  {draft.material ? 'You uploaded a material. Add a short Objective, Background, and Lesson summary so students still have readable lesson cards.' : 'No uploaded material yet. Fill in the Lesson content manually.'}
+                </Text>
+
+                <Field
+                  label="1  Layunin — Goal ng lesson"
+                  value={draft.layunin}
+                  onChangeText={(value) => setDraft((current) => ({ ...current, layunin: value }))}
+                  multiline
+                  placeholder={"What will students learn?\n\nExample: Students identify words that start with the letter M."}
+                />
+
+                <Field
+                  label="2  Alamin — Short topic explanation"
+                  value={draft.alamin}
+                  onChangeText={(value) => setDraft((current) => ({ ...current, alamin: value }))}
+                  multiline
+                  placeholder={"What should students know first about the topic?\n\nExample: The letter M has the /m/ sound. Some words start with M."}
+                />
+
+                <Field
+                  label="3  Lesson — Main lesson content"
+                  value={draft.aralin}
+                  onChangeText={(value) => setDraft((current) => ({ ...current, aralin: value }))}
+                  multiline
+                  placeholder={"What will students read or study?\n\nExample: Some words start with M, such as mata, mesa, and maya."}
+                />
+
+                <SmallButton onPress={() => setBuilderStep(2)}>Next: Activities →</SmallButton>
+              </SectionCard>
+            </>
+          )}
 
         {builderStep === 2 && (
           <SectionCard>
             <Text style={styles.cardTitle}>Activity Builder</Text>
             <Text style={styles.muted}>Add activity blocks to build your lesson structure.</Text>
-            <View style={styles.choiceRow}>{['infographic', 'mcq', 'writing', 'speech'].map((type) => <SmallButton key={type} tone={newActivity.type === type ? 'green' : 'slate'} onPress={() => setNewActivity((current) => ({ ...current, type }))}>{type}</SmallButton>)}</View>
+              <SelectMenu
+                label="Activity Type"
+                value={newActivity.type}
+                options={ACTIVITY_TYPE_OPTIONS}
+                onSelect={(type) => setNewActivity((current) => ({ ...current, type }))}
+              />
             <Field label="Activity Title" value={newActivity.title} onChangeText={(value) => setNewActivity((current) => ({ ...current, title: value }))} />
             {newActivity.type !== 'speech' ? (
               <Field label="Instructions" value={newActivity.instructions} onChangeText={(value) => setNewActivity((current) => ({ ...current, instructions: value }))} multiline />
@@ -789,6 +965,14 @@ async function handleLogout() {
               </>
             ) : (
               <>
+                {newActivity.type === 'writing' ? (
+                  <SelectMenu
+                    label="Writing Activity Type"
+                    value={newActivity.gawainType || 'writing_task'}
+                    options={WRITING_ACTIVITY_TYPE_OPTIONS}
+                    onSelect={(gawainType) => setNewActivity((current) => ({ ...current, gawainType }))}
+                  />
+                ) : null}
                 <Field label={newActivity.type === 'writing' ? 'Writing Instructions' : newActivity.type === 'speech' ? 'Reading Text' : 'Content'} value={newActivity.content} onChangeText={(value) => setNewActivity((current) => ({ ...current, content: value }))} multiline />
                 {newActivity.type === 'speech' ? (
                   <View style={styles.softRow}>
@@ -877,53 +1061,407 @@ async function handleLogout() {
     );
   }
 
+  function getStudentGradeLevelValue(student = {}) {
+    const grade = Number(
+      student.gradeLevel ||
+        student.grade ||
+        student.Student?.gradeLevel ||
+        student.student?.gradeLevel ||
+        0
+    );
+
+    return [1, 2, 3, 4, 5, 6].includes(grade) ? grade : null;
+  }
+
+  function getGroupGradeLevelValue(group = {}) {
+    const directGrade = Number(group.gradeLevel || group.grade || 0);
+    if ([1, 2, 3, 4, 5, 6].includes(directGrade)) return directGrade;
+
+    const members = Array.isArray(group.members) ? group.members : [];
+    for (const member of members) {
+      const memberGrade = getStudentGradeLevelValue(member.Student || member.student || member);
+      if (memberGrade) return memberGrade;
+    }
+
+    return null;
+  }
+
+  function getGroupMemberGradeValidationMessage(group = {}, student = {}) {
+    const groupGrade = getGroupGradeLevelValue(group);
+    const studentGrade = getStudentGradeLevelValue(student);
+
+    if (!studentGrade) {
+      return 'Student grade level is missing. Please check the student record first.';
+    }
+
+    if (groupGrade && studentGrade !== groupGrade) {
+      return `Only Grade ${groupGrade} students can be added to this group.`;
+    }
+
+    return '';
+  }
+
+  function toggleGroupTools(groupId) {
+    setOpenGroupTools((current) => ({
+      ...current,
+      [groupId]: !current[groupId],
+    }));
+  }
+
+  function getGroupMembers(group = {}) {
+    return Array.isArray(group.members)
+      ? group.members
+      : Array.isArray(group.Members)
+        ? group.Members
+        : [];
+  }
+
+  function getGroupTasks(group = {}) {
+    return Array.isArray(group.tasks) ? group.tasks : [];
+  }
+
+  function getMemberStudent(member = {}) {
+    return member.Student || member.student || member;
+  }
+
+  function getGroupTaskDeadlineLabel(task = {}) {
+    const value = task.dueAt || task.deadline || task.dueDate;
+
+    if (!value) return '';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleDateString();
+  }
+
+  async function handleSetGroupLeader(groupId, studentId) {
+    if (!groupId || !studentId) {
+      Alert.alert('Group Manager', 'Missing group leader details.');
+      return;
+    }
+
+    const saved = await run(
+      `leader-${groupId}-${studentId}`,
+      () => setGroupLeader(groupId, studentId),
+      'Group leader updated.'
+    );
+
+    if (saved) await load();
+  }
+
+  function confirmDeleteGroup(group = {}) {
+    const groupName = group.name || 'this group';
+
+    Alert.alert(
+      'Remove Group',
+      `Remove "${groupName}"? Students assigned to this group will no longer see it.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const removed = await run(
+              `group-delete-${group.id}`,
+              () => deleteGroup(group.id),
+              'Group removed.'
+            );
+
+            if (removed) {
+              setGroups((current) => current.filter((item) => Number(item.id) !== Number(group.id)));
+              setSelectedGroupId(null);
+              await load();
+            }
+          },
+        },
+      ]
+    );
+  }
+
   function renderGroups() {
+    const groupSelectOptions = groups.length
+      ? groups.map((group) => ({ value: String(group.id), label: group.name || 'Group' }))
+      : [{ value: '', label: 'No groups yet' }];
+    const taskTargetGroup = groups.find((group) => String(group.id) === String(taskForm.groupId || selectedGroup?.id)) || selectedGroup || groups[0] || null;
+    const taskTargetGroupId = taskForm.groupId || taskTargetGroup?.id || '';
+
     return (
       <>
         <SectionCard>
+          <Text style={styles.sectionLabel}>Classroom Tools</Text>
+          <Text style={styles.cardTitle}>Group Manager</Text>
+          <Text style={styles.muted}>Create groups, assign tasks, and add students to collaborative learning groups.</Text>
+        </SectionCard>
+
+        <SectionCard>
+          <Text style={styles.cardIcon}>➕</Text>
           <Text style={styles.cardTitle}>Create Group</Text>
-          <Field label="Group Name" value={groupForm.name} onChangeText={(name) => setGroupForm((current) => ({ ...current, name }))} />
-          <Field label="Description" value={groupForm.description} onChangeText={(description) => setGroupForm((current) => ({ ...current, description }))} multiline />
+          <Text style={styles.muted}>Set up a group, class section, or collaborative activity team.</Text>
+
+          <Field
+            label="Group Name"
+            value={groupForm.name}
+            onChangeText={(name) => setGroupForm((current) => ({ ...current, name }))}
+            placeholder="Group name"
+          />
+
+          <Field
+            label="Description / Section"
+            value={groupForm.description}
+            onChangeText={(description) => setGroupForm((current) => ({ ...current, description }))}
+            placeholder="Description / Section"
+            multiline
+          />
+
+          <SelectMenu
+            label="Group Grade Level"
+            value={groupForm.gradeLevel}
+            options={GRADE_SELECT_OPTIONS}
+            disabled={Boolean(busy)}
+            onSelect={(gradeLevel) => setGroupForm((current) => ({ ...current, gradeLevel }))}
+          />
+
           <SmallButton disabled={!groupForm.name.trim() || Boolean(busy)} onPress={async () => {
-            const saved = await run('group-create', () => createGroup(groupForm), 'Group created.');
-            if (saved) setGroupForm({ name: '', description: '' });
+            const groupGradeLevel = Number(groupForm.gradeLevel);
+
+            if (![1, 2, 3, 4, 5, 6].includes(groupGradeLevel)) {
+              Alert.alert('Group Creation', 'Select a valid Grade 1 to Grade 6 level.');
+              return;
+            }
+
+            const groupPayload = { ...groupForm, gradeLevel: groupGradeLevel };
+            const saved = await run('group-create', () => createGroup(groupPayload), 'Group created.');
+
+            if (saved) {
+              setGroups((current) => [
+                { ...saved, gradeLevel: saved.gradeLevel || groupGradeLevel },
+                ...current.filter((group) => Number(group.id) !== Number(saved.id)),
+              ]);
+              setSelectedGroupId(saved.id);
+              setGroupForm({ name: '', description: '', gradeLevel: String(groupGradeLevel) });
+            }
           }}>Create Group</SmallButton>
         </SectionCard>
 
         <SectionCard>
-          <Text style={styles.cardTitle}>Group Manager</Text>
-          {groups.map((group) => (
-            <TouchableOpacity key={group.id} style={[styles.softRow, Number(selectedGroup?.id) === Number(group.id) && styles.selectedRow]} onPress={() => setSelectedGroupId(group.id)}>
-              <Text style={styles.rowTitle}>{group.name}</Text>
-              <Text style={styles.muted}>{group.members?.length || 0} members • {group.tasks?.length || 0} tasks</Text>
-            </TouchableOpacity>
-          ))}
-          {!groups.length && <Text style={styles.muted}>No groups created yet.</Text>}
+          <Text style={styles.cardIcon}>📝</Text>
+          <Text style={styles.cardTitle}>Add Task</Text>
+          <Text style={styles.muted}>Assign collaborative work with a deadline and XP reward.</Text>
+
+          <SelectMenu
+            label="Group"
+            value={String(taskTargetGroupId)}
+            options={groupSelectOptions}
+            disabled={!groups.length || Boolean(busy)}
+            onSelect={(groupId) => {
+              setTaskForm((current) => ({ ...current, groupId }));
+              setSelectedGroupId(groupId);
+            }}
+          />
+
+          <Field
+            label="Task Title"
+            value={taskForm.title}
+            onChangeText={(title) => setTaskForm((current) => ({ ...current, title }))}
+            placeholder="Task title"
+          />
+
+          <Field
+            label="Deadline"
+            value={taskForm.deadline}
+            onChangeText={(deadline) => setTaskForm((current) => ({ ...current, deadline }))}
+            placeholder="YYYY-MM-DD"
+          />
+
+          <Field
+            label="XP Reward"
+            value={taskForm.xpReward}
+            keyboardType="numeric"
+            onChangeText={(xpReward) => setTaskForm((current) => ({ ...current, xpReward: normalizeXpRewardInput(xpReward) }))}
+            placeholder="XP"
+          />
+
+          <SmallButton disabled={!groups.length || !taskForm.title.trim() || Boolean(busy)} onPress={async () => {
+            const groupId = taskForm.groupId || selectedGroup?.id || groups[0]?.id;
+
+            if (!groupId) {
+              Alert.alert('Add Task', 'Select a group first.');
+              return;
+            }
+
+            const saved = await run(
+              'task-create',
+              () => addGroupTask(groupId, {
+                title: taskForm.title,
+                description: taskForm.description,
+                dueAt: taskForm.deadline || null,
+                deadline: taskForm.deadline || null,
+                xpReward: Number(taskForm.xpReward || 10),
+              }),
+              'Task added.'
+            );
+
+            if (saved) {
+              setTaskForm({ title: '', description: '', deadline: '', xpReward: '10', groupId: String(groupId) });
+              await load();
+            }
+          }}>Add Task</SmallButton>
         </SectionCard>
 
-        {selectedGroup && (
-          <>
-            <SectionCard>
-              <Text style={styles.cardTitle}>{selectedGroup.name} Members</Text>
-              {(selectedGroup.members || []).map((member) => (
-                <Text key={member.id} style={styles.body}>{member.Student?.avatar || '🧒'} {member.Student?.name || 'Student'} • {member.groupRole || 'member'}</Text>
-              ))}
-              <Text style={styles.fieldLabel}>Add Learner</Text>
-              <View style={styles.choiceRow}>{(monitoring.rows || []).map((student) => <SmallButton key={student.id} tone="slate" disabled={Boolean(busy)} onPress={() => run(`member-${student.id}`, () => addGroupMember(selectedGroup.id, student.id), 'Learner added.')}>{student.name}</SmallButton>)}</View>
-            </SectionCard>
-            <SectionCard>
-              <Text style={styles.cardTitle}>Add Task</Text>
-              <Field label="Task Title" value={taskForm.title} onChangeText={(title) => setTaskForm((current) => ({ ...current, title }))} />
-              <Field label="Description" value={taskForm.description} onChangeText={(description) => setTaskForm((current) => ({ ...current, description }))} multiline />
-              <Field label="XP Reward" value={taskForm.xpReward} keyboardType="numeric" onChangeText={(xpReward) => setTaskForm((current) => ({ ...current, xpReward }))} />
-              <SmallButton disabled={!taskForm.title.trim() || Boolean(busy)} onPress={async () => {
-                const saved = await run('task-create', () => addGroupTask(selectedGroup.id, { ...taskForm, xpReward: Number(taskForm.xpReward || 10) }), 'Task added.');
-                if (saved) setTaskForm({ title: '', description: '', xpReward: '10' });
-              }}>Add Task</SmallButton>
-              {(selectedGroup.tasks || []).map((task) => <View key={task.id} style={styles.softRow}><Text style={styles.rowTitle}>{task.title}</Text><Text style={styles.muted}>+{task.xpReward || 0} XP</Text></View>)}
-            </SectionCard>
-          </>
-        )}
+        <SectionCard>
+          <View style={styles.actionRow}>
+            <View style={styles.flex}>
+              <Text style={styles.cardTitle}>Groups</Text>
+              <Text style={styles.muted}>Add students to existing groups and review assigned tasks.</Text>
+            </View>
+            <Text style={styles.lessonStatusChip}>{groups.length} group{groups.length === 1 ? '' : 's'}</Text>
+          </View>
+
+          {groups.length ? groups.map((group) => {
+            const members = getGroupMembers(group);
+            const tasks = getGroupTasks(group);
+            const memberCount = members.length;
+            const taskCount = tasks.length;
+            const isOpen = Boolean(openGroupTools[group.id]);
+            const groupGrade = getGroupGradeLevelValue(group);
+
+            return (
+              <View key={group.id} style={[styles.lessonListCard, Number(selectedGroup?.id) === Number(group.id) && styles.selectedRow]}>
+                <TouchableOpacity onPress={() => setSelectedGroupId(group.id)}>
+                  <Text style={styles.rowTitle}>{group.name}</Text>
+                  <Text style={styles.muted}>{group.description || 'No description added.'}</Text>
+                  <View style={styles.lessonMetaGrid}>
+                    <View style={styles.lessonMetaPill}>
+                      <Text style={styles.lessonMetaLabel}>Members</Text>
+                      <Text style={styles.lessonMetaValue}>👥 {memberCount}</Text>
+                    </View>
+                    <View style={styles.lessonMetaPill}>
+                      <Text style={styles.lessonMetaLabel}>Tasks</Text>
+                      <Text style={styles.lessonMetaValue}>✅ {taskCount}</Text>
+                    </View>
+                    {groupGrade ? (
+                      <View style={styles.lessonMetaPill}>
+                        <Text style={styles.lessonMetaLabel}>Grade</Text>
+                        <Text style={styles.lessonMetaValue}>{groupGrade}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.softRow}>
+                  <Text style={styles.rowTitle}>Members</Text>
+                  {members.length ? members.map((member) => {
+                    const student = getMemberStudent(member);
+                    const studentId = student.id || member.studentId;
+                    const isLeader = String(member.groupRole || '').toLowerCase() === 'leader';
+
+                    return (
+                      <View key={member.id || studentId || student.studentCode || student.name} style={styles.actionRow}>
+                        <View style={styles.flex}>
+                          <Text style={styles.body}>👤 {student.name || 'Student'}</Text>
+                          <Text style={styles.muted}>{isLeader ? 'Leader' : 'Member'}</Text>
+                        </View>
+                        {!isLeader ? (
+                          <SmallButton
+                            tone="slate"
+                            disabled={Boolean(busy)}
+                            onPress={() => handleSetGroupLeader(group.id, studentId)}
+                          >
+                            Set as Leader
+                          </SmallButton>
+                        ) : null}
+                      </View>
+                    );
+                  }) : (
+                    <Text style={styles.muted}>No members added yet.</Text>
+                  )}
+                </View>
+
+                <View style={styles.softRow}>
+                  <Text style={styles.rowTitle}>Tasks</Text>
+                  {tasks.length ? (
+                    <>
+                      {tasks.slice(0, 3).map((task) => (
+                        <View key={task.id || task.title} style={styles.actionRow}>
+                          <View style={styles.flex}>
+                            <Text style={styles.body}>{task.title || 'Group task'}</Text>
+                            <Text style={styles.muted}>
+                              +{task.xpReward || 0} XP{getGroupTaskDeadlineLabel(task) ? ` • Due ${getGroupTaskDeadlineLabel(task)}` : ''}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                      {tasks.length > 3 ? (
+                        <Text style={styles.muted}>+{tasks.length - 3} more task{tasks.length - 3 === 1 ? '' : 's'}</Text>
+                      ) : null}
+                    </>
+                  ) : (
+                    <Text style={styles.muted}>No tasks assigned yet.</Text>
+                  )}
+                </View>
+
+                <View style={styles.lessonActionRow}>
+                  <SmallButton tone="slate" onPress={() => toggleGroupTools(group.id)}>
+                    {isOpen ? 'Hide Add Member' : 'Add Member'}
+                  </SmallButton>
+                  <SmallButton tone="red" disabled={Boolean(busy)} onPress={() => confirmDeleteGroup(group)}>
+                    Remove Group
+                  </SmallButton>
+                </View>
+
+                {isOpen ? (
+                  <View style={styles.softRow}>
+                    <Text style={styles.fieldLabel}>Add Member</Text>
+                    <Text style={styles.muted}>
+                      {groupGrade
+                        ? `Only Grade ${groupGrade} learners can be added to this group.`
+                        : 'Only learners from the same grade level can be grouped.'}
+                    </Text>
+
+                    <View style={styles.choiceRow}>
+                      {(monitoring.rows || [])
+                        .filter((student) => {
+                          const studentGrade = getStudentGradeLevelValue(student);
+                          return !groupGrade || studentGrade === groupGrade;
+                        })
+                        .map((student) => (
+                          <SmallButton
+                            key={student.id}
+                            tone="slate"
+                            disabled={Boolean(busy)}
+                            onPress={() => {
+                              const gradeValidationMessage = getGroupMemberGradeValidationMessage(group, student);
+                              if (gradeValidationMessage) {
+                                Alert.alert('Group Members', gradeValidationMessage);
+                                return;
+                              }
+
+                              run(`member-${student.id}`, () => addGroupMember(group.id, student.id), 'Learner added.');
+                            }}
+                          >
+                            {student.name} • Grade {student.gradeLevel || student.grade || '-'}
+                          </SmallButton>
+                        ))}
+                    </View>
+
+                    {!(monitoring.rows || []).some((student) => {
+                      const studentGrade = getStudentGradeLevelValue(student);
+                      return !groupGrade || studentGrade === groupGrade;
+                    }) ? (
+                      <Text style={styles.muted}>No learners match this group grade level.</Text>
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+            );
+          }) : (
+            <View style={styles.softRow}>
+              <Text style={styles.rowTitle}>👥 No groups yet.</Text>
+              <Text style={styles.muted}>Create your first group to start collaborative learning tasks.</Text>
+            </View>
+          )}
+        </SectionCard>
       </>
     );
   }
@@ -953,7 +1491,12 @@ async function handleLogout() {
         <SectionCard>
           <Text style={styles.cardTitle}>Student Quiz Attempts</Text>
           <Text style={styles.muted}>{summary.total || 0} quiz records • {summary.averageBest || 0}% average best</Text>
-          <View style={styles.choiceRow}>{QUIZ_FILTERS.map((filter) => <SmallButton key={filter} tone={quizFilter === filter ? 'green' : 'slate'} onPress={() => setQuizFilter(filter)}>{filter}</SmallButton>)}</View>
+          <SelectMenu
+            label="Performance Filter"
+            value={quizFilter}
+            options={QUIZ_FILTERS.map((filter) => ({ value: filter, label: filter }))}
+            onSelect={setQuizFilter}
+          />
           {quizRows.map((row) => (
             <View key={row.key} style={styles.softRow}>
               <Text style={styles.rowTitle}>{row.studentName} • {row.quizTitle}</Text>
@@ -1594,22 +2137,27 @@ async function handleLogout() {
             placeholder="Full name"
           />
 
-          <Text style={styles.fieldLabel}>Grade</Text>
-          <View style={styles.choiceRow}>
-            {['1', '2', '3', '4', '5', '6'].map((grade) => (
-              <SmallButton
-                key={grade}
-                tone={studentForm.gradeLevel === grade ? 'green' : 'slate'}
-                disabled={busy === 'student-create'}
-                onPress={() => setStudentForm((current) => ({ ...current, gradeLevel: grade }))}
-              >
-                {grade}
-              </SmallButton>
-            ))}
-          </View>
+            <SelectMenu
+              label="Student Grade"
+              value={studentForm.gradeLevel}
+              options={GRADE_SELECT_OPTIONS}
+              disabled={busy === 'student-create'}
+              onSelect={(gradeLevel) => setStudentForm((current) => ({ ...current, gradeLevel }))}
+            />
+
+          {studentSectionOptions.length ? (
+            <SelectMenu
+              label="Section Suggestions"
+              value={studentForm.section}
+              options={studentSectionOptions}
+              disabled={busy === 'student-create'}
+              placeholder="Choose existing section"
+              onSelect={(section) => setStudentForm((current) => ({ ...current, section }))}
+            />
+          ) : null}
 
           <Field
-            label="Section"
+            label={studentSectionOptions.length ? 'Section / Custom Section' : 'Section'}
             value={studentForm.section}
             onChangeText={(section) => setStudentForm((current) => ({ ...current, section }))}
             placeholder="Section name"
@@ -2277,6 +2825,19 @@ const styles = StyleSheet.create({
  width: '48%' },
   statIcon: { fontSize: 24 },
   statValue: { color: '#166534', fontWeight: '900', fontSize: 28, marginTop: 6 },
+  selectTrigger: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E1', borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 12, marginTop: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  selectTriggerDisabled: { opacity: 0.6 },
+  selectValue: { color: '#0F172A', fontWeight: '800', flex: 1 },
+  selectChevron: { color: '#64748B', fontWeight: '900', marginLeft: 10 },
+  selectOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.35)', justifyContent: 'flex-end' },
+  selectSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, maxHeight: '72%' },
+  selectTitle: { color: '#0F172A', fontSize: 18, fontWeight: '900', marginBottom: 10 },
+  selectOption: { borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 14, padding: 13, marginTop: 8, backgroundColor: '#F8FAFC' },
+  selectOptionActive: { borderColor: '#16A34A', backgroundColor: '#DCFCE7' },
+  selectOptionText: { color: '#0F172A', fontWeight: '800' },
+  selectOptionTextActive: { color: '#166534', fontWeight: '900' },
+  selectClose: { backgroundColor: '#0F172A', borderRadius: 14, padding: 13, alignItems: 'center', marginTop: 12 },
+  selectCloseText: { color: '#FFFFFF', fontWeight: '900' },
   muted: { color: '#64748B', marginTop: 4 },
   body: { color: '#475569', marginTop: 7, lineHeight: 20 },
   softRow: { backgroundColor: '#F0FDF4', borderRadius: 14, padding: 12, marginTop: 9 },
