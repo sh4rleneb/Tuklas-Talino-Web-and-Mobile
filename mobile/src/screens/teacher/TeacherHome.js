@@ -499,23 +499,66 @@ export default function TeacherHome({ navigation }) {
   const lessonGradeOptions = GRADE_SELECT_OPTIONS;
 
   const studentSectionOptions = useMemo(() => {
-    const sections = [
-      ...(Array.isArray(dashboard?.assignedClasses)
-        ? dashboard.assignedClasses.map((item) => item.section)
-        : []),
-      ...(Array.isArray(monitoring?.rows)
-        ? monitoring.rows.map((student) => student.section)
-        : []),
-      ...studentReport.map((student) => student.section),
-    ]
-      .map((sectionName) => String(sectionName || '').trim())
-      .filter(Boolean);
+    const sections = new Set();
 
-    return [...new Set(sections)].sort().map((sectionName) => ({
-      value: sectionName,
-      label: sectionName,
-    }));
-  }, [dashboard?.assignedClasses, monitoring?.rows, studentReport]);
+    function addSection(value) {
+      const section = String(value || '').replace(/\s+/g, ' ').trim();
+
+      if (section) {
+        sections.add(section);
+      }
+    }
+
+    function collectSectionFromStudent(student = {}) {
+      addSection(student.section);
+      addSection(student.sectionName);
+      addSection(student.classSection);
+      addSection(student.Student?.section);
+      addSection(student.Student?.sectionName);
+      addSection(student.student?.section);
+      addSection(student.student?.sectionName);
+    }
+
+    (dashboard?.assignedClasses || []).forEach((item) => {
+      addSection(item.section);
+      addSection(item.sectionName);
+      addSection(item.classSection);
+      addSection(item.name);
+      addSection(item.description);
+    });
+
+    (dashboard?.classes || []).forEach((item) => {
+      addSection(item.section);
+      addSection(item.sectionName);
+      addSection(item.classSection);
+      addSection(item.name);
+      addSection(item.description);
+    });
+
+    (dashboard?.sections || []).forEach((item) => {
+      if (typeof item === 'string') {
+        addSection(item);
+      } else {
+        addSection(item.section);
+        addSection(item.sectionName);
+        addSection(item.name);
+      }
+    });
+
+    (monitoring.rows || []).forEach(collectSectionFromStudent);
+    (studentReport || []).forEach(collectSectionFromStudent);
+
+    groups.forEach((group) => {
+      addSection(group.section);
+      addSection(group.sectionName);
+      addSection(group.classSection);
+      addSection(group.description);
+    });
+
+    return Array.from(sections)
+      .sort((first, second) => first.localeCompare(second))
+      .map((section) => ({ value: section, label: section }));
+  }, [dashboard, groups, monitoring.rows, studentReport]);
   const stats = dashboard?.stats || {};
 
   async function run(action, work, success) {
@@ -902,7 +945,6 @@ async function handleLogout() {
                   label="Lesson Title"
                   value={draft.title}
                   onChangeText={(value) => setDraft((current) => ({ ...current, title: value }))}
-                  placeholder="e.g. Nouns and Examples"
                 />
               </SectionCard>
 
@@ -917,7 +959,7 @@ async function handleLogout() {
                   value={draft.layunin}
                   onChangeText={(value) => setDraft((current) => ({ ...current, layunin: value }))}
                   multiline
-                  placeholder={"What will students learn?\n\nExample: Students identify words that start with the letter M."}
+                  placeholder={`What will students learn?\n\nExample: Students identify words that start with the letter M.`}
                 />
 
                 <Field
@@ -925,7 +967,7 @@ async function handleLogout() {
                   value={draft.alamin}
                   onChangeText={(value) => setDraft((current) => ({ ...current, alamin: value }))}
                   multiline
-                  placeholder={"What should students know first about the topic?\n\nExample: The letter M has the /m/ sound. Some words start with M."}
+                  placeholder={`What should students know first about the topic?\n\nExample: The letter M has the /m/ sound. Some words start with M.`}
                 />
 
                 <Field
@@ -2111,8 +2153,32 @@ async function handleLogout() {
     setBusy('student-create');
     try {
       const data = await createStudentAccount({ name, gradeLevel, section });
-      setCreatedStudentAccount(data);
-      setStudentForm({ name: '', gradeLevel: String(gradeLevel), section: '' });
+      const createdStudent = {
+        ...(data?.student || data?.learner || data?.data || data || {}),
+        name: data?.student?.name || data?.name || name,
+        gradeLevel,
+        section,
+      };
+      const createdStudentId = createdStudent.id || createdStudent.studentId || createdStudent.studentCode || `${name}-${gradeLevel}-${section}`;
+
+      function mergeCreatedStudentRows(rows = []) {
+        return [
+          createdStudent,
+          ...rows.filter((student) => {
+            const studentId = student.id || student.studentId || student.studentCode || `${student.name}-${student.gradeLevel}-${student.section}`;
+            return String(studentId) !== String(createdStudentId);
+          }),
+        ];
+      }
+
+      setMonitoring((current) => ({
+        ...current,
+        rows: mergeCreatedStudentRows(current.rows || []),
+      }));
+
+      setStudentReport((current) => mergeCreatedStudentRows(current || []));
+      Alert.alert('Student Account', `Created account for ${createdStudent.name || name}. Temporary password: ${data?.temporaryPassword || 'Not returned'}`);
+      setStudentForm({ name: '', gradeLevel: String(gradeLevel), section });
       Alert.alert(
         'Student Account Created',
         `Username: ${data.username || data.student?.studentCode || 'Created'}\nTemporary PIN: ${data.temporaryPin || 'Check response'}`
