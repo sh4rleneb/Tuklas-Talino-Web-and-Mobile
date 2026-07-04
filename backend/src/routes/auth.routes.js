@@ -47,9 +47,134 @@ function publicUser(user) {
   };
 }
 
+
+function verifyLoginAccount(user) {
+  const role = String(user?.Role?.name || '').toLowerCase();
+
+  if (user?.status && user.status !== 'active') {
+    return {
+      status: 403,
+      message: 'This account is archived. Please contact the administrator.'
+    };
+  }
+
+  if (role === 'teacher') {
+    if (!user.Teacher) {
+      return {
+        status: 403,
+        message: 'Teacher account verification failed. Teacher profile was not found.'
+      };
+    }
+
+    if (user.Teacher.status && user.Teacher.status !== 'active') {
+      return {
+        status: 403,
+        message: 'This teacher account is archived. Please contact the administrator.'
+      };
+    }
+  }
+
+  if (role === 'admin' && !user.AdminProfile) {
+    return {
+      status: 403,
+      message: 'Admin account verification failed. Admin profile was not found.'
+    };
+  }
+
+  return null;
+}
+
 function loginAvatar(value) {
   const avatar = typeof value === 'string' ? value.trim() : '';
   return avatar && avatar.length <= 16 ? avatar : null;
+}
+
+
+async function findTeacherLoginUser(identifier) {
+  const rawIdentifier = String(identifier || '').trim();
+  const normalizedIdentifier = normalizeLoginIdentifier(rawIdentifier, 'teacher');
+
+  if (!normalizedIdentifier) return null;
+
+  const directUser = await User.findOne({
+    where: { username: normalizedIdentifier },
+    include: [Role, Teacher]
+  });
+
+  if (directUser) return directUser;
+
+  const teacher = await Teacher.findOne({
+    where: { employeeCode: normalizedIdentifier }
+  });
+
+  if (teacher) {
+    return User.findOne({
+      where: { id: teacher.userId },
+      include: [Role, Teacher]
+    });
+  }
+
+  if (rawIdentifier.includes('@')) {
+    return User.findOne({
+      where: { email: rawIdentifier },
+      include: [Role, Teacher]
+    });
+  }
+
+  return null;
+}
+
+async function findAdminLoginUser(identifier) {
+  const rawIdentifier = String(identifier || '').trim();
+
+  if (!rawIdentifier) return null;
+
+  const directUser = await User.findOne({
+    where: { username: rawIdentifier },
+    include: [Role, AdminProfile]
+  });
+
+  if (directUser) return directUser;
+
+  if (rawIdentifier.includes('@')) {
+    return User.findOne({
+      where: { email: rawIdentifier },
+      include: [Role, AdminProfile]
+    });
+  }
+
+  return null;
+}
+
+function teacherLoginCheckPayload(user) {
+  const exists = Boolean(
+    user &&
+    user.status === 'active' &&
+    user.Role?.name === 'teacher' &&
+    user.Teacher &&
+    user.Teacher.status === 'active'
+  );
+
+  return {
+    exists,
+    role: exists ? 'teacher' : null,
+    name: exists ? user.Teacher?.name || user.displayName : null
+  };
+}
+
+function adminLoginCheckPayload(user) {
+  const exists = Boolean(
+    user &&
+    user.status === 'active' &&
+    user.Role?.name === 'admin' &&
+    user.AdminProfile
+  );
+
+  return {
+    exists,
+    role: exists ? 'admin' : null,
+    name: exists ? user.AdminProfile?.name || user.displayName : null
+  };
 }
 
 router.get('/check-student/:identifier', async (req, res, next) => {
@@ -73,6 +198,39 @@ router.get('/check-student/:identifier', async (req, res, next) => {
     );
 
     return res.json({ exists });
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+router.get('/check-teacher/:identifier', async (req, res, next) => {
+  try {
+    const identifier = String(req.params.identifier || '').trim();
+
+    if (!identifier) {
+      return res.json({ exists: false });
+    }
+
+    const user = await findTeacherLoginUser(identifier);
+
+    return res.json(teacherLoginCheckPayload(user));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/check-admin/:identifier', async (req, res, next) => {
+  try {
+    const identifier = String(req.params.identifier || '').trim();
+
+    if (!identifier) {
+      return res.json({ exists: false });
+    }
+
+    const user = await findAdminLoginUser(identifier);
+
+    return res.json(adminLoginCheckPayload(user));
   } catch (err) {
     next(err);
   }
@@ -110,6 +268,11 @@ router.post('/login', async (req, res, next) => {
     const valid = await bcrypt.compare(body.password, user.passwordHash);
     if (!valid) {
       return res.status(401).json({ message: 'Password is incorrect.' });
+    }
+
+    const loginVerification = verifyLoginAccount(user);
+    if (loginVerification) {
+      return res.status(loginVerification.status).json({ message: loginVerification.message });
     }
 
     const requestedAvatar = loginAvatar(req.body.avatar);
