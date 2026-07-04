@@ -184,6 +184,8 @@ const filteredLogs = logs.filter(log => {
   });
 
   const [assignGradeFilter, setAssignGradeFilter] = useState('');
+  const [studentGradeFilter, setStudentGradeFilter] = useState('all');
+  const [studentSectionFilter, setStudentSectionFilter] = useState('all');
   const sectionOptions = [...new Set(
     classOptions
       .filter(option => !assignGradeFilter || Number(option.gradeLevel) === Number(assignGradeFilter))
@@ -202,6 +204,20 @@ const filteredLogs = logs.filter(log => {
       .filter(o => !stuForm.gradeLevel || Number(o.gradeLevel) === Number(stuForm.gradeLevel))
       .map(o => o.section),
   ].filter(Boolean))].sort();
+
+  const studentManagementSectionOptions = [...new Set(
+    students
+      .filter(student => studentGradeFilter === 'all' || Number(student.gradeLevel || student.grade) === Number(studentGradeFilter))
+      .map(student => normalizeSpaces(student.section || student.sectionName || student.classSection || ''))
+      .filter(Boolean)
+  )].sort();
+
+  const filteredStudents = students.filter(student => {
+    const matchesGrade = studentGradeFilter === 'all' || Number(student.gradeLevel || student.grade) === Number(studentGradeFilter);
+    const matchesSection = studentSectionFilter === 'all' || normalizeSpaces(student.section || student.sectionName || student.classSection || '') === studentSectionFilter;
+
+    return matchesGrade && matchesSection;
+  });
 
   function scrollTo(id) {
     document.getElementById(id)?.scrollIntoView({
@@ -683,7 +699,40 @@ function teacherNameForAssignment(assignment) {
                     <span>Actions</span>
                   </div>
 
-                  {students.map(s => (
+                  
+                    <div className="teacher-tool-box" style={{ marginBottom: 16 }}>
+                      <div className="teacher-form-grid">
+                        <select
+                          className="input-field"
+                          value={studentGradeFilter}
+                          onChange={event => {
+                            setStudentGradeFilter(event.target.value);
+                            setStudentSectionFilter('all');
+                          }}
+                        >
+                          <option value="all">All year levels</option>
+                          {[1, 2, 3, 4, 5, 6].map(grade => (
+                            <option key={grade} value={grade}>Grade {grade}</option>
+                          ))}
+                        </select>
+
+                        <select
+                          className="input-field"
+                          value={studentSectionFilter}
+                          onChange={event => setStudentSectionFilter(event.target.value)}
+                        >
+                          <option value="all">All sections</option>
+                          {studentManagementSectionOptions.map(section => (
+                            <option key={section} value={section}>{section}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <p style={{ margin: '10px 0 0', color: '#64748b', fontSize: 13 }}>
+                        Showing {filteredStudents.length} of {students.length} active student{students.length === 1 ? '' : 's'}.
+                      </p>
+                    </div>
+
+{filteredStudents.map(s => (
                     <div className="admin-clean-table-row" key={s.id}>
                       <span>
                         <strong>{s.name}</strong>

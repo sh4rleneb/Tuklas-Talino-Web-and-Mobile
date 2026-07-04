@@ -151,6 +151,8 @@ const [auditSearch, setAuditSearch] = useState('');
   const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
   const [teacherForm, setTeacherForm] = useState({ name: '', email: '' });
   const [assignmentForm, setAssignmentForm] = useState({ teacherId: '', gradeLevel: '1', section: '' });
+  const [studentGradeFilter, setStudentGradeFilter] = useState('all');
+  const [studentSectionFilter, setStudentSectionFilter] = useState('all');
 
   const studentValidation = studentErrors(studentForm);
   const teacherValidation = teacherErrors(teacherForm);
@@ -183,6 +185,22 @@ const [auditSearch, setAuditSearch] = useState('');
         .filter(Boolean)
     ),
   ].sort((first, second) => first.localeCompare(second));
+
+  const studentManagementSectionOptions = [
+    ...new Set(
+      students
+        .filter((student) => studentGradeFilter === 'all' || Number(student.gradeLevel || student.grade) === Number(studentGradeFilter))
+        .map((student) => normalizeSpaces(student.section || student.sectionName || student.classSection || ''))
+        .filter(Boolean)
+    ),
+  ].sort((first, second) => first.localeCompare(second));
+
+  const filteredStudents = students.filter((student) => {
+    const matchesGrade = studentGradeFilter === 'all' || Number(student.gradeLevel || student.grade) === Number(studentGradeFilter);
+    const matchesSection = studentSectionFilter === 'all' || normalizeSpaces(student.section || student.sectionName || student.classSection || '') === studentSectionFilter;
+
+    return matchesGrade && matchesSection;
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -720,7 +738,61 @@ async function executeVerifiedAction() {
     return (
       <Card>
         <Text style={styles.cardTitle}>Student Management</Text>
-        {students.map((student) => (
+          <Text style={styles.helperText}>Filter learners by year level and section.</Text>
+
+          <Text style={styles.fieldLabel}>Year Level</Text>
+          <View style={styles.choiceRow}>
+            <Button
+              tone={studentGradeFilter === 'all' ? 'green' : 'slate'}
+              disabled={Boolean(busy)}
+              onPress={() => {
+                setStudentGradeFilter('all');
+                setStudentSectionFilter('all');
+              }}
+            >
+              All
+            </Button>
+            {gradeOptions.map((grade) => (
+              <Button
+                key={`student-filter-grade-${grade}`}
+                tone={Number(studentGradeFilter) === Number(grade) ? 'green' : 'slate'}
+                disabled={Boolean(busy)}
+                onPress={() => {
+                  setStudentGradeFilter(grade);
+                  setStudentSectionFilter('all');
+                }}
+              >
+                G{grade}
+              </Button>
+            ))}
+          </View>
+
+          <Text style={styles.fieldLabel}>Section</Text>
+          <View style={styles.choiceRow}>
+            <Button
+              tone={studentSectionFilter === 'all' ? 'green' : 'slate'}
+              disabled={Boolean(busy)}
+              onPress={() => setStudentSectionFilter('all')}
+            >
+              All
+            </Button>
+            {studentManagementSectionOptions.map((sectionOption) => (
+              <Button
+                key={`student-filter-section-${sectionOption}`}
+                tone={studentSectionFilter === sectionOption ? 'green' : 'slate'}
+                disabled={Boolean(busy)}
+                onPress={() => setStudentSectionFilter(sectionOption)}
+              >
+                {sectionOption}
+              </Button>
+            ))}
+          </View>
+
+          <Text style={styles.muted}>
+            Showing {filteredStudents.length} of {students.length} active student{students.length === 1 ? '' : 's'}.
+          </Text>
+
+        {filteredStudents.map((student) => (
           <View key={student.id} style={styles.recordCard}>
             <Text style={styles.rowTitle}>{student.avatar || '🧒'} {student.name}</Text>
             <Text style={styles.muted}>{student.studentCode} • Baitang {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
@@ -787,7 +859,7 @@ async function executeVerifiedAction() {
             </View>
           </View>
         ))}
-        {!students.length && <Text style={styles.muted}>No active students.</Text>}
+        {!filteredStudents.length && <Text style={styles.muted}>{students.length ? 'No students match the selected filters.' : 'No active students.'}</Text>}
       </Card>
     );
   }
