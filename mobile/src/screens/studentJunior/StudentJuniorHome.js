@@ -39,6 +39,15 @@ function isVisibleGroupRecord(item) {
   );
 }
 
+
+function localizeBadgeDescription(description) {
+  const value = description || 'Nakuha sa matagumpay na pagtatapos ng isang gawain.';
+
+  return String(value)
+    .replace(/\blessons\b/gi, 'mga aralin')
+    .replace(/\blesson\b/gi, 'aralin');
+}
+
 function getVisibleGroups(rawGroups = []) {
   return (Array.isArray(rawGroups) ? rawGroups : [])
     .filter(isVisibleGroupRecord)
@@ -201,15 +210,15 @@ export default function StudentJuniorHome({ navigation }) {
 
           <View style={styles.quickStatsRow}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{totalLesson}</Text>
+              <Text style={styles.statValue}>📚 {totalLesson}</Text>
               <Text style={styles.statLabel}>Aralin</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{completedLesson}</Text>
+              <Text style={styles.statValue}>✅ {completedLesson}</Text>
               <Text style={styles.statLabel}>Natapos</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{badges.length}</Text>
+              <Text style={styles.statValue}>🏅 {badges.length}</Text>
               <Text style={styles.statLabel}>Badges</Text>
             </View>
           </View>
@@ -295,7 +304,7 @@ export default function StudentJuniorHome({ navigation }) {
                 <View key={badge.id || badge.name} style={styles.badgeCard}>
                   <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
                   <Text style={styles.badgeName}>{badge.name}</Text>
-                  <Text style={styles.badgeMeta}>{badge.description || 'Nakuha sa matagumpay na pagtatapos ng isang gawain.'}</Text>
+                  <Text style={styles.badgeMeta}>{localizeBadgeDescription(badge.description)}</Text>
                 </View>
               ))
             ) : (
@@ -342,11 +351,11 @@ export default function StudentJuniorHome({ navigation }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#DDFBE8',
   },
   container: {
     flex: 1,
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#DDFBE8',
     paddingTop: 10,
   },
   contentContainer: {
@@ -370,13 +379,13 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     padding: 16,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    shadowColor: '#FB923C',
-    shadowOpacity: 0.10,
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.14,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 9 },
-    elevation: 5,
+    elevation: 6,
   },
 
   brandRow: {
@@ -416,13 +425,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 32,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
     shadowColor: '#14532D',
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 9 },
-    elevation: 5,
+    elevation: 6,
   },
 
   userSection: {
@@ -489,16 +498,16 @@ const styles = StyleSheet.create({
 
   heroCard: {
     marginTop: 14,
-    backgroundColor: '#FEFCE8',
+    backgroundColor: '#16A34A',
     borderRadius: 34,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    shadowColor: '#F59E0B',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: '#15803D',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -513,13 +522,13 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 31,
     fontFamily: 'Fredoka_700Bold',
-    color: '#0F172A',
+    color: '#FFFFFF',
     lineHeight: 37,
   },
   subtitle: {
     marginTop: 8,
     fontSize: 17,
-    color: '#475569',
+    color: '#DCFCE7',
     lineHeight: 25,
     fontFamily: 'Nunito_800ExtraBold',
     width: '100%',
@@ -543,13 +552,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 26,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    shadowColor: '#F59E0B',
-    shadowOpacity: 0.08,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.12,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    elevation: 4,
   },
   xpRow: {
     flexDirection: 'row',
@@ -560,7 +569,7 @@ const styles = StyleSheet.create({
   },
   xpLabel: {
     fontSize: 15,
-    color: '#EA580C',
+    color: '#16A34A',
     fontFamily: 'Fredoka_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -587,7 +596,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 13,
-    backgroundColor: '#FED7AA',
+    backgroundColor: '#86EFAC',
     borderRadius: 999,
     marginTop: 16,
     overflow: 'hidden',
@@ -616,14 +625,14 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingVertical: 15,
     paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: '#FED7AA',
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
     alignItems: 'center',
-    shadowColor: '#F59E0B',
-    shadowOpacity: 0.07,
+    shadowColor: '#14532D',
+    shadowOpacity: 0.12,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
+    elevation: 4,
     minHeight: 86,
   },
   statValue: {
@@ -673,7 +682,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardTag: {
-    color: '#EA580C',
+    color: '#16A34A',
     fontFamily: 'Fredoka_700Bold',
     fontSize: 14,
     marginBottom: 5,
@@ -702,8 +711,8 @@ const styles = StyleSheet.create({
     padding: 26,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#FED7AA',
-    shadowColor: '#F59E0B',
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
     shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 3,
@@ -714,7 +723,7 @@ const styles = StyleSheet.create({
     padding: 18,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#FED7AA',
+    borderColor: '#BBF7D0',
   },
   emptyEmoji: {
     fontSize: 48,
@@ -749,26 +758,26 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    shadowColor: '#F59E0B',
-    shadowOpacity: 0.07,
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.10,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 7 },
-    elevation: 4,
+    elevation: 5,
     minHeight: 184,
   },
   badgeIcon: {
     fontSize: 48,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#BBF7D0',
     width: 72,
     height: 72,
     borderRadius: 24,
     textAlign: 'center',
     textAlignVertical: 'center',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderWidth: 1.5,
+    borderColor: '#4ADE80',
   },
   badgeName: {
     fontSize: 17,
@@ -790,13 +799,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 30,
     padding: 20,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
     shadowColor: '#14532D',
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.12,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    elevation: 5,
   },
   taskTitle: {
     color: '#0F172A',
@@ -828,11 +837,11 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 24,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#BBF7D0',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderWidth: 1.5,
+    borderColor: '#4ADE80',
   },
 
   lessonIcon: {
@@ -840,12 +849,17 @@ const styles = StyleSheet.create({
   },
 
   lessonXpBadge: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#FFFFFF',
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#86EFAC',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
 
   lessonXpText: {
