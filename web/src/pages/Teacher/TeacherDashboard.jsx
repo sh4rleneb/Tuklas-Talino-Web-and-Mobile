@@ -40,7 +40,7 @@ function stableShuffleOptions(options = [], seed = '') {
 function buildFallbackOptions(correctText, alternates = []) {
   const correct = String(correctText || 'Filipino');
   const choices = [correct, ...alternates.filter(Boolean).filter(item => String(item) !== correct)];
-  const fillers = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Oral Communication', 'Pagsulat', 'Hindi nabanggit'];
+  const fillers = ['Reading', 'Vocabulary', 'Literature', 'Oral Communication', 'Writing', 'Not specified'];
   fillers.forEach(item => {
     if (choices.length < 4 && !choices.includes(item)) choices.push(item);
   });
@@ -68,7 +68,7 @@ function buildQuizQuestionsFromLesson(lesson = {}) {
           id: String(question.id || `${lesson.id || 'lesson'}-${activityIndex}-${questionIndex}`),
           type: 'mcq',
           source: activity.title || 'Lesson Quiz',
-          prompt: question.question || question.prompt || 'Piliin ang tamang sagot.',
+          prompt: question.question || question.prompt || 'Choose the correct answer.',
           options: hasCorrect ? options : options.map((option, idx) => ({ ...option, isCorrect: idx === 0 })),
           points: Number(question.points || 1)
         });
@@ -1115,7 +1115,7 @@ export default function TeacherDashboard({
             <div className="teacher-profile-avatar">👩‍🏫</div>
             <div className="teacher-profile-text">
               <strong>{teacherName}</strong>
-              <small>Guro</small>
+              <small>Teacher</small>
             </div>
           </div>
 
@@ -2046,7 +2046,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
   const [builderTab, setBuilderTab] = useState('source');
   const [lessonDraft, setLessonDraft] = useState({
     gradeLevel: 1,
-    subject: 'Pagbasa',
+    subject: 'Reading',
     title: '',
     xpReward: 25,
     duration: '10 minuto',
@@ -2054,7 +2054,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     passage: '',
     layunin: '',
     alamin: '',
-    aralin: ''
+    lesson: ''
   });
 
   const assignedGrades = [...new Set((assignedClasses || [])
@@ -2120,7 +2120,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       },
       writing: {
         ...base,
-        title: 'Gawain',
+        title: 'Writing Activity',
         gawainType: Number(lessonDraft.gradeLevel || 1) <= 3 ? 'complete_sentence' : 'writing_task',
         prompt: '',
         template: 'Ang ____ ay ____.',
@@ -2129,7 +2129,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       },
       speech: {
         ...base,
-        title: 'Bigkas',
+        title: 'Speech Activity',
         targetText: ''
       },
       matching: {
@@ -2410,7 +2410,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       });
 
       setLessonPlanFilePreview('');
-      setLessonPlanFileStatus('Material uploaded. Students will see this as Materyal inside the lesson after you publish.');
+      setLessonPlanFileStatus('Material uploaded. Students will see this as Material inside the lesson after you publish.');
       setAiDraftNotice('');
     } catch (err) {
       setLessonPlanFile(null);
@@ -2470,9 +2470,9 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
         if (activity.type === 'writing') {
           const rawGawainType = activity.gawainType || 'writing_task';
-          const gawainType = rawGawainType === 'complete_sentence' ? 'complete_sentence' : 'writing_task';
+          const activityType = rawGawainType === 'complete_sentence' ? 'complete_sentence' : 'writing_task';
 
-          if (gawainType === 'complete_sentence') {
+          if (activityType === 'complete_sentence') {
             const template = String(activity.template || activity.prompt || '').trim();
             const choices = String(activity.choicesText || '')
               .split(/[\n,]/)
@@ -2484,11 +2484,11 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
             return {
               type: 'writing',
-              title: activity.title || 'Gawain',
+              title: activity.title || 'Writing Activity',
               instructions: activity.instructions || 'Kumpletuhin ang pangungusap.',
               prompt: template,
               rubric: {
-                gawainType,
+                activityType,
                 template,
                 choices,
                 wordBank: choices,
@@ -2504,11 +2504,11 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
           return {
             type: 'writing',
-            title: activity.title || 'Gawain',
+            title: activity.title || 'Writing Activity',
             instructions: activity.instructions || null,
             prompt: activity.prompt.trim(),
             rubric: {
-              gawainType,
+              activityType,
               needsTeacherReview: true
             }
           };
@@ -2519,7 +2519,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
           return {
             type: 'speech',
-            title: activity.title || 'Bigkas',
+            title: activity.title || 'Speech Activity',
             instructions: activity.instructions || null,
             targetText: activity.targetText.trim()
           };
@@ -2594,17 +2594,17 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
   function guessSubjectFromPlan(text) {
     const lower = String(text || '').toLowerCase();
 
-    if (/oral|bigkas|pagbigkas|talumpati|speech|pronunciation|salita nang malinaw/.test(lower)) return 'Oral Comm';
-    if (/sulat|pagsulat|pangungusap|sanaysay|liham|tulaing isusulat/.test(lower)) return 'Pagsulat';
-    if (/panitikan|tula|alamat|pabula|maikling kwento|kuwento/.test(lower)) return 'Panitikan';
-    if (/bokabularyo|talasalitaan|kahulugan|salitang|vocabulary/.test(lower)) return 'Bokabularyo';
-    if (/pagbasa|basa|reading|komprehensyon|unawa|story/.test(lower)) return 'Pagbasa';
+    if (/oral|bigkas|pagbigkas|talumpati|speech|pronunciation|word nang malinaw/.test(lower)) return 'Oral Comm';
+    if (/sulat|pagsulat|pangungusap|sanaysay|liham|tulaing isusulat/.test(lower)) return 'Writing';
+    if (/panitikan|tula|alamat|pabula|maikling kwento|kuwento/.test(lower)) return 'Literature';
+    if (/bokabularyo|talawordan|meaning|words |vocabulary/.test(lower)) return 'Vocabulary';
+    if (/pagbasa|basa|reading|komprehensyon|unawa|story/.test(lower)) return 'Reading';
 
-    return 'Pagbasa';
+    return 'Reading';
   }
 
   function guessGradeFromPlan(text) {
-    const match = String(text || '').match(/grade\s*([1-6])|baitang\s*([1-6])/i);
+    const match = String(text || '').match(/grade\s*([1-6])|grade\s*([1-6])/i);
     return Number(match?.[1] || match?.[2] || lessonDraft.gradeLevel || 1);
   }
 
@@ -2618,9 +2618,9 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
   function getKeywordsFromPlan(text) {
     const stopWords = new Set([
-      'ang', 'mga', 'para', 'with', 'that', 'this', 'from', 'lesson', 'grade', 'baitang',
+      'ang', 'mga', 'para', 'with', 'that', 'this', 'from', 'lesson', 'grade', 'grade',
       'student', 'students', 'teacher', 'learning', 'objective', 'objectives', 'activity',
-      'filipino', 'aralin', 'gawain', 'panuto', 'pagkatapos', 'maaaring', 'dapat', 'will',
+      'filipino', 'lesson', 'activity', 'instructions', 'after', 'may', 'must', 'will',
       'able', 'identify', 'understand', 'explain', 'write', 'read', 'using'
     ]);
 
@@ -2651,7 +2651,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     const sentences = getCleanSentences(rawPlan);
     const keywords = getKeywordsFromPlan(rawPlan);
     const mainPassage = sentences.slice(0, 5).join('\n\n') || rawPlan.slice(0, 900);
-    const vocabularyWords = (keywords.length ? keywords : ['salita', 'kahulugan', 'aralin']).slice(0, 4);
+    const vocabularyWords = (keywords.length ? keywords : ['word', 'meaning', 'lesson']).slice(0, 4);
     const firstSentence = sentences[0] || generatedTitle;
 
     const generatedActivities = [
@@ -2659,35 +2659,35 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
         id: makeId(),
         type: 'infographic',
         title: 'Info Card',
-        instructions: 'Basahin ang maikling gabay bago sagutan ang gawain.',
-        content: `Paksa: ${generatedTitle}\n\nMahahalagang ideya:\n- Basahin at unawain ang aralin.\n- Sagutan ang mga gawain pagkatapos magbasa.\n- Humingi ng gabay sa guro kung may hindi malinaw.`
+        instructions: 'Read the short guide before answering the activity.',
+        content: `Topic: ${generatedTitle}\n\nKey ideas:\n- Read and understand the lesson.\n- Answer the activities after reading.\n- Ask the teacher for guidance if something is unclear.`
       },
       {
         id: makeId(),
         type: 'vocabulary',
-        title: 'Mga Bagong Salita',
-        instructions: 'Pag-aralan ang salita, kahulugan, at halimbawa.',
+        title: 'New Vocabulary Words',
+        instructions: 'Study the word, meaning, and example.',
         words: vocabularyWords.map(word => ({
           id: makeId(),
           word: word.charAt(0).toUpperCase() + word.slice(1),
-          meaning: 'Ilagay o iwasto ang kahulugan ng salitang ito.',
-          example: `Halimbawa ng gamit ng ${word} sa pangungusap.`
+          meaning: 'Enter or correct the meaning of this word.',
+          example: `Example usage of ${word} in a sentence.`
         }))
       },
       {
         id: makeId(),
         type: 'mcq',
         title: 'Mini Quiz',
-        instructions: 'Piliin ang pinakaangkop na sagot.',
+        instructions: 'Choose the best answer.',
         questions: [
           {
             id: makeId(),
-            question: `Ano ang pangunahing paksa ng aralin na "${generatedTitle}"?`,
+            question: `What is the main topic of the lesson na "${generatedTitle}"?`,
             options: [
               { id: makeId(), text: generatedSubject, isCorrect: true },
               { id: makeId(), text: 'Matematika', isCorrect: false },
               { id: makeId(), text: 'Agham', isCorrect: false },
-              { id: makeId(), text: 'Araling Panlipunan', isCorrect: false }
+              { id: makeId(), text: 'Social Studies', isCorrect: false }
             ]
           }
         ]
@@ -2695,15 +2695,15 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       {
         id: makeId(),
         type: 'writing',
-        title: 'Gawain',
-        instructions: 'Sumulat ng maikling sagot batay sa aralin.',
+        title: 'Writing Activity',
+        instructions: 'Write a short answer based on the lesson.',
         prompt: `Ano ang natutuhan mo tungkol sa ${generatedTitle}? Sumulat ng 2 hanggang 3 pangungusap.`
       },
       {
         id: makeId(),
         type: 'speech',
-        title: 'Bigkas',
-        instructions: 'Basahin nang malinaw ang pangungusap.',
+        title: 'Speech Activity',
+        instructions: 'Read the sentence clearly.',
         targetText: firstSentence.slice(0, 180)
       }
     ];
@@ -2715,7 +2715,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       title: generatedTitle,
       xpReward: prev.xpReward || 25,
       duration: prev.duration || '10 minuto',
-      instructions: 'Basahin ang aralin, pakinggan kung kailangan, at sagutan ang mga gawain.',
+      instructions: 'Read the lesson, listen if needed, and answer the activities.',
       passage: mainPassage
     }));
 
@@ -2758,11 +2758,11 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     }
 
     const hasQuiz = preparedActivities.some(activity => activity.type === 'mcq');
-    const hasGawain = preparedActivities.some(activity => activity.type === 'writing');
-    const hasBigkas = preparedActivities.some(activity => activity.type === 'speech');
+    const hasWritingActivity = preparedActivities.some(activity => activity.type === 'writing');
+    const hasSpeechActivity = preparedActivities.some(activity => activity.type === 'speech');
 
-    if (!hasQuiz || !hasGawain || !hasBigkas) {
-      window.alert('Please add one Quiz, one Gawain, and one Bigkas before publishing.');
+    if (!hasQuiz || !hasWritingActivity || !hasSpeechActivity) {
+      window.alert('Please add one Quiz, one Writing Activity, and one Speech Activity before publishing.');
       setBuilderTab('activities');
       return;
     }
@@ -2770,7 +2770,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     const structuredPassage = [
       lessonDraft.layunin?.trim() ? `Layunin:\n${lessonDraft.layunin.trim()}` : '',
       lessonDraft.alamin?.trim() ? `Alamin:\n${lessonDraft.alamin.trim()}` : '',
-      lessonDraft.aralin?.trim() ? `Aralin:\n${lessonDraft.aralin.trim()}` : ''
+      lessonDraft.aralin?.trim() ? `Lesson:\n${lessonDraft.aralin.trim()}` : ''
     ].filter(Boolean).join('\n\n') || lessonDraft.passage || '';
 
     const payload = {
@@ -2779,7 +2779,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       title: lessonDraft.title.trim(),
       xpReward: Number(lessonDraft.xpReward || 25),
       duration: '10 minuto',
-      instructions: lessonDraft.instructions || 'Basahin ang aralin at sagutan ang mga gawain.',
+      instructions: lessonDraft.instructions || 'Read the lesson and answer the activities.',
       passage: structuredPassage || null,
       activities: preparedActivities
     };
@@ -2788,7 +2788,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
     setLessonDraft({
       gradeLevel: 1,
-      subject: 'Pagbasa',
+      subject: 'Reading',
       title: '',
       xpReward: 25,
       duration: '10 minuto',
@@ -2796,7 +2796,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       passage: '',
       layunin: '',
       alamin: '',
-      aralin: ''
+      lesson: ''
     });
 
     setActivities([]);
@@ -2825,15 +2825,15 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
   const activityButtonMeta = [
     { type: 'mcq', label: 'Quiz', icon: '?', className: 'choice-mcq' },
-    { type: 'writing', label: 'Gawain', icon: '✎', className: 'choice-writing' },
-    { type: 'speech', label: 'Bigkas', icon: '🎙️', className: 'choice-speech' }
+    { type: 'writing', label: 'Writing', icon: '✎', className: 'choice-writing' },
+    { type: 'speech', label: 'Speech', icon: '🎙️', className: 'choice-speech' }
   ];
 
   const assessmentProfile = lessonAssessmentProfile(validActivities);
   const assessmentChecks = [
     { label: 'Content / Info', ok: assessmentProfile.hasContent, note: 'Adds lesson context before assessment.' },
     { label: 'Quiz', ok: assessmentProfile.hasObjectiveQuiz, note: 'Measures basic understanding with a score.' },
-    { label: 'Gawain Evidence', ok: assessmentProfile.hasWriting, note: 'Shows if students can express ideas in Filipino.' },
+    { label: 'Writing Evidence', ok: assessmentProfile.hasWriting, note: 'Shows if students can express ideas clearly.' },
     { label: 'Speech Evidence', ok: assessmentProfile.hasSpeech, note: 'Supports pronunciation and oral communication.' }
   ];
   const readinessScore = Math.round((assessmentChecks.filter(item => item.ok).length / assessmentChecks.length) * 100);
@@ -3308,7 +3308,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                 className="input-field"
                 value={lessonDraft.title}
                 onChange={(e) => updateLesson('title', e.target.value)}
-                placeholder="e.g. Pangngalan at mga Halimbawa"
+                placeholder="e.g. Nouns and Examples"
               />
             </div>
 
@@ -3326,11 +3326,11 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
             {lessonPlanFile ? (
               <div className="muted" style={{ marginBottom: 12 }}>
-                You uploaded a material. Add a short Layunin, Alamin, and Aralin summary so students still have readable lesson cards.
+                You uploaded a material. Add a short Objective, Background, and Lesson summary so students still have readable lesson cards.
               </div>
             ) : (
               <div className="muted" style={{ marginBottom: 12 }}>
-                No uploaded material yet. Fill in the Aralin content manually.
+                No uploaded material yet. Fill in the Lesson content manually.
               </div>
             )}
 
@@ -3367,7 +3367,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                 className="input-field"
                 value={lessonDraft.layunin || ''}
                 onChange={(e) => updateLesson('layunin', e.target.value)}
-                placeholder={"Ano ang matututuhan ng students?\n\nHalimbawa: Natutukoy ang mga salitang nagsisimula sa letrang M."}
+                placeholder={"What will students learn?\n\nExample: Students identify words that start with the letter M."}
                 rows="4"
                 style={{
                   minHeight: 132,
@@ -3411,7 +3411,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                 className="input-field"
                 value={lessonDraft.alamin || ''}
                 onChange={(e) => updateLesson('alamin', e.target.value)}
-                placeholder={"Ano ang kailangang malaman muna ng students tungkol sa topic?\n\nHalimbawa: Ang letrang M ay may tunog na /m/. May mga salita na nagsisimula sa M."}
+                placeholder={"What should students know first about the topic?\n\nExample: The letter M has the /m/ sound. Some words start with M."}
                 rows="4"
                 style={{
                   minHeight: 144,
@@ -3448,14 +3448,14 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                 >
                   3
                 </span>
-                <span style={{ color: '#009A57', fontSize: 23, letterSpacing: '-0.03em' }}>Aralin</span>
+                <span style={{ color: '#009A57', fontSize: 23, letterSpacing: '-0.03em' }}>Lesson</span>
                 <span style={{ color: '#64748B', fontSize: 16, fontWeight: 850 }}>— Main lesson content</span>
               </label>
               <textarea
                 className="input-field lms-editor-area"
                 value={lessonDraft.aralin || ''}
                 onChange={(e) => updateLesson('aralin', e.target.value)}
-                placeholder={"Ano ang babasahin o aaralin ng students?\n\nHalimbawa: May mga salitang nagsisimula sa M tulad ng mata, mesa, at maya."}
+                placeholder={"What will students read or study?\n\nExample: Some words start with M, such as mata, mesa, and maya."}
                 rows="8"
                 style={{
                   minHeight: 190,
@@ -3724,13 +3724,13 @@ function TeacherActivityBlock({
       color: '#ec407a'
     },
     writing: {
-      label: 'Gawain',
+      label: 'Writing',
       desc: 'Choose the best activity for the lesson.',
       icon: '✎',
       color: '#16a9b7'
     },
     speech: {
-      label: 'Bigkas',
+      label: 'Speech',
       desc: 'Practice speaking and pronunciation.',
       icon: '🎙️',
       color: '#f47c20'
@@ -3789,7 +3789,7 @@ function TeacherActivityBlock({
             className="input-field"
             value={activity.title}
             onChange={(e) => updateActivity(activity.id, { title: e.target.value })}
-            placeholder="Halimbawa: Gawain"
+            placeholder="Example: Writing Activity"
             style={{ minHeight: 56, fontSize: 16, padding: '14px 18px' }}
           />
 
@@ -3797,7 +3797,7 @@ function TeacherActivityBlock({
             className="input-field"
             value={activity.instructions}
             onChange={(e) => updateActivity(activity.id, { instructions: e.target.value })}
-            placeholder="Halimbawa: Basahin ang tanong at sagutin nang maayos."
+            placeholder="Example: Read the question and answer clearly."
             style={{ minHeight: 56, fontSize: 16, padding: '14px 18px' }}
           />
         </div>
@@ -3885,7 +3885,7 @@ function TeacherActivityBlock({
         )}
 
         {activity.type === 'writing' && (
-          <div className="teacher-inline-gawain" style={{ display: 'grid', gap: 12 }}>
+          <div className="teacher-inline-activity" style={{ display: 'grid', gap: 12 }}>
             <div
               className="teacher-activity-row-fields"
               style={{
@@ -3896,7 +3896,7 @@ function TeacherActivityBlock({
               }}
             >
               <label style={{ display: 'grid', gap: 8, fontWeight: 900, fontSize: 16 }}>
-                Gawain Type
+                Activity Type
                 <select
                   className="input-field"
                   value={(activity.gawainType || 'writing_task') === 'complete_sentence' ? 'complete_sentence' : 'writing_task'}
@@ -3932,7 +3932,7 @@ function TeacherActivityBlock({
                   className="input-field"
                   value={activity.template || ''}
                   onChange={(e) => updateActivity(activity.id, { template: e.target.value })}
-                  placeholder={"Sentence Template\nHalimbawa: Ang ____ ay maganda."}
+                  placeholder={"Sentence Template\nExample: The ____ is beautiful."}
                   rows="3"
                   style={{
                     minHeight: 116,
@@ -3946,7 +3946,7 @@ function TeacherActivityBlock({
                   className="input-field"
                   value={activity.choicesText || ''}
                   onChange={(e) => updateActivity(activity.id, { choicesText: e.target.value })}
-                  placeholder={"Choices / Word Bank\nHalimbawa, one per line:\nbahay\npaaralan"}
+                  placeholder={"Choices / Word Bank\nExample, one per line:\nhome\nschool"}
                   rows="4"
                   style={{
                     minHeight: 140,
@@ -3960,7 +3960,7 @@ function TeacherActivityBlock({
                   className="input-field"
                   value={activity.correctAnswer || ''}
                   onChange={(e) => updateActivity(activity.id, { correctAnswer: e.target.value })}
-                  placeholder="Correct Answer — Halimbawa: bahay"
+                  placeholder="Correct Answer — Example: home"
                   style={{
                     minHeight: 58,
                     fontSize: 16,
@@ -3973,7 +3973,7 @@ function TeacherActivityBlock({
                 className="input-field"
                 value={activity.prompt}
                 onChange={(e) => updateActivity(activity.id, { prompt: e.target.value })}
-                placeholder={"Writing Task\nHalimbawa: Sumulat ng 2 pangungusap tungkol sa aral ng kuwento."}
+                placeholder={"Writing Task\nExample: Write 2 sentences about the lesson of the story."}
                 rows="4"
                 style={{
                   minHeight: 140,
@@ -4062,7 +4062,7 @@ function TeacherActivityBlock({
             className="input-field"
             value={activity.content}
             onChange={(e) => updateActivity(activity.id, { content: e.target.value })}
-            placeholder="Short info card content. Example: Ang pangngalan ay salita na tumutukoy sa tao, bagay, hayop, lugar, o pangyayari."
+            placeholder="Short info card content. Example: A noun is a word that refers to a person, thing, animal, place, or event."
             rows="3"
           />
         )}

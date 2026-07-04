@@ -122,8 +122,8 @@ function GawainPreview({ activity }) {
     return (
       <div className="teacher-student-preview-content-card">
         <div className="teacher-student-preview-card-kicker">Student activity step</div>
-        <h3>Gawain</h3>
-        <p className="teacher-student-preview-muted">No Gawain added yet. Add a Gawain activity before publishing.</p>
+        <h3>Writing Activity</h3>
+        <p className="teacher-student-preview-muted">No Writing Activity added yet. Add a Writing Activity before publishing.</p>
       </div>
     );
   }
@@ -137,7 +137,7 @@ function GawainPreview({ activity }) {
   return (
     <div className="teacher-student-preview-content-card">
       <div className="teacher-student-preview-card-kicker">Student activity step</div>
-      <h3>{activity.title || 'Gawain'}</h3>
+      <h3>{activity.title || 'Writing Activity'}</h3>
       {activity.instructions && (
         <p className="teacher-student-preview-muted">{activity.instructions}</p>
       )}
@@ -174,8 +174,8 @@ function BigkasPreview({ activity }) {
     return (
       <div className="teacher-student-preview-content-card">
         <div className="teacher-student-preview-card-kicker">Student speaking step</div>
-        <h3>Bigkas</h3>
-        <p className="teacher-student-preview-muted">No Bigkas added yet. Add a Bigkas activity before publishing.</p>
+        <h3>Speech Activity</h3>
+        <p className="teacher-student-preview-muted">No Speech Activity added yet. Add a Speech Activity before publishing.</p>
       </div>
     );
   }
@@ -183,7 +183,7 @@ function BigkasPreview({ activity }) {
   return (
     <div className="teacher-student-preview-content-card">
       <div className="teacher-student-preview-card-kicker">Student speaking step</div>
-      <h3>{activity.title || 'Bigkas'}</h3>
+      <h3>{activity.title || 'Speech Activity'}</h3>
       {activity.instructions && (
         <p className="teacher-student-preview-muted">{activity.instructions}</p>
       )}
@@ -282,13 +282,13 @@ export default function TeacherStudentLessonPreview({
       },
       {
         key: 'gawain',
-        title: 'Gawain',
+        title: 'Writing',
         subtitle: writingActivity ? 'Activity preview' : 'Not added yet',
         render: () => <GawainPreview activity={writingActivity} />
       },
       {
         key: 'bigkas',
-        title: 'Bigkas',
+        title: 'Speech',
         subtitle: speechActivity ? 'Speaking preview' : 'Not added yet',
         render: () => <BigkasPreview activity={speechActivity} />
       },
