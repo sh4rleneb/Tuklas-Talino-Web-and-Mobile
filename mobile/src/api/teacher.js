@@ -71,6 +71,10 @@ export async function getTeacherLessons() {
   return api('/lessons/mine');
 }
 
+export async function createStudentAccount(body) {
+  return api('/students', { method: 'POST', body });
+}
+
 export async function createLesson(body) {
   return api('/lessons', { method: 'POST', body });
 }

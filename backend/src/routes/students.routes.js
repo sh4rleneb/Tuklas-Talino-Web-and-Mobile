@@ -647,7 +647,7 @@ router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/', requireRole('admin'), async (req, res, next) => {
+router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
     const body = validate(studentSchema, req.body);
     assertSafeContentPayload({ name: body.name, section: body.section }, 'student account');

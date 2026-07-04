@@ -27,6 +27,7 @@ import {
   archiveLesson,
   createGroup,
   createLesson,
+  createStudentAccount,
   getPendingGroupChecks,
   getReportSummary,
   getStudentReport,
@@ -303,6 +304,8 @@ export default function TeacherHome({ navigation }) {
   const [groupForm, setGroupForm] = useState({ name: '', description: '' });
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [taskForm, setTaskForm] = useState({ title: '', description: '', xpReward: '10' });
+  const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
+  const [createdStudentAccount, setCreatedStudentAccount] = useState(null);
   const [quizFilter, setQuizFilter] = useState('All');
 
   const load = useCallback(async () => {
@@ -1374,10 +1377,94 @@ async function handleLogout() {
     );
   }
 
+  async function handleCreateStudentAccount() {
+    const name = String(studentForm.name || '').replace(/\s+/g, ' ').trim();
+    const section = String(studentForm.section || '').replace(/\s+/g, ' ').trim();
+    const gradeLevel = Number(studentForm.gradeLevel);
+
+    if (!name) {
+      Alert.alert('Student Account', 'Student name is required.');
+      return;
+    }
+
+    if (![1, 2, 3, 4, 5, 6].includes(gradeLevel)) {
+      Alert.alert('Student Account', 'Grade must be from 1 to 6.');
+      return;
+    }
+
+    if (!section) {
+      Alert.alert('Student Account', 'Section is required.');
+      return;
+    }
+
+    setBusy('student-create');
+    try {
+      const data = await createStudentAccount({ name, gradeLevel, section });
+      setCreatedStudentAccount(data);
+      setStudentForm({ name: '', gradeLevel: String(gradeLevel), section: '' });
+      Alert.alert(
+        'Student Account Created',
+        `Username: ${data.username || data.student?.studentCode || 'Created'}\nTemporary PIN: ${data.temporaryPin || 'Check response'}`
+      );
+      await load();
+    } catch (err) {
+      Alert.alert('Student Account', err.message || 'Unable to create student account.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   function renderStudents() {
     return (
-      <SectionCard>
-        <Text style={styles.cardTitle}>Student Monitoring</Text>
+      <>
+        <SectionCard>
+          <Text style={styles.cardTitle}>Add Student Account</Text>
+          <Field
+            label="Student Name"
+            value={studentForm.name}
+            onChangeText={(name) => setStudentForm((current) => ({ ...current, name }))}
+            placeholder="Full name"
+          />
+
+          <Text style={styles.fieldLabel}>Grade</Text>
+          <View style={styles.choiceRow}>
+            {['1', '2', '3', '4', '5', '6'].map((grade) => (
+              <SmallButton
+                key={grade}
+                tone={studentForm.gradeLevel === grade ? 'green' : 'slate'}
+                disabled={busy === 'student-create'}
+                onPress={() => setStudentForm((current) => ({ ...current, gradeLevel: grade }))}
+              >
+                {grade}
+              </SmallButton>
+            ))}
+          </View>
+
+          <Field
+            label="Section"
+            value={studentForm.section}
+            onChangeText={(section) => setStudentForm((current) => ({ ...current, section }))}
+            placeholder="Section name"
+          />
+
+          <SmallButton disabled={Boolean(busy)} onPress={handleCreateStudentAccount}>
+            {busy === 'student-create' ? 'Creating...' : 'Create Student Account'}
+          </SmallButton>
+
+          {createdStudentAccount && (
+            <View style={[styles.studentCard, { marginTop: 12, borderBottomWidth: 0 }]}>
+              <Text style={styles.studentAvatar}>✅</Text>
+              <View style={styles.flex}>
+                <Text style={styles.rowTitle}>Student account created</Text>
+                <Text style={styles.muted}>Username: {createdStudentAccount.username || createdStudentAccount.student?.studentCode || '—'}</Text>
+                <Text style={styles.muted}>Temporary PIN: {createdStudentAccount.temporaryPin || '—'}</Text>
+              </View>
+            </View>
+          )}
+        </SectionCard>
+
+        <SectionCard>
+          <Text style={styles.cardTitle}>Student Monitoring</Text>
         {(monitoring.rows || []).map((student) => (
           <View key={student.id} style={styles.studentCard}>
             <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
@@ -1390,7 +1477,8 @@ async function handleLogout() {
           </View>
         ))}
         {!monitoring.rows?.length && <Text style={styles.muted}>No assigned learners yet.</Text>}
-      </SectionCard>
+        </SectionCard>
+      </>
     );
   }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { uploadForm } from '../../api/client';
+import { api, uploadForm } from '../../api/client';
 import { SUBJECTS } from '../../constants/studentConstants';
 import { asArray, fmtDate, lessonAssessmentProfile } from '../../utils/studentHelpers';
 import { TeacherRedesignStyles } from '../../components/styles/StyleBlocks';
@@ -173,6 +173,50 @@ export default function TeacherDashboard({
   const [openGroupTools, setOpenGroupTools] = useState({});
   const [openGroupProgress, setOpenGroupProgress] = useState({});
   const [gradingWritingIds, setGradingWritingIds] = useState({});
+  const [studentAccountForm, setStudentAccountForm] = useState({ name: '', gradeLevel: '1', section: '' });
+  const [studentAccountBusy, setStudentAccountBusy] = useState(false);
+  const [studentAccountError, setStudentAccountError] = useState('');
+  const [studentAccountResult, setStudentAccountResult] = useState(null);
+
+  async function handleCreateStudentAccount(event) {
+    event.preventDefault();
+    const name = String(studentAccountForm.name || '').replace(/\s+/g, ' ').trim();
+    const section = String(studentAccountForm.section || '').replace(/\s+/g, ' ').trim();
+    const gradeLevel = Number(studentAccountForm.gradeLevel);
+
+    setStudentAccountError('');
+    setStudentAccountResult(null);
+
+    if (!name) {
+      setStudentAccountError('Student name is required.');
+      return;
+    }
+
+    if (![1, 2, 3, 4, 5, 6].includes(gradeLevel)) {
+      setStudentAccountError('Grade must be from 1 to 6.');
+      return;
+    }
+
+    if (!section) {
+      setStudentAccountError('Section is required.');
+      return;
+    }
+
+    setStudentAccountBusy(true);
+    try {
+      const data = await api('/students', {
+        method: 'POST',
+        body: { name, gradeLevel, section }
+      });
+      setStudentAccountResult(data);
+      setStudentAccountForm({ name: '', gradeLevel: String(gradeLevel), section: '' });
+      if (typeof reload === 'function') await reload();
+    } catch (err) {
+      setStudentAccountError(err.message || 'Unable to create student account.');
+    } finally {
+      setStudentAccountBusy(false);
+    }
+  }
 
   const lessons = data.lessons || [];
   const groups = data.groups || [];
@@ -1990,6 +2034,78 @@ export default function TeacherDashboard({
                   </tr>
                 </thead>
                 <tbody>
+                  <div className="teacher-tool-box" style={{ marginBottom: 18 }}>
+                    <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
+                      <div>
+                        <div className="lms-section-label">Student Account</div>
+                        <h3>Add Student</h3>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handleCreateStudentAccount}>
+                      <div className="teacher-two-fields">
+                        <input
+                          className="input-field"
+                          value={studentAccountForm.name}
+                          onChange={(event) => setStudentAccountForm(form => ({ ...form, name: event.target.value }))}
+                          placeholder="Student full name"
+                        />
+                        <select
+                          className="input-field"
+                          value={studentAccountForm.gradeLevel}
+                          onChange={(event) => setStudentAccountForm(form => ({ ...form, gradeLevel: event.target.value }))}
+                        >
+                          {[1, 2, 3, 4, 5, 6].map(grade => (
+                            <option key={grade} value={grade}>Grade {grade}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <input
+                        className="input-field"
+                        value={studentAccountForm.section}
+                        onChange={(event) => setStudentAccountForm(form => ({ ...form, section: event.target.value }))}
+                        placeholder="Section name"
+                        list="teacher-student-section-list"
+                        style={{ marginTop: 10 }}
+                      />
+
+                      <datalist id="teacher-student-section-list">
+                        {[...new Set([
+                          ...assignedClasses.map(item => item.section),
+                          ...students.map(student => student.section)
+                        ].filter(Boolean))].map(section => (
+                          <option key={section} value={section} />
+                        ))}
+                      </datalist>
+
+                      {studentAccountError && (
+                        <p style={{ color: '#dc2626', fontWeight: 800, margin: '10px 0 0' }}>
+                          {studentAccountError}
+                        </p>
+                      )}
+
+                      {studentAccountResult && (
+                        <div className="lms-empty-line" style={{ marginTop: 10, textAlign: 'left' }}>
+                          <strong>Student account created.</strong>
+                          <br />
+                          Username: {studentAccountResult.username || studentAccountResult.student?.studentCode || '—'}
+                          <br />
+                          Temporary PIN: {studentAccountResult.temporaryPin || '—'}
+                        </div>
+                      )}
+
+                      <button
+                        className="lms-main-action full"
+                        type="submit"
+                        disabled={studentAccountBusy}
+                        style={{ marginTop: 12 }}
+                      >
+                        {studentAccountBusy ? 'Creating...' : 'Create Student Account'}
+                      </button>
+                    </form>
+                  </div>
+
                   {rows.length ? rows.map(row => (
                     <tr key={row.id}>
                       <td>
