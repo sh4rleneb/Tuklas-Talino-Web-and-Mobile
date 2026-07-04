@@ -10,15 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/client';
 
-console.log('RN CHECK', {
-  ActivityIndicator: !!ActivityIndicator,
-  ScrollView: !!ScrollView,
-  StyleSheet: !!StyleSheet,
-  Text: !!Text,
-  TouchableOpacity: !!TouchableOpacity,
-  View: !!View,
-  SafeAreaView: !!SafeAreaView,
-});
+
 
 
 export default function LessonDashboardScreen({ navigation, route }) {
