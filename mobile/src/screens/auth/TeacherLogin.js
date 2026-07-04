@@ -15,7 +15,7 @@ import {
 import { Ionicons }
 from '@expo/vector-icons';
 
-import { loginGuro }
+import { loginTeacher }
 from '../../api/auth';
 
 function cleanTeacherLoginIdentifierInput(value, shouldUppercase = false) {
@@ -62,7 +62,7 @@ export default function GuroLogin({
 
       setLoading(true);
 
-      const data = await loginGuro(
+      const data = await loginTeacher(
         identifier,
         password
       );
@@ -70,13 +70,13 @@ export default function GuroLogin({
       if (data.user?.mustChangePassword) {
         navigation.replace(
           'ChangePassword',
-          { homeRoute: 'GuroHome' }
+          { homeRoute: 'TeacherHome' }
         );
         return;
       }
 
       navigation.replace(
-        'GuroHome'
+        'TeacherHome'
       );
 
     } catch (error) {

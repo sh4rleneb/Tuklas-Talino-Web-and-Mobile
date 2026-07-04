@@ -263,15 +263,15 @@ export default function AralinLibrary({ navigation, variant = 'junior' }) {
     }
 
     if (variant === 'senior') {
-      navigation.navigate('AralinDashboardScreen', {
+      navigation.navigate('LessonDashboardScreen', {
         lessonId: lesson.id,
         homeRoute: 'StudentSeniorTabs',
       });
       return;
     }
 
-    navigation.navigate('Aralins', {
-      screen: 'AralinDashboardScreen',
+    navigation.navigate('Lessons', {
+      screen: 'LessonDashboardScreen',
       params: {
         lessonId: lesson.id,
         homeRoute: 'StudentTabs',

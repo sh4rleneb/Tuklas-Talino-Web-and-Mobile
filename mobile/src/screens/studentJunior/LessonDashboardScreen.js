@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  GawainIndicator,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,6 +9,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/client';
+
+console.log('RN CHECK', {
+  ActivityIndicator: !!ActivityIndicator,
+  ScrollView: !!ScrollView,
+  StyleSheet: !!StyleSheet,
+  Text: !!Text,
+  TouchableOpacity: !!TouchableOpacity,
+  View: !!View,
+  SafeAreaView: !!SafeAreaView,
+});
+
 
 export default function LessonDashboardScreen({ navigation, route }) {
   const { lessonId, homeRoute } = route.params || {};
@@ -40,7 +51,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <GawainIndicator size="large" color="#22C55E" />
+          <ActivityIndicator size="large" color="#22C55E" />
           <Text style={styles.loadingText}>Nilo-load ang aralin...</Text>
         </View>
       </SafeAreaView>
@@ -72,7 +83,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={styles.page}>
 
         <TouchableOpacity style={styles.backRow} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Aklatan ng mga Lesson</Text>
+          <Text style={styles.backText}>← Aklatan ng mga Aralin</Text>
         </TouchableOpacity>
 
         <View style={styles.pill}>
@@ -126,7 +137,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
           onPress={() => navigation.navigate('StudentJuniorLessonDetail', { lessonId, homeRoute })}
         >
           <Text style={styles.buttonText}>
-            {isCompleted ? '🔁 Balikan ang Lesson' : progressPercent > 0 ? '▶ Ipagpatuloy ang Lesson' : '▶ Simulan ang Lesson'}
+            {isCompleted ? '🔁 Balikan ang Lesson' : progressPercent > 0 ? '▶ Ipagpatuloy ang Aralin' : '▶ Simulan ang Aralin'}
           </Text>
         </TouchableOpacity>
 

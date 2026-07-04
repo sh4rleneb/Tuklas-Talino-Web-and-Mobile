@@ -47,15 +47,15 @@ import {
 import { logout } from '../../api/auth';
 
 const NAV_ITEMS = [
-  ['dashboard', '🏠', 'Dashboard'],
-  ['lessons', '📚', 'Lessons'],
-  ['groups', '👥', 'Groups'],
-  ['assessment', '🧠', 'Assessment'],
-  ['review', '📝', 'Review'],
-  ['students', '🎓', 'Students'],
-  ['reports', '📊', 'Reports'],
+  ['dashboard', '🏠', 'Pangunahing Pahina'],
+  ['lessons', '📚', 'Mga Aralin'],
+  ['groups', '👥', 'Mga Grupo'],
+  ['assessment', '🧠', 'Pagtatasa'],
+  ['review', '📝', 'Pagsusuri'],
+  ['students', '🎓', 'Mga Mag-aaral'],
+  ['reports', '📊', 'Mga Ulat'],
 ];
-const BUILDER_STEPS = ['Material', 'Details', 'Activities', 'Preview', 'My Lessons'];
+const BUILDER_STEPS = ['Materyal', 'Mga Detalye', 'Mga Gawain', 'Paunang Tingin', 'Mga Aralin Ko'];
 const QUIZ_FILTERS = ['All', 'Needs Support', 'Developing', 'Proficient', 'Advanced'];
 const SUBJECTS = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Oral Communication', 'Pagsulat'];
 
@@ -393,9 +393,9 @@ async function handleLogout() {
     try {
       const data = await uploadLessonMaterial(result.assets[0]);
       setDraft((current) => ({ ...current, material: data.material }));
-      Alert.alert('Lesson Material', 'File uploaded successfully.');
+      Alert.alert('Materyal ng Aralin', 'File uploaded successfully.');
     } catch (err) {
-      Alert.alert('Lesson Material', err.message || 'Unable to upload file.');
+      Alert.alert('Materyal ng Aralin', err.message || 'Unable to upload file.');
     } finally {
       setBusy('');
     }
@@ -409,10 +409,10 @@ async function handleLogout() {
     }
 
     const title = newActivity.title.trim() || {
-      infographic: 'Lesson Notes',
-      writing: 'Writing Activity',
-      speech: 'Speech Practice',
-      mcq: 'Multiple Choice Quiz',
+      infographic: 'Tala ng Aralin',
+      writing: 'Gawain sa Pagsulat',
+      speech: 'Pagsasanay sa Pagbigkas',
+      mcq: 'Maramihang Pagpipiliang Pagsusulit',
     }[type];
     let activity;
 
@@ -501,7 +501,7 @@ async function handleLogout() {
     const activities = [
       ...(draft.material ? [{
         type: 'material',
-        title: 'Lesson Material',
+        title: 'Materyal ng Aralin',
         instructions: draft.instructions,
         ...draft.material,
       }] : []),
@@ -549,10 +549,10 @@ async function handleLogout() {
       <>
         <View style={styles.statsGrid}>
           {[
-            ['📗', stats.publishedLessons ?? stats.lessons ?? 0, 'Published Lessons'],
-            ['🎓', stats.students ?? 0, 'Students'],
-            ['📈', `${stats.classProgress ?? 0}%`, 'Class Progress'],
-            ['📝', stats.draftLessons ?? 0, 'Draft Lessons'],
+            ['📗', stats.publishedLessons ?? stats.lessons ?? 0, 'Nailathalang Aralin'],
+            ['🎓', stats.students ?? 0, 'Mga Mag-aaral'],
+            ['📈', `${stats.classProgress ?? 0}%`, 'Pag-unlad ng Klase'],
+            ['📝', stats.draftLessons ?? 0, 'Mga Burador na Aralin'],
           ].map(([icon, value, label]) => (
             <SectionCard key={label} style={styles.statCard}>
               <Text style={styles.statIcon}>{icon}</Text>
@@ -613,7 +613,7 @@ async function handleLogout() {
                 <Text style={styles.muted}>{draft.material.fileType} • {Math.round((draft.material.size || 0) / 1024)} KB</Text>
               </View>
             )}
-            <SmallButton disabled={busy === 'material'} onPress={pickMaterial}>{busy === 'material' ? 'Uploading...' : 'Choose and Upload File'}</SmallButton>
+            <SmallButton disabled={busy === 'material'} onPress={pickMaterial}>{busy === 'material' ? 'Ina-upload...' : 'Pumili at Mag-upload ng File'}</SmallButton>
             <Field label="Teacher Notes" value={draft.instructions} onChangeText={(value) => setDraft((current) => ({ ...current, instructions: value }))} multiline placeholder="Notes and instructions for learners" />
             <SmallButton onPress={() => setBuilderStep(1)}>Continue</SmallButton>
           </SectionCard>
@@ -652,7 +652,7 @@ async function handleLogout() {
               </>
             ) : (
               <>
-                <Field label={newActivity.type === 'writing' ? 'Writing Prompt' : newActivity.type === 'speech' ? 'Speech Target Only' : 'Content'} value={newActivity.content} onChangeText={(value) => setNewActivity((current) => ({ ...current, content: value }))} multiline />
+                <Field label={newActivity.type === 'writing' ? 'Panuto sa Pagsulat' : newActivity.type === 'speech' ? 'Tekstong Babasahin' : 'Nilalaman'} value={newActivity.content} onChangeText={(value) => setNewActivity((current) => ({ ...current, content: value }))} multiline />
                 {newActivity.type === 'speech' ? (
                   <View style={styles.softRow}>
                     <Text style={styles.rowTitle}>Speech target only</Text>
@@ -675,9 +675,9 @@ async function handleLogout() {
         {builderStep === 3 && (
           <SectionCard>
             <Text style={styles.cardTitle}>Preview</Text>
-            <Text style={styles.previewTitle}>{draft.title || 'Untitled lesson'}</Text>
+            <Text style={styles.previewTitle}>{draft.title || 'Walang Pamagat na Aralin'}</Text>
             <Text style={styles.muted}>Baitang {draft.gradeLevel} • {draft.subject} • +{draft.xpReward || 0} XP</Text>
-            <Text style={styles.body}>{draft.passage || 'No reading passage added.'}</Text>
+            <Text style={styles.body}>{draft.passage || 'Wala pang idinagdag na babasahin.'}</Text>
             <Text style={styles.rowTitle}>{draft.activities.length} learning activit{draft.activities.length === 1 ? 'y' : 'ies'}</Text>
             <View style={styles.buttonRow}>
               <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson('draft')}>Save Draft</SmallButton>
@@ -835,7 +835,7 @@ async function handleLogout() {
 
   function getReviewLessonTitle(item) {
     const lesson = getReviewLesson(item);
-    return item.lessonTitle || lesson.title || item.activityTitle || 'Untitled lesson';
+    return item.lessonTitle || lesson.title || item.activityTitle || 'Walang Pamagat na Aralin';
   }
 
   function getReviewSubject(item) {
@@ -1293,7 +1293,7 @@ async function handleLogout() {
             ['📝', allCount, 'Total Reviews'],
             ['✍️', writingItems.length, 'Writing'],
             ['🎤', speechItems.length, 'Speech'],
-            ['👥', buckets.length, 'Students'],
+            ['👥', buckets.length, 'Mga Mag-aaral'],
           ].map(([icon, value, label]) => (
             <SectionCard key={label} style={styles.statCard}>
               <Text style={styles.statIcon}>{icon}</Text>
@@ -1456,7 +1456,7 @@ async function handleLogout() {
               <Text style={styles.title}>Teacher Workspace</Text>
               <Text style={styles.subtitle}>Manage lessons, groups, assessments, and reports.</Text>
             </View>
-            <SmallButton tone="slate" onPress={confirmLogout}>Logout</SmallButton>
+            <SmallButton tone="slate" onPress={confirmLogout}>Mag-logout</SmallButton>
           </View>
 
           <View style={styles.workspaceHero}>
