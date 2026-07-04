@@ -56,7 +56,7 @@ const NAV_ITEMS = [
   ['students', '🎓', 'Students'],
   ['reports', '📊', 'Reports'],
 ];
-const BUILDER_STEPS = ['Material', 'Details', 'Activities', 'Preview', 'My Lessons'];
+const BUILDER_STEPS = ['📎 Lesson Material', '📝 Lesson Details', '🧩 Activities', '👁 Preview', '📚 My Lessons'];
 const QUIZ_FILTERS = ['All', 'Needs Support', 'Developing', 'Proficient', 'Advanced'];
 const SUBJECTS = ['Reading', 'Vocabulary', 'Literature', 'Oral Communication', 'Writing'];
 
@@ -68,6 +68,9 @@ function emptyLessonDraft() {
     duration: '10 minuto',
     xpReward: '20',
     passage: '',
+    layunin: '',
+    alamin: '',
+    aralin: '',
     instructions: '',
     speechTarget: '',
     material: null,
@@ -111,6 +114,45 @@ function SmallButton({ children, onPress, tone = 'green', disabled = false }) {
 
 function cleanTeacherLessonText(value) {
   return String(value ?? '').trim();
+}
+
+function splitStructuredLessonPassage(passage = '') {
+  const text = String(passage || '');
+
+  const sections = {
+    layunin: '',
+    alamin: '',
+    aralin: ''
+  };
+
+  const patterns = [
+    ['layunin', /Layunin:\s*([\s\S]*?)(?=\n\s*Alamin:|\n\s*Lesson:|$)/i],
+    ['alamin', /Alamin:\s*([\s\S]*?)(?=\n\s*Lesson:|$)/i],
+    ['aralin', /Lesson:\s*([\s\S]*)$/i]
+  ];
+
+  patterns.forEach(([key, pattern]) => {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      sections[key] = match[1].trim();
+    }
+  });
+
+  if (!sections.layunin && !sections.alamin && !sections.aralin) {
+    sections.aralin = text.trim();
+  }
+
+  return sections;
+}
+
+function buildStructuredLessonPassage(draft = {}) {
+  const parts = [
+    cleanTeacherLessonText(draft.layunin) ? `Layunin:\n${cleanTeacherLessonText(draft.layunin)}` : '',
+    cleanTeacherLessonText(draft.alamin) ? `Alamin:\n${cleanTeacherLessonText(draft.alamin)}` : '',
+    cleanTeacherLessonText(draft.aralin) ? `Lesson:\n${cleanTeacherLessonText(draft.aralin)}` : ''
+  ].filter(Boolean);
+
+  return parts.join('\n\n') || cleanTeacherLessonText(draft.passage);
 }
 
 function getTeacherActivityValidationMessage(activity = {}) {
@@ -482,6 +524,7 @@ async function handleLogout() {
       duration: lesson.duration || '10 minuto',
       xpReward: String(lesson.xpReward || 20),
       passage: lesson.passage || '',
+      ...splitStructuredLessonPassage(lesson.passage || ''),
       instructions: lesson.instructions || materialActivity?.instructions || '',
       speechTarget: lesson.speechTarget || '',
       material: materialActivity
@@ -495,6 +538,39 @@ async function handleLogout() {
         : null,
       activities: editableActivities,
     };
+  }
+
+
+  function getLessonActivities(lesson = {}) {
+    return Array.isArray(lesson.activities) ? lesson.activities : [];
+  }
+
+  function getLessonMaterialLabel(lesson = {}) {
+    const material = getLessonActivities(lesson).find((activity) => activity?.type === 'material');
+
+    if (!material) return 'No material';
+
+    return material.fileName || material.name || material.title || 'Attached material';
+  }
+
+  function getLessonQuizItemCount(lesson = {}) {
+    return getLessonActivities(lesson)
+      .filter((activity) => activity?.type === 'mcq')
+      .reduce((total, activity) => {
+        if (Array.isArray(activity.questions)) return total + activity.questions.length;
+        if (activity.question || Array.isArray(activity.options)) return total + 1;
+        return total;
+      }, 0);
+  }
+
+  function formatTeacherLessonDate(value) {
+    if (!value) return 'No date';
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return 'No date';
+
+    return date.toLocaleDateString();
   }
 
   function editLessonDraft(lesson) {
@@ -561,7 +637,7 @@ async function handleLogout() {
       title: draft.title,
       duration: draft.duration,
       xpReward: Number(draft.xpReward || 20),
-      passage: draft.passage || null,
+      passage: buildStructuredLessonPassage(draft) || null,
       instructions: draft.instructions || null,
       speechTarget: draft.speechTarget || null,
       status,
@@ -661,38 +737,43 @@ async function handleLogout() {
 
         {builderStep === 0 && (
           <SectionCard>
-            <Text style={styles.cardTitle}>Lesson Material</Text>
-            <Text style={styles.muted}>Upload a PDF, PPT, or PPTX file for this lesson.</Text>
+            <Text style={styles.cardTitle}>Optional Lesson Material</Text>
+            <Text style={styles.muted}>Upload a PPT, PPTX, or PDF file. PDFs can preview inside the student lesson. PPT/PPTX files open as slides or download.</Text>
             {draft.material && (
               <View style={styles.softRow}>
                 <Text style={styles.rowTitle}>📎 {draft.material.fileName}</Text>
                 <Text style={styles.muted}>{draft.material.fileType} • {Math.round((draft.material.size || 0) / 1024)} KB</Text>
               </View>
             )}
-            <SmallButton disabled={busy === 'material'} onPress={pickMaterial}>{busy === 'material' ? 'Uploading...' : 'Choose and Upload File'}</SmallButton>
+            <SmallButton disabled={busy === 'material'} onPress={pickMaterial}>{busy === 'material' ? 'Uploading...' : 'Upload PPT/PDF Material'}</SmallButton>
             <Field label="Teacher Notes" value={draft.instructions} onChangeText={(value) => setDraft((current) => ({ ...current, instructions: value }))} multiline placeholder="Notes and instructions for learners" />
-            <SmallButton onPress={() => setBuilderStep(1)}>Continue</SmallButton>
+            <SmallButton onPress={() => setBuilderStep(1)}>Next: Lesson Details →</SmallButton>
           </SectionCard>
         )}
 
         {builderStep === 1 && (
           <SectionCard>
-            <Text style={styles.cardTitle}>Lesson Details</Text>
+            <Text style={styles.cardTitle}>Lesson Information</Text>
             <Text style={styles.fieldLabel}>Grade</Text>
             <View style={styles.choiceRow}>{['1', '2', '3', '4', '5', '6'].map((grade) => <SmallButton key={grade} tone={draft.gradeLevel === grade ? 'green' : 'slate'} onPress={() => setDraft((current) => ({ ...current, gradeLevel: grade }))}>{grade}</SmallButton>)}</View>
-            <Text style={styles.fieldLabel}>Category</Text>
+            <Text style={styles.fieldLabel}>Subject Area</Text>
             <View style={styles.choiceRow}>{SUBJECTS.map((subject) => <SmallButton key={subject} tone={draft.subject === subject ? 'green' : 'slate'} onPress={() => setDraft((current) => ({ ...current, subject }))}>{subject}</SmallButton>)}</View>
-            <Field label="Title" value={draft.title} onChangeText={(value) => setDraft((current) => ({ ...current, title: value }))} placeholder="Lesson title" />
+            <Field label="Lesson Title" value={draft.title} onChangeText={(value) => setDraft((current) => ({ ...current, title: value }))} placeholder="e.g. Nouns and Examples" />
             <Field label="Duration" value={draft.duration} onChangeText={(value) => setDraft((current) => ({ ...current, duration: value }))} />
             <Field label="XP Reward" value={draft.xpReward} keyboardType="numeric" onChangeText={(value) => setDraft((current) => ({ ...current, xpReward: value }))} />
-            <Field label="Reading Passage" value={draft.passage} onChangeText={(value) => setDraft((current) => ({ ...current, passage: value }))} multiline />
-            <SmallButton onPress={() => setBuilderStep(2)}>Continue</SmallButton>
+            <Text style={styles.fieldLabel}>Learning Content</Text>
+            <Text style={styles.muted}>{draft.material ? 'You uploaded a material. Add a short Objective, Background, and Lesson summary so students still have readable lesson cards.' : 'No uploaded material yet. Fill in the Lesson content manually.'}</Text>
+            <Field label="Layunin — Goal ng lesson" value={draft.layunin} onChangeText={(value) => setDraft((current) => ({ ...current, layunin: value }))} multiline placeholder="What will students learn? Example: Students identify words that start with the letter M." />
+            <Field label="Alamin — Short topic explanation" value={draft.alamin} onChangeText={(value) => setDraft((current) => ({ ...current, alamin: value }))} multiline placeholder="What should students know first about the topic?" />
+            <Field label="Lesson — Main lesson content" value={draft.aralin} onChangeText={(value) => setDraft((current) => ({ ...current, aralin: value }))} multiline placeholder="What will students read or study?" />
+            <SmallButton onPress={() => setBuilderStep(2)}>Next: Activities →</SmallButton>
           </SectionCard>
         )}
 
         {builderStep === 2 && (
           <SectionCard>
-            <Text style={styles.cardTitle}>Activities</Text>
+            <Text style={styles.cardTitle}>Activity Builder</Text>
+            <Text style={styles.muted}>Add activity blocks to build your lesson structure.</Text>
             <View style={styles.choiceRow}>{['infographic', 'mcq', 'writing', 'speech'].map((type) => <SmallButton key={type} tone={newActivity.type === type ? 'green' : 'slate'} onPress={() => setNewActivity((current) => ({ ...current, type }))}>{type}</SmallButton>)}</View>
             <Field label="Activity Title" value={newActivity.title} onChangeText={(value) => setNewActivity((current) => ({ ...current, title: value }))} />
             {newActivity.type !== 'speech' ? (
@@ -717,27 +798,27 @@ async function handleLogout() {
                 ) : null}
               </>
             )}
-            <SmallButton onPress={addActivity}>Add Activity</SmallButton>
+            <SmallButton onPress={addActivity}>Add Activity Block</SmallButton>
             {draft.activities.map((activity, index) => (
               <View key={`${activity.type}-${index}`} style={styles.softRow}>
                 <Text style={styles.rowTitle}>{index + 1}. {activity.title}</Text>
                 <Text style={styles.muted}>{activity.type}</Text>
               </View>
             ))}
-            <SmallButton onPress={() => setBuilderStep(3)}>Preview</SmallButton>
+            <SmallButton onPress={() => setBuilderStep(3)}>Next: Preview →</SmallButton>
           </SectionCard>
         )}
 
         {builderStep === 3 && (
           <SectionCard>
-            <Text style={styles.cardTitle}>{editingLesson?.id ? 'Edit Lesson Preview' : 'Preview'}</Text>
+            <Text style={styles.cardTitle}>{editingLesson?.id ? 'Edit Lesson Preview' : 'Student Lesson Preview'}</Text>
             <Text style={styles.previewTitle}>{draft.title || 'Untitled Lesson'}</Text>
             <Text style={styles.muted}>Grade {draft.gradeLevel} • {draft.subject} • +{draft.xpReward || 0} XP</Text>
-            <Text style={styles.body}>{draft.passage || 'No reading material has been added yet.'}</Text>
-            <Text style={styles.rowTitle}>{draft.activities.length} learning activit{draft.activities.length === 1 ? 'y' : 'ies'}</Text>
+            <Text style={styles.body}>{buildStructuredLessonPassage(draft) || 'No reading material has been added yet.'}</Text>
+            <Text style={styles.rowTitle}>{draft.activities.length} activity block{draft.activities.length === 1 ? '' : 's'} in this lesson</Text>
             <View style={styles.buttonRow}>
-              {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson(editingLesson.status || 'draft')}>Save Changes</SmallButton> : <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson('draft')}>Save Draft</SmallButton>}
-              {editingLesson?.status !== 'published' ? <SmallButton disabled={Boolean(busy)} onPress={() => saveLesson('published')}>Publish</SmallButton> : null}
+              {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson(editingLesson.status || 'draft')}>💾 Save Changes</SmallButton> : <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson('draft')}>📋 Save Draft</SmallButton>}
+              {editingLesson?.status !== 'published' ? <SmallButton disabled={Boolean(busy)} onPress={() => saveLesson('published')}>🚀 Publish Lesson</SmallButton> : null}
               {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={resetLessonBuilder}>Cancel Edit</SmallButton> : null}
             </View>
           </SectionCard>
@@ -745,17 +826,50 @@ async function handleLogout() {
 
         {builderStep === 4 && (
           <SectionCard>
-            <Text style={styles.cardTitle}>My Lessons</Text>
-            {lessons.map((lesson) => (
-              <View key={lesson.id} style={styles.actionRow}>
-                <View style={styles.flex}>
-                  <Text style={styles.rowTitle}>{lesson.title}</Text>
-                  <Text style={styles.muted}>Grade {lesson.gradeLevel} • {lesson.subject} • {lesson.status}</Text>
+            <Text style={styles.cardTitle}>My Created Lessons</Text>
+            <Text style={styles.muted}>Edit draft or published lessons from your list.</Text>
+            {lessons.map((lesson) => {
+              const isPublished = (lesson.status || 'published') === 'published';
+
+              return (
+                <View key={lesson.id} style={styles.lessonListCard}>
+                  <View style={styles.lessonListHeader}>
+                    <View style={styles.flex}>
+                      <Text style={styles.rowTitle}>📘 {lesson.title || 'Untitled Lesson'}</Text>
+                      <Text style={styles.muted}>Grade {lesson.gradeLevel} • {lesson.subject}</Text>
+                    </View>
+                    <Text style={[styles.lessonStatusChip, isPublished ? styles.lessonStatusPublished : styles.lessonStatusDraft]}>
+                      ● {isPublished ? 'Published' : 'Draft'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.lessonMetaGrid}>
+                    <View style={styles.lessonMetaPill}>
+                      <Text style={styles.lessonMetaLabel}>Material</Text>
+                      <Text style={styles.lessonMetaValue}>{getLessonMaterialLabel(lesson)}</Text>
+                    </View>
+                    <View style={styles.lessonMetaPill}>
+                      <Text style={styles.lessonMetaLabel}>Quiz Items</Text>
+                      <Text style={styles.lessonMetaValue}>{getLessonQuizItemCount(lesson)}</Text>
+                    </View>
+                    <View style={styles.lessonMetaPill}>
+                      <Text style={styles.lessonMetaLabel}>XP</Text>
+                      <Text style={styles.lessonMetaValue}>+{lesson.xpReward || 0}</Text>
+                    </View>
+                    <View style={styles.lessonMetaPill}>
+                      <Text style={styles.lessonMetaLabel}>Updated</Text>
+                      <Text style={styles.lessonMetaValue}>{formatTeacherLessonDate(lesson.updatedAt || lesson.createdAt)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.lessonActionRow}>
+                    <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => editLessonDraft(lesson)}>Edit</SmallButton>
+                    {lesson.status === 'draft' ? <SmallButton disabled={Boolean(busy)} onPress={() => run(`publish-${lesson.id}`, () => updateLesson(lesson.id, { status: 'published' }), 'Lesson published.')}>Publish</SmallButton> : null}
+                    {lesson.status !== 'archived' ? <SmallButton tone="red" disabled={Boolean(busy)} onPress={() => run(`archive-${lesson.id}`, () => archiveLesson(lesson.id), 'Lesson removed.')}>Remove Lesson</SmallButton> : null}
+                  </View>
                 </View>
-                {lesson.status === 'draft' ? <SmallButton disabled={Boolean(busy)} onPress={() => run(`publish-${lesson.id}`, () => updateLesson(lesson.id, { status: 'published' }), 'Lesson published.')}>Publish</SmallButton> : null}
-                {lesson.status !== 'archived' ? <SmallButton tone="red" disabled={Boolean(busy)} onPress={() => run(`archive-${lesson.id}`, () => archiveLesson(lesson.id), 'Lesson archived.')}>Archive</SmallButton> : null}
-              </View>
-            ))}
+              );
+            })}
             {!lessons.length && <Text style={styles.muted}>No lessons created yet.</Text>}
           </SectionCard>
         )}
@@ -2168,6 +2282,16 @@ const styles = StyleSheet.create({
   softRow: { backgroundColor: '#F0FDF4', borderRadius: 14, padding: 12, marginTop: 9 },
   selectedRow: { borderWidth: 2, borderColor: '#22C55E' },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  lessonListCard: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 16, padding: 12, marginTop: 12 },
+  lessonListHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  lessonStatusChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, fontSize: 11, fontWeight: '900', overflow: 'hidden' },
+  lessonStatusPublished: { backgroundColor: '#DCFCE7', color: '#166534' },
+  lessonStatusDraft: { backgroundColor: '#FEF3C7', color: '#92400E' },
+  lessonMetaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  lessonMetaPill: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, padding: 9, minWidth: '47%', flex: 1 },
+  lessonMetaLabel: { color: '#64748B', fontSize: 11, fontWeight: '800' },
+  lessonMetaValue: { color: '#0F172A', fontWeight: '900', marginTop: 3 },
+  lessonActionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   rowTitle: { color: '#0F172A', fontWeight: '800' },
   statusText: { color: '#166534', fontWeight: '800', marginTop: 5 },
   warning: { color: '#B45309', fontWeight: '800', marginTop: 5 },
