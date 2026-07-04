@@ -116,7 +116,7 @@ export default function StudentJuniorHome({ navigation }) {
               </Text>
 
               <Text style={styles.brandSubtitle}>
-                Matuto ng Filipino habang naglalaro.
+                Magbasa, matuto, at magsaya!
               </Text>
             </View>
           </View>
@@ -132,7 +132,7 @@ export default function StudentJuniorHome({ navigation }) {
           </View>
 
           <View>
-            <Text style={styles.profileGreeting}>Magandang araw! 👋</Text>
+            <Text style={styles.profileGreeting}>Hello, batang talino! 👋</Text>
 
             <Text style={styles.profileName}>
               {name}
@@ -166,8 +166,8 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.heroCard}>
           <View style={styles.heroHeader}>
             <View style={styles.heroTextBlock}>
-              <Text style={styles.greeting}>Ipagpatuloy ang iyong pag-aaral</Text>
-              <Text style={styles.subtitle}>Tuloy lang sa iyong pag-aaral at kumita ng mas maraming XP!</Text>
+              <Text style={styles.greeting}>Tara, mag-aral tayo! 🌈</Text>
+              <Text style={styles.subtitle}>Pumili ng aralin, sumagot, at mangolekta ng XP!</Text>
             </View>
           </View>
 
@@ -202,7 +202,7 @@ export default function StudentJuniorHome({ navigation }) {
           <View style={styles.quickStatsRow}>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{totalLesson}</Text>
-              <Text style={styles.statLabel}>Lesson</Text>
+              <Text style={styles.statLabel}>Aralin</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{completedLesson}</Text>
@@ -218,7 +218,7 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Iyong mga Lesson
+              Mga Aralin Mo
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Lesson')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
@@ -244,7 +244,7 @@ export default function StudentJuniorHome({ navigation }) {
 
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardTag}>
-                        {nextLesson.subject || 'Lesson'}
+                        {nextLesson.subject || 'Aralin'}
                       </Text>
 
                       <Text style={styles.cardTitle}>
@@ -265,7 +265,7 @@ export default function StudentJuniorHome({ navigation }) {
 
                   <View style={styles.continueButton}>
                     <Text style={styles.continueButtonText}>
-                      Buksan ang aralin →
+                      Simulan ang aralin →
                     </Text>
                   </View>
                 </View>
@@ -275,7 +275,7 @@ export default function StudentJuniorHome({ navigation }) {
                 <Text style={styles.emptyEmoji}>📚</Text>
                 <Text style={styles.emptyTitle}>Wala pang aktibong aralin</Text>
                 <Text style={styles.emptyText}>
-                  Buksan ang aklatan ng mga aralin upang simulan ang susunod mong gawain.
+                  Pumili ng aralin para magsimula.
                 </Text>
               </View>
             )}
@@ -283,7 +283,7 @@ export default function StudentJuniorHome({ navigation }) {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Badges</Text>
+            <Text style={styles.sectionTitle}>Mga Badge</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Badge')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
             </TouchableOpacity>
@@ -302,7 +302,7 @@ export default function StudentJuniorHome({ navigation }) {
               <View style={styles.emptyStateSmall}>
                 <Text style={styles.emptyEmoji}>🌱</Text>
                 <Text style={styles.emptyTitle}>Wala ka pang badge</Text>
-                <Text style={styles.emptyText}>Tapusin ang mga aralin o misyon upang makakuha ng mga badge.</Text>
+                <Text style={styles.emptyText}>Tapusin ang aralin para makakuha ng badge.</Text>
               </View>
             )}
           </View>
@@ -311,7 +311,7 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Mga Gawain ng Grupo
+              Gawain ng Grupo
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Groups')}>
               <Text style={styles.sectionLink}>Buksan →</Text>
@@ -328,7 +328,7 @@ export default function StudentJuniorHome({ navigation }) {
             <View style={styles.emptyStateSmall}>
               <Text style={styles.emptyEmoji}>🎉</Text>
               <Text style={styles.emptyTitle}>Wala pang gawaing panggrupo</Text>
-              <Text style={styles.emptyText}>Mahusay! Bumalik muli mamaya para sa mga gawain ng pangkat.</Text>
+              <Text style={styles.emptyText}>Mahusay! Bumalik mamaya para sa bagong gawain.</Text>
             </View>
           )}
 
@@ -342,17 +342,17 @@ export default function StudentJuniorHome({ navigation }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#FFF7ED',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F0FDF4',
-    paddingTop: 16,
+    backgroundColor: '#FFF7ED',
+    paddingTop: 10,
   },
   contentContainer: {
     paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: 44,
+    paddingBottom: 130,
   },
   loaderWrapper: {
     flex: 1,
@@ -366,17 +366,17 @@ const styles = StyleSheet.create({
   },
 
   brandCard: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 28,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    padding: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
-    shadowColor: '#14532D',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    borderColor: '#FED7AA',
+    shadowColor: '#FB923C',
+    shadowOpacity: 0.10,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 9 },
+    elevation: 5,
   },
 
   brandRow: {
@@ -385,109 +385,120 @@ const styles = StyleSheet.create({
   },
 
   brandLogo: {
-    width: 56,
-    height: 56,
+    width: 64,
+    height: 64,
     marginRight: 14,
   },
 
   brandTitle: {
-    fontSize: 22,
+    fontSize: 26,
     fontFamily: 'Fredoka_700Bold',
     color: '#16A34A',
+    lineHeight: 31,
   },
 
   brandSubtitle: {
-    marginTop: 4,
+    marginTop: 5,
     color: '#64748B',
-    fontSize: 12,
-    fontFamily: 'Nunito_700Bold',
+    fontSize: 15,
+    lineHeight: 21,
+    fontFamily: 'Nunito_800ExtraBold',
   },
 
   profileGreeting: {
     color: '#16A34A',
-    fontSize: 12,
+    fontSize: 15,
     fontFamily: 'Nunito_800ExtraBold',
-    marginBottom: 2,
+    marginBottom: 3,
   },
 
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    backgroundColor: '#ECFDF5',
-    borderRadius: 28,
-    padding: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: '#BBF7D0',
     shadowColor: '#14532D',
     shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 9 },
+    elevation: 5,
   },
 
   userSection: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 14,
   },
 
   avatarBubble: {
-    width: 48,
-    height: 48,
-    borderRadius: 18,
+    width: 66,
+    height: 66,
+    borderRadius: 24,
     backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
+    marginRight: 14,
+    borderWidth: 2,
+    borderColor: '#86EFAC',
+    shadowColor: '#16A34A',
+    shadowOpacity: 0.10,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
   },
 
   avatarBubbleText: {
-    fontSize: 24,
+    fontSize: 34,
   },
 
   profileName: {
-    fontSize: 17,
+    fontSize: 22,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
+    lineHeight: 27,
   },
 
   profileGrade: {
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 3,
+    fontSize: 15,
+    fontFamily: 'Nunito_800ExtraBold',
   },
 
   rightSection: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
   },
 
   smallChip: {
     backgroundColor: '#ECFDF5',
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginLeft: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
 
   smallChipText: {
     color: '#166534',
-    fontFamily: 'Fredoka_600SemiBold',
-    fontSize: 12,
+    fontFamily: 'Fredoka_700Bold',
+    fontSize: 15,
   },
 
   heroCard: {
-    marginTop: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 26,
-    padding: 14,
+    marginTop: 14,
+    backgroundColor: '#FEFCE8',
+    borderRadius: 34,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
-    shadowColor: '#14532D',
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
+    borderColor: '#FDE68A',
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
-    elevation: 5,
+    elevation: 6,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -500,16 +511,17 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   greeting: {
-    fontSize: 24,
+    fontSize: 31,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
+    lineHeight: 37,
   },
   subtitle: {
-    marginTop: 6,
-    fontSize: 13,
-    color: '#334155',
-    lineHeight: 22,
-    fontFamily: 'Nunito_700Bold',
+    marginTop: 8,
+    fontSize: 17,
+    color: '#475569',
+    lineHeight: 25,
+    fontFamily: 'Nunito_800ExtraBold',
     width: '100%',
     flexShrink: 1,
   },
@@ -527,95 +539,108 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   xpCard: {
-    marginTop: 12,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 20,
-    padding: 14,
+    marginTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 26,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#FED7AA',
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
   xpRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
     gap: 10,
   },
   xpLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    fontFamily: 'Fredoka_600SemiBold',
+    fontSize: 15,
+    color: '#EA580C',
+    fontFamily: 'Fredoka_700Bold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   xpValue: {
-    fontSize: 28,
+    fontSize: 36,
     fontFamily: 'Fredoka_700Bold',
     color: '#16A34A',
     marginTop: 4,
+    lineHeight: 42,
   },
   levelBadge: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#86EFAC',
   },
   levelText: {
     color: '#166534',
-    fontSize: 12,
-    fontFamily: 'Fredoka_600SemiBold',
+    fontSize: 14,
+    fontFamily: 'Fredoka_700Bold',
   },
   progressBar: {
-    height: 8,
-    backgroundColor: '#E2E8F0',
+    height: 13,
+    backgroundColor: '#FED7AA',
     borderRadius: 999,
-    marginTop: 12,
+    marginTop: 16,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#16A34A',
+    backgroundColor: '#22C55E',
     borderRadius: 999,
   },
   progressInfo: {
-    marginTop: 8,
-    color: '#64748B',
-    fontSize: 12,
-    fontFamily: 'Nunito_700Bold',
+    marginTop: 10,
+    color: '#475569',
+    fontSize: 15,
+    lineHeight: 21,
+    fontFamily: 'Nunito_800ExtraBold',
   },
   quickStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: 14,
     gap: 10,
   },
   statCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 10,
+    borderRadius: 24,
+    paddingVertical: 15,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
-    shadowColor: '#14532D',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    borderColor: '#FED7AA',
+    alignItems: 'center',
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+    minHeight: 86,
   },
   statValue: {
-    fontSize: 17,
+    fontSize: 24,
     fontFamily: 'Fredoka_700Bold',
     color: '#16A34A',
+    lineHeight: 29,
   },
   statLabel: {
     marginTop: 6,
     color: '#475569',
+    fontSize: 13,
+    textAlign: 'center',
     fontFamily: 'Nunito_800ExtraBold',
   },
   section: {
-    marginTop: 14,
+    marginTop: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -624,14 +649,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 21,
+    fontSize: 25,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
+    lineHeight: 31,
   },
   sectionLink: {
     color: '#16A34A',
-    fontSize: 13,
-    fontFamily: 'Fredoka_600SemiBold',
+    fontSize: 15,
+    fontFamily: 'Fredoka_700Bold',
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -647,19 +673,22 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardTag: {
-    color: '#16A34A',
-    fontFamily: 'Fredoka_600SemiBold',
-    marginBottom: 4,
+    color: '#EA580C',
+    fontFamily: 'Fredoka_700Bold',
+    fontSize: 14,
+    marginBottom: 5,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 23,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
-    marginBottom: 6,
+    marginBottom: 7,
+    lineHeight: 29,
   },
   cardMeta: {
     color: '#64748B',
-    fontFamily: 'Nunito_700Bold',
+    fontSize: 15,
+    fontFamily: 'Nunito_800ExtraBold',
   },
   cardAction: {
     marginTop: 14,
@@ -669,36 +698,41 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    padding: 24,
+    borderRadius: 30,
+    padding: 26,
     alignItems: 'center',
-    shadowColor: '#14532D',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
     elevation: 3,
   },
   emptyStateSmall: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 14,
+    borderRadius: 24,
+    padding: 18,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: '#FED7AA',
   },
   emptyEmoji: {
-    fontSize: 42,
+    fontSize: 48,
     marginBottom: 12,
   },
   emptyTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
-    marginBottom: 6,
+    marginBottom: 7,
+    textAlign: 'center',
   },
   emptyText: {
     textAlign: 'center',
     color: '#64748B',
-    fontFamily: 'Nunito_700Bold',
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: 'Nunito_800ExtraBold',
   },
   badgeRow: {
     flexDirection: 'row',
@@ -709,166 +743,134 @@ const styles = StyleSheet.create({
   },
 
   badgeCard: {
-
     width: '48%',
-
-    backgroundColor: '#F8FAFC',
-
-    borderRadius: 26,
-
-    paddingVertical: 18,
-
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    paddingVertical: 20,
     paddingHorizontal: 12,
-
     alignItems: 'center',
-
     borderWidth: 1,
-
-    borderColor: '#BBF7D0',
-
-    shadowColor: '#14532D',
-
-    shadowOpacity: 0.06,
-
-    shadowRadius: 12,
-
-    shadowOffset: { width: 0, height: 6 },
-
-    elevation: 3,
-
-    minHeight: 170,
-
+    borderColor: '#FED7AA',
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 4,
+    minHeight: 184,
   },
   badgeIcon: {
-    fontSize: 42,
-    backgroundColor: '#ECFDF5',
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    fontSize: 48,
+    backgroundColor: '#FEF3C7',
+    width: 72,
+    height: 72,
+    borderRadius: 24,
     textAlign: 'center',
     textAlignVertical: 'center',
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#FDE68A',
   },
   badgeName: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '900',
     color: '#0F172A',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
     marginTop: 12,
   },
   badgeMeta: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 17,
     marginTop: 6,
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    fontFamily: 'Nunito_700Bold',
   },
   taskCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    padding: 14,
+    borderRadius: 30,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: '#BBF7D0',
     shadowColor: '#14532D',
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 7 },
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   taskTitle: {
-    fontSize: 17,
-    fontFamily: 'Fredoka_700Bold',
     color: '#0F172A',
-    marginBottom: 6,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: 'Fredoka_700Bold',
   },
   taskMeta: {
     color: '#64748B',
-    fontFamily: 'Nunito_700Bold',
-    marginBottom: 10,
+    fontSize: 16,
+    lineHeight: 23,
+    marginTop: 8,
+    fontFamily: 'Nunito_800ExtraBold',
   },
   taskXp: {
+    marginTop: 14,
     color: '#16A34A',
-    fontFamily: 'Fredoka_600SemiBold',
+    fontSize: 17,
+    fontFamily: 'Fredoka_700Bold',
   },
 
   lessonCardContent: {
-
     flexDirection: 'row',
-
-    alignItems: 'flex-start',
-
+    alignItems: 'center',
+    gap: 14,
   },
 
   lessonIconWrap: {
-
-    width: 60,
-
-    height: 60,
-
-    borderRadius: 20,
-
-    backgroundColor: '#DCFCE7',
-
+    width: 70,
+    height: 70,
+    borderRadius: 24,
+    backgroundColor: '#FEF3C7',
     justifyContent: 'center',
-
     alignItems: 'center',
-
-    marginRight: 14,
-
     borderWidth: 1,
-
-    borderColor: '#BBF7D0',
-
+    borderColor: '#FDE68A',
   },
 
   lessonIcon: {
-    fontSize: 28,
+    fontSize: 38,
   },
 
   lessonXpBadge: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    backgroundColor: '#DCFCE7',
     borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
   },
 
   lessonXpText: {
     color: '#166534',
-    fontSize: 12,
-    fontFamily: 'Fredoka_600SemiBold',
+    fontSize: 13,
+    fontFamily: 'Fredoka_700Bold',
   },
 
   continueButton: {
-
-    marginTop: 18,
-
-    backgroundColor: '#16A34A',
-
-    borderRadius: 18,
-
-    paddingVertical: 10,
-
+    marginTop: 16,
+    backgroundColor: '#22C55E',
+    borderRadius: 999,
+    paddingVertical: 14,
     alignItems: 'center',
-
-    shadowColor: '#15803D',
-
-    shadowOpacity: 0.18,
-
-    shadowRadius: 8,
-
-    shadowOffset: { width: 0, height: 5 },
-
-    elevation: 3,
-
+    shadowColor: '#16A34A',
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
 
   continueButtonText: {
     color: '#FFFFFF',
-    fontFamily: 'Fredoka_600SemiBold',
+    fontSize: 17,
+    fontFamily: 'Fredoka_700Bold',
   },
 
 });
