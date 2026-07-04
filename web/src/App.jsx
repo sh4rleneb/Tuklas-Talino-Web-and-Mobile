@@ -6824,7 +6824,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
         <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
         <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
-        <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
+        <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Ranggo</button>
         <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
       </nav>
     </div>
@@ -6859,7 +6859,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
     { id: 'missions', icon: '🎮', label: 'Missions' },
     { id: 'groups', icon: '👥', label: 'Groups' },
     { id: 'badges', icon: '🏅', label: 'Badges' },
-    { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
+    { id: 'leaderboard', icon: '🏆', label: 'Ranggo' },
     { id: 'profile', icon: '👤', label: 'Profile' }
   ];
 
@@ -7811,7 +7811,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
           <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
           <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
           <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
-          <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
+          <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Ranggo</button>
           <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
         </nav>
       </div>
@@ -16203,7 +16203,7 @@ function StudentLeaderboard({ data, go, logout }) {
     setLoading(true);
     api('/leaderboard')
       .then(res => { if (!active) return; setLeaderboard(res.leaderboard || []); })
-      .catch(err => { if (!active) return; setError(err.message || 'Unable to load leaderboard.'); })
+      .catch(err => { if (!active) return; setError(err.message || 'Hindi ma-load ang talaan ng ranggo.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
@@ -16213,7 +16213,7 @@ function StudentLeaderboard({ data, go, logout }) {
   const ChromeComponent = early ? EarlyStudentChrome : Grade46StudentChrome;
 
   return (
-    <ChromeComponent data={data} activeTab="leaderboard" go={go} logout={logout} icon="🏆" title="Leaderboard" subtitle="Pinakamataas na mag-aaral batay sa XP.">
+    <ChromeComponent data={data} activeTab="leaderboard" go={go} logout={logout} icon="🏆" title="Talaan ng Ranggo" subtitle="Tingnan ang ranggo ng mga mag-aaral batay sa XP.">
       <style>{`
         @keyframes lb-in { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
         .lb-a { opacity:0; animation:lb-in 0.42s cubic-bezier(.22,1,.36,1) forwards; }
@@ -16223,7 +16223,7 @@ function StudentLeaderboard({ data, go, logout }) {
         .lb-row:hover { background:#F0FDF4!important; transform:translateX(4px); box-shadow:0 4px 18px rgba(34,197,94,.13)!important; }
       `}</style>
 
-      {loading && <div style={{textAlign:'center',padding:'60px 0',color:'#64748B',fontSize:18,fontWeight:800}}>🏆 Loading leaderboard...</div>}
+      {loading && <div style={{textAlign:'center',padding:'60px 0',color:'#64748B',fontSize:18,fontWeight:800}}>🏆 Ina-load ang talaan ng ranggo...</div>}
       {error && <div style={{textAlign:'center',padding:'40px 0',color:'#EF4444',fontWeight:700}}>{error}</div>}
 
       {!loading && !error && (
@@ -16266,7 +16266,7 @@ function StudentLeaderboard({ data, go, logout }) {
                         {player.name}
                         {isMe && <span style={{marginLeft:8,fontSize:11,background:'#DCFCE7',color:'#16A34A',borderRadius:999,padding:'2px 8px',fontWeight:800}}>Ikaw</span>}
                       </div>
-                      <div style={{color:'#94A3B8',fontSize:13,marginTop:2,fontWeight:700}}>Grade {player.gradeLevel}</div>
+                      <div style={{color:'#94A3B8',fontSize:13,marginTop:2,fontWeight:700}}>Baitang {player.gradeLevel}</div>
                     </div>
                     <div style={{textAlign:'right',flexShrink:0}}>
                       <div style={{fontWeight:900,color:'#16A34A',fontSize:16}}>⚡ {player.xp}</div>
@@ -16282,7 +16282,7 @@ function StudentLeaderboard({ data, go, logout }) {
             <div style={{textAlign:'center',padding:'60px 0',color:'#64748B'}}>
               <div style={{fontSize:48,marginBottom:12}}>🏆</div>
               <div style={{fontWeight:900,fontSize:18}}>Walang data pa.</div>
-              <div style={{marginTop:6,fontSize:14}}>Kumpletuhin ang mga aralin para makita ang leaderboard.</div>
+              <div style={{marginTop:6,fontSize:14}}>Kumpletuhin ang mga aralin para makita ang talaan ng ranggo.</div>
             </div>
           )}
         </>
