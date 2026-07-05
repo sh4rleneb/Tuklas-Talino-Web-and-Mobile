@@ -1,5 +1,28 @@
 import React from 'react';
 
+const TUKLAS_KAAGAPAY_BADGE_IMAGE = '/badges/kaagapay-sa-gawain.png';
+
+function isTuklasKaagapayBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'kaagapay sa gawain' || code === 'group_1' || code.includes('kaagapay');
+}
+
+function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
+  if (isTuklasKaagapayBadge(badge)) {
+    return (
+      <img
+        src={TUKLAS_KAAGAPAY_BADGE_IMAGE}
+        alt={badge?.name || 'Kaagapay sa Gawain'}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
+  return <>{badge?.icon || fallback}</>;
+}
+
+
 export function Grade46ReferenceStyles() {
   return (
     <style>{`

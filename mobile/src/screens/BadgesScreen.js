@@ -1,11 +1,33 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View, StyleSheet, Image } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../api/client';
 import StudentScreenHeader from '../components/StudentScreenHeader';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../components/Card';
 import { colors } from '../styles/theme';
+
+const KAAGAPAY_BADGE_IMAGE = require('../../assets/badges/kaagapay-sa-gawain.png');
+
+function isKaagapayBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'kaagapay sa gawain' || code.includes('kaagapay');
+}
+
+function BadgeVisual({ badge }) {
+  if (isKaagapayBadge(badge)) {
+    return (
+      <Image
+        source={KAAGAPAY_BADGE_IMAGE}
+        style={styles.badgeImage}
+        resizeMode="contain"
+      />
+    );
+  }
+
+  return <Text style={styles.icon}>{badge?.icon}</Text>;
+}
 
 export default function BadgesScreen({ navigation }) {
   const [badges, setBadges] = useState([]);
@@ -126,7 +148,7 @@ export default function BadgesScreen({ navigation }) {
 
             return (
               <Card key={b.id} style={[styles.badge, !isOwned && styles.locked]}>
-                <Text style={styles.icon}>{b.icon}</Text>
+                <BadgeVisual badge={b} />
                 <Text style={styles.name}>{b.name}</Text>
                 <Text style={styles.muted}>{badgeCaption(b)}</Text>
                 {!isOwned && progress && (
@@ -294,7 +316,7 @@ const styles = StyleSheet.create({
     borderColor: '#BBF7D0',
   },
 
-  name: {
+  badgeImage: { width: 72, height: 72, borderRadius: 26, backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#BBF7D0' }, name: {
     textAlign: 'center',
     fontWeight: '900',
     color: '#0F172A',

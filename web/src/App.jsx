@@ -24,6 +24,29 @@ import StartupLoader from './components/common/StartupLoader';
 import StudentGroupSubmissionReview from './components/student/StudentGroupSubmissionReview';
 import Grade46MobileNav from './components/student/Grade46MobileNav';
 
+const TUKLAS_KAAGAPAY_BADGE_IMAGE = '/badges/kaagapay-sa-gawain.png';
+
+function isTuklasKaagapayBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'kaagapay sa gawain' || code === 'group_1' || code.includes('kaagapay');
+}
+
+function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
+  if (isTuklasKaagapayBadge(badge)) {
+    return (
+      <img
+        src={TUKLAS_KAAGAPAY_BADGE_IMAGE}
+        alt={badge?.name || 'Kaagapay sa Gawain'}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
+  return <>{badge?.icon || fallback}</>;
+}
+
+
 const STUDENT_SUBJECT_DISPLAY_LABELS = {
   'Oral Comm': 'Komunikasyong Pagsasalita',
   'Oral Communication': 'Komunikasyong Pagsasalita',
@@ -7478,7 +7501,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
                   className={activeTab === item.id ? 'active' : ''}
                   onClick={() => openTab(item.id)}
                 >
-                  <span>{item.icon}</span>{item.label}
+                  <span><TuklasBadgeVisual badge={item} size={56} /></span>{item.label}
                 </button>
               ))}
             </nav>
@@ -7740,7 +7763,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
                 {badgePreview.map((badge, index) => (
                   <div className="g46-ref-badge unlocked" key={badge.id || badge.name || index}>
                     <div>
-                      <span>{badge.icon || '🏅'}</span>
+                      <span><TuklasBadgeVisual badge={badge} size={56} /></span>
                       <strong>{badgeDisplayName(badge) || 'Gantimpala'}</strong>
                       <small className="g46-ref-badge-status">{badge.statusText || 'Natapos mo ang isang layunin sa pag-aaral!'}</small>
                     </div>
@@ -8612,7 +8635,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
                           fontSize: 22
                         }}
                       >
-                        <span>{section.icon}</span>
+                        <span><TuklasBadgeVisual badge={section} size={56} /></span>
                         <span>{section.label}</span>
                       </div>
 
@@ -9560,7 +9583,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
             <div className="g12-summary-chip-row">
               {summaryItems.map(item => (
                 <span className="g12-summary-chip" key={item.label}>
-                  <span>{item.icon}</span>
+                  <span><TuklasBadgeVisual badge={item} size={56} /></span>
                   {item.label}
                 </span>
               ))}
@@ -10307,7 +10330,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                   <div className="g12-reward-badge-list">
                     {rewardModal.badges.slice(0, 2).map((badge, badgeIndex) => (
                       <div className="g12-reward-badge-chip" key={badge.id || badge.code || badge.name || badgeIndex}>
-                        <span>{badge.icon || '🏅'}</span>
+                        <span><TuklasBadgeVisual badge={badge} size={56} /></span>
                         <div>
                           <strong>{badgeDisplayName(badge) || 'Bagong Gantimpala'}</strong>
                           <small>{badgeDisplayDescription(badge)}</small>
@@ -10368,7 +10391,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                   }
                 }}
               >
-                <span>{step.icon}</span>
+                <span><TuklasBadgeVisual badge={step} size={56} /></span>
                 <small>{step.label}</small>
               </button>
             ))}
@@ -15359,7 +15382,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                       className={`g12-role-choice simple ${selectedRoleId === role.id ? 'selected' : ''}`}
                       onClick={() => chooseRole(role.id)}
                     >
-                      <span>{role.icon}</span>
+                      <span><TuklasBadgeVisual badge={role} size={56} /></span>
                       {role.label}
                       <small>{role.helper}</small>
                     </button>
@@ -15929,7 +15952,7 @@ function EarlyBadgesScreen({ data, go }) {
                   style={{ animationDelay: `${badgeIndex * 80}ms` }}
                 >
                   <div>
-                    <div className="g12-badge-big">{badge.icon || '🏅'}</div>
+                    <div className="g12-badge-big"><TuklasBadgeVisual badge={badge} size={72} /></div>
                     <strong>{badgeDisplayName(badge) || 'Gantimpala'}</strong>
                     <p className="g12-badge-reason">✨ {badgeAchievementReason(badge)}</p>
                   </div>
@@ -15959,7 +15982,7 @@ function EarlyBadgesScreen({ data, go }) {
                   style={{ animationDelay: `${goalIndex * 70}ms` }}
                 >
                   <div>
-                    <div className="g12-badge-big g12-badge-big-locked">{goal.icon || '🏅'}</div>
+                    <div className="g12-badge-big g12-badge-big-locked"><TuklasBadgeVisual badge={goal} size={72} /></div>
                     <strong>{goal.name || 'Naka-lock na Gantimpala'}</strong>
                     <p className="g12-badge-reason"><span>Layunin</span>{' '}{goal.howToUnlock}</p>
                   </div>
@@ -16025,7 +16048,7 @@ function StudentBadges({ data, go, logout}) {
                   style={{ animationDelay: `${badgeIndex * 70}ms` }}
                 >
                   <div>
-                    <span>{badge.icon || '🏅'}</span>
+                    <span><TuklasBadgeVisual badge={badge} size={56} /></span>
                     <strong>{badgeDisplayName(badge) || 'Gantimpala'}</strong>
                     <p className="g46-badge-reason">{badgeAchievementReason(badge)}</p>
                   </div>
@@ -16055,7 +16078,7 @@ function StudentBadges({ data, go, logout}) {
                   style={{ animationDelay: `${goalIndex * 70}ms` }}
                 >
                   <div>
-                    <span>{goal.icon || '🏅'}</span>
+                    <span><TuklasBadgeVisual badge={goal} size={56} /></span>
                     <strong>{goal.name || 'Naka-lock na Gantimpala'}</strong>
                     <p className="g46-badge-reason g46-locked-goal-text"><span>Layunin</span>{' '}{goal.howToUnlock}</p>
                   </div>

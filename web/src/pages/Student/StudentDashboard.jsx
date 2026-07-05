@@ -4,6 +4,29 @@ import { api } from '../../api/client';
 import StatCard from '../../components/StatCard';
 import ProgressBar from '../../components/ProgressBar';
 
+const TUKLAS_KAAGAPAY_BADGE_IMAGE = '/badges/kaagapay-sa-gawain.png';
+
+function isTuklasKaagapayBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'kaagapay sa gawain' || code === 'group_1' || code.includes('kaagapay');
+}
+
+function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
+  if (isTuklasKaagapayBadge(badge)) {
+    return (
+      <img
+        src={TUKLAS_KAAGAPAY_BADGE_IMAGE}
+        alt={badge?.name || 'Kaagapay sa Gawain'}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
+  return <>{badge?.icon || fallback}</>;
+}
+
+
 const STUDENT_SUBJECT_DISPLAY_LABELS = {
   'Oral Comm': 'Komunikasyong Pagsasalita',
   'Oral Communication': 'Komunikasyong Pagsasalita',
@@ -15,6 +38,28 @@ function formatStudentSubjectDisplay(subject) {
   return STUDENT_SUBJECT_DISPLAY_LABELS[value] || subject || 'Filipino';
 }
 
+
+const KAAGAPAY_BADGE_IMAGE = '/badges/kaagapay-sa-gawain.png';
+
+function isKaagapayBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'kaagapay sa gawain' || code.includes('kaagapay');
+}
+
+function BadgeVisual({ badge }) {
+  if (isKaagapayBadge(badge)) {
+    return (
+      <img
+        src={KAAGAPAY_BADGE_IMAGE}
+        alt={badge?.name || 'Kaagapay sa Gawain'}
+        style={{ width: 56, height: 56, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
+  return <>{badge?.icon}</>;
+}
 
 export default function StudentDashboard() {
   const [data, setData] = useState(null);
@@ -64,7 +109,7 @@ export default function StudentDashboard() {
 
       <div className="section-heading"><h2>Mga Gantimpala</h2><Link to="/student/badges">Tingnan ang mga gantimpala</Link></div>
       <div className="badge-row">
-        {data.badges.length ? data.badges.map(b => <span className="badge-chip" key={b.id}>{b.icon} {b.name}</span>) : <p className="empty">Complete lessons bubuksan badges.</p>}
+        {data.badges.length ? data.badges.map(b => <span className="badge-chip" key={b.id}><BadgeVisual badge={b} /> {b.name}</span>) : <p className="empty">Complete lessons bubuksan badges.</p>}
       </div>
     </section>
   );
