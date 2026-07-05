@@ -383,24 +383,22 @@ export default function MissionScreen({ navigation }) {
               activeOpacity={0.85}
               disabled={submitting || completed}
               onPress={() => {
-                if (claimable) {
-                  claimMission(selectedMission);
-                  return;
-                }
+                  if (claimable) {
+                    claimMission(selectedMission);
+                    return;
+                  }
 
-                if (selectedMission.future) {
-                  Alert.alert(
-                    selectedMission.title,
-                    selectedMission.instruction || 'Maaaring ikonekta ang pagsusuri ng pagbigkas sa susunod.'
-                  );
-                  return;
-                }
+                  const missionId = getMissionKey(selectedMission);
+                  if (!missionId) {
+                    Alert.alert('May Problema', 'Hindi makita ang mission ID.');
+                    return;
+                  }
 
-                navigation.navigate('MissionGame', {
-                  missionId: selectedMission.id,
-                  gradeLevel,
-                });
-              }}
+                  navigation.navigate('MissionGame', {
+                    missionId,
+                    mission: selectedMission,
+                  });
+                }}
             >
               <Text style={styles.playButtonText}>
                 {submitting
