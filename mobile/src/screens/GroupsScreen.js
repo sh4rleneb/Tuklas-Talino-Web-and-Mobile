@@ -610,33 +610,33 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F6FFF5' },
   content: {
     padding: 16,
-    paddingTop: 32,
-    paddingBottom: 44,
+    paddingTop: 10,
+    paddingBottom: 100,
   },
   header: {
     marginBottom: 14,
   },
   heroCard: {
     backgroundColor: '#ECFDF5',
-    borderRadius: 26,
-    padding: 20,
-    marginBottom: 6,
+    borderRadius: 28,
+    padding: 14,
+    marginBottom: 18,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
     color: colors.ink,
   },
   summaryRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 16,
+    marginTop: 14,
   },
   summaryCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    paddingVertical: 12,
+    paddingVertical: 9,
     paddingHorizontal: 8,
     alignItems: 'center',
   },
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   toolsCard: {
-    marginBottom: 14,
+    marginBottom: 18,
   },
   searchInput: {
     backgroundColor: '#F8FAFC',
@@ -663,7 +663,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 10,
   },
   filterRow: {
     gap: 8,
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     borderColor: '#86EFAC',
     borderWidth: 1,
     borderRadius: 18,
-    padding: 14,
+    padding: 13,
     marginBottom: 14,
   },
   noticeError: {
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
     color: '#B91C1C',
   },
   groupCard: {
-    marginBottom: 14,
+    marginBottom: 18,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
   },
   groupIconWrap: {
     backgroundColor: '#DCFCE7',
-    borderRadius: 18,
+    borderRadius: 26,
     width: 42,
     height: 42,
     alignItems: 'center',
@@ -734,7 +734,7 @@ const styles = StyleSheet.create({
   },
   muted: {
     color: colors.muted,
-    lineHeight: 20,
+    lineHeight: 30,
   },
   metaRow: {
     flexDirection: 'row',
@@ -919,8 +919,8 @@ const styles = StyleSheet.create({
 
   waitingCard: {
     alignItems: 'center',
-    paddingVertical: 32,
-    marginBottom: 14,
+    paddingVertical: 22,
+    marginBottom: 18,
   },
 
   waitingIcon: {
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
   },
 
   teamMissionCard: {
-    marginBottom: 14,
+    marginBottom: 18,
   },
 
   teamMissionTitle: {
@@ -964,7 +964,7 @@ const styles = StyleSheet.create({
 
   stepPill: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: '#DDE7D8',
     paddingVertical: 12,
@@ -994,12 +994,218 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FFFA',
     borderRadius: 20,
     padding: 16,
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
   teamArrow: {
     fontSize: 22,
     fontWeight: '900',
   },
+
+
+  // [MODERN_STUDENT_UI_OVERRIDES_START]
+  safe: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+  },
+
+  screen: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+  },
+
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 26,
+    paddingBottom: 120,
+  },
+
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 34,
+    padding: 20,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 7,
+    marginBottom: 16,
+  },
+
+  title: {
+    color: '#0F172A',
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '900',
+  },
+
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 22,
+    paddingVertical: 13,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  summaryValue: {
+    color: '#16A34A',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryLabel: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 3,
+    textAlign: 'center',
+  },
+
+  toolsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 3,
+  },
+
+  searchInput: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderRadius: 22,
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '800',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+  },
+
+  filterChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+
+  filterChipActive: {
+    backgroundColor: '#22C55E',
+    borderColor: '#22C55E',
+  },
+
+  groupCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.09,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+
+  groupIconWrap: {
+    backgroundColor: '#DCFCE7',
+    borderRadius: 24,
+    width: 58,
+    height: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  group: {
+    fontSize: 21,
+    lineHeight: 26,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+
+  inner: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    padding: 15,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  task: {
+    color: '#0F172A',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '900',
+  },
+
+  jobCard: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 26,
+    padding: 18,
+    marginBottom: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#DCFCE7',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+
+  waitingCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+  },
+
+  teamMissionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+  },
+
+  teamCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  // [MODERN_STUDENT_UI_OVERRIDES_END]
+
 
 });

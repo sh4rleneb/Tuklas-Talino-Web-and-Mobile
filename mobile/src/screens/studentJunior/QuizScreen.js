@@ -691,7 +691,7 @@ const closeQuizPreview = useCallback(() => {
                   )}
 
                   <TouchableOpacity
-                    style={[styles.primaryButton, limitReached && styles.buttonDisabled]}
+                    style={[styles.primaryButton, styles.quizStartButton, limitReached && styles.buttonDisabled]}
                     onPress={() => openQuizPreview(quiz)}
                     disabled={limitReached}
                     activeOpacity={0.85}
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 130,
+    paddingBottom: 100,
   },
 
   center: {
@@ -796,15 +796,15 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#0F172A',
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
-    lineHeight: 34,
+    lineHeight: 30,
   },
 
   subtitle: {
     color: '#64748B',
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '800',
     marginTop: 4,
   },
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 13,
     fontWeight: '800',
-    marginTop: 3,
+    marginTop: 14,
   },
 
   quizList: {
@@ -928,9 +928,10 @@ const styles = StyleSheet.create({
   },
 
   quizReady: {
+    marginBottom: 12,
     color: '#EA580C',
     fontWeight: '900',
-    marginTop: 14,
+    marginTop: 20,
     fontSize: 15,
   },
 
@@ -1026,10 +1027,10 @@ const styles = StyleSheet.create({
 
   activeHero: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 30,
-    padding: 20,
+    borderRadius: 28,
+    padding: 16,
     marginTop: 14,
-    marginBottom: 14,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: '#BBF7D0',
     shadowColor: '#14532D',
@@ -1126,8 +1127,8 @@ const styles = StyleSheet.create({
 
   questionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 30,
-    padding: 20,
+    borderRadius: 24,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#DCFCE7',
     shadowColor: '#14532D',
@@ -1148,9 +1149,9 @@ const styles = StyleSheet.create({
 
   question: {
     color: '#0F172A',
-    fontSize: 23,
+    fontSize: 20,
     fontWeight: '900',
-    lineHeight: 31,
+    lineHeight: 27,
     marginBottom: 10,
   },
 
@@ -1209,7 +1210,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: '#22C55E',
     borderRadius: 999,
-    paddingVertical: 16,
+    paddingVertical: 13,
     paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1385,4 +1386,173 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
   },
+
+  // [MODERN_STUDENT_UI_OVERRIDES_START]
+  safe: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+  },
+
+  screen: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+  },
+
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 26,
+    paddingBottom: 120,
+  },
+
+  headerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 7,
+    marginBottom: 18,
+  },
+
+  title: {
+    color: '#0F172A',
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '900',
+  },
+
+  subtitle: {
+    color: '#64748B',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+
+  summaryRow: {
+    marginBottom: 28,
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+
+  summaryCard: {
+    minHeight: 96,
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  quizCard: {
+    paddingBottom: 24,
+    paddingTop: 22,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 26,
+    padding: 18,
+    marginBottom: 26,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.09,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+
+  activeHero: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 34,
+    padding: 20,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 7,
+    marginBottom: 16,
+  },
+
+  activeTitle: {
+    color: '#0F172A',
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '900',
+  },
+
+  activeSubtitle: {
+    color: '#64748B',
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+
+  questionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+
+  question: {
+    color: '#0F172A',
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: '900',
+  },
+
+  optionButton: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    padding: 13,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
+  },
+
+  selectedOption: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#22C55E',
+  },
+
+  primaryButton: {
+    backgroundColor: '#22C55E',
+    borderRadius: 999,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 5,
+  },
+
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  // [MODERN_STUDENT_UI_OVERRIDES_END]
+
+
+  quizStartButton: {
+    marginTop: 14,
+    marginBottom: 2,
+  },
+
 });

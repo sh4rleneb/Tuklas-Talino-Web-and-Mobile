@@ -162,11 +162,12 @@ function categoryMeta(subject) {
 
 
 const lessonColors = [
-      '#EEF4FF',
-      '#FFF0F7',
-      '#F3F0FF',
-      '#FEF3C7',
-    ];
+  '#F7FEF9',
+  '#F0FDF4',
+  '#F8FAFC',
+  '#F4FBF7',
+  '#ECFDF5',
+];
 
     const lessonIcons = [
       '📖',
@@ -315,12 +316,12 @@ const lessonColors = [
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>🏅 {badges.length}</Text>
-                <Text style={styles.achievementLabel}>🏅 Mga Badge</Text>
+                <Text style={styles.achievementLabel}>Mga Badge</Text>
               </View>
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>⭐ {level}</Text>
-                <Text style={styles.achievementLabel}>⭐ Antas</Text>
+                <Text style={styles.achievementLabel}>Antas</Text>
               </View>
 
             </View>
@@ -687,24 +688,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_800ExtraBold',
   },
 heroCard: {
-  backgroundColor: '#16A34A',
-  borderRadius: 34,
-  padding: 20,
+    backgroundColor: '#16A34A',
+    borderRadius: 32,
+    padding: 22,
   marginBottom: 18,
-  borderWidth: 1,
-  borderColor: '#22C55E',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
   shadowColor: '#14532D',
-  shadowOpacity: 0.18,
-  shadowRadius: 20,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
   shadowOffset: { width: 0, height: 10 },
-  elevation: 8,
+    elevation: 4,
 },
 
   heroTop: {
 
     flexDirection: 'row',
-
-    alignItems: 'flex-start',
+    alignItems: 'center',
 
     width: '100%',
 
@@ -719,41 +719,37 @@ heroCard: {
   },
 
   avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 26,
-    backgroundColor: '#ECFDF5',
+    width: 66,
+    height: 66,
+    borderRadius: 22,
+    backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#86EFAC',
   },
 
   avatar: {
-    fontSize: 38,
+    fontSize: 34,
   },
 
   heroTitle: {
-
-    fontSize: 30,
+    fontSize: 28,
 
     fontWeight: '900',
-
     color: '#FFFFFF',
+    letterSpacing: -0.4,
+    lineHeight: 34,
 
-    letterSpacing: -0.6,
 
   },
 
   heroSubtitle: {
-
-    fontSize: 15,
-
+    fontSize: 14,
     color: '#DCFCE7',
 
     marginTop: 6,
-
-    lineHeight: 23,
+    lineHeight: 22,
 
     fontFamily: 'Nunito_700Bold',
 
@@ -764,28 +760,22 @@ heroCard: {
   },
 
   xpCard: {
-
     backgroundColor: '#FFFFFF',
-
-    borderRadius: 28,
-
+    borderRadius: 26,
     padding: 18,
 
     marginTop: 18,
 
     borderWidth: 1,
-
-    borderColor: '#BBF7D0',
+    borderColor: '#DCFCE7',
 
     shadowColor: '#14532D',
-
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.06,
 
     shadowRadius: 14,
 
     shadowOffset: { width: 0, height: 7 },
-
-    elevation: 5,
+    elevation: 2,
 
   },
 
@@ -811,20 +801,17 @@ heroCard: {
   },
 
   xpValue: {
-
-    fontSize: 34,
+    fontSize: 32,
 
     fontWeight: '900',
-
-    color: '#15803D',
+    color: '#166534',
 
     marginTop: 2,
 
   },
 
   levelBadge: {
-
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#ECFDF5',
 
     paddingHorizontal: 14,
 
@@ -833,8 +820,7 @@ heroCard: {
     borderRadius: 999,
 
     borderWidth: 1,
-
-    borderColor: '#FDE68A',
+    borderColor: '#86EFAC',
 
   },
 
@@ -846,9 +832,7 @@ heroCard: {
 
 
     fontWeight: '900',
-
-
-    color: '#92400E',
+    color: '#166534',
 
 
   },
@@ -883,91 +867,96 @@ heroCard: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginTop: 16,
-    rowGap: 10,
+    marginTop: 18,
+    rowGap: 12,
   },
 
   achievementCard: {
     backgroundColor: '#FFFFFF',
     width: '48%',
-    borderRadius: 22,
-    paddingVertical: 14,
+    borderRadius: 20,
+    paddingVertical: 15,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#DCFCE7',
     shadowColor: '#14532D',
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    elevation: 1,
+    paddingHorizontal: 10,
+
   },
 
   achievementValue: {
     fontSize: 18,
     fontFamily: 'Fredoka_700Bold',
-    color: '#22C55E',
+    color: '#16A34A',
   },
 
   achievementLabel: {
     marginTop: 4,
-    fontSize: 10,
+    fontSize: 11,
     textAlign: 'center',
-    color: '#64748B',
+    color: '#475569',
     fontFamily: 'Nunito_800ExtraBold',
+    lineHeight: 15,
+
   },
 
   quickStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 18,
-    gap: 10,
+    marginTop: 20,
+    gap: 12,
   },
 
   quickCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingVertical: 16,
+    borderRadius: 24,
+    paddingVertical: 17,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#DCFCE7',
     shadowColor: '#14532D',
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
-    elevation: 2,
+    elevation: 1,
+    paddingHorizontal: 10,
+    minHeight: 98,
+    justifyContent: 'center',
+
   },
 
   quickValue: {
-    fontSize: 26,
-    color: '#22C55E',
+    fontSize: 28,
+    color: '#16A34A',
     fontFamily: 'Fredoka_700Bold',
   },
 
   quickLabel: {
     marginTop: 6,
     fontSize: 12,
-    color: '#64748B',
+    color: '#475569',
     fontFamily: 'Nunito_800ExtraBold',
+    lineHeight: 16,
+    textAlign: 'center',
+
   },
 
   section: {
-
     marginTop: 24,
-
     backgroundColor: '#FFFFFF',
-
     borderRadius: 30,
-
-    padding: 16,
+    padding: 18,
 
     borderWidth: 1,
-
     borderColor: '#BBF7D0',
 
     shadowColor: '#14532D',
-
-    shadowOpacity: 0.07,
+    shadowOpacity: 0.06,
 
     shadowRadius: 14,
 
@@ -982,43 +971,40 @@ heroCard: {
     flexDirection: 'row',
 
     justifyContent: 'space-between',
-
     alignItems: 'center',
+    marginBottom: 18,
+    gap: 10,
 
-    marginBottom: 12,
 
   },
 
   sectionTitle: {
-
     fontSize: 24,
 
     fontWeight: '900',
-
     color: '#0F172A',
 
     letterSpacing: -0.3,
+    lineHeight: 30,
+    flex: 1,
+    minWidth: 0,
+
+
 
   },
 
   allLessons: {
-
     color: '#15803D',
 
     fontFamily: 'Fredoka_600SemiBold',
-
-    fontSize: 14,
-
-    backgroundColor: '#DCFCE7',
-
+    fontSize: 13,
+    backgroundColor: '#F0FDF4',
     paddingHorizontal: 12,
-
     paddingVertical: 7,
 
     borderRadius: 999,
 
     borderWidth: 1,
-
     borderColor: '#BBF7D0',
 
   },
@@ -1026,53 +1012,41 @@ heroCard: {
   lessonGrid: {
 
     flexDirection: 'column',
-
     gap: 12,
-
     marginTop: 4,
 
   },
 
   lessonCard: {
-
-    backgroundColor: '#F8FAFC',
-
-    borderRadius: 28,
-
+    backgroundColor: '#F7FEF9',
+    borderRadius: 26,
     padding: 18,
 
     marginBottom: 0,
 
     borderWidth: 1,
-
     borderColor: '#BBF7D0',
-
-    minHeight: 176,
+    minHeight: 178,
 
     shadowColor: '#14532D',
-
-    shadowOpacity: 0.08,
-
-    shadowRadius: 12,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
 
     shadowOffset: { width: 0, height: 6 },
 
     elevation: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+
 
   },
 
   lessonEmoji: {
-
-    fontSize: 38,
-
-    backgroundColor: '#ECFDF5',
-
-    width: 64,
-
-    height: 64,
-
-    borderRadius: 24,
-
+    fontSize: 31,
+    backgroundColor: '#FFFFFF',
+    width: 56,
+    height: 56,
+    borderRadius: 20,
     textAlign: 'center',
 
     textAlignVertical: 'center',
@@ -1080,82 +1054,76 @@ heroCard: {
     overflow: 'hidden',
 
     borderWidth: 1,
-
     borderColor: '#BBF7D0',
+    alignSelf: 'center',
+
 
   },
 
   lessonTag: {
-
-    alignSelf: 'flex-start',
-
+    alignSelf: 'center',
     color: '#15803D',
 
     fontFamily: 'Fredoka_600SemiBold',
-
-    marginTop: 14,
-
-    fontSize: 12,
+    marginTop: 12,
+    fontSize: 10,
 
     textTransform: 'uppercase',
 
     letterSpacing: 0.5,
-
     backgroundColor: '#DCFCE7',
-
-    paddingHorizontal: 10,
-
+    paddingHorizontal: 11,
     paddingVertical: 5,
 
     borderRadius: 999,
 
     borderWidth: 1,
+    borderColor: '#86EFAC',
+    textAlign: 'center',
+    lineHeight: 14,
+    maxWidth: '92%',
 
-    borderColor: '#BBF7D0',
+
 
   },
 
   lessonTitle: {
-
     fontSize: 18,
 
     fontWeight: '900',
 
     color: '#0F172A',
-
     lineHeight: 24,
-
     marginTop: 10,
+    alignSelf: 'center',
+    textAlign: 'center',
+    width: '100%',
+
+
 
   },
 
   startBtn: {
-
     marginTop: 16,
-
     backgroundColor: '#16A34A',
 
     alignSelf: 'stretch',
 
     paddingHorizontal: 18,
-
     paddingVertical: 13,
-
-    borderRadius: 999,
+    borderRadius: 20,
 
     alignItems: 'center',
 
     justifyContent: 'center',
 
     shadowColor: '#14532D',
-
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.08,
 
     shadowRadius: 10,
 
     shadowOffset: { width: 0, height: 5 },
-
-    elevation: 4,
+    elevation: 2,
 
   },
 
@@ -1164,9 +1132,7 @@ heroCard: {
     color: '#FFFFFF',
 
     fontFamily: 'Fredoka_600SemiBold',
-
     fontSize: 14,
-
     letterSpacing: 0.2,
 
   },
@@ -1181,7 +1147,7 @@ heroCard: {
 
   badgeUnlocked: {
     width: '48%',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F0FDF4',
     borderRadius: 22,
     paddingVertical: 20,
     alignItems: 'center',
@@ -1211,6 +1177,8 @@ heroCard: {
     color: '#166534',
     textAlign: 'center',
     fontSize: 14,
+    lineHeight: 18,
+
   },
 
   badgeLockedText: {
@@ -1226,20 +1194,16 @@ heroCard: {
     color: '#64748B',
 
     fontFamily: 'Nunito_800ExtraBold',
-
     backgroundColor: '#F8FAFC',
-
     borderRadius: 22,
 
     padding: 16,
 
     borderWidth: 1,
-
     borderColor: '#E2E8F0',
 
     textAlign: 'center',
-
-    lineHeight: 20,
+    lineHeight: 21,
 
   },
 

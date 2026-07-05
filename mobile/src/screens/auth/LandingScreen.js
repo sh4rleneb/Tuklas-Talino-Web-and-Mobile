@@ -211,9 +211,7 @@ export default function LandingScreen({
               at subaybayan ang iyong pag-unlad.
             </Text>
 
-            <TouchableOpacity
-              style={styles.studentButton}
-              onPress={() =>
+            <View style={styles.studentButton}>
                 navigation.navigate(
                   'StudentLogin'
                 )
@@ -224,7 +222,7 @@ export default function LandingScreen({
                 Mag-aaral →
               </Text>
 
-            </TouchableOpacity>
+            </View>
 
           </View>
 
@@ -586,11 +584,12 @@ const styles = StyleSheet.create({
   },
 
   studentTitle: {
-    fontSize: 40,
+    fontWeight: '900',
+    fontSize: 15,
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#16A34A',
+    color: '#334155',
   },
 
   teacherTitle: {
@@ -627,18 +626,15 @@ const styles = StyleSheet.create({
   },
 
   studentButton: {
-    backgroundColor: '#22C55E',
+    marginBottom: 6,
+    flexDirection: 'row',
 
     width: '92%',
-    alignSelf: 'center',
-
-    paddingVertical: 20,
-
-    borderRadius: 100,
+    alignSelf: 'flex-start',
 
     alignItems: 'center',
 
-    marginTop: 28,
+    marginTop: 4,
   },
 
   teacherButton: {

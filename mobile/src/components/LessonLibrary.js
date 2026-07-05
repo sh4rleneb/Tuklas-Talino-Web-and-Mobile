@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
-  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,30 +9,34 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import StudentScreenHeader from './StudentScreenHeader';
 import { api } from '../api/client';
 
 const CATEGORIES = [
-  { key: 'ALL', label: 'Lahat', icon: '🌎', accent: '#22C55E', soft: '#ECFDF5' },
+  { key: 'ALL', label: 'Lahat', icon: '✨', accent: '#22C55E', soft: '#ECFDF5' },
   { key: 'Pagbasa', label: 'Pagbasa', icon: '📖', accent: '#22C55E', soft: '#DCFCE7' },
-  { key: 'Bokabularyo', label: 'Bokabularyo', icon: '🔤', accent: '#3B82F6', soft: '#DBEAFE' },
-  { key: 'Panitikan', label: 'Panitikan', icon: '📜', accent: '#A855F7', soft: '#F3E8FF' },
-  { key: 'Oral Communication', label: 'Komunikasyong Pagsasalita', icon: '🎙️', accent: '#F59E0B', soft: '#FEF3C7' },
+  { key: 'Bokabularyo', label: 'Bokabularyo', icon: '🧩', accent: '#3B82F6', soft: '#DBEAFE' },
+  { key: 'Panitikan', label: 'Panitikan', icon: '📚', accent: '#A855F7', soft: '#F3E8FF' },
+  { key: 'Oral Communication', label: 'Pagsasalita', icon: '🎙️', accent: '#F59E0B', soft: '#FEF3C7' },
   { key: 'Pagsulat', label: 'Pagsulat', icon: '✍️', accent: '#EC4899', soft: '#FCE7F3' },
 ];
 
 function categoryKey(subject = '') {
-  const value = String(subject).trim().toLowerCase();
-  if (value === 'oral comm' || value === 'oral communication' || value === 'pagsasalita') return 'Oral Communication';
+  const value = String(subject || '').trim().toLowerCase();
+
+  if (value === 'oral comm' || value === 'oral communication' || value === 'pagsasalita') {
+    return 'Oral Communication';
+  }
+
   return CATEGORIES.find((category) => category.key.toLowerCase() === value)?.key || String(subject || 'General');
 }
 
 function categoryMeta(subject) {
   const key = categoryKey(subject);
+
   return CATEGORIES.find((category) => category.key === key) || {
     key,
-    label: key,
-    icon: '📚',
+    label: key || 'Filipino',
+    icon: '📘',
     accent: '#64748B',
     soft: '#F1F5F9',
   };
@@ -44,36 +47,30 @@ function gameQuestMeta(subject) {
 
   const games = {
     Pagbasa: {
-      element: 'Pagbasa',
-      title: '📖 Laro ng Pagbasa at Pagtutugma',
-      mission: 'Basahin ang pahiwatig, piliin ang tamang sagot, at mangolekta ng mga bituin sa bawat tamang tugma.',
+      title: 'Laro ng Pagbasa',
+      mission: 'Basahin ang pahiwatig, piliin ang tamang sagot, at mangolekta ng mga bituin.',
     },
     Bokabularyo: {
-      element: 'Bokabularyo',
-      title: '🔤 Laro ng Pagtutugma ng Salita',
-      mission: 'Itugma ang mga salita sa tamang larawan o kahulugan upang mapalawak ang iyong bokabularyo.',
+      title: 'Pagtutugma ng Salita',
+      mission: 'Itugma ang salita sa larawan o kahulugan para lumawak ang bokabularyo.',
     },
     Panitikan: {
-      element: 'Panitikan',
-      title: '📜 Laro ng Pakikipagsapalaran sa Kuwento',
-      mission: 'Basahin ang kuwento, sagutin ang mga hamon, at i-unlock ang susunod na pakikipagsapalaran.',
+      title: 'Pakikipagsapalaran sa Kuwento',
+      mission: 'Basahin ang kuwento, sagutin ang hamon, at i-unlock ang susunod na bahagi.',
     },
     'Oral Communication': {
-      element: 'Pagsasalita',
-      title: '🎙️ Laro ng Malinaw na Pagbigkas',
-      mission: 'Bigkasin nang malinaw ang mga salita at kumita ng mga bituin habang humuhusay.',
+      title: 'Malinaw na Pagbigkas',
+      mission: 'Makinig, bumigkas, at magsanay magsalita nang may kumpiyansa.',
     },
     Pagsulat: {
-      element: 'Pagsulat',
-      title: '✍️ Laro sa Pagsulat',
-      mission: 'Magsanay sa pagsulat ng mga salita o maiikling sagot upang makakuha ng XP.',
+      title: 'Laro sa Pagsulat',
+      mission: 'Magsanay sa pagsulat ng salita, pangungusap, at maiikling sagot.',
     },
   };
 
   return games[key] || {
-    element: key || 'Filipino',
-    title: '🎮 Laro sa Pagkatuto',
-    mission: 'Magbasa, pumili, magsalita, o magsulat upang mangolekta ng mga bituin at ma-unlock ang susunod na laro.',
+    title: 'Laro sa Pagkatuto',
+    mission: 'Magbasa, pumili, magsalita, o magsulat upang makakuha ng XP.',
   };
 }
 
@@ -82,43 +79,37 @@ function clampPercent(value = 0) {
 }
 
 function lessonDifficulty(lesson = {}, student = {}) {
-  const rawDifficulty = String(
-    lesson.difficulty ||
-    lesson.difficultyLevel ||
-    lesson.level ||
-    ''
-  ).trim().toLowerCase();
-
+  const raw = String(lesson.difficulty || lesson.difficultyLevel || lesson.level || '').trim().toLowerCase();
   const grade = Number(lesson.gradeLevel || student.gradeLevel || 0);
   const xp = Number(lesson.xpReward || 0);
 
-  if (rawDifficulty.includes('beginner') || rawDifficulty.includes('easy')) {
+  if (raw.includes('beginner') || raw.includes('easy')) {
     return {
-      label: rawDifficulty.includes('beginner') ? 'Baguhan' : 'Madali',
-      icon: rawDifficulty.includes('beginner') ? '🌱' : '😊',
+      label: raw.includes('beginner') ? 'Baguhan' : 'Madali',
+      icon: '🌱',
       color: '#16A34A',
       soft: '#DCFCE7',
-      helper: 'Maikli, masaya, at madaling tapusin.',
+      helper: 'Maikli, masaya, at madaling simulan.',
     };
   }
 
-  if (rawDifficulty.includes('medium') || rawDifficulty.includes('normal')) {
+  if (raw.includes('medium') || raw.includes('normal')) {
     return {
       label: 'Katamtaman',
       icon: '⚡',
       color: '#2563EB',
       soft: '#DBEAFE',
-      helper: 'Isang balanseng hamon para sa tuloy-tuloy na pagsasanay.',
+      helper: 'Balanseng hamon para sa tuloy-tuloy na pagsasanay.',
     };
   }
 
-  if (rawDifficulty.includes('hard') || rawDifficulty.includes('advanced')) {
+  if (raw.includes('hard') || raw.includes('advanced')) {
     return {
-      label: rawDifficulty.includes('advanced') ? 'Dalubhasa' : 'Mahirap',
-      icon: rawDifficulty.includes('advanced') ? '🏆' : '🔥',
+      label: raw.includes('advanced') ? 'Dalubhasa' : 'Mahirap',
+      icon: '🔥',
       color: '#DC2626',
       soft: '#FEE2E2',
-      helper: 'Mas mapaghamong gawain na nangangailangan ng masusing pag-iisip.',
+      helper: 'Mas mapaghamong gawain para sa masusing pag-iisip.',
     };
   }
 
@@ -128,7 +119,7 @@ function lessonDifficulty(lesson = {}, student = {}) {
       icon: '🌱',
       color: '#16A34A',
       soft: '#DCFCE7',
-      helper: 'Idinisenyo para sa mga nagsisimula: magbasa, pumili, at mangolekta ng mga bituin.',
+      helper: 'Para sa nagsisimula: magbasa, pumili, at mangolekta ng bituin.',
     };
   }
 
@@ -138,7 +129,7 @@ function lessonDifficulty(lesson = {}, student = {}) {
       icon: '⭐',
       color: '#F59E0B',
       soft: '#FEF3C7',
-      helper: 'Isang masayang hamon na may mga simpleng gawain.',
+      helper: 'Masayang hamon na may simple at malinaw na gawain.',
     };
   }
 
@@ -148,7 +139,7 @@ function lessonDifficulty(lesson = {}, student = {}) {
       icon: '⚡',
       color: '#2563EB',
       soft: '#DBEAFE',
-      helper: 'Isang balanseng hamon para sa tuloy-tuloy na pagsasanay.',
+      helper: 'Balanseng hamon para sa tuloy-tuloy na pagsasanay.',
     };
   }
 
@@ -158,7 +149,7 @@ function lessonDifficulty(lesson = {}, student = {}) {
       icon: '🔥',
       color: '#EA580C',
       soft: '#FFEDD5',
-      helper: 'Mas mapaghamong gawain na nangangailangan ng masusing pag-iisip.',
+      helper: 'Mas mapaghamong gawain para sa masusing pag-iisip.',
     };
   }
 
@@ -167,33 +158,29 @@ function lessonDifficulty(lesson = {}, student = {}) {
     icon: '🏆',
     color: '#7C3AED',
     soft: '#EDE9FE',
-    helper: 'Isang pinakamataas na antas ng aralin para sa mga handa sa malaking hamon.',
+    helper: 'Mas mataas na antas para sa handa sa malaking hamon.',
   };
 }
 
 function questStarCount(lesson = {}) {
   if (lesson.completed) return 3;
 
-  const percent = clampPercent(lesson.progressPercent || lesson.progress?.percent);
+  const percent = clampPercent(lesson.progressPercent ?? lesson.progress?.percent);
 
   if (percent >= 70) return 2;
   if (percent >= 25) return 1;
-  return 0;
-}
 
-function isLittleQuestAralin(lesson = {}, student = {}, playful = false) {
-  const grade = Number(lesson.gradeLevel || student.gradeLevel || 0);
-  return playful && grade > 0 && grade <= 2;
+  return 0;
 }
 
 function withUnlockStates(lessons = [], enforceSequential = false) {
   const unlockBySubject = new Map();
 
-  return lessons.map((lesson) => {
+  return (Array.isArray(lessons) ? lessons : []).map((lesson) => {
     const subject = categoryKey(lesson.subject);
     const completed = Boolean(lesson.completed);
-
     let unlocked;
+
     if (!enforceSequential) {
       unlocked = true;
     } else {
@@ -207,25 +194,30 @@ function withUnlockStates(lessons = [], enforceSequential = false) {
       completed,
       unlocked,
       subjectKey: subject,
-      progressPercent: completed ? 100 : clampPercent(lesson.progress?.percent),
+      progressPercent: completed ? 100 : clampPercent(lesson.progressPercent ?? lesson.progress?.percent),
     };
   });
 }
 
-export default function AralinLibrary({ navigation, variant = 'junior' }) {
+function actionText(lesson = {}) {
+  if (!lesson.unlocked) return 'Naka-lock';
+  if (lesson.completed) return 'Tapos Na';
+  if (Number(lesson.progressPercent || 0) > 0) return 'Magpatuloy';
+  return 'Simulan';
+}
+
+export default function LessonLibrary({ navigation, variant = 'junior' }) {
   const [dashboard, setDashboard] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const playful = variant === 'junior';
 
-  const cardScale = React.useRef(
-    new Animated.Value(1)
-  ).current;
+  const playful = variant === 'junior';
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+
     try {
       setDashboard(await api('/dashboard'));
     } catch (err) {
@@ -235,47 +227,52 @@ export default function AralinLibrary({ navigation, variant = 'junior' }) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    load();
-  }, [load]));
-
-  const lessons = useMemo(() => {
-    const grade = Number(dashboard?.student?.gradeLevel || 0);
-    const enforceSequential = false;
-    return withUnlockStates(dashboard?.lessons || [], enforceSequential);
-  }, [dashboard]);
-
-  const filteredAralins = useMemo(
-    () => selectedCategory === 'ALL'
-      ? lessons
-      : lessons.filter((lesson) => lesson.subjectKey === selectedCategory),
-    [lessons, selectedCategory]
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
   );
 
   const student = dashboard?.student || {};
   const progress = dashboard?.progress || {};
 
-  function openAralin(lesson) {
+  const lessons = useMemo(
+    () => withUnlockStates(dashboard?.lessons || [], false),
+    [dashboard]
+  );
 
+  const filteredLessons = useMemo(
+    () =>
+      selectedCategory === 'ALL'
+        ? lessons
+        : lessons.filter((lesson) => lesson.subjectKey === selectedCategory),
+    [lessons, selectedCategory]
+  );
 
-    if (!lesson.unlocked) {
-      return;
-    }
+  const completedLessons = lessons.filter((lesson) => lesson.completed).length;
+  const totalLessons = lessons.length;
+  const overallPercent = totalLessons
+    ? clampPercent(progress.percent ?? (completedLessons / totalLessons) * 100)
+    : 0;
 
-    if (variant === 'senior') {
-      navigation.navigate('LessonDashboardScreen', {
-        lessonId: lesson.id,
-        homeRoute: 'StudentSeniorTabs',
-      });
+  function openLesson(lesson) {
+    if (!lesson.unlocked) return;
+
+    const params = {
+      lessonId: lesson.id,
+      homeRoute: variant === 'senior' ? 'StudentSeniorTabs' : 'StudentTabs',
+    };
+
+    const routeNames = navigation?.getState?.()?.routeNames || [];
+
+    if (routeNames.includes('LessonDashboardScreen')) {
+      navigation.navigate('LessonDashboardScreen', params);
       return;
     }
 
     navigation.navigate('Lessons', {
       screen: 'LessonDashboardScreen',
-      params: {
-        lessonId: lesson.id,
-        homeRoute: 'StudentTabs',
-      },
+      params,
     });
   }
 
@@ -283,8 +280,8 @@ export default function AralinLibrary({ navigation, variant = 'junior' }) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#22C55E" />
-          <Text style={styles.muted}>Ina-load ang iyong mga aralin...</Text>
+          <ActivityIndicator color="#16A34A" size="large" />
+          <Text style={styles.loadingText}>Ina-load ang iyong mga aralin...</Text>
         </View>
       </SafeAreaView>
     );
@@ -292,526 +289,760 @@ export default function AralinLibrary({ navigation, variant = 'junior' }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.page}>
-        <StudentScreenHeader
-          navigation={navigation}
-          avatar={student.avatar}
-          gradeLevel={student.gradeLevel}
-        />
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.page}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.hero, playful ? styles.heroJunior : styles.heroSenior]}>
+          <View style={styles.heroGlowOne} />
+          <View style={styles.heroGlowTwo} />
 
-        <View style={[styles.hero, playful && styles.heroPlayful]}>
-          <Text style={styles.eyebrow}>
-            {playful ? 'MAPA NG MGA HAMON' : 'SENTRO NG PAG-AARAL NG FILIPINO'}
-          </Text>
-          <Text style={styles.title}>
-            📚 Aklatan ng mga Aralin
-          </Text>
-          <Text style={styles.subtitle}>
-            {playful
-              ? 'Maglaro ng mga larong pang-Filipino, mangolekta ng mga bituin, kumita ng XP, at i-unlock ang susunod na hamon.'
-              : 'Pumili ng kategorya, kumita ng XP, at ipagpatuloy ang iyong pag-aaral.'}
-          </Text>
+          <View style={styles.heroTop}>
+            <View style={styles.heroTextWrap}>
+              <Text style={styles.eyebrow}>
+                {playful ? 'MAPA NG MGA HAMON' : 'SENTRO NG PAG-AARAL'}
+              </Text>
+              <Text style={styles.title}>
+                {playful ? 'Aklatan ng Aralin' : 'Mga Aralin sa Filipino'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {playful
+                  ? 'Pumili ng aralin, mangolekta ng bituin, kumita ng XP, at i-unlock ang susunod na hamon.'
+                  : 'Piliin ang kategorya, ipagpatuloy ang aralin, at subaybayan ang progreso mo.'}
+              </Text>
+            </View>
+
+            <View style={styles.gradeBadge}>
+              <Text style={styles.gradeBadgeIcon}>{playful ? '🧭' : '📘'}</Text>
+              <Text style={styles.gradeBadgeText}>G{student.gradeLevel || '—'}</Text>
+            </View>
+          </View>
 
           <View style={styles.heroStats}>
-            <Text style={styles.heroStat}>⚡ {student.xp || 0} XP</Text>
-            <Text style={styles.heroStat}>{progress.percent || 0}% tapos</Text>
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatValue}>{student.xp || 0}</Text>
+              <Text style={styles.heroStatLabel}>XP</Text>
+            </View>
+
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatValue}>{overallPercent}%</Text>
+              <Text style={styles.heroStatLabel}>Progress</Text>
+            </View>
+
+            <View style={styles.heroStatCard}>
+              <Text style={styles.heroStatValue}>{completedLessons}/{totalLessons || 0}</Text>
+              <Text style={styles.heroStatLabel}>Aralin</Text>
+            </View>
           </View>
 
           <View style={styles.overallTrack}>
-            <View style={[styles.overallFill, { width: `${clampPercent(progress.percent)}%` }]} />
+            <View style={[styles.overallFill, { width: `${overallPercent}%` }]} />
           </View>
 
           <Text style={styles.progressCount}>
-            {progress.completedAralins || 0}/{progress.totalAralins || lessons.length} aralin ang natapos
+            {completedLessons} sa {totalLessons || 0} aralin ang natapos
           </Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+
+        <View style={styles.sectionRow}>
+          <View>
+            <Text style={styles.sectionTitle}>Mga Kategorya</Text>
+            <Text style={styles.sectionHint}>Piliin ang gusto mong pag-aralan.</Text>
+          </View>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+        >
           {CATEGORIES.map((category) => {
             const active = category.key === selectedCategory;
 
             return (
-              <Animated.View
-                key={category.key}
-                style={{
-                  transform: [
-                    {
-                      scale: cardScale,
-                    },
-                  ],
-                }}
-              >
               <TouchableOpacity
+                key={category.key}
+                onPress={() => setSelectedCategory(category.key)}
+                activeOpacity={0.86}
                 style={[
                   styles.filter,
-                  active && {
-                    backgroundColor: category.soft,
-                    borderColor: category.accent,
+                  {
+                    borderColor: active ? category.accent : '#E2E8F0',
+                    backgroundColor: active ? category.soft : '#FFFFFF',
                   },
                 ]}
-                onPress={() => setSelectedCategory(category.key)}
               >
-                <Text>{category.icon}</Text>
-
+                <Text style={styles.filterIcon}>{category.icon}</Text>
                 <Text
                   style={[
                     styles.filterText,
-                    active && { color: category.accent },
+                    { color: active ? category.accent : '#64748B' },
                   ]}
                 >
                   {category.label}
                 </Text>
               </TouchableOpacity>
-              </Animated.View>
             );
           })}
         </ScrollView>
 
         {error ? (
           <View style={styles.messageCard}>
+            <Text style={styles.errorTitle}>Hindi ma-load ang aralin</Text>
             <Text style={styles.error}>{error}</Text>
+
             <TouchableOpacity style={styles.retryButton} onPress={load}>
               <Text style={styles.retryText}>Subukan Muli</Text>
             </TouchableOpacity>
           </View>
-        ) : filteredAralins.length ? (
-          filteredAralins.map((lesson) => {
+        ) : null}
+
+        {!error && filteredLessons.length ? (
+          filteredLessons.map((lesson) => {
             const meta = categoryMeta(lesson.subject);
             const game = gameQuestMeta(lesson.subject);
             const difficulty = lessonDifficulty(lesson, student);
-            const littleQuest = isLittleQuestAralin(lesson, student, playful);
             const stars = questStarCount(lesson);
-
-            let action = lesson.completed
-              ? '✅ Tapos Na'
-              : lesson.unlocked
-                ? lesson.progressPercent > 0 ? '▶ Magpatuloy' : '▶ Simulan'
-                : '🔒 Naka-lock';
-
-            if (littleQuest) {
-              action = lesson.completed
-                ? '✅ Tapos Na'
-                : lesson.unlocked
-                  ? lesson.progressPercent > 0 ? '▶ Magpatuloy' : '▶ Simulan'
-                  : '🔒 Naka-lock';
-            }
+            const percent = clampPercent(lesson.progressPercent);
+            const locked = !lesson.unlocked;
+            const completed = lesson.completed;
+            const action = actionText(lesson);
 
             return (
               <TouchableOpacity
                 key={lesson.id}
-                activeOpacity={1}
-
-                onPressIn={() => {
-                  Animated.spring(cardScale,{
-                    toValue:0.97,
-                    useNativeDriver:true,
-                  }).start();
-                }}
-
-                onPressOut={() => {
-                  Animated.spring(cardScale,{
-                    toValue:1,
-                    friction:4,
-                    useNativeDriver:true,
-                  }).start();
-                }}
-                disabled={!lesson.unlocked}
+                disabled={locked}
+                activeOpacity={0.88}
+                onPress={() => openLesson(lesson)}
                 style={[
                   styles.lessonCard,
-                  littleQuest && styles.questCard,
-                  !lesson.unlocked && styles.lockedCard,
+                  completed && styles.lessonCardDone,
+                  locked && styles.lockedCard,
+                  { borderColor: completed ? '#86EFAC' : meta.soft },
                 ]}
-                onPress={() => openAralin(lesson)}
               >
+                <View style={[styles.cardAccent, { backgroundColor: meta.soft }]} />
+
                 <View style={styles.lessonTop}>
-                  {!littleQuest && (
-                    <View
-                      style={[
-                        styles.thumbnail,
-                        { backgroundColor: meta.soft },
-                      ]}
-                    >
-                      <Text style={styles.thumbnailIcon}>
-                        {lesson.completed ? '✅' : meta.icon}
-                      </Text>
-                    </View>
-                  )}
-
                   <View
-                    style={{
-                      flex: 1,
-                      marginLeft: littleQuest ? 0 : 14,
-                    }}>
-                    <Text style={styles.lessonTitle}>
-                      {lesson.title}
+                    style={[
+                      styles.thumbnail,
+                      {
+                        backgroundColor: meta.soft,
+                        borderColor: meta.accent,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.thumbnailIcon}>
+                      {completed ? '✅' : meta.icon}
                     </Text>
-
-                    {!littleQuest && (
-                    <Text style={styles.lessonMeta}>
-                      {meta.label} • Baitang {lesson.gradeLevel || student.gradeLevel || '—'} • {lesson.xpReward || 0} XP
-                    </Text>
-                    )}
-
-                    {!littleQuest && (
-                    <View style={styles.metaRow}>
-                      <View
-                        style={[
-                          styles.difficultyPill,
-                          {
-                            backgroundColor: difficulty.soft,
-                            borderColor: difficulty.color,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.difficultyText,
-                            { color: difficulty.color },
-                          ]}
-                        >
-                          {difficulty.icon} {difficulty.label}
-                        </Text>
-                      </View>
-
-                      <View style={styles.starRow}>
-                        {[0,1,2].map(i => (
-                          <Text
-                            key={i}
-                            style={[
-                              styles.starIcon,
-                              i >= stars && styles.starEmpty,
-                            ]}
-                          >
-                            ⭐
-                          </Text>
-                        ))}
-                      </View>
-                    </View>
-                    )}
-
-                    {!littleQuest && (
-                      <>
-                        <Text style={styles.difficultyHelp}>
-                          {game.title}
-                        </Text>
-
-                        <Text style={styles.lessonMeta}>
-                          {game.mission}
-                        </Text>
-                      </>
-                    )}
-
-
-                    {littleQuest && (
-                      <>
-                        <Text
-                          style={{
-                            marginTop: 8,
-                            fontSize: 14,
-                            fontWeight: '800',
-                            color: '#16A34A',
-                          }}
-                        >
-                          ⭐ {lesson.xpReward || 0} XP
-                        </Text>
-
-                        <View
-                          style={{
-                            marginTop: 10,
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <View
-                            style={{
-                              flex: 1,
-                              height: 8,
-                              backgroundColor: '#E5E7EB',
-                              borderRadius: 999,
-                              marginRight: 12,
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <View
-                              style={{
-                                width: `${lesson.progressPercent}%`,
-                                height: '100%',
-                                backgroundColor: meta.accent,
-                              }}
-                            />
-                          </View>
-
-                          <Text
-                            style={{
-                              fontWeight: '900',
-                              color: '#15803D',
-                            }}
-                          >
-                            {action}
-                          </Text>
-                        </View>
-                      </>
-                    )}
-
-                    {!littleQuest && (
-                      <>
-                        <View style={styles.lessonTrack}>
-                          <View
-                            style={[
-                              styles.lessonFill,
-                              {
-                                width: `${lesson.progressPercent}%`,
-                                backgroundColor: meta.accent,
-                              },
-                            ]}
-                          />
-                        </View>
-
-                        <View style={styles.lessonProgressRow}>
-                          <Text style={styles.progressValue}>
-                            {lesson.progressPercent}%
-                          </Text>
-
-                          <Text style={styles.xpChip}>
-                            {action}
-                          </Text>
-                        </View>
-                      </>
-                    )}
                   </View>
 
-                  <Text style={styles.lessonArrow}>
-                    {lesson.unlocked ? '›' : '🔒'}
+                  <View style={styles.lessonTitleWrap}>
+                    <Text style={[styles.subject, { color: meta.accent }]}>
+                      {meta.label}
+                    </Text>
+                    <Text style={styles.lessonTitle}>{lesson.title}</Text>
+                    <Text style={styles.lessonMeta}>
+                      Baitang {lesson.gradeLevel || student.gradeLevel || '—'} • +{lesson.xpReward || 0} XP
+                    </Text>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.statusPill,
+                      {
+                        backgroundColor: completed
+                          ? '#DCFCE7'
+                          : locked
+                            ? '#F1F5F9'
+                            : difficulty.soft,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        {
+                          color: completed
+                            ? '#166534'
+                            : locked
+                              ? '#64748B'
+                              : difficulty.color,
+                        },
+                      ]}
+                    >
+                      {completed ? 'Tapos' : action}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.questBox}>
+                  <View style={styles.questTop}>
+                    <Text style={styles.questTitle}>
+                      {playful ? '🎮 ' : '📌 '}
+                      {game.title}
+                    </Text>
+
+                    <View style={styles.starRow}>
+                      {[0, 1, 2].map((index) => (
+                        <Text
+                          key={index}
+                          style={[
+                            styles.starIcon,
+                            index >= stars && styles.starEmpty,
+                          ]}
+                        >
+                          ⭐
+                        </Text>
+                      ))}
+                    </View>
+                  </View>
+
+                  <Text style={styles.questHelp}>{game.mission}</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <View style={styles.infoChip}>
+                    <Text style={styles.infoChipText}>
+                      {difficulty.icon} {difficulty.label}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoChip}>
+                    <Text style={styles.infoChipText}>
+                      {percent}% tapos
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.difficultyHelp}>{difficulty.helper}</Text>
+
+                <View style={styles.lessonProgressRow}>
+                  <Text style={styles.progressValue}>Progreso</Text>
+                  <Text style={styles.progressValue}>{percent}%</Text>
+                </View>
+
+                <View style={styles.lessonTrack}>
+                  <View
+                    style={[
+                      styles.lessonFill,
+                      {
+                        width: `${percent}%`,
+                        backgroundColor: completed ? '#22C55E' : meta.accent,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.cardBottom}>
+                  <Text style={[styles.xpChip, { backgroundColor: meta.accent }]}>
+                    +{lesson.xpReward || 0} XP
+                  </Text>
+
+                  <Text style={styles.openText}>
+                    {locked ? '🔒 Naka-lock' : `${action} →`}
                   </Text>
                 </View>
               </TouchableOpacity>
             );
           })
-        ) : (
+        ) : null}
+
+        {!error && !filteredLessons.length ? (
           <View style={styles.messageCard}>
-            <Text style={styles.muted}>Wala pang nailalathalang aralin sa kategoryang ito.</Text>
+            <Text style={styles.emptyTitle}>Wala pang aralin dito</Text>
+            <Text style={styles.muted}>
+              Wala pang nailalathalang aralin sa kategoryang ito.
+            </Text>
           </View>
-        )}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F6FFF5' },
-  page: { padding: 12, paddingBottom: 44 },
+  safe: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+  },
+
+  screen: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+  },
+
+  page: {
+    paddingHorizontal: 16,
+    paddingTop: 30,
+    paddingBottom: 100,
+  },
+
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F6FFF5',
-  },
-  hero: {
-    backgroundColor: '#FFF',
-    borderRadius: 26,
-    padding: 20,
-    marginBottom: 20,
-  },
-  heroPlayful: {
     backgroundColor: '#ECFDF5',
-    borderColor: '#BBF7D0',
-    borderWidth: 1,
+    padding: 24,
   },
-  eyebrow: { color: '#16A34A', fontWeight: '900', fontSize: 12 },
-  title: { color: '#0F172A', fontSize: 31, fontWeight: '900', marginTop: 6 },
-  subtitle: { color: '#64748B', marginTop: 7, lineHeight: 21 },
-  heroStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
-  heroStat: { color: '#166534', fontWeight: '900' },
+
+  loadingText: {
+    color: '#64748B',
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 12,
+  },
+
+  hero: {
+    borderRadius: 28,
+    padding: 14,
+    marginBottom: 18,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    shadowColor: '#14532D',
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 7,
+  },
+
+  heroJunior: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#86EFAC',
+  },
+
+  heroSenior: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#BFDBFE',
+  },
+
+  heroGlowOne: {
+    position: 'absolute',
+    top: -48,
+    right: -38,
+    width: 140,
+    height: 140,
+    borderRadius: 999,
+    backgroundColor: '#DCFCE7',
+  },
+
+  heroGlowTwo: {
+    position: 'absolute',
+    bottom: -74,
+    left: -46,
+    width: 160,
+    height: 160,
+    borderRadius: 999,
+    backgroundColor: '#DBEAFE',
+  },
+
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+
+  heroTextWrap: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  eyebrow: {
+    color: '#16A34A',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+
+  title: {
+    color: '#0F172A',
+    fontSize: 26,
+    lineHeight: 30,
+    fontWeight: '900',
+  },
+
+  subtitle: {
+    color: '#64748B',
+    marginTop: 4,
+    lineHeight: 18,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  gradeBadge: {
+    width: 72,
+    minHeight: 72,
+    borderRadius: 26,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+
+  gradeBadgeIcon: {
+    fontSize: 28,
+  },
+
+  gradeBadgeText: {
+    color: '#0F172A',
+    fontWeight: '900',
+    fontSize: 13,
+    marginTop: 2,
+  },
+
+  heroStats: {
+    flexDirection: 'row',
+    marginTop: 13,
+  },
+
+  heroStatCard: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 22,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginRight: 8,
+  },
+
+  heroStatValue: {
+    color: '#16A34A',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  heroStatLabel: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
   overallTrack: {
     height: 10,
     backgroundColor: '#D1FAE5',
     borderRadius: 99,
     overflow: 'hidden',
-    marginTop: 12,
+    marginTop: 14,
   },
-  overallFill: { height: '100%', backgroundColor: '#22C55E', borderRadius: 99 },
-  progressCount: { color: '#64748B', marginTop: 8, fontSize: 12 },
-  sectionTitle: { color: '#0F172A', fontSize: 22, fontWeight: '900' },
-  filters: { paddingVertical: 12, gap: 8 },
+
+  overallFill: {
+    height: '100%',
+    backgroundColor: '#22C55E',
+    borderRadius: 99,
+  },
+
+  progressCount: {
+    color: '#64748B',
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  sectionRow: {
+    marginBottom: 8,
+  },
+
+  sectionTitle: {
+    color: '#0F172A',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  sectionHint: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+
+  filters: {
+    paddingVertical: 10,
+    paddingRight: 16,
+  },
+
   filter: {
     flexDirection: 'row',
-    gap: 5,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFF',
-    borderRadius: 99,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginRight: 8,
   },
-  filterText: { color: '#64748B', fontWeight: '800' },
+
+  filterIcon: {
+    fontSize: 15,
+    marginRight: 6,
+  },
+
+  filterText: {
+    fontWeight: '900',
+    fontSize: 13,
+  },
+
   lessonCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 10,
-    elevation: 3,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 12,
+    marginBottom: 18,
+    borderWidth: 1.5,
+    overflow: 'hidden',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.09,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
-  questCard: {
-    borderWidth: 2,
-    borderColor: '#FDE68A',
-    backgroundColor: '#FFFBEB',
+
+  lessonCardDone: {
+    backgroundColor: '#F8FAFC',
   },
-  lockedCard: { opacity: 0.55 },
+
+  lockedCard: {
+    opacity: 0.55,
+  },
+
+  cardAccent: {
+    position: 'absolute',
+    top: -34,
+    right: -30,
+    width: 118,
+    height: 118,
+    borderRadius: 999,
+    opacity: 0.85,
+  },
+
   lessonTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  thumbnail: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  questThumbnail: {
+
+  thumbnail: {
     width: 66,
     height: 66,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: '#FBBF24',
+    borderRadius: 24,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  thumbnailIcon: { fontSize: 28 },
-  questThumbnailIcon: { fontSize: 36 },
-  statusStack: {
-    alignItems: 'flex-end',
-    gap: 8,
+
+  thumbnailIcon: {
+    fontSize: 33,
+  },
+
+  lessonTitleWrap: {
     flex: 1,
   },
-  status: {
-    fontWeight: '900',
-    textAlign: 'right',
-  },
-  difficultyPill: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  difficultyText: {
+
+  subject: {
     fontSize: 12,
     fontWeight: '900',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  subject: { marginTop: 12, fontWeight: '900' },
+
   lessonTitle: {
     color: '#0F172A',
-    fontSize: 19,
+    fontSize: 20,
+    lineHeight: 25,
     fontWeight: '900',
-    marginTop: 2,
+    marginTop: 3,
   },
 
   lessonMeta: {
     color: '#64748B',
     fontSize: 12,
     marginTop: 4,
+    fontWeight: '800',
   },
-  lessonArrow: {
-    fontSize: 28,
-    color: '#94A3B8',
-    fontWeight: '700',
-    alignSelf: 'center',
+
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginLeft: 8,
   },
-  difficultyHelp: {
-    color: '#64748B',
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  questBanner: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  questBannerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  questLabel: {
-    color: '#92400E',
+
+  statusText: {
+    fontSize: 11,
     fontWeight: '900',
   },
-  questHelp: {
-    color: '#92400E',
-    marginTop: 6,
-    lineHeight: 19,
-    fontWeight: '700',
+
+  questBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 22,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
+
+  questTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  questTitle: {
+    flex: 1,
+    color: '#0F172A',
+    fontWeight: '900',
+    fontSize: 15,
+    marginRight: 8,
+  },
+
+  questHelp: {
+    color: '#64748B',
+    marginTop: 7,
+    lineHeight: 20,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+
   starRow: {
     flexDirection: 'row',
-    gap: 2,
   },
+
   starIcon: {
-    fontSize: 18,
+    fontSize: 16,
   },
+
   starEmpty: {
-    color: '#D6D3D1',
+    opacity: 0.24,
   },
-  metaRow: {
+
+  infoRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
     marginTop: 12,
   },
-  metaMini: {
+
+  infoChip: {
     backgroundColor: '#F8FAFC',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
+    marginRight: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  metaMiniText: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  muted: { color: '#64748B', marginTop: 4 },
-  xpChip: {
-    color: '#FFFFFF',
+
+  infoChipText: {
+    color: '#475569',
     fontSize: 12,
     fontWeight: '900',
-    backgroundColor: '#16A34A',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    overflow: 'hidden',
-    textAlign: 'center',
   },
+
+  difficultyHelp: {
+    color: '#64748B',
+    marginTop: 4,
+    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
   lessonProgressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 14,
   },
-  progressValue: { color: '#334155', fontWeight: '900' },
+
+  progressValue: {
+    color: '#334155',
+    fontWeight: '900',
+    fontSize: 13,
+  },
+
   lessonTrack: {
-    height: 8,
+    height: 9,
     backgroundColor: '#E2E8F0',
     borderRadius: 99,
     overflow: 'hidden',
-    marginTop: 7,
-  },
-  lessonFill: { height: '100%', borderRadius: 99 },
-  messageCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 18,
     marginTop: 8,
   },
-  error: { color: '#B91C1C' },
+
+  lessonFill: {
+    height: '100%',
+    borderRadius: 99,
+  },
+
+  cardBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+
+  xpChip: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+
+  openText: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  messageCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  errorTitle: {
+    color: '#991B1B',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+
+  error: {
+    color: '#B91C1C',
+    lineHeight: 21,
+    fontWeight: '700',
+  },
+
   retryButton: {
     alignSelf: 'flex-start',
     backgroundColor: '#16A34A',
-    borderRadius: 14,
+    borderRadius: 999,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 11,
     marginTop: 12,
   },
-  retryText: { color: '#FFF', fontWeight: '900' },
+
+  retryText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+
+  emptyTitle: {
+    color: '#0F172A',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  muted: {
+    color: '#64748B',
+    lineHeight: 21,
+    fontWeight: '800',
+  },
 });

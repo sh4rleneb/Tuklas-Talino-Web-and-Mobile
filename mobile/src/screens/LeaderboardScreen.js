@@ -201,9 +201,11 @@ export default function LeaderboardScreen({ navigation }) {
             <Text style={styles.podiumSubtitle}>
               Podium ng may pinakamataas na XP.
             </Text>
-          </View>
 
-          <Text style={styles.podiumBadge}>Top 3</Text>
+            <View style={styles.topThreeInline}>
+              <Text style={styles.topThreeInlineText}>🏆 Top 3 learners</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.podiumStageWrap}>
@@ -350,35 +352,35 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 140,
+    paddingTop: 10,
+    paddingBottom: 100,
   },
 
   heroCard: {
     backgroundColor: 'transparent',
-    borderRadius: 0,
+    borderRadius: 28,
     paddingHorizontal: 0,
     paddingTop: 8,
     paddingBottom: 12,
     marginTop: 4,
-    marginBottom: 8,
+    marginBottom: 18,
     borderWidth: 0,
     shadowOpacity: 0,
     elevation: 0,
   },
 
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
     color: '#0F172A',
-    lineHeight: 34,
+    lineHeight: 30,
   },
 
   subtitle: {
     color: '#64748B',
-    marginTop: 6,
-    fontSize: 14,
-    lineHeight: 21,
+    marginTop: 5,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '800',
   },
 
@@ -400,52 +402,75 @@ const styles = StyleSheet.create({
 
 
   podiumHeader: {
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    marginTop: 2,
+    flexShrink: 0,
+    alignSelf: 'stretch',
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
     marginBottom: 16,
   },
 
   podiumTitle: {
     color: '#0F172A',
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '900',
   },
 
   podiumSubtitle: {
-    marginTop: 4,
+    marginTop: 3,
     color: '#64748B',
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '800',
   },
 
   podiumBadge: {
+    marginTop: 2,
+    marginLeft: 8,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
     backgroundColor: '#DCFCE7',
     color: '#166534',
-    paddingHorizontal: 11,
+    paddingHorizontal: 10,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 14,
     overflow: 'hidden',
     fontWeight: '900',
     fontSize: 12,
   },
 
   podiumStageWrap: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 7,
+    marginTop: 2,
+    flexShrink: 0,
+    alignSelf: 'stretch',
     backgroundColor: '#F8FAFC',
-    borderRadius: 24,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     paddingTop: 16,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingBottom: 0,
   },
 
   podiumStage: {
+    paddingTop: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    marginTop: 8,
+    flexShrink: 0,
+    alignSelf: 'stretch',
     minHeight: 240,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
   },
@@ -505,7 +530,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 999,
+    borderRadius: 22,
     overflow: 'hidden',
     fontSize: 10,
     fontWeight: '900',
@@ -713,4 +738,219 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 20,
   },
+
+  // [MODERN_STUDENT_UI_OVERRIDES_START]
+  safe: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+  },
+
+  screen: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+  },
+
+  content: {
+    paddingHorizontal: 18,
+    paddingTop: 26,
+    paddingBottom: 120,
+  },
+
+  heroCard: {
+    marginHorizontal: 0,
+    alignSelf: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+    shadowColor: '#92400E',
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 7,
+    marginBottom: 16,
+  },
+
+  title: {
+    color: '#0F172A',
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '900',
+  },
+
+  subtitle: {
+    color: '#64748B',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+
+  podiumCard: {
+    marginHorizontal: 0,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 14,
+    paddingTop: 14,
+    overflow: 'visible',
+    paddingVertical: 7,
+    marginTop: 8,
+    flexShrink: 0,
+    paddingHorizontal: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+    shadowColor: '#92400E',
+    shadowOpacity: 0.10,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+    marginBottom: 16,
+  },
+
+  podiumTitle: {
+    textAlign: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    marginTop: 2,
+    alignSelf: 'stretch',
+    lineHeight: 27,
+    paddingRight: 0,
+    flexShrink: 0,
+    color: '#0F172A',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  podiumSubtitle: {
+    textAlign: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    flexShrink: 0,
+    alignSelf: 'stretch',
+    color: '#64748B',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+
+  podiumPlayer: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+
+  firstPodiumBlock: {
+    borderRadius: 16,
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+
+  secondPodiumBlock: {
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
+  },
+
+  thirdPodiumBlock: {
+    borderRadius: 16,
+    backgroundColor: '#FFF7ED',
+    borderColor: '#FDBA74',
+  },
+
+  podiumName: {
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+
+  firstPodiumName: {
+    color: '#92400E',
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+
+  restCard: {
+    marginHorizontal: 0,
+    alignSelf: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 13,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+
+  rankRow: {
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  playerName: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  xpText: {
+    color: '#16A34A',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  emptyCard: {
+    marginHorizontal: 0,
+    alignSelf: 'stretch',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  // [MODERN_STUDENT_UI_OVERRIDES_END]
+
+
+  topThreeInline: {
+    alignSelf: 'center',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  topThreeInlineText: {
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
 });

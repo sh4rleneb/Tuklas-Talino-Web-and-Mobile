@@ -767,7 +767,7 @@ const styles = StyleSheet.create({
 
   leaderboardNavCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
     padding: 18,
@@ -806,6 +806,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     color: '#0F172A',
+    flexShrink: 1,
   },
 
   leaderboardNavText: {
@@ -814,13 +815,15 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     fontWeight: '700',
     color: '#64748B',
+    flexShrink: 1,
   },
 
   leaderboardNavArrow: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '900',
     color: '#16A34A',
-    marginLeft: 10,
+    marginLeft: 8,
+    marginTop: 4,
   },
 
   avatars: {
@@ -907,7 +910,7 @@ const styles = StyleSheet.create({
   xpLogItem: {
     position: 'relative',
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: '#F8FAFC',
     borderRadius: 22,
     paddingVertical: 14,
@@ -948,19 +951,24 @@ const styles = StyleSheet.create({
 
   xpLogContent: {
     flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
 
   xpLogPoints: {
     fontSize: 16,
     fontWeight: '900',
     color: '#16A34A',
+    flexShrink: 1,
   },
 
   xpLogNote: {
     marginTop: 3,
     fontSize: 14,
+    lineHeight: 20,
     fontWeight: '800',
     color: '#334155',
+    flexShrink: 1,
   },
 
   xpDate: {
@@ -968,6 +976,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 6,
     fontWeight: '700',
+    flexShrink: 1,
   },
 
   xpLogEmpty: {

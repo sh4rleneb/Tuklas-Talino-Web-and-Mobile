@@ -21,25 +21,23 @@ const MISSION_GAMES = [
     xp: 15,
     baseStatus: 'Handa na',
     short: 'Hanapin ang pares!',
-    instruction:
-      'Hanapin ang tamang pares. Basahin ang salita, tingnan ang larawan o kahulugan, at piliin ang magkapareha.',
+    instruction: 'Hanapin ang tamang pares. Basahin ang salita, tingnan ang larawan o kahulugan, at piliin ang magkapareha.',
     sample: 'aso → larawan ng aso, bahay → larawan ng bahay',
     reward: 'Pag-unlad sa Bituin ng Bokabularyo',
-    tone: 'sky',
+    tone: 'sky'
   },
   {
     id: 'letter-pop',
     title: 'Pagpili ng Titik',
-    icon: '🔤',
+    icon: '🎈',
     module: 'Pagbasa',
     xp: 12,
     baseStatus: 'Handa na',
     short: 'Piliin ang pantig!',
-    instruction:
-      'Piliin ang nawawalang titik o pantig. Kapag tama, mabubuo ang salita at may gantimpalang XP.',
+    instruction: 'Piliin ang nawawalang titik o pantig. Kapag tama, mabubuo ang salita at may gantimpalang XP.',
     sample: 'ba + ___ = bata',
     reward: 'Pag-unlad sa sunod-sunod na pagbasa',
-    tone: 'sun',
+    tone: 'sun'
   },
   {
     id: 'picture-guess',
@@ -49,25 +47,23 @@ const MISSION_GAMES = [
     xp: 12,
     baseStatus: 'Handa na',
     short: 'Hulaan ang larawan!',
-    instruction:
-      'Pagmasdan ang picture card, pagkatapos piliin ang salitang tumutukoy dito.',
+    instruction: 'Pagmasdan ang picture card, pagkatapos piliin ang salitang tumutukoy dito.',
     sample: 'larawan ng pusa → pusa',
     reward: 'Vocabulary confidence',
-    tone: 'mint',
+    tone: 'mint'
   },
   {
     id: 'sentence-builder',
     title: 'Pagbuo ng Pangungusap',
-    icon: '✍️',
+    icon: '🧱',
     module: 'Pagsulat',
     xp: 18,
     baseStatus: 'Handa na',
     short: 'Ayusin ang pangungusap!',
-    instruction:
-      'Ilagay ang mga salita sa tamang ayos hanggang makabuo ng malinaw na pangungusap.',
+    instruction: 'Ilagay ang mga salita sa tamang ayos hanggang makabuo ng malinaw na pangungusap.',
     sample: 'Ako / ay / bata.',
     reward: 'Pag-unlad sa gantimpala sa Pagsulat Builder',
-    tone: 'pink',
+    tone: 'pink'
   },
   {
     id: 'story-quest',
@@ -77,11 +73,10 @@ const MISSION_GAMES = [
     xp: 20,
     baseStatus: 'Handa na',
     short: 'Basahin at sagutin!',
-    instruction:
-      'Basahin ang story card. Sagutin ang tanong tungkol sa tauhan, tagpuan, o pangyayari.',
+    instruction: 'Basahin ang story card. Sagutin ang tanong tungkol sa tauhan, tagpuan, o pangyayari.',
     sample: 'Sino ang pangunahing tauhan?',
     reward: 'Pag-unlad sa Hamon sa Pag-unawa',
-    tone: 'violet',
+    tone: 'violet'
   },
   {
     id: 'sound-and-say',
@@ -91,14 +86,13 @@ const MISSION_GAMES = [
     xp: 15,
     baseStatus: 'Handa na',
     short: 'Magsanay bumigkas ng salitang Filipino o maikling parirala.',
-    instruction:
-      'Pakinggan ang salita, pagkatapos bigkasin ito nang malinaw. Maaaring ikonekta ang pagsusuri ng pagbigkas sa susunod.',
+    instruction: 'Pakinggan ang salita, pagkatapos bigkasin ito nang malinaw. Maaaring ikonekta ang pagsusuri ng pagbigkas sa susunod.',
     sample: 'Magandang umaga po.',
     reward: 'Oral practice confidence',
     tone: 'rose',
-    future: true,
+    future: true
   },
-];
+  ];
 
 const TONES = {
   sky: {
@@ -371,7 +365,7 @@ export default function MissionScreen({ navigation }) {
 
             {selectedMission.future ? (
               <Text style={styles.futureNote}>
-                Note: Ito ay handa na para sa oral practice. Puwedeng ikonekta sa speech checking feature sa susunod.
+                Maaaring ikonekta ang pagsusuri ng pagbigkas sa susunod.
               </Text>
             ) : null}
 
@@ -391,6 +385,14 @@ export default function MissionScreen({ navigation }) {
               onPress={() => {
                 if (claimable) {
                   claimMission(selectedMission);
+                  return;
+                }
+
+                if (selectedMission.future) {
+                  Alert.alert(
+                    selectedMission.title,
+                    selectedMission.instruction || 'Maaaring ikonekta ang pagsusuri ng pagbigkas sa susunod.'
+                  );
                   return;
                 }
 
@@ -609,7 +611,7 @@ const styles = StyleSheet.create({
 
   content: {
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 26,
     paddingBottom: 120,
   },
 
