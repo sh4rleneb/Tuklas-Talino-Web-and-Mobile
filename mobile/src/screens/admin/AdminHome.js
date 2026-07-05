@@ -141,6 +141,13 @@ export default function AdminHome({ navigation }) {
   
 const [auditSearch, setAuditSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
+  const [actionDropdownOpen, setActionDropdownOpen] = useState(false);
+  const [auditDatePreset, setAuditDatePreset] = useState('all');
+  const [dateRangeDropdownOpen, setDateRangeDropdownOpen] = useState(false);
+  const [auditCalendarTarget, setAuditCalendarTarget] = useState(null);
+  const [auditCalendarMonth, setAuditCalendarMonth] = useState(() => new Date());
+  const [auditFromDate, setAuditFromDate] = useState('');
+  const [auditToDate, setAuditToDate] = useState('');
   const [sortOrder, setSortOrder] = useState('newest');
 
   const [reportSummary, setReportSummary] = useState(null);
@@ -366,6 +373,133 @@ async function executeVerifiedAction() {
     );
   }
 
+
+  function auditActionLabel(action = '') {
+    const labels = {
+      'account.status': 'Updated account status',
+      'auth.login': 'Logged in',
+      'auth.logout': 'Logged out',
+      'auth.change_password': 'Changed password',
+      'student.create': 'Created student account',
+      'student.update': 'Updated student account',
+      'student.archive': 'Archived student account',
+      'student.reactivate': 'Reactivated student account',
+      'student.reset_password': 'Reset student password',
+      'student.reset_progress': 'Reset student progress',
+      'student.promote': 'Promoted student',
+      'teacher.create': 'Created teacher account',
+      'teacher.update': 'Updated teacher account',
+      'teacher.archive': 'Archived teacher account',
+      'teacher.reactivate': 'Reactivated teacher account',
+      'teacher.reset_password': 'Reset teacher password',
+      'lesson.create': 'Created lesson',
+      'lesson.update': 'Updated lesson',
+      'lesson.archive': 'Archived lesson',
+      'lesson.complete': 'Completed lesson',
+      'quiz.result': 'Submitted quiz result',
+      'group.create': 'Created group',
+      'group.update': 'Updated group',
+      'group.archive': 'Archived group',
+      'group.add_member': 'Added group member',
+      'group.remove_member': 'Removed group member',
+      'group.set_leader': 'Set group leader',
+      'group_task.create': 'Created group task',
+      'group_task.archive': 'Archived group task',
+      'group_task.approve_group_completion': 'Approved group task',
+      'group_task.return_group_completion': 'Returned group task',
+      'speech_attempt.review': 'Reviewed speech attempt',
+      'system.seed': 'Loaded seed data',
+    };
+
+    if (labels[action]) return labels[action];
+
+    return String(action || 'System action')
+      .replace(/[._-]+/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  function auditActorFor(log) {
+    const actorUserId = Number(log.actorUserId || log.userId || log.metadata?.actorUserId || 0);
+    const actorProfiles = [
+      ...accounts.map((account) => ({
+        userId: Number(account.id || account.userId || 0),
+        name: account.displayName || account.name || account.username || `User #${account.id || account.userId || '—'}`,
+        username: account.username || account.email || '',
+        roleLabel: account.Role?.name || account.role || account.roleName || 'user',
+      })),
+      ...students.map((student) => ({
+        userId: Number(student.userId || student.User?.id || student.user?.id || 0),
+        name: student.name || student.User?.displayName || student.user?.displayName || student.studentCode || 'Student',
+        username: student.studentCode || student.User?.username || student.user?.username || '',
+        roleLabel: 'student',
+      })),
+      ...archivedStudents.map((student) => ({
+        userId: Number(student.userId || student.User?.id || student.user?.id || 0),
+        name: student.name || student.User?.displayName || student.user?.displayName || student.studentCode || 'Archived student',
+        username: student.studentCode || student.User?.username || student.user?.username || '',
+        roleLabel: 'student',
+      })),
+      ...teachers.map((teacher) => ({
+        userId: Number(teacher.userId || teacher.User?.id || teacher.user?.id || 0),
+        name: teacher.name || teacher.User?.displayName || teacher.user?.displayName || teacher.employeeCode || 'Teacher',
+        username: teacher.employeeCode || teacher.User?.username || teacher.user?.username || '',
+        roleLabel: 'teacher',
+      })),
+      ...archivedTeachers.map((teacher) => ({
+        userId: Number(teacher.userId || teacher.User?.id || teacher.user?.id || 0),
+        name: teacher.name || teacher.User?.displayName || teacher.user?.displayName || teacher.employeeCode || 'Archived teacher',
+        username: teacher.employeeCode || teacher.User?.username || teacher.user?.username || '',
+        roleLabel: 'teacher',
+      })),
+    ].filter((profile) => profile.userId);
+
+    const matched = actorProfiles.find((profile) => Number(profile.userId) === actorUserId);
+
+    if (matched) {
+      return {
+        ...matched,
+        roleLabel: String(matched.roleLabel || 'user').replace(/\b\w/g, (char) => char.toUpperCase()),
+      };
+    }
+
+    return {
+      userId: actorUserId || null,
+      name: actorUserId ? `User #${actorUserId}` : 'System',
+      username: '',
+      roleLabel: actorUserId ? 'Unknown role' : 'System',
+    };
+  }
+
+  function auditEntityLabel(log) {
+    const entity = String(log.entityType || 'record')
+      .replace(/[._-]+/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+
+    return `${entity} #${log.entityId ?? '—'}`;
+  }
+
+  function auditDetails(log) {
+    const metadata = log.metadata || {};
+    const details = [];
+
+    if (log.action === 'student.promote') {
+      details.push(`${metadata.studentName || 'Student'}${metadata.studentCode ? ` (${metadata.studentCode})` : ''}`);
+      if (metadata.oldGrade || metadata.newGrade) {
+        details.push(`Baitang ${metadata.oldGrade || '—'} → Baitang ${metadata.newGrade || '—'}`);
+      }
+      if (metadata.section) details.push(`Section ${metadata.section}`);
+    }
+
+    if (metadata.status) details.push(`Status: ${metadata.status}`);
+    if (metadata.reason) details.push(`Reason: ${metadata.reason}`);
+    if (metadata.score !== undefined && metadata.score !== null) details.push(`Score: ${metadata.score}`);
+    if (metadata.reviewStatus) details.push(`Review: ${metadata.reviewStatus}`);
+    if (metadata.studentId) details.push(`Student ID: ${metadata.studentId}`);
+    if (metadata.lessonId) details.push(`Lesson ID: ${metadata.lessonId}`);
+
+    return details.join(' • ');
+  }
+
   function renderOverview() {
     const archived = accounts.filter((account) => account.status === 'archived').length;
     const assignments = enrollments.teacherAssignments || [];
@@ -423,12 +557,21 @@ async function executeVerifiedAction() {
 
         <Card>
           <Text style={styles.cardTitle}>Recent System Activity</Text>
-          {logs.slice(0, 6).map((log) => (
-            <View key={log.id} style={styles.timelineItem}>
-              <Text style={styles.rowTitle}>{log.action}</Text>
-              <Text style={styles.muted}>{log.entityType || 'record'} #{log.entityId ?? '—'} • {new Date(log.createdAt).toLocaleString()}</Text>
-            </View>
-          ))}
+          {logs.slice(0, 6).map((log) => {
+            const actor = auditActorFor(log);
+            return (
+              <View key={log.id} style={styles.timelineItem}>
+                <Text style={styles.rowTitle}>{auditActionLabel(log.action)}</Text>
+                <Text style={styles.auditActor}>By {actor.name}</Text>
+                <Text style={styles.muted}>
+                  {actor.roleLabel}{actor.username ? ` • ${actor.username}` : ''}{actor.userId ? ` • User #${actor.userId}` : ''}
+                </Text>
+                <Text style={styles.muted}>
+                  {auditEntityLabel(log)} • {new Date(log.createdAt).toLocaleString()}
+                </Text>
+              </View>
+            );
+          })}
           {!logs.length && <Text style={styles.muted}>No audit logs available.</Text>}
         </Card>
       </>
@@ -960,20 +1103,177 @@ async function executeVerifiedAction() {
 function renderLogs() {
     const actionOptions = [...new Set(logs.map(l => l.action).filter(Boolean))];
 
+    function auditInputDate(date) {
+      return date.toISOString().slice(0, 10);
+    }
+
+    function auditDateOnly(value) {
+      if (!value) return null;
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return null;
+      return parsed.toDateString();
+    }
+
+    const now = new Date();
+    const todayDate = auditInputDate(now);
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 6);
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 29);
+
+    const todayLogs = logs.filter((log) => auditDateOnly(log.createdAt) === now.toDateString()).length;
+    const weekLogs = logs.filter((log) => {
+      const createdAt = new Date(log.createdAt);
+      return !Number.isNaN(createdAt.getTime()) && now - createdAt <= 7 * 24 * 60 * 60 * 1000;
+    }).length;
+    const monthLogs = logs.filter((log) => {
+      const createdAt = new Date(log.createdAt);
+      return (
+        !Number.isNaN(createdAt.getTime()) &&
+        createdAt.getMonth() === now.getMonth() &&
+        createdAt.getFullYear() === now.getFullYear()
+      );
+    }).length;
+
+    function applyAuditPreset(preset) {
+      setAuditDatePreset(preset);
+      setDateRangeDropdownOpen(false);
+      setAuditCalendarTarget(null);
+
+      if (preset === 'today') {
+        setAuditFromDate(todayDate);
+        setAuditToDate(todayDate);
+      } else if (preset === 'week') {
+        setAuditFromDate(auditInputDate(sevenDaysAgo));
+        setAuditToDate(todayDate);
+      } else if (preset === 'month') {
+        setAuditFromDate(auditInputDate(thirtyDaysAgo));
+        setAuditToDate(todayDate);
+      } else {
+        setAuditFromDate('');
+        setAuditToDate('');
+      }
+    }
+
+    function auditParseDateInput(value) {
+      if (!value) return null;
+      const [year, month, day] = String(value).split('-').map(Number);
+      if (!year || !month || !day) return null;
+      const parsed = new Date(year, month - 1, day);
+      if (Number.isNaN(parsed.getTime())) return null;
+      return parsed;
+    }
+
+    function auditCalendarMonthLabel() {
+      return auditCalendarMonth.toLocaleDateString(undefined, {
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+
+    function moveAuditCalendarMonth(offset) {
+      setAuditCalendarMonth((current) => {
+        const next = new Date(current);
+        next.setMonth(current.getMonth() + offset);
+        return next;
+      });
+    }
+
+    function auditCalendarCells() {
+      const year = auditCalendarMonth.getFullYear();
+      const month = auditCalendarMonth.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const startOffset = firstDay.getDay();
+      const startDate = new Date(year, month, 1 - startOffset);
+
+      return Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + index);
+
+        return {
+          key: auditInputDate(date),
+          date,
+          label: date.getDate(),
+          inMonth: date.getMonth() === month,
+        };
+      });
+    }
+
+    function openAuditCalendar(target) {
+      setAuditCalendarTarget(target);
+      const selected = auditParseDateInput(target === 'from' ? auditFromDate : auditToDate);
+      setAuditCalendarMonth(selected || new Date());
+    }
+
+    function selectAuditCalendarDate(value) {
+      if (auditCalendarTarget === 'from') {
+        setAuditFromDate(value);
+      } else {
+        setAuditToDate(value);
+      }
+      setAuditDatePreset('custom');
+      setAuditCalendarTarget(null);
+    }
+
+    function clearAuditCalendarDate(target) {
+      if (target === 'from') {
+        setAuditFromDate('');
+      } else {
+        setAuditToDate('');
+      }
+      setAuditDatePreset('custom');
+      setAuditCalendarTarget(null);
+    }
+
+    function auditDateRangeLabel() {
+      if (auditDatePreset === 'today') return 'Today';
+      if (auditDatePreset === 'week') return 'Last 7 Days';
+      if (auditDatePreset === 'month') return 'Last 30 Days';
+      if (auditDatePreset === 'custom') {
+        if (auditFromDate && auditToDate) return `${auditFromDate} to ${auditToDate}`;
+        if (auditFromDate) return `From ${auditFromDate}`;
+        if (auditToDate) return `Until ${auditToDate}`;
+        return 'Custom Range';
+      }
+      return 'All Dates';
+    }
+
     const filteredLogs = logs
       .filter((log) => {
+        const actor = auditActorFor(log);
+        const searchableLog = [
+          JSON.stringify(log),
+          auditActionLabel(log.action),
+          auditEntityLabel(log),
+          auditDetails(log),
+          actor.name,
+          actor.username,
+          actor.roleLabel,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
         const matchesSearch =
-          JSON.stringify(log)
-            .toLowerCase()
-            .includes(auditSearch.toLowerCase());
+          searchableLog.includes(auditSearch.toLowerCase());
 
         const matchesAction =
           actionFilter === 'all' ||
           log.action === actionFilter;
 
+        const createdAt = new Date(log.createdAt);
+        const matchesFrom =
+          !auditFromDate ||
+          (!Number.isNaN(createdAt.getTime()) && createdAt >= new Date(`${auditFromDate}T00:00:00`));
+        const matchesTo =
+          !auditToDate ||
+          (!Number.isNaN(createdAt.getTime()) && createdAt <= new Date(`${auditToDate}T23:59:59`));
+
         return (
           matchesSearch &&
-          matchesAction
+          matchesAction &&
+          matchesFrom &&
+          matchesTo
         );
       })
       .sort((a, b) =>
@@ -985,71 +1285,273 @@ function renderLogs() {
     return (
       <Card>
         <Text style={styles.cardTitle}>Audit Log Timeline</Text>
+        <Text style={styles.muted}>
+          Read-only record of recent admin and system maintenance actions.
+        </Text>
+
+        <View style={styles.auditStatsGrid}>
+          {[
+            [logs.length, 'Total Logs'],
+            [todayLogs, 'Today'],
+            [weekLogs, 'Last 7 Days'],
+            [monthLogs, 'This Month'],
+          ].map(([value, label]) => (
+            <View key={label} style={styles.auditStatCard}>
+              <Text style={styles.auditStatValue}>{value}</Text>
+              <Text style={styles.auditStatLabel}>{label}</Text>
+            </View>
+          ))}
+        </View>
 
         <TextInput
           value={auditSearch}
           onChangeText={setAuditSearch}
-          placeholder="Search logs..."
-          style={{
-            borderWidth: 1,
-            borderColor: '#ddd',
-            borderRadius: 10,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            marginBottom: 12,
-          }}
-
+          placeholder="Search user, action, or entity..."
+          placeholderTextColor="#8aa39b"
+          style={styles.auditSearchInput}
         />
 
+        <Text style={styles.fieldLabel}>Date Range</Text>
+        <TouchableOpacity
+          style={styles.auditDateDropdownButton}
+          onPress={() => setDateRangeDropdownOpen((current) => !current)}
+        >
+          <Text style={styles.auditDateDropdownIcon}>📅</Text>
+          <Text style={styles.auditDateDropdownText}>{auditDateRangeLabel()}</Text>
+          <Text style={styles.auditDateDropdownChevron}>
+            {dateRangeDropdownOpen ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+
+        {dateRangeDropdownOpen ? (
+          <View style={styles.auditDateDropdownPanel}>
+            {[
+              ['today', 'Today'],
+              ['week', 'Last 7 Days'],
+              ['month', 'Last 30 Days'],
+              ['all', 'All Dates'],
+            ].map(([value, label]) => (
+              <TouchableOpacity
+                key={value}
+                style={[
+                  styles.auditDateDropdownOption,
+                  auditDatePreset === value && styles.auditDateDropdownOptionActive,
+                ]}
+                onPress={() => applyAuditPreset(value)}
+              >
+                <Text
+                  style={[
+                    styles.auditDateDropdownOptionText,
+                    auditDatePreset === value && styles.auditDateDropdownOptionTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <View style={styles.auditCustomDatePanel}>
+              <Text style={styles.auditCustomDateTitle}>Custom Range</Text>
+
+              <View style={styles.auditDateRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.auditCalendarField,
+                    auditCalendarTarget === 'from' && styles.auditCalendarFieldActive,
+                  ]}
+                  onPress={() => openAuditCalendar('from')}
+                >
+                  <Text style={styles.auditCalendarFieldLabel}>From</Text>
+                  <Text style={styles.auditCalendarFieldValue}>
+                    {auditFromDate || 'Select date'}
+                  </Text>
+                  <Text style={styles.auditCalendarFieldIcon}>📅</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.auditCalendarField,
+                    auditCalendarTarget === 'to' && styles.auditCalendarFieldActive,
+                  ]}
+                  onPress={() => openAuditCalendar('to')}
+                >
+                  <Text style={styles.auditCalendarFieldLabel}>To</Text>
+                  <Text style={styles.auditCalendarFieldValue}>
+                    {auditToDate || 'Select date'}
+                  </Text>
+                  <Text style={styles.auditCalendarFieldIcon}>📅</Text>
+                </TouchableOpacity>
+              </View>
+
+              {auditCalendarTarget ? (
+                <View style={styles.auditCalendarPanel}>
+                  <View style={styles.auditCalendarHeader}>
+                    <TouchableOpacity
+                      style={styles.auditCalendarNavButton}
+                      onPress={() => moveAuditCalendarMonth(-1)}
+                    >
+                      <Text style={styles.auditCalendarNavText}>‹</Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.auditCalendarMonthTitle}>
+                      {auditCalendarMonthLabel()}
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.auditCalendarNavButton}
+                      onPress={() => moveAuditCalendarMonth(1)}
+                    >
+                      <Text style={styles.auditCalendarNavText}>›</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.auditCalendarWeekRow}>
+                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                      <Text key={day} style={styles.auditCalendarWeekText}>{day}</Text>
+                    ))}
+                  </View>
+
+                  <View style={styles.auditCalendarGrid}>
+                    {auditCalendarCells().map((cell) => {
+                      const isSelected =
+                        cell.key === auditFromDate ||
+                        cell.key === auditToDate;
+
+                      return (
+                        <TouchableOpacity
+                          key={cell.key}
+                          style={[
+                            styles.auditCalendarDay,
+                            !cell.inMonth && styles.auditCalendarDayMuted,
+                            isSelected && styles.auditCalendarDaySelected,
+                          ]}
+                          onPress={() => selectAuditCalendarDate(cell.key)}
+                        >
+                          <Text
+                            style={[
+                              styles.auditCalendarDayText,
+                              !cell.inMonth && styles.auditCalendarDayTextMuted,
+                              isSelected && styles.auditCalendarDayTextSelected,
+                            ]}
+                          >
+                            {cell.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <View style={styles.auditCalendarFooter}>
+                    <TouchableOpacity
+                      onPress={() => clearAuditCalendarDate(auditCalendarTarget)}
+                    >
+                      <Text style={styles.auditCalendarFooterText}>Clear</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => selectAuditCalendarDate(todayDate)}
+                    >
+                      <Text style={styles.auditCalendarFooterText}>Today</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                style={styles.auditApplyDateButton}
+                onPress={() => {
+                  setDateRangeDropdownOpen(false);
+                  setAuditCalendarTarget(null);
+                }}
+              >
+                <Text style={styles.auditApplyDateText}>Apply Date Range</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+
         <Text style={styles.muted}>
-          Logs: {filteredLogs.length} • Actions: {actionOptions.length}
+          Logs: {filteredLogs.length} of {logs.length} • Actions: {actionOptions.length}
         </Text>
 
         <Text style={styles.fieldLabel}>Action</Text>
 
-        <View style={styles.choiceRow}>
-          <TouchableOpacity
-            style={[styles.navChip, actionFilter === 'all' && styles.navChipActive]}
-            onPress={() => setActionFilter('all')}
-          >
-            <Text style={[styles.navLabel, actionFilter === 'all' && styles.navLabelActive]}>
-              All
-            </Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.auditActionDropdownButton}
+          onPress={() => setActionDropdownOpen((current) => !current)}
+        >
+          <Text style={styles.auditActionDropdownText}>
+            {actionFilter === 'all' ? 'All Actions' : auditActionLabel(actionFilter)}
+          </Text>
+          <Text style={styles.auditActionDropdownIcon}>
+            {actionDropdownOpen ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
 
-          {actionOptions.map(action => (
+        {actionDropdownOpen ? (
+          <View style={styles.auditActionDropdownPanel}>
             <TouchableOpacity
-              key={action}
-              style={[styles.navChip, actionFilter === action && styles.navChipActive]}
-              onPress={() => setActionFilter(action)}
+              style={[
+                styles.auditActionDropdownOption,
+                actionFilter === 'all' && styles.auditActionDropdownOptionActive,
+              ]}
+              onPress={() => {
+                setActionFilter('all');
+                setActionDropdownOpen(false);
+              }}
             >
-              <Text style={[styles.navLabel, actionFilter === action && styles.navLabelActive]}>
-                {action}
+              <Text
+                style={[
+                  styles.auditActionDropdownOptionText,
+                  actionFilter === 'all' && styles.auditActionDropdownOptionTextActive,
+                ]}
+              >
+                All Actions
               </Text>
             </TouchableOpacity>
-          ))}
-        </View>
+
+            {actionOptions.map(action => (
+              <TouchableOpacity
+                key={action}
+                style={[
+                  styles.auditActionDropdownOption,
+                  actionFilter === action && styles.auditActionDropdownOptionActive,
+                ]}
+                onPress={() => {
+                  setActionFilter(action);
+                  setActionDropdownOpen(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.auditActionDropdownOptionText,
+                    actionFilter === action && styles.auditActionDropdownOptionTextActive,
+                  ]}
+                >
+                  {auditActionLabel(action)}
+                </Text>
+                <Text style={styles.auditActionDropdownRawText}>{action}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
 
         <Text style={styles.fieldLabel}>Sort</Text>
 
         <View style={styles.choiceRow}>
-          <TouchableOpacity
-            style={[styles.navChip, sortOrder === 'newest' && styles.navChipActive]}
+          <Button
+            tone={sortOrder === 'newest' ? 'green' : 'slate'}
             onPress={() => setSortOrder('newest')}
           >
-            <Text style={[styles.navLabel, sortOrder === 'newest' && styles.navLabelActive]}>
-              Newest
-            </Text>
-          </TouchableOpacity>
+            Newest
+          </Button>
 
-          <TouchableOpacity
-            style={[styles.navChip, sortOrder === 'oldest' && styles.navChipActive]}
+          <Button
+            tone={sortOrder === 'oldest' ? 'green' : 'slate'}
             onPress={() => setSortOrder('oldest')}
           >
-            <Text style={[styles.navLabel, sortOrder === 'oldest' && styles.navLabelActive]}>
-              Oldest
-            </Text>
-          </TouchableOpacity>
+            Oldest
+          </Button>
         </View>
 
         <Button
@@ -1057,58 +1559,63 @@ function renderLogs() {
           onPress={() => {
             setAuditSearch('');
             setActionFilter('all');
+            setActionDropdownOpen(false);
+            setAuditDatePreset('all');
+            setDateRangeDropdownOpen(false);
+            setAuditCalendarTarget(null);
+            setAuditFromDate('');
+            setAuditToDate('');
             setSortOrder('newest');
           }}
         >
           Reset Filters
         </Button>
-        {filteredLogs.map((log) => (
-          <View key={log.id} style={styles.timelineItem}>
-            <View style={styles.auditHeader}>
-              <Text style={styles.auditAction}>
-                {log.action}
+
+        {filteredLogs.map((log) => {
+          const actor = auditActorFor(log);
+          const details = auditDetails(log);
+
+          return (
+            <View key={log.id} style={styles.timelineItem}>
+              <View style={styles.auditHeader}>
+                <Text style={styles.auditAction}>
+                  {auditActionLabel(log.action)}
+                </Text>
+
+                <Text style={styles.auditEntity}>
+                  {log.entityType || 'record'}
+                </Text>
+              </View>
+
+              <Text style={styles.auditActor}>
+                User: {actor.name}
               </Text>
 
-              <Text style={styles.auditEntity}>
-                {log.entityType || 'record'}
+              <Text style={styles.muted}>
+                {actor.roleLabel}{actor.username ? ` • ${actor.username}` : ''}{actor.userId ? ` • User #${actor.userId}` : ''}
+              </Text>
+
+              <Text style={styles.auditRecord}>
+                Action: {log.action} • {auditEntityLabel(log)}
+              </Text>
+
+              {details ? (
+                <Text style={styles.muted}>
+                  {details}
+                </Text>
+              ) : null}
+
+              <Text style={styles.auditDate}>
+                {new Date(log.createdAt).toLocaleString()}
               </Text>
             </View>
+          );
+        })}
 
-            <Text style={styles.auditRecord}>
-              Record #{log.entityId ?? '—'}
-            </Text>
-
-            {log.action === 'student.promote' &&
-             log.metadata ? (
-              <>
-                <Text style={styles.muted}>
-                  {log.metadata.studentName || 'Unknown Student'}
-                </Text>
-
-                <Text style={styles.muted}>
-                  {log.metadata.studentCode || ''}
-                </Text>
-
-                <Text style={styles.muted}>
-                  Baitang {log.metadata.oldGrade}
-                  {' → '}
-                  Baitang {log.metadata.newGrade}
-                </Text>
-              </>
-            ) : null}
-
-            {log.metadata?.reason ? (
-              <Text style={styles.muted}>
-                Reason: {log.metadata.reason}
-              </Text>
-            ) : null}
-
-            <Text style={styles.auditDate}>
-              {new Date(log.createdAt).toLocaleString()}
-            </Text>
-          </View>
-        ))}
         {!logs.length && <Text style={styles.muted}>No audit logs available.</Text>}
+        {logs.length > 0 && !filteredLogs.length && (
+          <Text style={styles.muted}>No audit logs match the selected filters.</Text>
+        )}
       </Card>
     );
   }
@@ -1897,6 +2404,318 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '900',
+  },
+
+  auditStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  auditStatCard: {
+    flexGrow: 1,
+    flexBasis: '46%',
+    backgroundColor: '#f8fbf8',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#d8e7da',
+    padding: 14,
+  },
+  auditStatValue: {
+    color: '#06183f',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  auditStatLabel: {
+    color: '#06183f',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  auditDateDropdownButton: {
+    minHeight: 52,
+    borderWidth: 2,
+    borderColor: '#9be4b7',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  auditDateDropdownIcon: {
+    fontSize: 18,
+    marginRight: 8,
+  },
+  auditDateDropdownText: {
+    color: '#06183f',
+    fontSize: 14,
+    fontWeight: '900',
+    flex: 1,
+  },
+  auditDateDropdownChevron: {
+    color: '#06183f',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 10,
+  },
+  auditDateDropdownPanel: {
+    borderWidth: 1,
+    borderColor: '#d8e7da',
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    marginTop: -4,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  auditDateDropdownOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#edf5ef',
+  },
+  auditDateDropdownOptionActive: {
+    backgroundColor: '#eef8f1',
+  },
+  auditDateDropdownOptionText: {
+    color: '#06183f',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  auditDateDropdownOptionTextActive: {
+    color: '#125334',
+  },
+  auditCustomDatePanel: {
+    padding: 12,
+    backgroundColor: '#f8fbf8',
+  },
+  auditCustomDateTitle: {
+    color: '#125334',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+  auditApplyDateButton: {
+    minHeight: 42,
+    borderRadius: 12,
+    backgroundColor: '#125334',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  auditApplyDateText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  auditSearchInput: {
+    borderWidth: 2,
+    borderColor: '#9be4b7',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+    color: '#06183f',
+    fontWeight: '800',
+    backgroundColor: '#ffffff',
+  },
+  auditActionDropdownButton: {
+    minHeight: 52,
+    borderWidth: 2,
+    borderColor: '#9be4b7',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  auditActionDropdownText: {
+    color: '#06183f',
+    fontSize: 14,
+    fontWeight: '900',
+    flex: 1,
+  },
+  auditActionDropdownIcon: {
+    color: '#06183f',
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: 10,
+  },
+  auditActionDropdownPanel: {
+    borderWidth: 1,
+    borderColor: '#d8e7da',
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    marginTop: -4,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  auditActionDropdownOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#edf5ef',
+  },
+  auditActionDropdownOptionActive: {
+    backgroundColor: '#eef8f1',
+  },
+  auditActionDropdownOptionText: {
+    color: '#06183f',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  auditActionDropdownOptionTextActive: {
+    color: '#125334',
+  },
+  auditActionDropdownRawText: {
+    color: '#6b7f76',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+
+  auditCalendarField: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#9be4b7',
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 62,
+  },
+  auditCalendarFieldActive: {
+    borderColor: '#125334',
+    backgroundColor: '#eef8f1',
+  },
+  auditCalendarFieldLabel: {
+    color: '#587066',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  auditCalendarFieldValue: {
+    color: '#06183f',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  auditCalendarFieldIcon: {
+    position: 'absolute',
+    right: 10,
+    top: 18,
+    fontSize: 16,
+  },
+  auditCalendarPanel: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#d8e7da',
+    padding: 10,
+    marginTop: 10,
+  },
+  auditCalendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  auditCalendarNavButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eef8f1',
+  },
+  auditCalendarNavText: {
+    color: '#125334',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  auditCalendarMonthTitle: {
+    color: '#06183f',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  auditCalendarWeekRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  auditCalendarWeekText: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#587066',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  auditCalendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  auditCalendarDay: {
+    width: '14.285%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    marginVertical: 1,
+  },
+  auditCalendarDayMuted: {
+    opacity: 0.35,
+  },
+  auditCalendarDaySelected: {
+    backgroundColor: '#125334',
+  },
+  auditCalendarDayText: {
+    color: '#06183f',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  auditCalendarDayTextMuted: {
+    color: '#8aa39b',
+  },
+  auditCalendarDayTextSelected: {
+    color: '#ffffff',
+  },
+  auditCalendarFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingHorizontal: 4,
+  },
+  auditCalendarFooterText: {
+    color: '#125334',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  auditDateRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  auditDateInput: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#9be4b7',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    color: '#06183f',
+    fontWeight: '800',
+    backgroundColor: '#ffffff',
+  },
+
+  auditActor: {
+    color: '#125334',
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: 8,
   },
 
   auditRecord: {

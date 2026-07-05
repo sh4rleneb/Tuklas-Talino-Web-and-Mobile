@@ -1492,13 +1492,14 @@ if (role === 'admin') {
 }
 
 async function loadAdminDashboard() {
-  const [stats, students, archivedStudents, teachers, archivedTeachers, enrollments, logs] = await Promise.all([
+  const [stats, students, archivedStudents, teachers, archivedTeachers, enrollments, accounts, logs] = await Promise.all([
     api('/admin/stats'),
     api('/students?status=active'),
     api('/students?status=archived'),
     api('/teachers?status=active'),
     api('/teachers?status=archived'),
     api('/admin/enrollments'),
+    api('/admin/accounts'),
     api('/admin/audit-logs?limit=50')
   ]);
 
@@ -1510,6 +1511,7 @@ async function loadAdminDashboard() {
     archivedTeachers: archivedTeachers.teachers || [],
     teacherAssignments: enrollments.teacherAssignments || [],
     classOptions: enrollments.classOptions || [],
+    accounts: accounts.users || [],
     logs: logs.logs || []
   });
 }

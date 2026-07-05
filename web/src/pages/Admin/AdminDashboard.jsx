@@ -122,6 +122,7 @@ export default function AdminDashboard({
   }
 
   const stats = data.stats || {};
+  const accounts = data.accounts || [];
   const students = data.students || [];
   const archivedStudents = data.archivedStudents || [];
   const teachers = data.teachers || [];
@@ -129,6 +130,132 @@ export default function AdminDashboard({
   const teacherAssignments = data.teacherAssignments || [];
   const classOptions = data.classOptions || [];
   const logs = data.logs || [];
+  const auditActorProfiles = [
+    ...accounts.map(account => ({
+      userId: Number(account.id || account.userId || 0),
+      name: account.displayName || account.name || account.username || `User #${account.id || account.userId || '—'}`,
+      username: account.username || account.email || '',
+      roleLabel: account.Role?.name || account.role || account.roleName || 'user',
+    })),
+    ...students.map(student => ({
+      userId: Number(student.userId || student.User?.id || student.user?.id || 0),
+      name: student.name || student.User?.displayName || student.user?.displayName || student.studentCode || 'Student',
+      username: student.studentCode || student.User?.username || student.user?.username || '',
+      roleLabel: 'student',
+    })),
+    ...archivedStudents.map(student => ({
+      userId: Number(student.userId || student.User?.id || student.user?.id || 0),
+      name: student.name || student.User?.displayName || student.user?.displayName || student.studentCode || 'Archived student',
+      username: student.studentCode || student.User?.username || student.user?.username || '',
+      roleLabel: 'student',
+    })),
+    ...teachers.map(teacher => ({
+      userId: Number(teacher.userId || teacher.User?.id || teacher.user?.id || 0),
+      name: teacher.name || teacher.User?.displayName || teacher.user?.displayName || teacher.employeeCode || 'Teacher',
+      username: teacher.employeeCode || teacher.User?.username || teacher.user?.username || '',
+      roleLabel: 'teacher',
+    })),
+    ...archivedTeachers.map(teacher => ({
+      userId: Number(teacher.userId || teacher.User?.id || teacher.user?.id || 0),
+      name: teacher.name || teacher.User?.displayName || teacher.user?.displayName || teacher.employeeCode || 'Archived teacher',
+      username: teacher.employeeCode || teacher.User?.username || teacher.user?.username || '',
+      roleLabel: 'teacher',
+    })),
+  ].filter(profile => profile.userId);
+
+  function auditActionLabel(action = '') {
+    const labels = {
+      'account.status': 'Updated account status',
+      'auth.login': 'Logged in',
+      'auth.logout': 'Logged out',
+      'auth.change_password': 'Changed password',
+      'student.create': 'Created student account',
+      'student.update': 'Updated student account',
+      'student.archive': 'Archived student account',
+      'student.reactivate': 'Reactivated student account',
+      'student.reset_password': 'Reset student password',
+      'student.reset_progress': 'Reset student progress',
+      'student.promote': 'Promoted student',
+      'teacher.create': 'Created teacher account',
+      'teacher.update': 'Updated teacher account',
+      'teacher.archive': 'Archived teacher account',
+      'teacher.reactivate': 'Reactivated teacher account',
+      'teacher.reset_password': 'Reset teacher password',
+      'lesson.create': 'Created lesson',
+      'lesson.update': 'Updated lesson',
+      'lesson.archive': 'Archived lesson',
+      'lesson.complete': 'Completed lesson',
+      'quiz.result': 'Submitted quiz result',
+      'group.create': 'Created group',
+      'group.update': 'Updated group',
+      'group.archive': 'Archived group',
+      'group.add_member': 'Added group member',
+      'group.remove_member': 'Removed group member',
+      'group.set_leader': 'Set group leader',
+      'group_task.create': 'Created group task',
+      'group_task.archive': 'Archived group task',
+      'group_task.approve_group_completion': 'Approved group task',
+      'group_task.return_group_completion': 'Returned group task',
+      'speech_attempt.review': 'Reviewed speech attempt',
+      'system.seed': 'Loaded seed data',
+    };
+
+    if (labels[action]) return labels[action];
+
+    return String(action || 'System action')
+      .replace(/[._-]+/g, ' ')
+      .replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  function auditActorFor(log) {
+    const actorUserId = Number(log.actorUserId || log.userId || log.metadata?.actorUserId || 0);
+    const matched = auditActorProfiles.find(profile => Number(profile.userId) === actorUserId);
+
+    if (matched) {
+      return {
+        ...matched,
+        roleLabel: String(matched.roleLabel || 'user').replace(/\b\w/g, char => char.toUpperCase()),
+      };
+    }
+
+    return {
+      userId: actorUserId || null,
+      name: actorUserId ? `User #${actorUserId}` : 'System',
+      username: '',
+      roleLabel: actorUserId ? 'Unknown role' : 'System',
+    };
+  }
+
+  function auditEntityLabel(log) {
+    const entity = String(log.entityType || 'record')
+      .replace(/[._-]+/g, ' ')
+      .replace(/\b\w/g, char => char.toUpperCase());
+
+    return `${entity} #${log.entityId || '—'}`;
+  }
+
+  function auditDetails(log) {
+    const metadata = log.metadata || {};
+    const details = [];
+
+    if (log.action === 'student.promote') {
+      details.push(`${metadata.studentName || 'Student'}${metadata.studentCode ? ` (${metadata.studentCode})` : ''}`);
+      if (metadata.oldGrade || metadata.newGrade) {
+        details.push(`Grade ${metadata.oldGrade || '—'} → Grade ${metadata.newGrade || '—'}`);
+      }
+      if (metadata.section) details.push(`Section ${metadata.section}`);
+    }
+
+    if (metadata.status) details.push(`Status: ${metadata.status}`);
+    if (metadata.reason) details.push(`Reason: ${metadata.reason}`);
+    if (metadata.score !== undefined && metadata.score !== null) details.push(`Score: ${metadata.score}`);
+    if (metadata.reviewStatus) details.push(`Review: ${metadata.reviewStatus}`);
+    if (metadata.studentId) details.push(`Student ID: ${metadata.studentId}`);
+    if (metadata.lessonId) details.push(`Lesson ID: ${metadata.lessonId}`);
+
+    return details.length ? details.join(' • ') : 'No extra details';
+  }
+
 
   const actionOptions = [...new Set(
     logs.map(log => log.action).filter(Boolean)
@@ -158,10 +285,25 @@ export default function AdminDashboard({
 const filteredLogs = logs.filter(log => {
     const createdAt = new Date(log.createdAt);
 
+    const actor = auditActorFor(log);
+    const searchableLog = [
+      log.action,
+      auditActionLabel(log.action),
+      log.entityType,
+      log.entityId,
+      actor.name,
+      actor.username,
+      actor.roleLabel,
+      auditEntityLabel(log),
+      auditDetails(log),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
     const matchesSearch =
       !logSearch ||
-      log.action?.toLowerCase().includes(logSearch.toLowerCase()) ||
-      log.entityType?.toLowerCase().includes(logSearch.toLowerCase());
+      searchableLog.includes(logSearch.toLowerCase());
 
     const matchesAction =
       !logAction ||
@@ -1018,32 +1160,51 @@ function teacherNameForAssignment(assignment) {
                 </div>
 
                 <div className="admin-clean-table admin-audit-table">
-                  <div className="admin-clean-table-head">
+                  <div
+                    className="admin-clean-table-head"
+                    style={{ gridTemplateColumns: '1.25fr 1.35fr 1fr 1.45fr 1fr' }}
+                  >
+                    <span>User</span>
                     <span>Action</span>
                     <span>Entity</span>
-                    <span>Record</span>
+                    <span>Details</span>
                     <span>Date</span>
                   </div>
 
-                  {filteredLogs.map(log => (
-                    <div className="admin-clean-table-row" key={log.id}>
-                      <span>
-                        <strong>{log.action}</strong>
-                      </span>
+                  {filteredLogs.map(log => {
+                    const actor = auditActorFor(log);
+                    return (
+                      <div
+                        className="admin-clean-table-row"
+                        key={log.id}
+                        style={{ gridTemplateColumns: '1.25fr 1.35fr 1fr 1.45fr 1fr' }}
+                      >
+                        <span>
+                          <strong>{actor.name}</strong>
+                          <small>{actor.roleLabel}{actor.username ? ` • ${actor.username}` : ''}</small>
+                          <small>{actor.userId ? `User #${actor.userId}` : 'System generated'}</small>
+                        </span>
 
-                      <span>
-                        <strong>{log.entityType || 'Record'}</strong>
-                      </span>
+                        <span>
+                          <strong>{auditActionLabel(log.action)}</strong>
+                          <small>{log.action}</small>
+                        </span>
 
-                      <span>
-                        <span className="lms-mini-pill">#{log.entityId || '-'}</span>
-                      </span>
+                        <span>
+                          <strong>{auditEntityLabel(log)}</strong>
+                          <small>{log.entityType || 'record'}</small>
+                        </span>
 
-                      <span>
-                        <small>{fmtDate(log.createdAt)}</small>
-                      </span>
-                    </div>
-                  ))}
+                        <span>
+                          <small>{auditDetails(log)}</small>
+                        </span>
+
+                        <span>
+                          <small>{fmtDate(log.createdAt)}</small>
+                        </span>
+                      </div>
+                    );
+                  })}
 
                   {!filteredLogs.length && (
                     <div className="lms-empty-line">No audit logs match the selected filters.</div>
