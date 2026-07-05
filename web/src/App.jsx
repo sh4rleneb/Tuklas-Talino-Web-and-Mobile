@@ -6843,14 +6843,14 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
       </main>
 
       <nav className="g12-nav" aria-label="Student navigation">
-        <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Tahanan</button>
+        <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
         <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Mga Pagsusulit</button>
+        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
         <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
         <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-        <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Mga Gantimpala</button>
-        <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Ranggo</button>
-        <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Aking Tala</button>
+        <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
+        <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
+        <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>My Profile</button>
       </nav>
     </div>
   </>;
@@ -6878,14 +6878,14 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
   };
 
   const navItems = [
-    { id: 'home', icon: '🏠', label: 'Tahanan' },
+    { id: 'home', icon: '🏠', label: 'Home' },
     { id: 'lessons', icon: '📚', label: 'Lessons' },
-    { id: 'quizzes', icon: '🧠', label: 'Mga Pagsusulit' },
+    { id: 'quizzes', icon: '🧠', label: 'Quizzes' },
     { id: 'missions', icon: '🎮', label: 'Missions' },
     { id: 'groups', icon: '👥', label: 'Groups' },
-    { id: 'badges', icon: '🏅', label: 'Mga Gantimpala' },
-    { id: 'leaderboard', icon: '🏆', label: 'Ranggo' },
-    { id: 'profile', icon: '👤', label: 'Aking Tala' }
+    { id: 'badges', icon: '🏅', label: 'Badges' },
+    { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
+    { id: 'profile', icon: '👤', label: 'My Profile' }
   ];
 
   return (
@@ -7730,7 +7730,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
           <section className="g46-ref-panel">
             <div className="g46-ref-panel-head">
               <div>
-                <h2>Mga Gantimpala</h2>
+                <h2>Badges</h2>
               </div>
               <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('badges')}>Tingnan lahat ng gantimpala →</button>
             </div>
@@ -7830,14 +7830,14 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
         </main>
 
         <nav className="g12-nav" aria-label="Student navigation">
-          <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Tahanan</button>
+          <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
           <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Mga Pagsusulit</button>
+          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
           <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
           <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-          <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Mga Gantimpala</button>
-          <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Ranggo</button>
-          <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Aking Tala</button>
+          <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
+          <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
+          <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>My Profile</button>
         </nav>
       </div>
     </>
@@ -15029,13 +15029,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
           </main>
 
           <nav className="g12-nav g12-mission-play-nav" aria-label="Student navigation">
-            <button type="button" onClick={() => openTab('home')}><span className="g12-nav-icon">🏠</span>Tahanan</button>
+            <button type="button" onClick={() => openTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
             <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Mga Pagsusulit</button>
+            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
             <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
             <button type="button" onClick={() => openTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-            <button type="button" onClick={() => openTab('badges')}><span className="g12-nav-icon">🏅</span>Mga Gantimpala</button>
-            <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>Aking Tala</button>
+            <button type="button" onClick={() => openTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
+            <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>My Profile</button>
           </nav>
         </div>
       </>
