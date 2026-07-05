@@ -30,7 +30,7 @@ export default function ProfilePage() {
         </div>
       </div>
       {message && <div className="alert success">{message}</div>}
-      <h2>Choose Avatar</h2>
+      <h2>Pumili ng Avatar</h2>
       <div className="avatar-picker">
         {avatars.map(a => <button key={a} className="avatar-choice" onClick={() => setAvatar(a)}>{a}</button>)}
       </div>

@@ -21,7 +21,7 @@ export default function BadgesPage() {
             <span>{b.icon}</span>
             <strong>{b.name}</strong>
             <p>{b.description}</p>
-            <small>{owned.has(b.id) ? 'Nabuksan' : `${b.xpThreshold || 0} XP kailangan`}</small>
+            <small>{owned.has(b.id) ? 'Nakuha na' : `${b.xpThreshold || 0} XP kailangan`}</small>
           </article>
         ))}
       </div>

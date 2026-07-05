@@ -43,13 +43,13 @@ export default function StudentDashboard() {
       <div className="stats-grid">
         <StatCard icon="⭐" label="XP" value={data.student.xp} tone="yellow" />
         <StatCard icon="🏆" label="Level" value={data.level} tone="blue" />
-        <StatCard icon="✅" label="Lessons Done" value={`${data.progress.completedLessons}/${data.progress.totalLessons}`} tone="green" />
+        <StatCard icon="✅" label="Mga Araling Natapos" value={`${data.progress.completedLessons}/${data.progress.totalLessons}`} tone="green" />
       </div>
 
       <ProgressBar value={data.progress.percent} label="Pag-unlad sa Aralin" />
 
       <div className="section-heading">
-        <h2>Recommended Lessons</h2>
+        <h2>Mga Inirerekomendang Aralin</h2>
         <Link to="/student/lessons" className="btn ghost">View all</Link>
       </div>
       <div className="lesson-grid">
@@ -62,7 +62,7 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      <div className="section-heading"><h2>Mga Gantimpala</h2><Link to="/student/badges">See badges</Link></div>
+      <div className="section-heading"><h2>Mga Gantimpala</h2><Link to="/student/badges">Tingnan ang mga gantimpala</Link></div>
       <div className="badge-row">
         {data.badges.length ? data.badges.map(b => <span className="badge-chip" key={b.id}>{b.icon} {b.name}</span>) : <p className="empty">Complete lessons bubuksan badges.</p>}
       </div>

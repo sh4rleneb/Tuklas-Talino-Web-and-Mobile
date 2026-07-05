@@ -749,7 +749,7 @@ export function Grade46ReferenceStyles() {
       }
 
       .g46-ref-badge-animated::after {
-        content: 'Earned';
+        content: 'Nakuha na';
         position: absolute;
         top: 12px;
         right: 12px;
@@ -824,7 +824,7 @@ export function Grade46ReferenceStyles() {
       }
 
       .g46-ref-badge-locked::after {
-        content: '🔒 Locked' !important;
+        content: '🔒 Naka-lock' !important;
         position: absolute !important;
         top: 12px !important;
         right: 12px !important;
@@ -958,7 +958,7 @@ export function Grade46ReferenceStyles() {
       }
 
       .g46-ref-badge-locked::after {
-        content: '🔒 Locked' !important;
+        content: '🔒 Naka-lock' !important;
         background: rgba(15, 23, 42, 0.09) !important;
         color: #475569 !important;
         border: 1px solid rgba(100, 116, 139, 0.18) !important;

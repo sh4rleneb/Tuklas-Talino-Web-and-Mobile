@@ -6079,7 +6079,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
             animation: none;
           }
         }
-        /* === End Baitang 1-2 Learning Worlds Card Polish === */
+        /* === End Baitang 1-2 Mga Mundo ng Pag-aaral Card Polish === */
 
 
         /* === Baitang 1-2 Home Avatar Badge === */
@@ -6619,7 +6619,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         }
 
         .g46-ref-badge-animated::after {
-          content: 'Nakamit';
+          content: 'Nakuha na';
           position: absolute;
           top: 12px;
           right: 12px;
@@ -6771,7 +6771,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
                   </div>
                   <h1>Kamusta, {s.name || 'Learner'}! 👋</h1>
                 </div>
-              <p>Ready ka na ba sa learning adventure today?</p>
+              <p>Handa ka na ba sa pag-aaral ngayon?</p>
             </div>
 
             <div className="g12-progress-card">
@@ -6791,7 +6791,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         </section>
 
         <section className="g12-section-card">
-          <h2 className="g12-section-title">🌎 Learning Worlds ⭐</h2>
+          <h2 className="g12-section-title">🌎 Mga Mundo ng Pag-aaral ⭐</h2>
           <p className="g12-section-subtitle"></p>
 
           <div className="g12-subject-grid">
@@ -7790,7 +7790,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
       <EarlyStudentSubpageStyles />
       <div className="g12-page">
         <header className="g12-topbar">
-          <button type="button" className="g12-brand" onClick={() => goStudentTab('home')} aria-label="Go to Tuklas Talino home">
+          <button type="button" className="g12-brand" onClick={() => goStudentTab('home')} aria-label="Pumunta sa tahanan ng Tuklas Talino">
             <img
               src="/tuklas-talino-icon.png"
               alt=""
@@ -10289,7 +10289,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
       <div className="g12-mission-wrap">
         {rewardModal && (
-          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Mission reward">
+          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Gantimpala sa Misyon">
             <div className="g12-reward-modal">
               {['🎊', '⭐', '✨', '🌟', '🎉', '💛', '🌈'].map((piece, index) => (
                 <span className="g12-confetti-piece" key={index}>{piece}</span>
@@ -10354,7 +10354,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
             <span className="g12-progress-fill" style={{ width: `${progress}%` }} />
           </div>
 
-          <div className="g12-mission-path" aria-label="Mission steps">
+          <div className="g12-mission-path" aria-label="Mga Hakbang sa Misyon">
             {missionSteps.map((step, index) => (
               <button
                 type="button"
@@ -12005,7 +12005,7 @@ function getMissionDemo(gameId) {
     },
     'picture-guess': {
       instruction: 'Tingnan ang picture clue at piliin ang tamang salitang Filipino.',
-      prompt: 'Picture clue: 🐱',
+      prompt: 'Palatandaan sa larawan: 🐱',
       sample: 'Anong Filipino word ang bagay sa larawan?',
       options: ['pusa', 'aso', 'ibon'],
       correct: 'pusa',
@@ -12502,7 +12502,7 @@ function getPictureGuessItemsForGrade(gradeLevel = 4) {
     {
       id: 'g1-pusa',
       picture: '🐱',
-      prompt: 'Picture clue: 🐱',
+      prompt: 'Palatandaan sa larawan: 🐱',
       sample: 'Tingnan ang larawan at piliin ang tamang salita.',
       options: ['pusa', 'aso', 'ibon'],
       correct: 'pusa',
@@ -12511,7 +12511,7 @@ function getPictureGuessItemsForGrade(gradeLevel = 4) {
     {
       id: 'g1-aso',
       picture: '🐶',
-      prompt: 'Picture clue: 🐶',
+      prompt: 'Palatandaan sa larawan: 🐶',
       sample: 'Tingnan ang larawan at piliin ang tamang salita.',
       options: ['aso', 'pusa', 'isda'],
       correct: 'aso',
@@ -12520,7 +12520,7 @@ function getPictureGuessItemsForGrade(gradeLevel = 4) {
     {
       id: 'g1-lapis',
       picture: '✏️',
-      prompt: 'Picture clue: ✏️',
+      prompt: 'Palatandaan sa larawan: ✏️',
       sample: 'Ginagamit ito sa pagsulat o pagguhit.',
       options: ['lapis', 'aklat', 'payong'],
       correct: 'lapis',
@@ -12529,7 +12529,7 @@ function getPictureGuessItemsForGrade(gradeLevel = 4) {
     {
       id: 'g2-payong',
       picture: '☂️',
-      prompt: 'Picture clue: ☂️',
+      prompt: 'Palatandaan sa larawan: ☂️',
       sample: 'Ginagamit ito kapag umuulan o mainit.',
       options: ['payong', 'puno', 'araw'],
       correct: 'payong',
@@ -12541,7 +12541,7 @@ function getPictureGuessItemsForGrade(gradeLevel = 4) {
     {
       id: 'g3-paaralan',
       picture: '🏫',
-      prompt: 'Picture clue: 🏫',
+      prompt: 'Palatandaan sa larawan: 🏫',
       sample: 'Lugar kung saan natututo ang mga mag-aaral.',
       options: ['paaralan', 'pamayanan', 'aklatan'],
       correct: 'paaralan',
@@ -12550,7 +12550,7 @@ function getPictureGuessItemsForGrade(gradeLevel = 4) {
     {
       id: 'g4-pamayanan',
       picture: '🏘️',
-      prompt: 'Picture clue: 🏘️',
+      prompt: 'Palatandaan sa larawan: 🏘️',
       sample: 'Lugar kung saan magkakasamang naninirahan ang mga tao.',
       options: ['pamayanan', 'kalikasan', 'paaralan'],
       correct: 'pamayanan',
@@ -12559,7 +12559,7 @@ function getPictureGuessItemsForGrade(gradeLevel = 4) {
     {
       id: 'g5-kalikasan',
       picture: '🌳',
-      prompt: 'Picture clue: 🌳',
+      prompt: 'Palatandaan sa larawan: 🌳',
       sample: 'Ito ay tumutukoy sa halaman, hayop, lupa, hangin, at tubig.',
       options: ['kalikasan', 'panitikan', 'kaalaman'],
       correct: 'kalikasan',
@@ -12568,7 +12568,7 @@ function getPictureGuessItemsForGrade(gradeLevel = 4) {
     {
       id: 'g6-panitikan',
       picture: '📜',
-      prompt: 'Picture clue: 📜',
+      prompt: 'Palatandaan sa larawan: 📜',
       sample: 'Mga akdang binabasa tulad ng tula, kuwento, at alamat.',
       options: ['panitikan', 'talasalitaan', 'pamayanan'],
       correct: 'panitikan',
@@ -14632,7 +14632,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       </div>
 
                       <div className="story-quest-open-book">
-                        <div className="story-quest-illustration-page" aria-label="Story illustration">
+                        <div className="story-quest-illustration-page" aria-label="Larawan ng kuwento">
                           <div className="story-quest-room">
                             <div className="story-quest-window" />
                             <div className="story-quest-shelf" />
@@ -14813,7 +14813,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       </div>
                     )}
 
-                    <div className="sentence-builder-tray" aria-label="Built sentence">
+                    <div className="sentence-builder-tray" aria-label="Nabuong pangungusap">
                       {sentenceBuilderWords.map((_, index) => {
                         const selectedIndex = sentenceBuilderSelected[index];
                         const selectedWord = selectedIndex !== undefined ? sentenceBuilderWords[selectedIndex] : '';
@@ -14891,7 +14891,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                   <div className={`picture-guess-game ${early ? 'early' : 'standard'}`}>
                     <div className="picture-guess-card">
                       <div className="picture-guess-label">Picture Challenge</div>
-                      <div className="picture-guess-image" aria-label="Picture clue">
+                      <div className="picture-guess-image" aria-label="Palatandaan sa larawan">
                         {demo?.picture || '🖼️'}
                       </div>
                       <p>💡 {demo?.sample || 'Tingnan ang larawan at piliin ang tamang sagot.'}</p>
@@ -14957,7 +14957,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       <strong>Clue:</strong> {demo?.sample}
                     </div>
 
-                    <div className="mission-play-options" aria-label="Mission choices">
+                    <div className="mission-play-options" aria-label="Mga pagpipilian sa misyon">
                       {(demo?.options || []).map(choice => (
                         <button
                           type="button"
@@ -15219,13 +15219,13 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">👥 Team Mission</h2>
-            <p className="g12-section-subtitle">Choose. Help. Done.</p>
+            <h2 className="g12-section-title">👥 Misyon ng Koponan</h2>
+            <p className="g12-section-subtitle">Pumili. Tumulong. Tapos.</p>
           </div>
         </div>
 
         {!groups.length ? (
-          <div className="g12-empty">No team mission yet.</div>
+          <div className="g12-empty">Wala pang misyon ng koponan.</div>
         ) : (
           <div className="g12-team-flow-shell">
             <div className="g12-team-top-controls">
@@ -15756,7 +15756,7 @@ function badgeAchievementReason(badge = {}) {
     return description;
   }
 
-  return 'You completed a learning goal bubuksan this badge.';
+  return 'Natapos mo ang isang layunin para mabuksan ang gantimpalang ito.';
 }
 
 
@@ -15916,7 +15916,7 @@ function EarlyBadgesScreen({ data, go }) {
             <span>🏆</span>
             <div>
               <strong>Nabuksang Gantimpala</strong>
-              <p>These are the rewards you already earned.</p>
+              <p>Ito ang mga gantimpalang nakuha mo na.</p>
             </div>
           </div>
 
@@ -15961,13 +15961,13 @@ function EarlyBadgesScreen({ data, go }) {
                   <div>
                     <div className="g12-badge-big g12-badge-big-locked">{goal.icon || '🏅'}</div>
                     <strong>{goal.name || 'Naka-lock na Gantimpala'}</strong>
-                    <p className="g12-badge-reason">How bubuksan: {goal.howToUnlock}</p>
+                    <p className="g12-badge-reason"><span>Layunin</span>{' '}{goal.howToUnlock}</p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="g12-empty">Amazing! You unlocked all available badges.</div>
+            <div className="g12-empty">Ang galing! Nakuha mo na ang lahat ng available na gantimpala.</div>
           )}
         </div>
 
@@ -16057,13 +16057,13 @@ function StudentBadges({ data, go, logout}) {
                   <div>
                     <span>{goal.icon || '🏅'}</span>
                     <strong>{goal.name || 'Naka-lock na Gantimpala'}</strong>
-                    <p className="g46-badge-reason g46-locked-goal-text"><span>Goal</span>{goal.howToUnlock}</p>
+                    <p className="g46-badge-reason g46-locked-goal-text"><span>Layunin</span>{' '}{goal.howToUnlock}</p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="g46-ref-empty">Excellent work! You unlocked all available badges.</div>
+            <div className="g46-ref-empty">Ang galing! Nakuha mo na ang lahat ng available na gantimpala.</div>
           )}
         </div>
 
