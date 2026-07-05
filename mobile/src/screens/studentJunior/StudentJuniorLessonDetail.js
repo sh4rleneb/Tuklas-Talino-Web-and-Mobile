@@ -41,6 +41,65 @@ import {
   getStructuredLessonLessonAudioText,
 } from '../../utils/structuredLesson';
 
+const BADGE_IMAGE_SOURCES = {
+  'bituin-sa-pagsagot': require('../../../assets/badges/bituin-sa-pagsagot.png'),
+  'henyo-sa-pagsusulit': require('../../../assets/badges/henyo-sa-pagsusulit.png'),
+  'kaagapay-sa-gawain': require('../../../assets/badges/kaagapay-sa-gawain.png'),
+};
+
+function normalizeBadgeSlug(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function normalizeBadgeImageUri(value = '') {
+  const uri = String(value || '').trim();
+
+  if (!uri) return '';
+  if (/^https?:\/\//i.test(uri)) return uri;
+  if (uri.startsWith('/')) return `https://tuklastalino.com${uri}`;
+
+  return '';
+}
+
+function getBadgeImageSource(badge = {}) {
+  const remoteUri = normalizeBadgeImageUri(
+    badge.imageUrl ||
+    badge.iconUrl ||
+    badge.badgeImageUrl ||
+    badge.image ||
+    badge.iconImage ||
+    badge.badge?.imageUrl ||
+    badge.badge?.iconUrl ||
+    ''
+  );
+
+  if (remoteUri) return { uri: remoteUri };
+
+  const slugCandidates = [
+    badge.slug,
+    badge.code,
+    badge.key,
+    badge.name,
+    badge.title,
+    badge.badge?.slug,
+    badge.badge?.name,
+    badge.badge?.title,
+  ].map(normalizeBadgeSlug).filter(Boolean);
+
+  for (const slug of slugCandidates) {
+    if (BADGE_IMAGE_SOURCES[slug]) return BADGE_IMAGE_SOURCES[slug];
+  }
+
+  return BADGE_IMAGE_SOURCES['kaagapay-sa-gawain'];
+}
+
+
 function optionalProgressRequest(request, fallback) {
   return request.catch((err) => {
     if (err.status === 404 || err.message === 'Route not found.') {
@@ -91,6 +150,7 @@ const [matchedPairs, setMatchedPairs] = useState({});
 const [selectedWords, setSelectedWords] = useState([]);
 
 const [badgePopup, setBadgePopup] = useState(null);
+const activeBadgePopup = badgePopup || {};
 const [animatedXp, setAnimatedXp] = useState(0);
 
 const badgeScale = useRef(new Animated.Value(0.6)).current;
@@ -281,28 +341,44 @@ const stepScrollRef = useRef(null);
     return source;
   }, [lesson?.activities, lesson?.gradeLevel, student?.gradeLevel]);
 
-  const missionSteps = useMemo(() => [
-    {
-      type: 'listen',
-      title: 'Layunin',
-    },
-    {
-      type: 'know',
-      title: 'Alamin',
-    },
-    {
-      type: 'read',
-      title: 'Basahin ang Lesson',
-    },
-    ...activities.map(activity => ({
-      type: 'activity',
-      activity,
-    })),
-    {
-      type: 'finish',
-      title: 'Tapusin ang Lesson',
-    },
-  ], [activities]);
+  const missionSteps = useMemo(() => {
+    const materialActivities = activities.filter((activity) => {
+      const type = String(activity?.type || '').toLowerCase();
+      return type === 'material' || type === 'infographic';
+    });
+
+    const learningActivities = activities.filter((activity) => {
+      const type = String(activity?.type || '').toLowerCase();
+      return type !== 'material' && type !== 'infographic';
+    });
+
+    return [
+      {
+        type: 'listen',
+        title: 'Layunin',
+      },
+      {
+        type: 'know',
+        title: 'Alamin',
+      },
+      ...materialActivities.map(activity => ({
+        type: 'activity',
+        activity,
+      })),
+      {
+        type: 'read',
+        title: 'Lessons',
+      },
+      ...learningActivities.map(activity => ({
+        type: 'activity',
+        activity,
+      })),
+      {
+        type: 'finish',
+        title: 'Tapos',
+      },
+    ];
+  }, [activities]);
 
   const totalSteps = missionSteps.length;
 
@@ -357,27 +433,27 @@ const stepScrollRef = useRef(null);
     if (stepItem?.type === 'read') return '📖';
     if (stepItem?.type === 'finish') return '⭐';
 
-    const activityType = stepItem?.activity?.type;
-    if (activityType === 'mcq') return '🎮';
+    const activityType = String(stepItem?.activity?.type || '').toLowerCase();
+
+    if (activityType === 'material' || activityType === 'infographic') return '🐾';
+    if (activityType === 'mcq' || activityType === 'quiz') return '🎮';
     if (activityType === 'writing') return '🧩';
     if (activityType === 'speech') return '🎤';
-    if (activityType === 'vocabulary') return '📚';
-    if (activityType === 'matching') return '🧩';
-    if (activityType === 'infographic') return '📎';
+    if (activityType === 'vocabulary' || activityType === 'matching') return '🧩';
 
-    return '🚀';
+    return '🧩';
   }
 
   function missionStepLabel(stepItem) {
     if (stepItem?.title) return stepItem.title;
 
-    const activityType = stepItem?.activity?.type;
-    if (activityType === 'mcq') return 'Oras ng Pagsusulit';
+    const activityType = String(stepItem?.activity?.type || '').toLowerCase();
+
+    if (activityType === 'material' || activityType === 'infographic') return 'Materyal';
+    if (activityType === 'mcq' || activityType === 'quiz') return 'Quizzes';
     if (activityType === 'writing') return 'Gawain';
-    if (activityType === 'speech') return 'Pagsasanay sa Pagbigkas';
-    if (activityType === 'vocabulary') return 'Mga Salita';
-    if (activityType === 'matching') return 'Pagtutugma';
-    if (activityType === 'infographic') return 'Materyal';
+    if (activityType === 'speech') return 'Bigkas';
+    if (activityType === 'vocabulary' || activityType === 'matching') return 'Gawain';
 
     return 'Gawain';
   }
@@ -1301,7 +1377,7 @@ const stepScrollRef = useRef(null);
             onPress={() => {
               if (lessonListening) return;
               if (!lessonListened) {
-                setGateToast('Makinig muna sa layunin.');
+                setGateToast('Pakinggan muna ang layunin.');
                 return;
               }
               advance('listen');
@@ -2955,7 +3031,7 @@ const stepScrollRef = useRef(null);
                       alignItems:'center',
                     }}
                   >
-                    <Text style={{fontSize:22}}>🏅</Text>
+                    <Image source={getBadgeImageSource(completionResult?.newBadges?.[0] || activeBadgePopup)} style={styles.badgeImage} resizeMode="contain" />
                     <Text
                       style={{
                         fontWeight:'900',
@@ -2982,7 +3058,7 @@ const stepScrollRef = useRef(null);
 
               {(completionResult?.newBadges || []).map((badge) => (
                 <View key={badge.id || badge.code} style={styles.badgeRow}>
-                  <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
+                  <Image source={getBadgeImageSource(badge)} style={styles.badgeImage} resizeMode="contain" />
                   <View>
                     <Text
                       style={{
@@ -2991,7 +3067,7 @@ const stepScrollRef = useRef(null);
                         color:'#92400E',
                       }}
                     >
-                      🏅 Bagong Badge
+                      Bagong Badge
                     </Text>
 
                     <Text
@@ -3127,14 +3203,7 @@ const stepScrollRef = useRef(null);
             transform:[{ scale: badgeScale }],
           }}
         >
-          <Text
-            style={{
-              fontSize:42,
-              marginRight:14,
-            }}
-          >
-            {badgePopup?.icon || '🏅'}
-          </Text>
+          <Image source={getBadgeImageSource(activeBadgePopup)} style={styles.badgePopupImage} resizeMode="contain" />
 
           <View style={{ flex:1 }}>
             <Text
@@ -3711,6 +3780,15 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   badgeIcon: { fontSize: 32 },
+  badgeImage: {
+    width: 38,
+    height: 38,
+  },
+  badgePopupImage: {
+    width: 96,
+    height: 96,
+    marginRight: 14,
+  },
   disabledButton: { backgroundColor: '#CBD5E1' },
   primaryText: { color: '#FFF', fontWeight: '900' },
   reward: { color: '#F97316', fontSize: 28, fontWeight: '900', marginTop: 14 },
