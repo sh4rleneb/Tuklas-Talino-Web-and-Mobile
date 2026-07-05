@@ -6945,7 +6945,6 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
         <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
         <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
-        <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
         <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
         <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
         <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
@@ -7764,7 +7763,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
           <section className="g46-ref-panel">
             <div className="g46-ref-panel-head">
               <div>
-                <h2>Lessons Mo</h2>
+                <h2>Mga Aralin</h2>
               </div>
               <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('lessons')}>Lahat ng aralin →</button>
             </div>
@@ -7931,7 +7930,6 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
           <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
           <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
           <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
-          <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
           <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
           <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
           <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
@@ -7954,7 +7952,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">📚 Aklatan ng Lessons</h2>
+            <h2 className="g12-section-title">📚 Aklatan ng Mga Aralin</h2>
 
           </div>
         </div>
@@ -8038,7 +8036,7 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
-            <h2>Aklatan ng Lessons</h2>
+            <h2>Aklatan ng Mga Aralin</h2>
             <p className="g46-ref-muted">{lessons.length} {lessons.length === 1 ? 'aralin' : 'mga aralin'} ang available para sa iyong baitang.</p>
           </div>
         </div>
@@ -10571,7 +10569,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-step-head">
                 <div className="g12-mission-big-icon">📖</div>
                 <div>
-                  <h3>Lessons</h3>
+                  <h3>Mga Aralin</h3>
                 </div>
               </div>
 
@@ -13373,7 +13371,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
         <section className="missions-section">
           <div className="missions-section-head">
             <div>
-              <h3>🎮 Mga Available na Larong Pang-aral</h3>
+              <h3>🎮 Mga Bukas na Larong Pang-aral</h3>
               <p>Pindutin ang Maglaro at kumita ng XP!</p>
             </div>
           </div>
@@ -15130,8 +15128,8 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
             <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
             <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
             <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
-            <button type="button" onClick={() => openTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
             <button type="button" onClick={() => openTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
+            <button type="button" onClick={() => openTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
             <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
           </nav>
         </div>

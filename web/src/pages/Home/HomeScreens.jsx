@@ -48,24 +48,24 @@ export function LandingScreen({ go }) {
       type: 'student',
       image: '/landing-student-boy.png',
       title: 'Student',
-      desc: 'Access lessons, quizzes, missions, groups, XP, badges, and your learning progress.',
-      action: 'Student Login',
+      desc: 'Buksan ang mga aralin, pagsusulit, misyon, grupo, XP, badge, at progreso sa pag-aaral.',
+      action: 'Mag-aaral',
       screen: 'screen-login-student',
     },
     {
       type: 'teacher',
       image: '/landing-teacher.png',
       title: 'Teacher',
-      desc: 'Create lessons, manage groups, monitor student progress, review outputs, and generate reports.',
-      action: 'Teacher Login',
+      desc: 'Gumawa ng aralin, pamahalaan ang mga grupo, subaybayan ang progreso ng mag-aaral, suriin ang gawa, at gumawa ng ulat.',
+      action: 'Guro',
       screen: 'screen-login-teacher',
     },
     {
       type: 'admin',
       image: '/landing-admin.png',
       title: 'Admin',
-      desc: 'Manage users, teacher accounts, student access, content, and system settings.',
-      action: 'Admin Login',
+      desc: 'Pamahalaan ang mga user, account ng guro, access ng mag-aaral, nilalaman, at setting ng sistema.',
+      action: 'Admin',
       screen: 'screen-login-admin',
     },
   ];
@@ -73,7 +73,7 @@ export function LandingScreen({ go }) {
   const lmsTools = [
     { icon: '📝', title: 'Quizzes', desc: 'Students answer assessments while attempts, scores, and progress are recorded.', tone: 'blue' },
     { icon: '🎮', title: 'Missions', desc: 'Game-like learning tasks help students practice lessons in a more engaging way.', tone: 'purple' },
-    { icon: '🏅', title: 'XP & Badges', desc: 'Reward features encourage participation, completion, and consistent learning.', tone: 'pink' },
+    { icon: '🏅', title: 'XP at Badge', desc: 'Reward features encourage participation, completion, and consistent learning.', tone: 'pink' },
     { icon: '📊', title: 'Monitoring', desc: 'Teachers can track lesson completion, quiz performance, XP, and learner status.', tone: 'blue' },
   ];
 
@@ -87,7 +87,7 @@ export function LandingScreen({ go }) {
 
   const helpCards = [
     {
-      title: 'Student Login Help',
+      title: 'Mag-aaral Help',
       desc: 'Students should use their assigned Student ID and password. If access does not work, they should ask their teacher for help.',
     },
     {
@@ -136,13 +136,12 @@ export function LandingScreen({ go }) {
         <div className="tt-hero-copy">
           <h1>Masayang Matuto sa Tuklas Talino!</h1>
           <p>
-            Para sa <strong>Grades 1–6:</strong> lessons, quizzes, missions, badges,
-            group tasks, at teacher monitoring.
+            Para sa <strong>Baitang 1–6:</strong> mga aralin, pagsusulit, misyon, badge, gawain sa grupo, at pagsubaybay ng guro.
           </p>
           <div className="tt-hero-points">
-            <div><span>🤖</span><strong>AI Powered</strong><small>TTS & speech feedback</small></div>
-            <div><span>🎮</span><strong>Games</strong><small>Fun learning tasks</small></div>
-            <div><span>🏅</span><strong>XP & Badges</strong><small>Rewards and progress</small></div>
+            <div><span>🤖</span><strong>Pinapagana ng AI</strong><small>TTS at puna sa pagsasalita</small></div>
+            <div><span>🎮</span><strong>Mga Laro</strong><small>Masayang gawain sa pag-aaral</small></div>
+            <div><span>🏅</span><strong>XP at Badge</strong><small>Gantimpala at progreso</small></div>
           </div>
         </div>
         <div className="tt-hero-art tt-hero-art-image" aria-hidden="true">
@@ -176,9 +175,9 @@ export function LandingScreen({ go }) {
           <button onClick={() => selectPublicPage('modules')}>Explore modules →</button>
         </div>
         <div className="tt-system-grid">
-          <div><span>📚</span><strong>Lessons</strong><small>Organized learning content for Grades 1–6.</small></div>
+          <div><span>📚</span><strong>Mga Aralin</strong><small>Nakaayos na nilalaman sa pag-aaral para sa Baitang 1–6.</small></div>
           <div><span>🎮</span><strong>Missions</strong><small>Gamified tasks that support engagement.</small></div>
-          <div><span>🏅</span><strong>XP & Badges</strong><small>Reward system for participation and completion.</small></div>
+          <div><span>🏅</span><strong>XP at Badge</strong><small>Reward system for participation and completion.</small></div>
           <div><span>📊</span><strong>Teacher Monitoring</strong><small>Progress records for better guidance.</small></div>
         </div>
       </section>
@@ -192,7 +191,7 @@ export function LandingScreen({ go }) {
         <h1>Mga Learning Modules at System Tools</h1>
         <p>
           Tuklas Talino organizes Filipino learning through subject modules and system tools that support
-          lessons, quizzes, missions, group work, badges, and teacher monitoring.
+          mga aralin, pagsusulit, misyon, gawain sa grupo, badge, at pagsubaybay ng guro.
         </p>
       </section>
 
@@ -238,7 +237,7 @@ export function LandingScreen({ go }) {
     <>
       <section className="tt-panel tt-page-intro">
         <div className="tt-page-kicker">About Tuklas Talino</div>
-        <h1>An AI-powered Filipino learning and gamified collaboration system for Grades 1–6</h1>
+        <h1>Isang Filipino learning system para sa Baitang 1–6 na may AI at gamified collaboration</h1>
         <p>
           Tuklas Talino is designed to support Filipino learning through guided activities, gamified engagement, group tasks, automated feedback, teacher monitoring, and admin-managed access.
         </p>
@@ -266,7 +265,7 @@ export function LandingScreen({ go }) {
       <section className="tt-panel tt-why-panel" aria-label="Why use Tuklas Talino">
         <h2>⭐ Bakit gamitin ang Tuklas Talino?</h2>
         <div className="tt-why-grid">
-          <div><span>📗</span><strong>Grade-Level Learning</strong><small>Lessons and activities are organized for Grades 1–6 learners.</small></div>
+          <div><span>📗</span><strong>Pag-aaral ayon sa Baitang</strong><small>Nakaayos ang mga aralin at gawain para sa mga mag-aaral sa Baitang 1–6.</small></div>
           <div><span>🎮</span><strong>Interactive Tasks</strong><small>Quizzes, missions, groups, XP, and badges help keep learning engaging.</small></div>
           <div><span>📊</span><strong>Progress Monitoring</strong><small>Teachers can track completion, performance, attempts, and learner status.</small></div>
           <div><span>🛡️</span><strong>Role-Based Access</strong><small>Students, teachers, and admins have separate dashboards and permissions.</small></div>
@@ -328,7 +327,7 @@ export function LandingScreen({ go }) {
             the admin for account access or dashboard concerns.
           </p>
         </div>
-        <button onClick={() => go('screen-login-student')}>Go to Student Login <span>→</span></button>
+        <button onClick={() => go('screen-login-student')}>Go to Mag-aaral <span>→</span></button>
       </section>
 
       {renderRoleCards()}
@@ -363,9 +362,9 @@ export function LandingScreen({ go }) {
         </nav>
 
         <div className="tt-login-actions">
-          <button className="tt-login-pill student" onClick={() => go('screen-login-student')}>👤 Student Login</button>
-          <button className="tt-login-pill teacher" onClick={() => go('screen-login-teacher')}>🖥️ Teacher Login</button>
-          <button className="tt-login-pill admin" onClick={() => go('screen-login-admin')}>🛡️ Admin Login</button>
+          <button className="tt-login-pill student" onClick={() => go('screen-login-student')}>👤 Mag-aaral</button>
+          <button className="tt-login-pill teacher" onClick={() => go('screen-login-teacher')}>🖥️ Guro</button>
+          <button className="tt-login-pill admin" onClick={() => go('screen-login-admin')}>🛡️ Admin</button>
         </div>
       </header>
 
@@ -381,15 +380,15 @@ export function LandingScreen({ go }) {
         <div>
           <strong>Quick Links</strong>
           <button onClick={() => selectPublicPage('home')}>Home</button>
-          <button onClick={() => selectPublicPage('modules')}>Modules</button>
-          <button onClick={() => selectPublicPage('about')}>About</button>
-          <button onClick={() => selectPublicPage('help')}>Help</button>
+          <button onClick={() => selectPublicPage('modules')}>Mga Modyul</button>
+          <button onClick={() => selectPublicPage('about')}>Tungkol</button>
+          <button onClick={() => selectPublicPage('help')}>Tulong</button>
         </div>
         <div>
           <strong>For Users</strong>
-          <button onClick={() => go('screen-login-student')}>Student Login</button>
-          <button onClick={() => go('screen-login-teacher')}>Teacher Login</button>
-          <button onClick={() => go('screen-login-admin')}>Admin Login</button>
+          <button onClick={() => go('screen-login-student')}>Mag-aaral</button>
+          <button onClick={() => go('screen-login-teacher')}>Guro</button>
+          <button onClick={() => go('screen-login-admin')}>Admin</button>
         </div>
         <div><strong>Connect with Us</strong><p className="tt-socials">● ▶ ✉</p></div>
       </footer>
