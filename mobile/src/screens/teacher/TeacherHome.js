@@ -490,6 +490,9 @@ export default function TeacherHome({ navigation }) {
   const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
   const [createdStudentAccount, setCreatedStudentAccount] = useState(null);
   const [quizFilter, setQuizFilter] = useState('All');
+  const [assessmentQuery, setAssessmentQuery] = useState('');
+  const [selectedAssessmentQuizId, setSelectedAssessmentQuizId] = useState('ALL');
+  const [showAllAssessmentRows, setShowAllAssessmentRows] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1575,43 +1578,199 @@ async function handleLogout() {
 
   function renderAssessment() {
     const summary = quizPerformance.summary || {};
+    const rawRows = Array.isArray(quizPerformance.rows) ? quizPerformance.rows : [];
+    const selectedRows = selectedAssessmentQuizId && selectedAssessmentQuizId !== 'ALL'
+      ? rawRows.filter((row) => String(row.quizId || '') === String(selectedAssessmentQuizId))
+      : rawRows;
+    const normalizedQuery = assessmentQuery.trim().toLowerCase();
+    const filteredRows = selectedRows.filter((row) => {
+      const matchesStatus = quizFilter === 'All' || String(row.status || '') === quizFilter;
+      const haystack = [
+        row.studentName,
+        row.quizTitle,
+        row.quizId,
+        row.section,
+        row.gradeLevel ? `grade ${row.gradeLevel}` : '',
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery));
+    });
+    const visibleRows = showAllAssessmentRows ? filteredRows : filteredRows.slice(0, 8);
+    const hiddenCount = Math.max(0, filteredRows.length - visibleRows.length);
+    const assessmentOptions = [
+      { value: 'ALL', label: 'All assessments' },
+      ...Array.from(
+        new Map(
+          rawRows
+            .filter((row) => row.quizId)
+            .map((row) => [String(row.quizId), row.quizTitle || row.quizId])
+        ).entries()
+      ).map(([value, label]) => ({ value, label })),
+    ];
+    const quizReadyLessons = activityCoverage.filter((lesson) => lesson.quizCount).length;
+    const totalQuestions = activityCoverage.reduce((total, lesson) => total + lesson.quizCount, 0);
+    const missingQuizLessons = Math.max(0, activityCoverage.length - quizReadyLessons);
+    const readiness = activityCoverage.length
+      ? Math.round((quizReadyLessons / activityCoverage.length) * 100)
+      : 0;
+    const proficientTotal = Number(summary.proficient || 0) + Number(summary.advanced || 0);
+
+    function scoreText(attempt) {
+      if (!attempt) return '—';
+      return `${attempt.percent ?? 0}%`;
+    }
+
+    function statusTone(status = '') {
+      const value = String(status).toLowerCase();
+      if (value.includes('advanced') || value.includes('proficient')) return 'good';
+      if (value.includes('developing')) return 'warn';
+      return 'bad';
+    }
+
+    function statusPillStyle(status = '') {
+      const tone = statusTone(status);
+      if (tone === 'good') return [styles.assessmentStatusPill, styles.assessmentStatusGood];
+      if (tone === 'warn') return [styles.assessmentStatusPill, styles.assessmentStatusWarn];
+      return [styles.assessmentStatusPill, styles.assessmentStatusBad];
+    }
+
+    function statusTextStyle(status = '') {
+      const tone = statusTone(status);
+      if (tone === 'good') return [styles.assessmentStatusText, styles.assessmentStatusGoodText];
+      if (tone === 'warn') return [styles.assessmentStatusText, styles.assessmentStatusWarnText];
+      return [styles.assessmentStatusText, styles.assessmentStatusBadText];
+    }
+
     return (
       <>
-        <View style={styles.statsGrid}>
+        <View style={styles.assessmentSummaryGrid}>
           {[
-            ['✅', activityCoverage.filter((lesson) => lesson.quizCount).length, 'Quiz Ready Lessons'],
-            ['❓', activityCoverage.reduce((total, lesson) => total + lesson.quizCount, 0), 'Total Questions'],
-            ['🎓', currentStudents.length || 0, 'Current Students'],
-            ['🎯', '75%', 'Passing Target'],
-          ].map(([icon, value, label]) => <SectionCard key={label} style={styles.statCard}><Text style={styles.statIcon}>{icon}</Text><Text style={styles.statValue}>{value}</Text><Text style={styles.muted}>{label}</Text></SectionCard>)}
+            ['✅', summary.total || rawRows.length || 0, 'Completed Assessments'],
+            ['📊', `${summary.averageBest || 0}%`, 'Average Score'],
+            ['🧭', summary.needsSupport || 0, 'Needs Support'],
+            ['🏅', proficientTotal, 'Proficient Students'],
+            ['🎯', `${readiness}%`, 'Quiz Readiness'],
+            ['❓', totalQuestions, 'Total Questions'],
+          ].map(([icon, value, label]) => (
+            <View key={label} style={styles.assessmentMetricCard}>
+              <Text style={styles.assessmentMetricIcon}>{icon}</Text>
+              <Text style={styles.assessmentMetricValue}>{value}</Text>
+              <Text style={styles.assessmentMetricLabel}>{label}</Text>
+            </View>
+          ))}
         </View>
+
         <SectionCard>
-          <Text style={styles.cardTitle}>Lesson to Quiz Checklist</Text>
+          <Text style={styles.cardTitle}>Assessment Coverage</Text>
+          <Text style={styles.muted}>
+            {quizReadyLessons} of {activityCoverage.length} lesson(s) have objective quiz evidence.
+            {missingQuizLessons ? ` ${missingQuizLessons} lesson(s) still need quiz items.` : ' All lessons are quiz-ready.'}
+          </Text>
           {activityCoverage.map((lesson) => (
             <View key={lesson.id} style={styles.softRow}>
               <Text style={styles.rowTitle}>{lesson.title}</Text>
-              <Text style={styles.muted}>Quiz {lesson.quizCount} • Writing {lesson.writingCount} • Speech {lesson.speechCount}</Text>
+              <Text style={styles.muted}>
+                {lesson.quizCount} quiz question(s) • {lesson.writingCount} writing • {lesson.speechCount} speech
+              </Text>
               {!lesson.quizCount && <Text style={styles.warning}>Missing quiz evidence</Text>}
             </View>
           ))}
+          {!activityCoverage.length && <Text style={styles.muted}>No lessons available for assessment coverage yet.</Text>}
         </SectionCard>
+
         <SectionCard>
-          <Text style={styles.cardTitle}>Student Quiz Attempts</Text>
-          <Text style={styles.muted}>{summary.total || 0} quiz records • {summary.averageBest || 0}% average best</Text>
+          <Text style={styles.cardTitle}>Student Assessment Results</Text>
+          <Text style={styles.muted}>
+            Monitor student assessment completion, review quiz scores, and identify learners who need support.
+          </Text>
+
+          <SelectMenu
+            label="Assessment"
+            value={selectedAssessmentQuizId}
+            options={assessmentOptions}
+            onSelect={(value) => {
+              setSelectedAssessmentQuizId(value);
+              setShowAllAssessmentRows(false);
+            }}
+          />
+
+          <TextInput
+            style={styles.assessmentSearchInput}
+            value={assessmentQuery}
+            onChangeText={(value) => {
+              setAssessmentQuery(value);
+              setShowAllAssessmentRows(false);
+            }}
+            placeholder="Search student or assessment..."
+            placeholderTextColor="#8aa39b"
+          />
+
           <SelectMenu
             label="Performance Filter"
             value={quizFilter}
             options={QUIZ_FILTERS.map((filter) => ({ value: filter, label: filter }))}
-            onSelect={setQuizFilter}
+            onSelect={(value) => {
+              setQuizFilter(value);
+              setShowAllAssessmentRows(false);
+            }}
           />
-          {quizRows.map((row) => (
-            <View key={row.key} style={styles.softRow}>
-              <Text style={styles.rowTitle}>{row.studentName} • {row.quizTitle}</Text>
-              <Text style={styles.muted}>Attempt 1: {row.attempt1?.percent ?? '—'}% • Attempt 2: {row.attempt2?.percent ?? '—'}%</Text>
-              <Text style={styles.statusText}>Best {row.bestPercent}% • {row.status}</Text>
+
+          <Text style={styles.assessmentCountText}>
+            Showing {visibleRows.length} of {filteredRows.length} assessment record{filteredRows.length === 1 ? '' : 's'}
+          </Text>
+
+          {visibleRows.map((row) => (
+            <View key={row.key || `${row.studentName}-${row.quizId}`} style={styles.assessmentResultRow}>
+              <View style={styles.assessmentResultHeader}>
+                <View style={styles.assessmentResultIdentity}>
+                  <Text style={styles.assessmentLearnerName}>{row.studentName || 'Student'}</Text>
+                  <Text style={styles.assessmentLessonTitle}>{row.quizTitle || 'Assessment'}</Text>
+                  <Text style={styles.muted}>
+                    Grade {row.gradeLevel || '—'}{row.section ? ` • Section ${row.section}` : ''}
+                  </Text>
+                </View>
+                <View style={statusPillStyle(row.status)}>
+                  <Text style={statusTextStyle(row.status)}>{row.status || 'Needs Support'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.assessmentMetaGrid}>
+                <View style={styles.assessmentMetaItem}>
+                  <Text style={styles.assessmentMetaLabel}>Attempt 1</Text>
+                  <Text style={styles.assessmentMetaValue}>{scoreText(row.attempt1)}</Text>
+                </View>
+                <View style={styles.assessmentMetaItem}>
+                  <Text style={styles.assessmentMetaLabel}>Attempt 2</Text>
+                  <Text style={styles.assessmentMetaValue}>{scoreText(row.attempt2)}</Text>
+                </View>
+                <View style={styles.assessmentMetaItem}>
+                  <Text style={styles.assessmentMetaLabel}>Best Score</Text>
+                  <Text style={styles.assessmentMetaValue}>{row.bestPercent || 0}%</Text>
+                </View>
+              </View>
             </View>
           ))}
-          {!quizRows.length && <Text style={styles.muted}>No quiz attempts match this filter.</Text>}
+
+          {!visibleRows.length && (
+            <View style={styles.assessmentEmptyState}>
+              <Text style={styles.assessmentEmptyIcon}>📝</Text>
+              <Text style={styles.rowTitle}>No matching assessment records.</Text>
+              <Text style={styles.muted}>Try another search or wait for students to complete their assessments.</Text>
+            </View>
+          )}
+
+          {filteredRows.length > 8 && (
+            <Pressable
+              style={styles.assessmentShowMoreButton}
+              onPress={() => setShowAllAssessmentRows((current) => !current)}
+            >
+              <Text style={styles.assessmentShowMoreText}>
+                {showAllAssessmentRows ? 'Show Less' : `Show More (${hiddenCount} more)`}
+              </Text>
+            </Pressable>
+          )}
         </SectionCard>
       </>
     );
@@ -2096,98 +2255,292 @@ async function handleLogout() {
     );
   }
 
-  function renderReviews() {
-    const writingItems = reviewQueue.writing || [];
-    const speechItems = reviewQueue.speech || [];
-    const buckets = buildReviewStudentBuckets(writingItems, speechItems);
-    const allCount = writingItems.length + speechItems.length;
-    const selectedBucket = buckets.find((bucket) => bucket.key === selectedReviewStudentKey);
-    const hasSelectedStudent = selectedReviewStudentKey && selectedReviewStudentKey !== 'all';
-    const hasSelectedAll = selectedReviewStudentKey === 'all';
-    const activeWriting = hasSelectedAll ? writingItems : hasSelectedStudent ? selectedBucket?.writing || [] : [];
-    const activeSpeech = hasSelectedAll ? speechItems : hasSelectedStudent ? selectedBucket?.speech || [] : [];
+  function renderReview() {
+    const writingReviewRows = Array.isArray(reviewQueue?.writing) ? reviewQueue.writing : [];
+    const pendingWritingReviewRows = writingReviewRows.filter((item) => (
+      String(item.reviewStatus || 'pending').toLowerCase() === 'pending' &&
+      Boolean(item.reviewEligible) &&
+      Number(item.student?.gradeLevel || item.lesson?.gradeLevel || 0) >= 3
+    ));
+    const gradedWritingReviewRows = writingReviewRows
+      .filter((item) => String(item.reviewStatus || '').toLowerCase() === 'graded')
+      .slice(0, 8);
+    const speechReviewRows = (Array.isArray(reviewQueue?.speech) ? reviewQueue.speech : []).slice(0, 12);
+
+    function reviewGrade(item) {
+      return item.student?.gradeLevel || item.lesson?.gradeLevel || '-';
+    }
+
+    function reviewSection(item) {
+      return item.student?.section || 'No section';
+    }
+
+    function reviewSubject(item) {
+      return item.lesson?.subject || 'Subject';
+    }
+
+    function reviewLessonTitle(item) {
+      return item.lesson?.title || 'Lesson';
+    }
+
+    function reviewStudentName(item) {
+      return item.student?.name || item.studentName || 'Student';
+    }
+
+    function renderReviewIdentity(item, statusLabel = '') {
+      return (
+        <View style={styles.reviewIdentityCard}>
+          <View style={styles.reviewAvatar}>
+            <Text style={styles.reviewAvatarText}>{String(reviewStudentName(item)).charAt(0).toUpperCase() || 'S'}</Text>
+          </View>
+          <View style={styles.reviewIdentityContent}>
+            <Text style={styles.reviewStudentName}>{reviewStudentName(item)}</Text>
+            <Text style={styles.reviewStudentMeta}>
+              Grade {reviewGrade(item)} • {reviewSection(item)} • {reviewSubject(item)}
+            </Text>
+            <Text style={styles.reviewLessonLine}>Lesson: {reviewLessonTitle(item)}</Text>
+          </View>
+          {statusLabel ? (
+            <View style={styles.reviewMiniPill}>
+              <Text style={styles.reviewMiniPillText}>{statusLabel}</Text>
+            </View>
+          ) : null}
+        </View>
+      );
+    }
+
+    async function saveWritingGrade(item) {
+      const submissionId = getReviewSubmissionId(item);
+      if (!submissionId || !gradeWritingSubmission) return;
+
+      const key = getReviewDraftKey('writing', item);
+      const draft = getReviewDraft('writing', item);
+      const score = Number(draft.score || 0);
+      const feedback = String(draft.feedback || '').trim();
+
+      if (!Number.isInteger(score) || score < 1 || score > 10) {
+        Alert.alert('Writing Review', 'Please select a score from 1 to 10.');
+        return;
+      }
+
+      setReviewDrafts((current) => ({
+        ...current,
+        [key]: {
+          ...(current[key] || draft),
+          score: String(score),
+          feedback,
+          saving: true,
+        },
+      }));
+
+      try {
+        await gradeWritingSubmission(submissionId, { score, feedback });
+        Alert.alert('Writing Review', 'Grade saved successfully.');
+        await load();
+      } catch (err) {
+        Alert.alert('Writing Review', err.message || 'Unable to save writing grade.');
+      } finally {
+        setReviewDrafts((current) => ({
+          ...current,
+          [key]: {
+            ...(current[key] || draft),
+            saving: false,
+          },
+        }));
+      }
+    }
 
     return (
       <>
-        <View style={styles.statsGrid}>
+        <View style={styles.reviewSummaryGrid}>
           {[
-            ['📝', allCount, 'Total Reviews'],
-            ['✍️', writingItems.length, 'Writing'],
-            ['🎤', speechItems.length, 'Speech'],
-            ['👥', buckets.length, 'Students'],
+            ['✍️', pendingWritingReviewRows.length, 'Pending Writing'],
+            ['⭐', gradedWritingReviewRows.length, 'Graded Writing'],
+            ['🎙️', speechReviewRows.length, 'Speech Attempts'],
           ].map(([icon, value, label]) => (
-            <SectionCard key={label} style={styles.statCard}>
-              <Text style={styles.statIcon}>{icon}</Text>
-              <Text style={styles.statValue}>{value}</Text>
-              <Text style={styles.muted}>{label}</Text>
-            </SectionCard>
+            <View key={label} style={styles.reviewMetricCard}>
+              <Text style={styles.reviewMetricIcon}>{icon}</Text>
+              <Text style={styles.reviewMetricValue}>{value}</Text>
+              <Text style={styles.reviewMetricLabel}>{label}</Text>
+            </View>
           ))}
         </View>
 
         <SectionCard>
-          <Text style={styles.cardTitle}>Student Submissions</Text>
-          <Text style={styles.muted}>Choose a learner to inspect their writing and speech submissions.</Text>
+          <Text style={styles.cardTitle}>Student Submission Review</Text>
+          <Text style={styles.muted}>
+            Grade 3–6 writing submissions and view speech attempts from your assigned learners.
+          </Text>
+        </SectionCard>
 
-          <TouchableOpacity
-            style={[styles.canvasStudentButton, selectedReviewStudentKey === 'all' && styles.canvasStudentButtonActive]}
-            onPress={() => setSelectedReviewStudentKey('all')}
-          >
-            <View style={styles.flex}>
-              <Text style={[styles.canvasStudentName, selectedReviewStudentKey === 'all' && styles.canvasStudentNameActive]}>
-                All students
-              </Text>
-              <Text style={[styles.canvasStudentMeta, selectedReviewStudentKey === 'all' && styles.canvasStudentMetaActive]}>
-                Optional: show the full class queue
+        <SectionCard>
+          <View style={styles.reviewSectionHeader}>
+            <View style={styles.flex1}>
+              <Text style={styles.reviewSectionLabel}>Writing Submissions</Text>
+              <Text style={styles.cardTitle}>Writing Submissions for Grading</Text>
+              <Text style={styles.muted}>
+                Only Grade 3–6 pending writing submissions can be graded here. The score from 1–10 becomes the XP earned.
               </Text>
             </View>
-
-            <View style={styles.canvasStudentCount}>
-              <Text style={styles.canvasStudentCountText}>{allCount}</Text>
+            <View style={styles.reviewMiniPill}>
+              <Text style={styles.reviewMiniPillText}>✍️ {pendingWritingReviewRows.length} pending</Text>
             </View>
-          </TouchableOpacity>
+          </View>
 
-          {buckets.map(renderCanvasStudentButton)}
-          {!buckets.length && (
-            <View style={styles.canvasEmptyState}>
-              <Text style={styles.canvasEmptyTitle}>No submissions yet</Text>
-              <Text style={styles.muted}>Writing and speech submissions will appear here once students submit work.</Text>
+          {pendingWritingReviewRows.length ? pendingWritingReviewRows.map((item) => {
+            const draft = getReviewDraft('writing', item);
+            const isSaving = Boolean(draft.saving);
+            return (
+              <View key={`writing-review-${getReviewSubmissionId(item)}`} style={styles.reviewCard}>
+                {renderReviewIdentity(item, 'Pending Grade')}
+
+                <View style={styles.reviewEvidenceGrid}>
+                  <View style={styles.reviewEvidenceItem}>
+                    <Text style={styles.reviewEvidenceLabel}>Submitted Date</Text>
+                    <Text style={styles.reviewEvidenceValue}>{formatReviewDate(item.submittedAt)}</Text>
+                  </View>
+                  <View style={styles.reviewEvidenceItem}>
+                    <Text style={styles.reviewEvidenceLabel}>XP Rule</Text>
+                    <Text style={styles.reviewEvidenceValue}>Score 1–10 = +1 to +10 XP</Text>
+                  </View>
+                </View>
+
+                <View style={styles.reviewContentBlock}>
+                  <Text style={styles.reviewBlockLabel}>Writing Prompt</Text>
+                  <Text style={styles.reviewBlockText}>{item.task?.prompt || 'No prompt available.'}</Text>
+                </View>
+
+                <View style={styles.reviewContentBlock}>
+                  <Text style={styles.reviewBlockLabel}>Student Answer</Text>
+                  <Text style={styles.reviewBlockText}>{item.content || 'No answer submitted.'}</Text>
+                </View>
+
+                <SelectMenu
+                  label="Score"
+                  value={draft.score || ''}
+                  options={[
+                    { value: '', label: 'Select score from 1 to 10' },
+                    ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => ({
+                      value: String(score),
+                      label: `${score}/10 → +${score} XP`,
+                    })),
+                  ]}
+                  onSelect={(value) => updateReviewDraft('writing', item, 'score', value)}
+                />
+
+                <Text style={styles.reviewInputLabel}>Teacher Feedback</Text>
+                <TextInput
+                  style={[styles.reviewTextInput, styles.reviewFeedbackInput]}
+                  value={draft.feedback || ''}
+                  onChangeText={(value) => updateReviewDraft('writing', item, 'feedback', value)}
+                  placeholder="Write feedback for the student..."
+                  placeholderTextColor="#8aa39b"
+                  multiline
+                />
+
+                <TouchableOpacity
+                  style={[styles.primaryAction, isSaving && styles.disabledAction]}
+                  disabled={isSaving}
+                  onPress={() => saveWritingGrade(item)}
+                >
+                  <Text style={styles.primaryActionText}>{isSaving ? 'Saving Grade...' : 'Save Grade'}</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }) : (
+            <View style={styles.reviewEmptyPanel}>
+              <Text style={styles.reviewEmptyIcon}>✅</Text>
+              <Text style={styles.rowTitle}>No pending writing submissions.</Text>
+              <Text style={styles.muted}>Grade 3–6 writing submissions waiting for grades will appear here.</Text>
             </View>
           )}
         </SectionCard>
 
         <SectionCard>
-          <View style={styles.canvasSectionHeader}>
-            <View style={styles.flex}>
-              <Text style={styles.cardTitle}>
-                {hasSelectedAll ? 'All Submission Reports' : hasSelectedStudent ? `${selectedBucket?.name || 'Student'} Reports` : 'Select a Student'}
-              </Text>
+          <View style={styles.reviewSectionHeader}>
+            <View style={styles.flex1}>
+              <Text style={styles.reviewSectionLabel}>Speech Review</Text>
+              <Text style={styles.cardTitle}>Speech Attempts</Text>
               <Text style={styles.muted}>
-                {hasSelectedAll
-                  ? 'Review every submission in the current class queue.'
-                  : hasSelectedStudent
-                    ? 'Review the selected learner’s submitted work.'
-                    : 'Choose a learner above to view writing and speech submissions.'}
+                View student speech attempts, transcript, target text, and recording if available.
               </Text>
+            </View>
+            <View style={styles.reviewMiniPill}>
+              <Text style={styles.reviewMiniPillText}>🎙️ {speechReviewRows.length} attempts</Text>
             </View>
           </View>
 
-          <Text style={styles.canvasSectionLabel}>Writing submissions</Text>
-          {activeWriting.length ? (
-            activeWriting.map((item) => renderCanvasSubmissionCard(item, 'writing'))
-          ) : (
-            <View style={styles.canvasEmptyState}>
-              <Text style={styles.canvasEmptyTitle}>No writing submissions</Text>
-              <Text style={styles.muted}>No written work for this selection.</Text>
+          {speechReviewRows.length ? speechReviewRows.map((item) => (
+            <View key={`speech-review-${getReviewSubmissionId(item)}`} style={styles.reviewCard}>
+              {renderReviewIdentity(item, 'View Only')}
+
+              <View style={styles.reviewEvidenceGrid}>
+                <View style={styles.reviewEvidenceItem}>
+                  <Text style={styles.reviewEvidenceLabel}>Submitted Date</Text>
+                  <Text style={styles.reviewEvidenceValue}>{formatReviewDate(item.submittedAt)}</Text>
+                </View>
+                <View style={styles.reviewEvidenceItem}>
+                  <Text style={styles.reviewEvidenceLabel}>Speech Score</Text>
+                  <Text style={styles.reviewEvidenceValue}>{item.score ?? 'Not scored'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.reviewContentBlock}>
+                <Text style={styles.reviewBlockLabel}>Target Text</Text>
+                <Text style={styles.reviewBlockText}>{item.task?.targetText || 'No target text available.'}</Text>
+              </View>
+
+              <View style={styles.reviewContentBlock}>
+                <Text style={styles.reviewBlockLabel}>Student Transcript</Text>
+                <Text style={styles.reviewBlockText}>{item.transcript || 'No transcript available.'}</Text>
+              </View>
+
+              {item.audioUrl ? (
+                <TouchableOpacity
+                  style={styles.reviewFileButton}
+                  onPress={() => Linking.openURL(item.audioUrl).catch(() => Alert.alert('Speech Review', 'Unable to open recording link.'))}
+                >
+                  <Text style={styles.reviewFileButtonText}>▶ Play Recording</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.muted}>No recording link available.</Text>
+              )}
+            </View>
+          )) : (
+            <View style={styles.reviewEmptyPanel}>
+              <Text style={styles.reviewEmptyIcon}>🎙️</Text>
+              <Text style={styles.rowTitle}>No speech attempts yet.</Text>
+              <Text style={styles.muted}>Speech attempts from assigned learners will appear here.</Text>
             </View>
           )}
+        </SectionCard>
 
-          <Text style={styles.canvasSectionLabel}>Speech attempts</Text>
-          {activeSpeech.length ? (
-            activeSpeech.map((item) => renderCanvasSubmissionCard(item, 'speech'))
-          ) : (
-            <View style={styles.canvasEmptyState}>
-              <Text style={styles.canvasEmptyTitle}>No speech attempts</Text>
-              <Text style={styles.muted}>No oral submissions for this selection.</Text>
+        <SectionCard>
+          <View style={styles.reviewSectionHeader}>
+            <View style={styles.flex1}>
+              <Text style={styles.reviewSectionLabel}>Recently Graded</Text>
+              <Text style={styles.cardTitle}>Recently Graded Writing</Text>
+            </View>
+            <View style={styles.reviewMiniPill}>
+              <Text style={styles.reviewMiniPillText}>⭐ {gradedWritingReviewRows.length} graded</Text>
+            </View>
+          </View>
+
+          {gradedWritingReviewRows.length ? gradedWritingReviewRows.map((item) => (
+            <View key={`graded-writing-${getReviewSubmissionId(item)}`} style={styles.reviewCardCompact}>
+              {renderReviewIdentity(item, `Score ${item.score ?? '-'} / 10`)}
+              <View style={styles.reviewXpPill}>
+                <Text style={styles.reviewXpPillText}>+{item.xpPreview ?? item.score ?? 0} XP</Text>
+              </View>
+              <Text style={styles.reviewFeedbackText}>
+                Feedback: {item.feedback || item.teacherFeedback || 'No feedback added.'}
+              </Text>
+            </View>
+          )) : (
+            <View style={styles.reviewEmptyPanel}>
+              <Text style={styles.reviewEmptyIcon}>⭐</Text>
+              <Text style={styles.rowTitle}>No graded writing yet.</Text>
+              <Text style={styles.muted}>Saved grades will appear here after teachers review writing submissions.</Text>
             </View>
           )}
         </SectionCard>
@@ -2443,7 +2796,7 @@ async function handleLogout() {
         {section === 'lessons' && renderBuilder()}
         {section === 'groups' && renderGroups()}
         {section === 'assessment' && renderAssessment()}
-        {section === 'review' && renderReviews()}
+        {section === 'review' && renderReview()}
         {section === 'students' && renderStudents()}
         {section === 'reports' && renderReports()}
 
@@ -3016,4 +3369,408 @@ const styles = StyleSheet.create({
   progressTrack: { height: 7, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 7 },
   progressFill: { height: '100%', backgroundColor: '#22C55E', borderRadius: 99 },
   error: { color: '#B91C1C', fontWeight: '800' },
+  assessmentSummaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 14,
+  },
+  assessmentMetricCard: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#d8e7da',
+    shadowColor: '#125334',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  assessmentMetricIcon: {
+    fontSize: 22,
+    marginBottom: 8,
+  },
+  assessmentMetricValue: {
+    color: '#125334',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  assessmentMetricLabel: {
+    color: '#587066',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  assessmentSearchInput: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#d8e7da',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    color: '#14223b',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  assessmentCountText: {
+    color: '#587066',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  assessmentResultRow: {
+    backgroundColor: '#f8fbf8',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#dcefe3',
+    padding: 14,
+    marginTop: 12,
+  },
+  assessmentResultHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  assessmentResultIdentity: {
+    flex: 1,
+  },
+  assessmentLearnerName: {
+    color: '#14223b',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  assessmentLessonTitle: {
+    color: '#125334',
+    fontSize: 13,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  assessmentStatusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+  },
+  assessmentStatusText: {
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  assessmentStatusGood: {
+    backgroundColor: '#dcfce7',
+    borderColor: '#86efac',
+  },
+  assessmentStatusWarn: {
+    backgroundColor: '#fef9c3',
+    borderColor: '#fde68a',
+  },
+  assessmentStatusBad: {
+    backgroundColor: '#fee2e2',
+    borderColor: '#fecaca',
+  },
+  assessmentStatusGoodText: {
+    color: '#166534',
+  },
+  assessmentStatusWarnText: {
+    color: '#854d0e',
+  },
+  assessmentStatusBadText: {
+    color: '#991b1b',
+  },
+  assessmentMetaGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  assessmentMetaItem: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#e5efe8',
+  },
+  assessmentMetaLabel: {
+    color: '#6b7f76',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  assessmentMetaValue: {
+    color: '#14223b',
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  assessmentEmptyState: {
+    alignItems: 'center',
+    backgroundColor: '#f8fbf8',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#dcefe3',
+    padding: 18,
+    marginTop: 12,
+  },
+  assessmentEmptyIcon: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  assessmentShowMoreButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#125334',
+    backgroundColor: '#eef8f1',
+    marginTop: 14,
+  },
+  assessmentShowMoreText: {
+    color: '#125334',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  flex1: {
+    flex: 1,
+  },
+  reviewSummaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 14,
+  },
+  reviewMetricCard: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#d8e7da',
+    shadowColor: '#125334',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  reviewMetricIcon: {
+    fontSize: 22,
+    marginBottom: 8,
+  },
+  reviewMetricValue: {
+    color: '#125334',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  reviewMetricLabel: {
+    color: '#587066',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  reviewSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  reviewSectionLabel: {
+    color: '#587066',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  reviewMiniPill: {
+    backgroundColor: '#eef8f1',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#c7e6d1',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
+  reviewMiniPillText: {
+    color: '#125334',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  reviewCard: {
+    backgroundColor: '#f8fbf8',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#dcefe3',
+    padding: 14,
+    marginTop: 12,
+  },
+  reviewCardCompact: {
+    backgroundColor: '#f8fbf8',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#dcefe3',
+    padding: 14,
+    marginTop: 12,
+  },
+  reviewIdentityCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 12,
+  },
+  reviewAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#125334',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewAvatarText: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 16,
+  },
+  reviewIdentityContent: {
+    flex: 1,
+  },
+  reviewStudentName: {
+    color: '#14223b',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  reviewStudentMeta: {
+    color: '#587066',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  reviewLessonLine: {
+    color: '#125334',
+    fontSize: 12,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  reviewEvidenceGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  reviewEvidenceItem: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#e5efe8',
+  },
+  reviewEvidenceLabel: {
+    color: '#6b7f76',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  reviewEvidenceValue: {
+    color: '#14223b',
+    fontSize: 13,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  reviewContentBlock: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e5efe8',
+    padding: 12,
+    marginBottom: 12,
+  },
+  reviewBlockLabel: {
+    color: '#587066',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+  reviewBlockText: {
+    color: '#14223b',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+  reviewInputLabel: {
+    color: '#587066',
+    fontSize: 12,
+    fontWeight: '900',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  reviewTextInput: {
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#d8e7da',
+    backgroundColor: '#ffffff',
+    color: '#14223b',
+    fontSize: 14,
+    fontWeight: '700',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  reviewFeedbackInput: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  reviewFileButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#eef8f1',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#125334',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  reviewFileButtonText: {
+    color: '#125334',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  reviewXpPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#dcfce7',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 8,
+  },
+  reviewXpPillText: {
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  reviewFeedbackText: {
+    color: '#587066',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 10,
+  },
+  reviewEmptyPanel: {
+    alignItems: 'center',
+    backgroundColor: '#f8fbf8',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#dcefe3',
+    padding: 18,
+    marginTop: 12,
+  },
+  reviewEmptyIcon: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+
 });
