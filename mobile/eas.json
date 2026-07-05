@@ -22,6 +22,12 @@
       "android": {
         "buildType": "apk"
       }
+    },
+    "view": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {

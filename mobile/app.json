@@ -30,7 +30,13 @@
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "package": "com.anonymous.tuklastalino",
-      "softwareKeyboardLayoutMode": "pan"
-    }
+      "softwareKeyboardLayoutMode": "pan",
+      "icon": "./assets/tuklas-talino-icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/tuklas-talino-icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "icon": "./assets/tuklas-talino-icon.png"
   }
 }
