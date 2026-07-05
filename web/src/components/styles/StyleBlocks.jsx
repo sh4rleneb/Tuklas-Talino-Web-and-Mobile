@@ -1,6 +1,7 @@
 import React from 'react';
 
 const TUKLAS_KAAGAPAY_BADGE_IMAGE = '/badges/kaagapay-sa-gawain.png';
+const TUKLAS_BITUIN_BADGE_IMAGE = '/badges/bituin-sa-pagsagot.png';
 
 function isTuklasKaagapayBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
@@ -8,7 +9,23 @@ function isTuklasKaagapayBadge(badge) {
   return name === 'kaagapay sa gawain' || code === 'group_1' || code.includes('kaagapay');
 }
 
+function isTuklasBituinBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'bituin sa pagsagot' || code === 'writing_3' || code.includes('writing') || code.includes('sagot');
+}
+
 function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
+  if (isTuklasBituinBadge(badge)) {
+    return (
+      <img
+        src={TUKLAS_BITUIN_BADGE_IMAGE}
+        alt={badge?.name || 'Bituin sa Pagsagot'}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
   if (isTuklasKaagapayBadge(badge)) {
     return (
       <img

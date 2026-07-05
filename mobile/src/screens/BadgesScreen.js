@@ -8,6 +8,7 @@ import Card from '../components/Card';
 import { colors } from '../styles/theme';
 
 const KAAGAPAY_BADGE_IMAGE = require('../../assets/badges/kaagapay-sa-gawain.png');
+const BITUIN_BADGE_IMAGE = require('../../assets/badges/bituin-sa-pagsagot.png');
 
 function isKaagapayBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
@@ -15,7 +16,23 @@ function isKaagapayBadge(badge) {
   return name === 'kaagapay sa gawain' || code.includes('kaagapay');
 }
 
+function isBituinBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'bituin sa pagsagot' || code === 'writing_3' || code.includes('writing') || code.includes('sagot');
+}
+
 function BadgeVisual({ badge }) {
+  if (isBituinBadge(badge)) {
+    return (
+      <Image
+        source={BITUIN_BADGE_IMAGE}
+        style={styles.badgeImage}
+        resizeMode="contain"
+      />
+    );
+  }
+
   if (isKaagapayBadge(badge)) {
     return (
       <Image

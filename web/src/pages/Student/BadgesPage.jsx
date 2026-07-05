@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 
 const TUKLAS_KAAGAPAY_BADGE_IMAGE = '/badges/kaagapay-sa-gawain.png';
+const TUKLAS_BITUIN_BADGE_IMAGE = '/badges/bituin-sa-pagsagot.png';
 
 function isTuklasKaagapayBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
@@ -9,7 +10,23 @@ function isTuklasKaagapayBadge(badge) {
   return name === 'kaagapay sa gawain' || code === 'group_1' || code.includes('kaagapay');
 }
 
+function isTuklasBituinBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'bituin sa pagsagot' || code === 'writing_3' || code.includes('writing') || code.includes('sagot');
+}
+
 function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
+  if (isTuklasBituinBadge(badge)) {
+    return (
+      <img
+        src={TUKLAS_BITUIN_BADGE_IMAGE}
+        alt={badge?.name || 'Bituin sa Pagsagot'}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
   if (isTuklasKaagapayBadge(badge)) {
     return (
       <img
@@ -25,6 +42,7 @@ function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
 
 
 const KAAGAPAY_BADGE_IMAGE = '/badges/kaagapay-sa-gawain.png';
+const BITUIN_BADGE_IMAGE = '/badges/bituin-sa-pagsagot.png';
 
 function isKaagapayBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
@@ -32,7 +50,23 @@ function isKaagapayBadge(badge) {
   return name === 'kaagapay sa gawain' || code.includes('kaagapay');
 }
 
+function isBituinBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'bituin sa pagsagot' || code === 'writing_3' || code.includes('writing') || code.includes('sagot');
+}
+
 function BadgeVisual({ badge }) {
+  if (isBituinBadge(badge)) {
+    return (
+      <img
+        src={BITUIN_BADGE_IMAGE}
+        alt={badge?.name || 'Bituin sa Pagsagot'}
+        style={{ width: 56, height: 56, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
   if (isKaagapayBadge(badge)) {
     return (
       <img
