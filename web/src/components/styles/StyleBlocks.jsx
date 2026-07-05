@@ -1623,7 +1623,7 @@ export function EarlyStudentSubpageStyles() {
         line-height: 1;
       }
 
-      /* Grade 1-2 shared Kid Curious UI for Lessons, Missions, Groups, Badges, and Profile. */
+      /* Grade 1-2 shared Kid Curious UI for Lessons, Mga Misyon, Groups, Badges, and Profile. */
       .g12-page {
         background:
           radial-gradient(circle at 14% 18%, rgba(255, 245, 207, 0.95), transparent 24%),
@@ -5278,7 +5278,7 @@ export function MissionStyles() {
       }
 
 
-      /* Grade 1-2 Missions and game screen balanced font sizing. */
+      /* Grade 1-2 Mga Misyon and game screen balanced font sizing. */
       .missions-wrap.early .missions-section,
       .missions-wrap.early .missions-badge-card,
       .missions-wrap.early .missions-stat-card,

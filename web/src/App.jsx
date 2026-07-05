@@ -389,7 +389,7 @@ export default function App() {
   const [selectedAvatar, setSelectedAvatar] = useState('🦊');
   const [studentDash, setStudentDash] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(null);
-  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [selectedPagsusulit, setSelectedPagsusulit] = useState(null);
   const [quizResult, setQuizResult] = useState(null);
   const [quizAttempts, setQuizAttempts] = useState({});
   const [selectedMissionGameId, setSelectedMissionGameId] = useState('word-match');
@@ -516,12 +516,12 @@ useEffect(() => {
       payload.selectedLessonId = selectedLesson.id;
     }
 
-    if (!['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedQuizId === undefined) {
-      payload.selectedQuizId = null;
+    if (!['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedPagsusulitId === undefined) {
+      payload.selectedPagsusulitId = null;
     }
 
-    if (['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedQuizId === undefined && selectedQuiz?.id) {
-      payload.selectedQuizId = selectedQuiz.id;
+    if (['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedPagsusulitId === undefined && selectedPagsusulit?.id) {
+      payload.selectedPagsusulitId = selectedPagsusulit.id;
     }
 
     if (id !== 'screen-stu-mission-play' && extra.selectedMissionGameId === undefined) {
@@ -547,11 +547,11 @@ useEffect(() => {
     rememberStudentScreen(screen);
   }, [subjectFilter]);
 
-  function getStudentQuizzesForRestore() {
+  function getStudentPagsusulitzesForRestore() {
     const quizzes = [];
 
     try {
-      quizzes.push(...asArray(buildStudentQuizzes(studentDash)));
+      quizzes.push(...asArray(buildStudentPagsusulitzes(studentDash)));
     } catch {
       // If quiz building fails for any reason, fallback sources below still keep the app safe.
     }
@@ -570,11 +570,11 @@ useEffect(() => {
     return Array.from(unique.values());
   }
 
-  function findStudentQuizForRestore(quizId) {
+  function findStudentPagsusulitForRestore(quizId) {
     const targetId = String(quizId || '');
     if (!targetId) return null;
 
-    return getStudentQuizzesForRestore().find(quiz =>
+    return getStudentPagsusulitzesForRestore().find(quiz =>
       String(quiz?.id || quiz?.quizId || '') === targetId
     ) || null;
   }
@@ -582,8 +582,8 @@ useEffect(() => {
   function getLatestQuizAttemptForRestore(quiz) {
     if (!quiz?.id) return null;
 
-    const attemptsByQuiz = studentDash?.quizAttempts || quizAttempts || {};
-    const attempts = asArray(attemptsByQuiz?.[quiz.id]);
+    const attemptsByPagsusulit = studentDash?.quizAttempts || quizAttempts || {};
+    const attempts = asArray(attemptsByPagsusulit?.[quiz.id]);
 
     const highestAttemptNo = Math.max(
       0,
@@ -632,7 +632,7 @@ useEffect(() => {
       saveStudentNavigationState({
         screen: 'screen-lessons',
         selectedLessonId: null,
-        selectedQuizId: null,
+        selectedPagsusulitId: null,
         selectedMissionGameId: null,
         subjectFilter: saved.subjectFilter || subjectFilter
       });
@@ -640,15 +640,15 @@ useEffect(() => {
     }
 
     if (saved.screen === 'screen-stu-quiz-play') {
-      const quiz = findStudentQuizForRestore(saved.selectedQuizId);
+      const quiz = findStudentPagsusulitForRestore(saved.selectedPagsusulitId);
 
       if (quiz) {
-        setSelectedQuiz(quiz);
+        setSelectedPagsusulit(quiz);
         setQuizResult(null);
         setScreen('screen-stu-quiz-play');
         saveStudentNavigationState({
           screen: 'screen-stu-quiz-play',
-          selectedQuizId: quiz.id,
+          selectedPagsusulitId: quiz.id,
           selectedLessonId: null,
           selectedMissionGameId: null,
           subjectFilter: saved.subjectFilter || subjectFilter
@@ -659,7 +659,7 @@ useEffect(() => {
       setScreen('screen-stu-quizzes');
       saveStudentNavigationState({
         screen: 'screen-stu-quizzes',
-        selectedQuizId: null,
+        selectedPagsusulitId: null,
         selectedLessonId: null,
         selectedMissionGameId: null,
         subjectFilter: saved.subjectFilter || subjectFilter
@@ -668,16 +668,16 @@ useEffect(() => {
     }
 
     if (saved.screen === 'screen-stu-quiz-result') {
-      const quiz = findStudentQuizForRestore(saved.selectedQuizId);
+      const quiz = findStudentPagsusulitForRestore(saved.selectedPagsusulitId);
       const restoredResult = quiz ? getLatestQuizAttemptForRestore(quiz) : null;
 
       if (quiz && restoredResult) {
-        setSelectedQuiz(quiz);
+        setSelectedPagsusulit(quiz);
         setQuizResult(restoredResult);
         setScreen('screen-stu-quiz-result');
         saveStudentNavigationState({
           screen: 'screen-stu-quiz-result',
-          selectedQuizId: quiz.id,
+          selectedPagsusulitId: quiz.id,
           selectedLessonId: null,
           selectedMissionGameId: null,
           subjectFilter: saved.subjectFilter || subjectFilter
@@ -688,7 +688,7 @@ useEffect(() => {
       setScreen('screen-stu-quizzes');
       saveStudentNavigationState({
         screen: 'screen-stu-quizzes',
-        selectedQuizId: null,
+        selectedPagsusulitId: null,
         selectedLessonId: null,
         selectedMissionGameId: null,
         subjectFilter: saved.subjectFilter || subjectFilter
@@ -704,7 +704,7 @@ useEffect(() => {
           screen: 'screen-stu-mission-play',
           selectedMissionGameId: saved.selectedMissionGameId,
           selectedLessonId: null,
-          selectedQuizId: null,
+          selectedPagsusulitId: null,
           subjectFilter: saved.subjectFilter || subjectFilter
         });
         return;
@@ -715,7 +715,7 @@ useEffect(() => {
         screen: 'screen-stu-missions',
         selectedMissionGameId: null,
         selectedLessonId: null,
-        selectedQuizId: null,
+        selectedPagsusulitId: null,
         subjectFilter: saved.subjectFilter || subjectFilter
       });
       return;
@@ -744,7 +744,7 @@ useEffect(() => {
     restoredStudentNavigationRef.current = false;
     setStudentDash(null);
     setSelectedLesson(null);
-    setSelectedQuiz(null);
+    setSelectedPagsusulit(null);
     setQuizResult(null);
     setQuizAttempts({});
     setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [], assignedClasses: [] });
@@ -925,12 +925,12 @@ if (role === 'admin') {
 
   function openQuiz(quiz) {
     if (!quiz) return;
-    setSelectedQuiz(quiz);
+    setSelectedPagsusulit(quiz);
     setQuizResult(null);
     go('screen-stu-quiz-play');
     saveStudentNavigationState({
       screen: 'screen-stu-quiz-play',
-      selectedQuizId: quiz.id,
+      selectedPagsusulitId: quiz.id,
       selectedLessonId: null,
       selectedMissionGameId: null,
       subjectFilter
@@ -955,7 +955,7 @@ if (role === 'admin') {
       return;
     }
 
-    setSelectedQuiz(quiz);
+    setSelectedPagsusulit(quiz);
     setQuizResult({
       ...latestAttempt,
       attemptHistory: attempts,
@@ -965,14 +965,14 @@ if (role === 'admin') {
     go('screen-stu-quiz-result');
     saveStudentNavigationState({
       screen: 'screen-stu-quiz-result',
-      selectedQuizId: quiz?.id || selectedQuiz?.id || null,
+      selectedPagsusulitId: quiz?.id || selectedPagsusulit?.id || null,
       selectedLessonId: null,
       selectedMissionGameId: null,
       subjectFilter
     });
   }
 
-  async function submitQuiz(quiz, answers) {
+  async function submitPagsusulit(quiz, answers) {
     if (!quiz) return null;
 
     const maxQuizAttempts = 2;
@@ -994,7 +994,7 @@ if (role === 'admin') {
       go('screen-stu-quiz-result');
     saveStudentNavigationState({
       screen: 'screen-stu-quiz-result',
-      selectedQuizId: quiz?.id || selectedQuiz?.id || null,
+      selectedPagsusulitId: quiz?.id || selectedPagsusulit?.id || null,
       selectedLessonId: null,
       selectedMissionGameId: null,
       subjectFilter
@@ -1027,7 +1027,7 @@ if (role === 'admin') {
     go('screen-stu-quiz-result');
     saveStudentNavigationState({
       screen: 'screen-stu-quiz-result',
-      selectedQuizId: quiz?.id || selectedQuiz?.id || null,
+      selectedPagsusulitId: quiz?.id || selectedPagsusulit?.id || null,
       selectedLessonId: null,
       selectedMissionGameId: null,
       subjectFilter
@@ -1058,10 +1058,10 @@ if (role === 'admin') {
     })
       .then((data) => {
         const saved = data?.quizResult || {};
-        const backendAttemptsForQuiz = Array.isArray(data?.quizAttempts) ? data.quizAttempts : null;
+        const backendAttemptsForPagsusulit = Array.isArray(data?.quizAttempts) ? data.quizAttempts : null;
 
-        const syncedAttempts = backendAttemptsForQuiz
-          ? { ...localUpdatedAttempts, [quiz.id]: backendAttemptsForQuiz }
+        const syncedAttempts = backendAttemptsForPagsusulit
+          ? { ...localUpdatedAttempts, [quiz.id]: backendAttemptsForPagsusulit }
           : localUpdatedAttempts;
 
         const syncedHistory = syncedAttempts?.[quiz.id] || [];
@@ -1097,7 +1097,7 @@ if (role === 'admin') {
       })
       .catch((err) => {
         const message = err?.message || 'Naisave sa device ang pagsusulit, pero hindi naisave sa server.';
-        console.warn('[TuklasTalino] Quiz backend save failed:', err);
+        console.warn('[TuklasTalino] Pagsusulit backend save failed:', err);
         notify(`${message} Iskor: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%).`, 'bad');
       });
 
@@ -3847,7 +3847,7 @@ async function archiveTeacher(id) {
     openQuizResult={openQuizResult}
     quizAttempts={quizAttempts}
     subjects={SUBJECTS}
-    buildStudentQuizzes={buildStudentQuizzes}
+    buildStudentPagsusulitzes={buildStudentPagsusulitzes}
     getBestQuizAttempt={getBestQuizAttempt}
     EarlyStudentChrome={EarlyStudentChrome}
     Grade46StudentChrome={Grade46StudentChrome}
@@ -3855,13 +3855,13 @@ async function archiveTeacher(id) {
 </Screen>
 
 <Screen id="screen-stu-quiz-play" active={screen === 'screen-stu-quiz-play'}>
-  {selectedQuiz && (
+  {selectedPagsusulit && (
     <QuizPlayer
       data={studentDash}
-      quiz={selectedQuiz}
+      quiz={selectedPagsusulit}
       go={go}
       logout={doLogout}
-      submitQuiz={submitQuiz}
+      submitPagsusulit={submitPagsusulit}
       quizAttempts={quizAttempts}
       getBestQuizAttempt={getBestQuizAttempt}
       EarlyStudentChrome={EarlyStudentChrome}
@@ -3878,7 +3878,7 @@ async function archiveTeacher(id) {
       go={go}
       logout={doLogout}
       openQuiz={openQuiz}
-      buildStudentQuizzes={buildStudentQuizzes}
+      buildStudentPagsusulitzes={buildStudentPagsusulitzes}
       EarlyStudentChrome={EarlyStudentChrome}
       Grade46StudentChrome={Grade46StudentChrome}
     />
@@ -3914,7 +3914,7 @@ async function archiveTeacher(id) {
               screen: 'screen-stu-mission-play',
               selectedMissionGameId: gameId,
               selectedLessonId: null,
-              selectedQuizId: null,
+              selectedPagsusulitId: null,
               subjectFilter
             });
           }}
@@ -4075,7 +4075,7 @@ function appendQuizAttempt(studentId, attempts, quizId, result) {
 }
 
 
-function normalizeQuizOption(option = {}, index = 0) {
+function normalizePagsusulitOption(option = {}, index = 0) {
   const rawText =
     option?.text ??
     option?.optionText ??
@@ -4120,14 +4120,14 @@ function buildFallbackOptions(correctText, alternates = []) {
   return stableShuffleOptions(options, correct);
 }
 
-function buildQuizQuestionsFromLesson(lesson = {}) {
+function buildPagsusulitQuestionsFromLesson(lesson = {}) {
   const activities = asArray(lesson?.activities);
   const questions = [];
 
   activities.forEach((activity, activityIndex) => {
     if (activity?.type === 'mcq') {
       asArray(activity.questions).forEach((question, questionIndex) => {
-        const options = asArray(question.options || question.choices).map(normalizeQuizOption);
+        const options = asArray(question.options || question.choices).map(normalizePagsusulitOption);
         if (!options.length) return;
         const hasCorrect = options.some(option => option.isCorrect);
         questions.push({
@@ -4145,9 +4145,9 @@ function buildQuizQuestionsFromLesson(lesson = {}) {
   return questions.slice(0, 25);
 }
 
-function buildStudentQuizzes(data = {}) {
+function buildStudentPagsusulitzes(data = {}) {
   return asArray(data?.lessons).map((lesson) => {
-    const questions = buildQuizQuestionsFromLesson(lesson);
+    const questions = buildPagsusulitQuestionsFromLesson(lesson);
     return {
       id: `lesson-${lesson.id || lesson.title}-quiz`,
       lessonId: lesson.id,
@@ -4163,7 +4163,7 @@ function buildStudentQuizzes(data = {}) {
   }).filter(quiz => quiz.questions.length);
 }
 
-function getQuizStats(quizzes = [], attempts = {}) {
+function getPagsusulitStats(quizzes = [], attempts = {}) {
   const taken = quizzes.filter(quiz => asArray(attempts?.[quiz.id]).length).length;
   const bestScores = quizzes.map(quiz => getBestQuizAttempt(attempts, quiz.id)).filter(Boolean);
   const average = bestScores.length
@@ -6845,7 +6845,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
       <nav className="g12-nav" aria-label="Student navigation">
         <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
         <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
+        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulitzes</button>
         <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
         <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
         <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
@@ -6880,8 +6880,8 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
   const navItems = [
     { id: 'home', icon: '🏠', label: 'Home' },
     { id: 'lessons', icon: '📚', label: 'Lessons' },
-    { id: 'quizzes', icon: '🧠', label: 'Quizzes' },
-    { id: 'missions', icon: '🎮', label: 'Missions' },
+    { id: 'quizzes', icon: '🧠', label: 'Pagsusulitzes' },
+    { id: 'missions', icon: '🎮', label: 'Mga Misyon' },
     { id: 'groups', icon: '👥', label: 'Groups' },
     { id: 'badges', icon: '🏅', label: 'Badges' },
     { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
@@ -7832,7 +7832,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
         <nav className="g12-nav" aria-label="Student navigation">
           <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
           <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
+          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulitzes</button>
           <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
           <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
           <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
@@ -9555,7 +9555,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
         <div className="g12-complete-summary">
           <section className="g12-complete-hero">
             <div className="g12-complete-badge">✅</div>
-            <h2>Lesson Completed!</h2>
+            <h2>Tapos na ang Aralin!</h2>
             <p>{lesson?.title || 'Natapos mo na ang lesson na ito.'}</p>
             <div className="g12-summary-chip-row">
               {summaryItems.map(item => (
@@ -9584,7 +9584,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               🏠 Home
             </button>
             <button type="button" className="g12-summary-btn secondary" onClick={() => go('screen-lessons')}>
-              📖 More Lessons
+              📖 Mas Maraming Aralin
             </button>
           </div>
         </div>
@@ -10487,7 +10487,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>
-                    Gawin ang Quiz →
+                    Gawin ang Pagsusulit →
                   </button>
                 </div>
               </div>
@@ -14369,7 +14369,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                 <div className="mission-play-actions">
                   <button type="button" className="mission-play-action secondary" onClick={backToMissions}>
-                    ← Back to Missions
+                    ← Bumalik sa mga Misyon
                   </button>
                 </div>
               </>
@@ -14455,7 +14455,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                     )}
 
                     {wordMatchCompleteModal && (
-                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Mission complete">
+                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Tapos na ang misyon">
                         <div className="mission-complete-modal">
                           <div className="mission-complete-icon">🏆</div>
                           <h3>Tapos na ang Misyon!</h3>
@@ -14468,10 +14468,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                           <div className="mission-complete-actions">
                             <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
-                              🔄 Play Again
+                              🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Missions
+                              🎮 Mga Misyon
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                               🏠 Home
@@ -14537,10 +14537,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                           <div className="mission-complete-actions">
                             <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
-                              🔄 Play Again
+                              🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Missions
+                              🎮 Mga Misyon
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                               🏠 Home
@@ -14706,7 +14706,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                                 setStoryQuestToast(null);
                               }}
                             >
-                              📖 Start Questions
+                              📖 Simulan ang mga Tanong
                             </button>
                           )}
 
@@ -14721,7 +14721,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       <>
                         <div className="story-quest-progress-card">
                           <div>
-                            <span>Quest Progress</span>
+                            <span>Progreso ng Hamon</span>
                             <strong>{Math.min(storyQuestDoneCount, storyQuestTotal)}/{storyQuestTotal}</strong>
                           </div>
                           <div className="story-quest-progress-track">
@@ -14782,10 +14782,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                                   <div className="mission-complete-actions">
                                     <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
-                                      🔄 Play Again
+                                      🔄 Maglaro Muli
                                     </button>
                                     <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                                      🎮 Missions
+                                      🎮 Mga Misyon
                                     </button>
                                     <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                                       🏠 Home
@@ -14802,7 +14802,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                 ) : isSentenceBuilder ? (
                   <div className={`sentence-builder-game ${early ? 'early' : 'standard'} ${sentenceBuilderWrong ? 'wrong' : ''} ${sentenceBuilderCorrect ? 'correct' : ''}`}>
                     <div className="sentence-builder-prompt">
-                      <div className="sentence-builder-mini-label">Sentence Mission</div>
+                      <div className="sentence-builder-mini-label">Misyon sa Pangungusap</div>
                       <h3>Buuin ang pangungusap</h3>
                       <p>💡 {demo?.clue || 'Tapikin ang mga salita sa tamang ayos.'}</p>
                     </div>
@@ -14853,10 +14853,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                     <div className="sentence-builder-actions">
                       <button type="button" className="sentence-builder-clear" onClick={clearSentenceBuilder} disabled={!sentenceBuilderSelected.length || sentenceBuilderCorrect}>
-                        ↺ Clear
+                        ↺ Burahin
                       </button>
                       <button type="button" className="sentence-builder-check" onClick={checkSentenceBuilderAnswer} disabled={!sentenceBuilderSelected.length || sentenceBuilderCorrect}>
-                        ✅ Check Sentence
+                        ✅ Suriin ang Pangungusap
                       </button>
                     </div>
 
@@ -14874,10 +14874,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                           <div className="mission-complete-actions">
                             <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
-                              🔄 Play Again
+                              🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Missions
+                              🎮 Mga Misyon
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                               🏠 Home
@@ -14890,7 +14890,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                 ) : isPictureGuess ? (
                   <div className={`picture-guess-game ${early ? 'early' : 'standard'}`}>
                     <div className="picture-guess-card">
-                      <div className="picture-guess-label">Picture Challenge</div>
+                      <div className="picture-guess-label">Hamon sa Larawan</div>
                       <div className="picture-guess-image" aria-label="Palatandaan sa larawan">
                         {demo?.picture || '🖼️'}
                       </div>
@@ -14936,10 +14936,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                           <div className="mission-complete-actions">
                             <button type="button" className="mission-complete-btn purple" onClick={restartDemo}>
-                              🔄 Play Again
+                              🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Missions
+                              🎮 Mga Misyon
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                               🏠 Home
@@ -14980,11 +14980,11 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                 <div className="mission-play-actions">
                   <button type="button" className="mission-play-action secondary" onClick={backToMissions}>
-                    ← Back to Missions
+                    ← Bumalik sa mga Misyon
                   </button>
                   {!isSentenceBuilder && (
 <button type="button" className="mission-play-action" onClick={restartDemo}>
-                    🔄 Restart
+                    🔄 Ulitin
                   </button>
                   )}
                   {isWordMatch ? (
@@ -15019,7 +15019,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
             <div className="g12-top-actions">
               <div className="g12-pill">🌸 Baitang {student.gradeLevel || '—'} • {student.section || '—'}</div>
               <div className="g12-pill">⚡ {xp} XP</div>
-              <button type="button" className="g12-action-btn" onClick={backToMissions}>🎮 Missions</button>
+              <button type="button" className="g12-action-btn" onClick={backToMissions}>🎮 Mga Misyon</button>
               <button type="button" className="g12-action-btn" onClick={() => go('screen-student')}>🏠 Tahanan</button>
             </div>
           </header>
@@ -15031,7 +15031,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
           <nav className="g12-nav g12-mission-play-nav" aria-label="Student navigation">
             <button type="button" onClick={() => openTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
             <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
+            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulitzes</button>
             <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
             <button type="button" onClick={() => openTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
             <button type="button" onClick={() => openTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
@@ -15051,7 +15051,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       icon={selectedGame?.icon || '🎮'}
       title={selectedGame?.title || 'Misyon'}
       subtitle={`${selectedGame?.module || 'Filipino'} misyon • +${selectedGame?.xp || 0} preview ng XP`}
-      titleAction={<button type="button" className="g46-ref-soft-btn" onClick={backToMissions}>← Missions</button>}
+      titleAction={<button type="button" className="g46-ref-soft-btn" onClick={backToMissions}>← Mga Misyon</button>}
       hideTitleCard={isLetterPop}
     >
       {content}
