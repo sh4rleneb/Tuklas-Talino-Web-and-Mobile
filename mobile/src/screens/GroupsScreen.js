@@ -1208,4 +1208,10 @@ const styles = StyleSheet.create({
   // [MODERN_STUDENT_UI_OVERRIDES_END]
 
 
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+
 });

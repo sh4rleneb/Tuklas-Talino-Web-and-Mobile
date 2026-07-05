@@ -211,14 +211,7 @@ export default function LandingScreen({
               at subaybayan ang iyong pag-unlad.
             </Text>
 
-            <View style={styles.studentButton}>
-                navigation.navigate(
-                  'StudentLogin'
-                )
-              }
-            >
-
-              <Text style={styles.buttonText}>
+            <View style={styles.studentButton}><Text style={styles.buttonText}>
                 Mag-aaral →
               </Text>
 
