@@ -582,12 +582,11 @@ const styles = StyleSheet.create({
   },
 
   studentTitle: {
-    fontWeight: '900',
-    fontSize: 15,
+    fontSize: 38,
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#334155',
+    color: '#16A34A',
   },
 
   teacherTitle: {
@@ -624,15 +623,21 @@ const styles = StyleSheet.create({
   },
 
   studentButton: {
-    marginBottom: 6,
-    flexDirection: 'row',
-
-    width: '92%',
-    alignSelf: 'flex-start',
-
+    backgroundColor: '#22C55E',
+    width: '82%',
+    alignSelf: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderRadius: 999,
     alignItems: 'center',
-
-    marginTop: 4,
+    justifyContent: 'center',
+    marginTop: 44,
+    marginBottom: 6,
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 5,
   },
 
   teacherButton: {
@@ -667,10 +672,9 @@ const styles = StyleSheet.create({
 
   buttonText: {
     color: '#FFFFFF',
-
     fontSize: 21,
-
     fontFamily: 'Fredoka_600SemiBold',
+    textAlign: 'center',
   },
 
   pagination: {
