@@ -22,7 +22,7 @@ export default function StudentDashboard() {
       <div className="welcome-card">
         <div className="avatar-xl">{data.student.avatar}</div>
         <div>
-          <p className="eyebrow">Grade {data.student.gradeLevel} • {data.student.section}</p>
+          <p className="eyebrow">Baitang {data.student.gradeLevel} • {data.student.section}</p>
           <h1>Kumusta, {data.student.name}!</h1>
           <p>Ipagpatuloy ang iyong paglalakbay sa Filipino.</p>
         </div>
@@ -34,7 +34,7 @@ export default function StudentDashboard() {
         <StatCard icon="✅" label="Lessons Done" value={`${data.progress.completedLessons}/${data.progress.totalLessons}`} tone="green" />
       </div>
 
-      <ProgressBar value={data.progress.percent} label="Lesson progress" />
+      <ProgressBar value={data.progress.percent} label="Pag-unlad sa Aralin" />
 
       <div className="section-heading">
         <h2>Recommended Lessons</h2>
@@ -43,14 +43,14 @@ export default function StudentDashboard() {
       <div className="lesson-grid">
         {data.lessons.slice(0, 6).map(lesson => (
           <Link className={`lesson-card ${lesson.completed ? 'done' : ''}`} to={`/student/lessons/${lesson.id}`} key={lesson.id}>
-            <span>{lesson.subject === 'Pagbasa' ? '📖' : lesson.subject === 'Bokabularyo' ? '🔤' : lesson.subject === 'Panitikan' ? '📜' : lesson.subject === 'Oral Comm' ? '🎙️' : '✍️'}</span>
+            <span>{lesson.subject === 'Pagbasa' ? '📖' : lesson.subject === 'Bokabularyo' ? '🔤' : lesson.subject === 'Panitikan' ? '📜' : lesson.subject === 'Pasalitang Komunikasyon' ? '🎙️' : '✍️'}</span>
             <strong>{lesson.title}</strong>
             <small>{lesson.subject} • {lesson.xpReward} XP</small>
           </Link>
         ))}
       </div>
 
-      <div className="section-heading"><h2>Badges</h2><Link to="/student/badges">See badges</Link></div>
+      <div className="section-heading"><h2>Mga Gantimpala</h2><Link to="/student/badges">See badges</Link></div>
       <div className="badge-row">
         {data.badges.length ? data.badges.map(b => <span className="badge-chip" key={b.id}>{b.icon} {b.name}</span>) : <p className="empty">Complete lessons to unlock badges.</p>}
       </div>

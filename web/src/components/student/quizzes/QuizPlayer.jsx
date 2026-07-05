@@ -196,7 +196,7 @@ export default function QuizPlayer({
                   className="quiz-primary"
                   onClick={nextQuestion}
                 >
-                  {hasSelectedAnswer ? "Next Question →" : "Skip for now →"}
+                  {hasSelectedAnswer ? "Susunod na Tanong →" : "Skip for now →"}
                 </button>
               ) : (
                 <button
@@ -229,10 +229,10 @@ export default function QuizPlayer({
         activeTab="quizzes"
         go={go}
         icon="🧠"
-        title={started ? "Quiz Time" : "Quiz Quest"}
+        title={started ? "Oras ng Pagsusulit" : "Hamon sa Pagsusulit"}
         subtitle={
           started
-            ? "Tapusin muna ang quiz bago lumipat sa ibang tab."
+            ? "Tapusin muna ang pagsusulit bago lumipat sa ibang tab."
             : quiz?.title || "Sagutin ang tanong."
         }
         beforeNavigate={beforeQuizNavigate}
@@ -250,7 +250,7 @@ export default function QuizPlayer({
         go={go}
         logout={logout}
         icon="🧠"
-        title={quiz?.title || "Quiz"}
+        title={quiz?.title || "Pagsusulit"}
         subtitle="" 
         titleAction={
           <button

@@ -33,12 +33,12 @@ export default function StudentGroupSubmissionReview({
     ? 'Group output approved'
     : isReturned
       ? 'Group output rejected'
-      : 'Group output submitted';
+      : 'Naipasa ang output ng grupo';
 
   const message = isApproved
     ? 'Your teacher approved this task and XP has been awarded.'
     : isReturned
-      ? 'Your teacher rejected this submission. Please check the remarks and submit again.'
+      ? 'Ibinalik ng guro ang ipinasa ninyo. Basahin ang puna at magpasa muli.'
       : 'Waiting for your teacher to review your group output.';
 
   return (

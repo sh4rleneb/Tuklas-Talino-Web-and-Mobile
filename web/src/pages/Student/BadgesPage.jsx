@@ -14,7 +14,7 @@ export default function BadgesPage() {
 
   return (
     <section>
-      <h1>Badges</h1>
+      <h1>Mga Gantimpala</h1>
       <div className="badge-grid">
         {data.allBadges.map(b => (
           <article className={`badge-card ${owned.has(b.id) ? 'owned' : ''}`} key={b.id}>

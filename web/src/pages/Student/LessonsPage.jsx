@@ -19,7 +19,7 @@ export default function LessonsPage() {
   return (
     <section>
       <div className="section-heading">
-        <h1>Lessons</h1>
+        <h1>Mga Aralin</h1>
         <select value={subject} onChange={e => setSubject(e.target.value)}>
           <option>All</option>
           {subjects.map(s => <option key={s}>{s}</option>)}

@@ -27,7 +27,7 @@ export default function LessonDetailPage() {
 
   async function submitSpeech() {
     await api(`/lessons/${id}/speech`, { method: 'POST', body: { taskId: speechTask.id, transcript } });
-    setMessage('Speech attempt saved. +6 XP');
+    setMessage('Naisave ang pagbigkas. +6 XP');
   }
 
   async function completeLesson() {

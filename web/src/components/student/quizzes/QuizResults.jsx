@@ -71,9 +71,9 @@ function hydrateAttemptReview(attempt = {}, quiz = {}) {
       ...item,
       index: item.index || index + 1,
       questionId: item.questionId || question?.id || index + 1,
-      prompt: item.prompt || questionPrompt(question, `Question ${index + 1}`),
+      prompt: item.prompt || questionPrompt(question, `Tanong ${index + 1}`),
       selectedOptionId: item.selectedOptionId || selectedOption?.id || null,
-      selectedText: item.selectedText || optionText(selectedOption, "No answer"),
+      selectedText: item.selectedText || optionText(selectedOption, "Walang sagot"),
       correctOptionId: item.correctOptionId || correctOption?.id || null,
       correctText: item.correctText || optionText(correctOption, "—"),
       correct,
@@ -164,13 +164,13 @@ export default function QuizResults({
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
-                {showReview ? "Review Answers" : "Quiz Attempt Saved"}
+                {showReview ? "Balikan ang mga Sagot" : "Naisave ang Pagsubok sa Pagsusulit"}
               </h2>
 
               <p className={early ? "g12-section-subtitle" : "g46-ref-muted"}>
                 {showReview
-                  ? "Check your answers."
-                  : "Try again first. Feedback later."}
+                  ? "Suriin ang iyong mga sagot."
+                  : "Subukan muna muli. Susunod ang feedback."}
               </p>
             </div>
 
@@ -201,7 +201,7 @@ export default function QuizResults({
               style={early ? { fontSize: 24, padding: 26, borderRadius: 30, lineHeight: 1.55 } : { fontSize: 17, lineHeight: 1.45 }}
             >
               <b>Score saved!</b>
-              <p>Try again first. Feedback later.</p>
+              <p>Subukan muna muli. Susunod ang feedback.</p>
             </div>
           ) : (
             <div className="quiz-review-list">
@@ -263,7 +263,7 @@ export default function QuizResults({
                     <p>{item.prompt}</p>
 
                     <p>
-                      Your answer: <strong>{item.selectedText || "No answer"}</strong>
+                      Your answer: <strong>{item.selectedText || "Walang sagot"}</strong>
                     </p>
 
                     <p>
@@ -286,7 +286,7 @@ export default function QuizResults({
         activeTab="quizzes"
         go={go}
         icon={mastery.icon || "🏆"}
-        title="Quiz Result"
+        title="Resulta ng Pagsusulit"
         subtitle={mastery.label}
       >
         {resultContent}
@@ -302,7 +302,7 @@ export default function QuizResults({
         go={go}
         logout={logout}
         icon={mastery.icon || "🏆"}
-        title="Quiz Result"
+        title="Resulta ng Pagsusulit"
         subtitle={`${mastery.label} • ${result.score}/${result.total}`}
       >
         {resultContent}

@@ -165,7 +165,7 @@ export default function QuizzesPage({
       quiz.subject,
     ];
 
-    const fallback = cleanQuizTitleSeed(quiz.title || quiz.subject || "Quiz", earlyMode) || "Quiz";
+    const fallback = cleanQuizTitleSeed(quiz.title || quiz.subject || "Pagsusulit", earlyMode) || "Pagsusulit";
 
     const chosen =
       sources
@@ -173,8 +173,8 @@ export default function QuizzesPage({
         .find((candidate) => candidate && candidate.length >= 3 && !isGenericQuizName(candidate)) ||
       fallback;
 
-    const finalTitle = chosen.replace(/\s*quiz\s*$/i, "").trim() || "Quiz";
-    return `${finalTitle} Quiz`;
+    const finalTitle = chosen.replace(/\s*quiz\s*$/i, "").trim() || "Pagsusulit";
+    return `Pagsusulit sa ${finalTitle}`;
   }
 
   // Keep this function name for existing Grade 1-2 card rendering.
@@ -216,15 +216,15 @@ export default function QuizzesPage({
       };
     const subjectLook = subjectTheme(quiz.subject) || {};
     const statusLabel = attemptsDone
-      ? "Final review available"
+      ? "May huling pagbabalik-aral"
       : attemptsUsed
-        ? `Attempt ${Math.min(attemptsUsed, maxQuizAttempts)}/${maxQuizAttempts} saved`
-        : "Ready to start";
+        ? `Naisave ang pagsubok ${Math.min(attemptsUsed, maxQuizAttempts)}/${maxQuizAttempts}`
+        : "Handa nang simulan";
     const actionLabel = attemptsDone
       ? "Review"
       : attemptsUsed
         ? "Try Again"
-        : "Start";
+        : "Simulan";
 
     return {
       quiz,
@@ -252,7 +252,7 @@ export default function QuizzesPage({
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
-                {early ? "🧠 Quiz Time" : "Quiz List"}
+                {early ? "🧠 Oras ng Pagsusulit" : "Listahan ng Pagsusulit"}
               </h2>
 
             </div>
@@ -348,7 +348,7 @@ export default function QuizzesPage({
         activeTab="quizzes"
         go={go}
         icon="🧠"
-        title="Quiz Time"
+        title="Oras ng Pagsusulit"
         subtitle=""
       >
         {quizContent}
@@ -364,7 +364,7 @@ export default function QuizzesPage({
         go={go}
         logout={logout}
         icon="🧠"
-        title="Quizzes"
+        title="Mga Pagsusulit"
         subtitle=""
       >
         {quizContent}

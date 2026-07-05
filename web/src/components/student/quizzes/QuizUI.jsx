@@ -102,7 +102,7 @@ function masteryFromPercent(percent = 0) {
       label: "Developing",
       icon: "🌱",
       tone: "yellow",
-      note: "Good effort. Review the missed questions.",
+      note: "Magandang pagsubok. Balikan ang mga maling sagot.",
     };
   }
 
@@ -1167,9 +1167,9 @@ function QuizGameHeader({ quiz, best, go, onBack }) {
         </span>
 
         <div>
-          <h2>{quiz?.title || "Quiz"}</h2>
+          <h2>{quiz?.title || "Pagsusulit"}</h2>
           <small>
-            {quiz?.subject || "Filipino"} • {quiz?.type || "Practice Quiz"}{" "}
+            {quiz?.subject || "Filipino"} • {quiz?.type || "Pagsasanay na Pagsusulit"}{" "}
             {best ? `• Best ${best.percent}%` : ""}
           </small>
         </div>
@@ -1211,7 +1211,7 @@ function QuizStartCard({ quiz, best, attemptsUsed = 0, maxAttempts = 2, onStart,
         {best && (
           <p>
             <strong>Best score:</strong> {best.score}/{best.total} (
-            {best.percent}%) • {best.mastery?.label || "Progress saved"}
+            {best.percent}%) • {best.mastery?.label || "Naisave ang pag-unlad"}
           </p>
         )}
 
@@ -1305,7 +1305,7 @@ function QuizQuestionCard({ quiz, question, currentIndex, total }) {
   return (
     <section className="quiz-question-box" aria-label={`Question ${currentIndex + 1}`}>
       <div>
-        <small>{quiz?.subject || "Filipino"} • {question?.source || "Quiz Check"}</small>
+        <small>{quiz?.subject || "Filipino"} • {question?.source || "Suriin ang Pagsusulit"}</small>
         <h2>{question?.prompt || "Piliin ang tamang sagot."}</h2>
       </div>
 
@@ -1400,7 +1400,7 @@ function QuizResultCard({ result }) {
 
           <div className="quiz-reward-box" style={rewardBoxStyle}>
             <b>+{Number(result.xpAwarded ?? 0)}</b>
-            <span>{Number(result.xpAwarded || 0) > 0 ? "XP earned" : "No extra XP"}</span>
+            <span>{Number(result.xpAwarded || 0) > 0 ? "Nakuhang XP" : "No extra XP"}</span>
           </div>
 
           <div className="quiz-reward-box" style={rewardBoxStyle}>

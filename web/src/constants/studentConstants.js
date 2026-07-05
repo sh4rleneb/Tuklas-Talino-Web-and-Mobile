@@ -14,11 +14,11 @@ export const MISSION_GAMES = [
     icon: '🧩',
     module: 'Bokabularyo',
     xp: 15,
-    baseStatus: 'Available',
+    baseStatus: 'Bukas na',
     short: 'Hanapin ang pares!',
     instruction: 'Hanapin ang tamang pares. Basahin ang salita, tingnan ang larawan o kahulugan, at piliin ang magkapareha.',
     sample: 'aso → larawan ng aso, bahay → larawan ng bahay',
-    reward: 'Bokabularyo Star progress',
+    reward: 'Pag-unlad sa Bituin ng Bokabularyo',
     tone: 'sky'
   },
   {
@@ -27,11 +27,11 @@ export const MISSION_GAMES = [
     icon: '🎈',
     module: 'Pagbasa',
     xp: 12,
-    baseStatus: 'Available',
+    baseStatus: 'Bukas na',
     short: 'Piliin ang pantig!',
-    instruction: 'Piliin ang nawawalang titik o pantig. Kapag tama, bubuo ang salita at may XP reward.',
+    instruction: 'Piliin ang nawawalang titik o pantig. Kapag tama, mabubuo ang salita at may gantimpalang XP.',
     sample: 'ba + ___ = bata',
-    reward: 'Reading streak progress',
+    reward: 'Pag-unlad sa sunod-sunod na pagbasa',
     tone: 'sun'
   },
   {
@@ -40,7 +40,7 @@ export const MISSION_GAMES = [
     icon: '🖼️',
     module: 'Bokabularyo',
     xp: 12,
-    baseStatus: 'Available',
+    baseStatus: 'Bukas na',
     short: 'Hulaan ang larawan!',
     instruction: 'Pagmasdan ang picture card, pagkatapos piliin ang salitang tumutukoy dito.',
     sample: 'larawan ng pusa → pusa',
@@ -53,11 +53,11 @@ export const MISSION_GAMES = [
     icon: '🧱',
     module: 'Pagsulat',
     xp: 18,
-    baseStatus: 'Available',
+    baseStatus: 'Bukas na',
     short: 'Ayusin ang pangungusap!',
     instruction: 'Ilagay ang mga salita sa tamang ayos hanggang makabuo ng malinaw na pangungusap.',
     sample: 'Ako / ay / bata.',
-    reward: 'Pagsulat Builder badge progress',
+    reward: 'Pag-unlad sa gantimpala sa Pagsulat Builder',
     tone: 'pink'
   },
   {
@@ -66,11 +66,11 @@ export const MISSION_GAMES = [
     icon: '📖',
     module: 'Panitikan',
     xp: 20,
-    baseStatus: 'Available',
+    baseStatus: 'Bukas na',
     short: 'Basahin at sagutin!',
     instruction: 'Basahin ang story card. Sagutin ang tanong tungkol sa tauhan, tagpuan, o pangyayari.',
     sample: 'Sino ang pangunahing tauhan?',
-    reward: 'Pag-unawa Quest progress',
+    reward: 'Pag-unlad sa Hamon sa Pag-unawa',
     tone: 'violet'
   },
   {
@@ -81,7 +81,7 @@ export const MISSION_GAMES = [
     xp: 15,
     baseStatus: 'Practice',
     short: 'Magsanay bumigkas ng salitang Filipino o maikling parirala.',
-    instruction: 'Pakinggan ang salita, pagkatapos bigkasin ito nang malinaw. Speech checking can be connected later.',
+    instruction: 'Pakinggan ang salita, pagkatapos bigkasin ito nang malinaw. Maaaring ikonekta ang pagsusuri ng pagbigkas sa susunod.',
     sample: 'Magandang umaga po.',
     reward: 'Oral practice confidence',
     tone: 'rose',
@@ -91,7 +91,7 @@ export const MISSION_GAMES = [
 
 export const EARLY_GROUP_ROLES = [
   { id: 'reader', icon: '📖', label: 'Reader', helper: 'Basahin ang salita o kuwento.' },
-  { id: 'speaker', icon: '🎤', label: 'Speaker', helper: 'Bigkasin ang sagot nang malinaw.' },
+  { id: 'speaker', icon: '🎤', label: 'Tagapagsalita', helper: 'Bigkasin ang sagot nang malinaw.' },
   { id: 'helper', icon: '⭐', label: 'Helper', helper: 'Tumulong sa kaklase.' },
   { id: 'checker', icon: '✅', label: 'Checker', helper: 'Tingnan kung tapos na ang gawain.' }
 ];
@@ -99,7 +99,7 @@ export const EARLY_GROUP_ROLES = [
 export const UPPER_GROUP_ROLES = [
   { id: 'leader', icon: '👑', label: 'Leader', helper: 'Guide the group and keep everyone on task.' },
   { id: 'reader', icon: '📖', label: 'Reader', helper: 'Read the passage or instructions.' },
-  { id: 'writer', icon: '✍️', label: 'Writer', helper: 'Prepare the group answer or summary.' },
+  { id: 'writer', icon: '✍️', label: 'Writer', helper: 'Ihanda ang sagot o buod ng grupo.' },
   { id: 'reporter', icon: '🎙️', label: 'Reporter', helper: 'Present the group output.' },
   { id: 'checker', icon: '✅', label: 'Checker', helper: 'Review the answer before submission.' }
 ];

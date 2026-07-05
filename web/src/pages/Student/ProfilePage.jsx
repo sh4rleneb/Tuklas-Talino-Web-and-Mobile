@@ -26,7 +26,7 @@ export default function ProfilePage() {
         <div className="avatar-xl">{dashboard.student.avatar}</div>
         <div>
           <h1>{dashboard.student.name}</h1>
-          <p>{dashboard.student.studentCode} • Grade {dashboard.student.gradeLevel} • {dashboard.student.section}</p>
+          <p>{dashboard.student.studentCode} • Baitang {dashboard.student.gradeLevel} • {dashboard.student.section}</p>
         </div>
       </div>
       {message && <div className="alert success">{message}</div>}
