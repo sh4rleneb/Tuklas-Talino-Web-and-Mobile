@@ -6745,7 +6745,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
 
         <div className="g12-top-actions">
           <div className="g12-pill">🌸 Baitang {s.gradeLevel || '—'} • {s.section || '—'}</div>
-          <button type="button" className="g12-action-btn g12-logout-btn" onClick={safeLogout}>🚪 Logout</button>
+          <button type="button" className="g12-action-btn g12-logout-btn" onClick={safeLogout}>🚪 Mag-logout</button>
         </div>
       </header>
 
@@ -7802,7 +7802,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
           <div className="g12-top-actions">
             <div className="g12-pill">🌸 Baitang {s.gradeLevel || '—'} • {s.section || '—'}</div>
             <div className="g12-pill g12-top-xp-pill"><span className="g12-top-xp-bolt">⚡</span> {s.xp || 0} XP</div>
-            <button type="button" className="g12-action-btn" onClick={() => goStudentTab('home')}>🏠 Home</button>
+            <button type="button" className="g12-action-btn" onClick={() => goStudentTab('home')}>🏠 Tahanan</button>
           </div>
         </header>
 
@@ -10581,7 +10581,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                       ⭐ Claim XP
                     </button>
                   ) : (
-                    <button className="g12-mission-btn purple" onClick={() => go('screen-student')}>🏠 Go Home</button>
+                    <button className="g12-mission-btn purple" onClick={() => go('screen-student')}>🏠 Bumalik sa Tahanan</button>
                   )}
                 </div>
               </div>
@@ -15020,7 +15020,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
               <div className="g12-pill">🌸 Baitang {student.gradeLevel || '—'} • {student.section || '—'}</div>
               <div className="g12-pill">⚡ {xp} XP</div>
               <button type="button" className="g12-action-btn" onClick={backToMissions}>🎮 Missions</button>
-              <button type="button" className="g12-action-btn" onClick={() => go('screen-student')}>🏠 Home</button>
+              <button type="button" className="g12-action-btn" onClick={() => go('screen-student')}>🏠 Tahanan</button>
             </div>
           </header>
 
