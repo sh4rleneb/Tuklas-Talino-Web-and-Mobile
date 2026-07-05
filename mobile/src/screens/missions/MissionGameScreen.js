@@ -27,7 +27,7 @@ import StoryQuestGame from './games/StoryQuestGame';
 import FillInTheBlankGame from './games/FillInTheBlankGame';
 
 
-const MAX_MISSION_ATTEMPTS = 5;
+const MAX_MISSION_ATTEMPTS = 2;
 
 const SOUND_AND_SAY_LEVELS = {
   1: {
@@ -66,7 +66,7 @@ function friendlyMissionErrorMessage(message = '') {
   const text = String(message || '').toLowerCase();
 
   if (text.includes('already used all') && text.includes('attempt')) {
-    return 'Naubos mo na ang 5 pagsubok para sa misyong ito. Magaling! Subukan ang ibang misyon o balikan ang iyong natutuhan.';
+    return 'Naubos mo na ang 2 pagsubok para sa misyong ito. Magaling! Subukan ang ibang misyon o balikan ang iyong natutuhan.';
   }
 
   if (text.includes('mission not found')) {
@@ -492,6 +492,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'word-match' && (
           <WordMatchGame
+            key={`word-match-${missionAttemptNo}`}
             activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
@@ -500,6 +501,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'letter-pop' && (
           <LetterPopGame
+            key={`letter-pop-${missionAttemptNo}`}
             activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
@@ -509,6 +511,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'picture-guess' && (
           <PictureGuessGame
+            key={`picture-guess-${missionAttemptNo}`}
             activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
@@ -518,6 +521,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'sentence-builder' && (
           <SentenceBuilderGame
+            key={`sentence-builder-${missionAttemptNo}`}
             activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
@@ -527,6 +531,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'story-quest' && (
           <StoryQuestGame
+            key={`story-quest-${missionAttemptNo}`}
             activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}
@@ -535,6 +540,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
         {missionId === 'fill-in-the-blank' && (
           <FillInTheBlankGame
+            key={`fill-in-the-blank-${missionAttemptNo}`}
             activity={mission}
             submitting={submitting}
             onMissionComplete={handleSubmit}

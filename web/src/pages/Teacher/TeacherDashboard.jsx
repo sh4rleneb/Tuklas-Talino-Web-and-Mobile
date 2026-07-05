@@ -167,8 +167,15 @@ export default function TeacherDashboard({
   exportStudentsCSV,
   exportLogsCSV,
   downloadSummaryReport,
+  downloadBuodReport,
   gradeWritingSubmission
 }) {
+
+  const handleDownloadMonitoringSummary =
+    typeof downloadSummaryReport === 'function'
+      ? downloadSummaryReport
+      : downloadBuodReport;
+
   const [teacherTab, setTeacherTab] = useState('lessons');
   const [openGroupTools, setOpenGroupTools] = useState({});
   const [openGroupProgress, setOpenGroupProgress] = useState({});
@@ -1225,17 +1232,9 @@ export default function TeacherDashboard({
               onClick={() => openTab('students')}
             >
               <span>🎓</span>
-              <strong>Student Monitoring</strong>
+              <strong>Student Monitoring Report</strong>
             </button>
 
-            <button
-              className="teacher-sidebar-button"
-              type="button"
-              onClick={downloadSummaryReport}
-            >
-              <span>📊</span>
-              <strong>Report</strong>
-            </button>
 
             <button
               className="teacher-sidebar-button danger"
@@ -2007,15 +2006,14 @@ export default function TeacherDashboard({
           <section className="teacher-workspace-card clean-students-panel" id="teacher-monitoring-table">
             <div className="teacher-workspace-heading monitor">
               <div>
-                <div className="lms-section-label">Learner Monitoring</div>
-                <h2>Students Monitoring Table</h2>
+                <div className="lms-section-label">Student Monitoring Report</div>
+                <h2>Student Monitoring Summary Report</h2>
               </div>
 
               <div className="teacher-monitor-actions">
                 <button type="button" className="lms-report-button" onClick={reload}>Refresh</button>
-                <button type="button" className="lms-report-button" onClick={exportStudentsCSV}>⬇️ Export CSV</button>
-                <button type="button" className="lms-report-button" onClick={exportLogsCSV}>⬇️ Export Activity Logs</button>
-                <button type="button" className="lms-report-button" onClick={downloadSummaryReport}>🧾 Summary Report</button>
+                <button type="button" className="lms-report-button" onClick={exportStudentsCSV}>⬇️ CSV Monitoring Report</button>
+                <button type="button" className="lms-report-button" disabled={!handleDownloadMonitoringSummary} onClick={handleDownloadMonitoringSummary}>🧾 PDF Monitoring Summary</button>
               </div>
             </div>
 

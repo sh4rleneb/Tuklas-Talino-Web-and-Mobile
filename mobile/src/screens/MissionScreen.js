@@ -12,7 +12,65 @@ import {
   View,
 } from 'react-native';
 
-const MISSION_GAMES = [
+
+const MAX_MISSION_ATTEMPTS = 2;
+
+const MOBILE_MISSION_TYPE_FALLBACKS = [
+  'word-match',
+  'letter-pop',
+  'picture-guess',
+  'sentence-builder',
+  'story-quest',
+  'fill-in-the-blank',
+];
+
+function normalizeMissionCatalog(rows = []) {
+  return rows.slice(0, 6).map((mission = {}, index) => {
+    const rawTitle =
+      mission.title ||
+      mission.name ||
+      mission.label ||
+      `Mission ${index + 1}`;
+
+    const slug = String(
+      mission.id ||
+      mission.key ||
+      mission.missionId ||
+      mission.gameId ||
+      rawTitle
+    )
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const fallbackType = MOBILE_MISSION_TYPE_FALLBACKS[index] || slug || `mission-${index + 1}`;
+
+    return {
+      ...mission,
+      id: mission.id || mission.key || mission.missionId || slug || `mission-${index + 1}`,
+      missionId: mission.missionId || mission.id || mission.key || slug || `mission-${index + 1}`,
+      title: rawTitle,
+      name: rawTitle,
+      subtitle: mission.subtitle || mission.tagline || mission.description || '',
+      description: mission.description || mission.instructions || mission.subtitle || '',
+      instructions: mission.instructions || mission.description || mission.guide || '',
+      icon: mission.icon || mission.emoji || '⭐',
+      tone: mission.tone || mission.color || ['mint', 'sky', 'amber', 'pink', 'violet', 'rose'][index % 6],
+      type: mission.type || mission.gameType || mission.kind || fallbackType,
+      gameType: mission.gameType || mission.type || mission.kind || fallbackType,
+      xpReward: Number(mission.xpReward || mission.rewardXp || mission.xp || 20),
+      maxAttempts: Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS),
+      questionPool: mission.questionPool || mission.questions || mission.pool || [],
+      questions: mission.questions || mission.questionPool || mission.pool || [],
+      state: mission.state || mission.status || 'ready',
+      baseStatus: mission.baseStatus || 'Handa na',
+    };
+  });
+}
+
+
+const MISSION_GAMES = normalizeMissionCatalog([
   {
     id: 'word-match',
     title: 'Pagtutugma ng Salita',
@@ -92,7 +150,7 @@ const MISSION_GAMES = [
     tone: 'rose',
     future: true
   },
-  ];
+  ]);
 
 const TONES = {
   sky: {
@@ -170,6 +228,36 @@ function getMissionKey(mission = {}) {
   return mission.missionId || mission.id;
 }
 
+
+function getMissionAttemptCount(mission = {}) {
+  const rawAttempts =
+    mission.attemptCount ??
+    mission.attemptsUsed ??
+    mission.attemptNo ??
+    mission.missionAttemptCount ??
+    mission.quizAttemptCount ??
+    mission.latestAttempt?.attemptNo ??
+    mission.attempt?.attemptNo ??
+    mission.dataJson?.attemptCount ??
+    0;
+
+  const fromArray = Array.isArray(mission.attempts)
+    ? mission.attempts.length
+    : Array.isArray(mission.missionAttempts)
+    ? mission.missionAttempts.length
+    : 0;
+
+  return Math.max(0, Math.min(MAX_MISSION_ATTEMPTS, Number(rawAttempts || fromArray || 0)));
+}
+
+function missionAttemptLabel(mission = {}) {
+  const used = getMissionAttemptCount(mission);
+  const max = Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS);
+
+  if (used >= max) return `Pagsubok ${max} sa ${max} • Naubos na`;
+  return `Pagsubok ${Math.max(1, used + 1)} sa ${max}`;
+}
+
 function buildMergedMissions(backendMissions = []) {
   return MISSION_GAMES.map((mission) => {
     const backend = backendMissions.find(
@@ -182,6 +270,9 @@ function buildMergedMissions(backendMissions = []) {
       ...mission,
       state: backend?.state || backend?.status || mission.state || 'ready',
       progress: Number(backend?.progress ?? backend?.percent ?? 0),
+      attemptCount: getMissionAttemptCount(backend || mission),
+      attemptsUsed: getMissionAttemptCount(backend || mission),
+      maxAttempts: Number(backend?.maxAttempts ?? mission.maxAttempts ?? MAX_MISSION_ATTEMPTS),
     };
   });
 }
@@ -336,6 +427,7 @@ export default function MissionScreen({ navigation }) {
                   {completed ? '✓' : claimable ? '★' : '▶'}
                 </Text>
                 <Text style={styles.playMetaLabel}>{statusLabel(selectedMission)}</Text>
+                <Text style={styles.playAttemptLabel}>{missionAttemptLabel(selectedMission)}</Text>
               </View>
             </View>
           </View>
@@ -551,6 +643,7 @@ export default function MissionScreen({ navigation }) {
                   >
                     {statusLabel(mission)}
                   </Text>
+                  <Text style={styles.missionAttemptText}>{missionAttemptLabel(mission)}</Text>
                 </View>
               </View>
 
@@ -798,6 +891,14 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  missionAttemptText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
+    textAlign: 'right',
+  },
+
   missionInstruction: {
     color: '#475569',
     fontSize: 14,
@@ -1008,6 +1109,14 @@ const styles = StyleSheet.create({
   playMetaValue: {
     fontSize: 20,
     fontWeight: '900',
+  },
+
+  playAttemptLabel: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 2,
+    textAlign: 'center',
   },
 
   playMetaLabel: {

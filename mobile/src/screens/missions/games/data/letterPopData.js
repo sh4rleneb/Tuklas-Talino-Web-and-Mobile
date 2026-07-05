@@ -7,6 +7,15 @@ function shuffle(items = []) {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
 
+
+function shuffleChoicesForAttempt(items = []) {
+  return items.map((item) => ({
+    ...item,
+    choices: Array.isArray(item.choices) ? shuffle(item.choices) : item.choices,
+    options: Array.isArray(item.options) ? shuffle(item.options) : item.options,
+  }));
+}
+
   return copy;
 }
 
@@ -59,5 +68,5 @@ export function getLetterPopItemsForGrade(gradeLevel = 1) {
 }
 
 export function getLetterPopAttemptItems(gradeLevel = 1) {
-  return shuffle(getLetterPopItemsForGrade(gradeLevel));
+  return shuffleChoicesForAttempt(shuffle(getLetterPopItemsForGrade(gradeLevel)));
 }

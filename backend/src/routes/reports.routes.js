@@ -406,7 +406,7 @@ router.get('/students.csv', async (req, res, next) => {
     const lines = [['Student ID','Name','Grade','Section','XP','Status','Last Active'].map(csvEscape).join(',')];
     for (const s of students) lines.push([s.studentCode, s.name, s.gradeLevel, s.section, s.xp, s.status, s.lastActiveAt || ''].map(csvEscape).join(','));
     res.header('Content-Type', 'text/csv');
-    res.attachment('tuklas-talino-students.csv');
+    res.attachment(req.role === 'admin' ? 'tuklas-talino-admin-student-report.csv' : 'tuklas-talino-teacher-monitoring-report.csv');
     res.send(lines.join('\n'));
   } catch (err) { next(err); }
 });
@@ -424,9 +424,310 @@ router.get('/activity-logs.csv', requireRole('admin'), async (req, res, next) =>
     const lines = [['Date','Actor','Action','Entity','Entity ID','Metadata'].map(csvEscape).join(',')];
     for (const log of logs) lines.push([log.createdAt, log.actorUserId, log.action, log.entityType, log.entityId, JSON.stringify(log.metadata || {})].map(csvEscape).join(','));
     res.header('Content-Type', 'text/csv');
-    res.attachment('tuklas-talino-activity-logs.csv');
+    res.attachment('tuklas-talino-admin-audit-trail-report.csv');
     res.send(lines.join('\n'));
   } catch (err) { next(err); }
+});
+
+router.get('/audit-trail.pdf', requireRole('admin'), async (req, res, next) => {
+  try {
+    const logs = await AuditLog.findAll({
+      order: [['createdAt', 'DESC']],
+      limit: 1000
+    });
+
+    const totalEvents = logs.length;
+
+    const actionCounts = logs.reduce((acc, log) => {
+      const action = String(log.action || 'unknown');
+      acc[action] = (acc[action] || 0) + 1;
+      return acc;
+    }, {});
+
+    const entityCounts = logs.reduce((acc, log) => {
+      const entity = String(log.entityType || 'system');
+      acc[entity] = (acc[entity] || 0) + 1;
+      return acc;
+    }, {});
+
+    const topActions = Object.entries(actionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    const topEntities = Object.entries(entityCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    const recentLogs = logs.slice(0, 8);
+
+    const doc = new PDFDocument({
+      margin: 30,
+      size: 'A4',
+      layout: 'landscape',
+      bufferPages: false
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="tuklas-talino-admin-audit-trail-report.pdf"'
+    );
+
+    doc.pipe(res);
+
+    const left = doc.page.margins.left;
+    const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+    function clean(value, max = 42) {
+      const output = String(value ?? '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      return output.length > max ? output.slice(0, max - 1) + '…' : output;
+    }
+
+    function metadataSummary(metadata) {
+      if (!metadata) return '';
+
+      try {
+        const parsed = typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
+
+        return Object.entries(parsed)
+          .slice(0, 2)
+          .map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
+          .join('; ');
+      } catch {
+        return String(metadata);
+      }
+    }
+
+    function drawCell(value, x, y, w, h, options = {}) {
+      doc
+        .font(options.bold ? 'Helvetica-Bold' : 'Helvetica')
+        .fontSize(options.size || 7)
+        .fillColor(options.color || '#111827')
+        .text(clean(value, options.max || 40), x + 4, y + 4, {
+          width: w - 8,
+          height: h - 8,
+          align: options.align || 'left',
+          ellipsis: true,
+          lineBreak: false
+        });
+    }
+
+    function drawTable(x, y, columns, rows, options = {}) {
+      const headerHeight = options.headerHeight || 18;
+      const rowHeight = options.rowHeight || 18;
+
+      if (options.title) {
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(9)
+          .fillColor('#111827')
+          .text(options.title, x, y, {
+            width: columns.reduce((sum, col) => sum + col.width, 0),
+            lineBreak: false
+          });
+
+        y += 14;
+      }
+
+      let colX = x;
+
+      for (const col of columns) {
+        doc
+          .rect(colX, y, col.width, headerHeight)
+          .fillAndStroke('#F3F4F6', '#111827');
+
+        drawCell(col.label, colX, y, col.width, headerHeight, {
+          bold: true,
+          size: options.headerSize || 6.8,
+          align: col.align,
+          max: col.max || 32
+        });
+
+        colX += col.width;
+      }
+
+      y += headerHeight;
+
+      for (const row of rows) {
+        colX = x;
+
+        for (let i = 0; i < columns.length; i += 1) {
+          const col = columns[i];
+
+          doc
+            .rect(colX, y, col.width, rowHeight)
+            .fillAndStroke('#FFFFFF', '#111827');
+
+          drawCell(row[i], colX, y, col.width, rowHeight, {
+            size: options.bodySize || 6.8,
+            align: col.align,
+            max: col.max || 36
+          });
+
+          colX += col.width;
+        }
+
+        y += rowHeight;
+      }
+
+      return y + 8;
+    }
+
+    function drawMetric(label, value, x, y, w) {
+      doc
+        .rect(x, y, w, 42)
+        .fillAndStroke('#FFFFFF', '#111827');
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(7)
+        .fillColor('#64748B')
+        .text(label, x + 6, y + 7, {
+          width: w - 12,
+          align: 'center',
+          lineBreak: false
+        });
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(13)
+        .fillColor('#111827')
+        .text(clean(value, 18), x + 6, y + 22, {
+          width: w - 12,
+          align: 'center',
+          lineBreak: false
+        });
+    }
+
+    function pct(count) {
+      return totalEvents ? Math.round((Number(count || 0) * 100) / totalEvents) + '%' : '0%';
+    }
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(15)
+      .fillColor('#111827')
+      .text('TUKLAS TALINO', left, 26, {
+        width: pageWidth,
+        align: 'center',
+        lineBreak: false
+      });
+
+    doc
+      .fontSize(13)
+      .text('ADMIN AUDIT TRAIL REPORT', left, 46, {
+        width: pageWidth,
+        align: 'center',
+        lineBreak: false
+      });
+
+    doc
+      .font('Helvetica')
+      .fontSize(8)
+      .fillColor('#374151')
+      .text(`Generated By: System Administrator    Date Generated: ${new Date().toLocaleString()}`, left, 66, {
+        width: pageWidth,
+        align: 'center',
+        lineBreak: false
+      });
+
+    const metricY = 92;
+    const metricW = pageWidth / 5;
+
+    drawMetric('TOTAL AUDIT EVENTS', totalEvents, left, metricY, metricW);
+    drawMetric('ACTION TYPES', Object.keys(actionCounts).length, left + metricW, metricY, metricW);
+    drawMetric('ENTITY TYPES', Object.keys(entityCounts).length, left + metricW * 2, metricY, metricW);
+    drawMetric('LATEST EVENT', logs[0]?.createdAt ? new Date(logs[0].createdAt).toLocaleDateString() : 'No logs', left + metricW * 3, metricY, metricW);
+    drawMetric('REPORT SCOPE', 'Admin Audit', left + metricW * 4, metricY, metricW);
+
+    let y = 154;
+
+    y = drawTable(
+      left,
+      y,
+      [
+        { label: 'ACTION', width: 205, max: 28 },
+        { label: 'COUNT', width: 55, align: 'center' },
+        { label: '%', width: 55, align: 'center' },
+        { label: 'ENTITY / TARGET', width: 205, max: 28 },
+        { label: 'COUNT', width: 55, align: 'center' },
+        { label: '%', width: 55, align: 'center' }
+      ],
+      Array.from({ length: 5 }).map((_, index) => {
+        const action = topActions[index] || ['—', 0];
+        const entity = topEntities[index] || ['—', 0];
+
+        return [
+          action[0],
+          action[1],
+          pct(action[1]),
+          entity[0],
+          entity[1],
+          pct(entity[1])
+        ];
+      }),
+      {
+        title: 'AUDIT SUMMARY DISTRIBUTION',
+        rowHeight: 20,
+        bodySize: 7,
+        headerSize: 6.8
+      }
+    );
+
+    drawTable(
+      left,
+      y + 4,
+      [
+        { label: 'DATE / TIME', width: 118, max: 25 },
+        { label: 'ACTOR', width: 58, align: 'center', max: 12 },
+        { label: 'ACTION', width: 135, max: 25 },
+        { label: 'ENTITY', width: 82, max: 18 },
+        { label: 'ID', width: 45, align: 'center', max: 10 },
+        { label: 'DETAILS / METADATA', width: 344, max: 72 }
+      ],
+      recentLogs.map((log) => [
+        log.createdAt ? new Date(log.createdAt).toLocaleString() : '',
+        log.actorUserId || 'System',
+        log.action || '',
+        log.entityType || '',
+        log.entityId || '',
+        metadataSummary(log.metadata)
+      ]),
+      {
+        title: 'RECENT AUDIT TRAIL ENTRIES',
+        rowHeight: 18,
+        bodySize: 6.3,
+        headerSize: 6.5
+      }
+    );
+
+    doc
+      .font('Helvetica')
+      .fontSize(7)
+      .fillColor('#6B7280')
+      .text(
+        'Note: This one-page PDF shows a concise audit trail summary. Download the CSV audit trail report for the complete activity log.',
+        left,
+        548,
+        {
+          width: pageWidth - 110,
+          lineBreak: false
+        }
+      );
+
+    doc.text('Page 1 of 1', left + pageWidth - 90, 548, {
+      width: 90,
+      align: 'right',
+      lineBreak: false
+    });
+
+    doc.end();
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.get('/summary', async (req, res, next) => {
@@ -588,8 +889,8 @@ router.get('/summary.csv', async (req, res, next) => {
 
     res.attachment(
       req.role === 'admin'
-        ? 'administrator-summary-report.csv'
-        : 'teacher-summary-report.csv'
+        ? 'tuklas-talino-admin-audit-trail-report.csv'
+        : 'tuklas-talino-teacher-monitoring-report.csv'
     );
 
     res.send(csv.join('\\n'));
@@ -609,20 +910,16 @@ router.get('/summary.pdf', async (req, res, next) => {
     const rows = await loadStudentPerformance(where);
     const summary = buildPerformanceSummary(rows);
 
-    const reportTitle =
+    const generatedAt = new Date();
+    const teacherName =
       req.role === 'admin'
-        ? 'Administrator Summary Report'
-        : 'Teacher Summary Report';
-
-    const reportSubtitle =
-      req.role === 'admin'
-        ? 'System-wide learning analytics and student performance overview'
-        : 'Assigned classes, handled students, progress, and review needs';
+        ? 'System Administrator'
+        : (req.teacher?.name || req.user?.name || 'Teacher');
 
     const fileName =
       req.role === 'admin'
-        ? 'administrator-summary-report.pdf'
-        : 'teacher-summary-report.pdf';
+        ? 'tuklas-talino-admin-monitoring-summary-report.pdf'
+        : 'tuklas-talino-teacher-monitoring-summary-report.pdf';
 
     const classMap = new Map();
 
@@ -664,304 +961,512 @@ router.get('/summary.pdf', async (req, res, next) => {
       }
     );
 
+    function pct(count, total) {
+      return total ? Math.round((count * 100) / total) : 0;
+    }
+
+    function performanceStatus(row) {
+      if (Number(row.completionPercent || 0) < 60) return 'Missing Activities';
+      if (Number(row.averageQuiz || 0) >= 90) return 'Outstanding';
+      if (Number(row.averageQuiz || 0) >= 75) return 'Good Standing';
+      if (Number(row.averageQuiz || 0) >= 60) return 'Needs Improvement';
+      return 'Needs Support';
+    }
+
+    function performanceRemark(row) {
+      const status = performanceStatus(row);
+
+      if (status === 'Outstanding') return 'Excellent performance';
+      if (status === 'Good Standing') return 'Continue progress';
+      if (status === 'Needs Improvement') return 'Needs guided practice';
+      if (status === 'Missing Activities') return 'Follow up missing work';
+      return 'Needs intervention';
+    }
+
+    const distribution = [
+      {
+        label: 'Outstanding',
+        short: 'Outstanding',
+        count: rows.filter(row => performanceStatus(row) === 'Outstanding').length
+      },
+      {
+        label: 'Good Standing',
+        short: 'Good',
+        count: rows.filter(row => performanceStatus(row) === 'Good Standing').length
+      },
+      {
+        label: 'Needs Improvement',
+        short: 'Improve',
+        count: rows.filter(row => performanceStatus(row) === 'Needs Improvement').length
+      },
+      {
+        label: 'Missing Activities',
+        short: 'Missing',
+        count: rows.filter(row => performanceStatus(row) === 'Missing Activities').length
+      },
+      {
+        label: 'Needs Support',
+        short: 'Support',
+        count: rows.filter(row => performanceStatus(row) === 'Needs Support').length
+      }
+    ];
+
+    const passingCount = rows.filter(row => Number(row.averageQuiz || 0) >= 75).length;
+
     const doc = new PDFDocument({
-      margin: 44,
+      margin: 32,
       size: 'A4',
+      layout: 'landscape',
       bufferPages: true
     });
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${fileName}"`
-    );
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
     doc.pipe(res);
 
-    const pageBottom = () =>
-      doc.page.height - doc.page.margins.bottom;
-
-    const contentWidth = () =>
-      doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const left = () => doc.page.margins.left;
+    const right = () => doc.page.width - doc.page.margins.right;
+    const bottom = () => doc.page.height - doc.page.margins.bottom;
+    const contentWidth = () => right() - left();
 
     function ensureSpace(height = 80) {
-      if (doc.y + height > pageBottom()) {
+      if (doc.y + height > bottom()) {
         doc.addPage();
       }
     }
 
-    function section(title) {
-      ensureSpace(48);
-
+    function cellText(value, x, y, w, h, options = {}) {
       doc
-        .moveDown(0.7)
-        .font('Helvetica-Bold')
-        .fontSize(14)
-        .fillColor('#0F172A')
-        .text(title, {
-          width: contentWidth()
+        .font(options.bold ? 'Helvetica-Bold' : 'Helvetica')
+        .fontSize(options.size || 8)
+        .fillColor(options.color || '#111827')
+        .text(String(value ?? ''), x + 4, y + 4, {
+          width: Math.max(8, w - 8),
+          height: Math.max(8, h - 8),
+          align: options.align || 'left',
+          ellipsis: true
         });
-
-      doc
-        .moveTo(doc.page.margins.left, doc.y + 4)
-        .lineTo(doc.page.width - doc.page.margins.right, doc.y + 4)
-        .strokeColor('#CBD5E1')
-        .lineWidth(1)
-        .stroke();
-
-      doc
-        .moveDown(0.8)
-        .fillColor('black');
     }
 
-    function metric(label, value) {
-      doc
-        .font('Helvetica-Bold')
-        .fontSize(10)
-        .fillColor('#334155')
-        .text(`${label}: `, {
-          continued: true
+    function drawTable(x, y, columns, tableRows, options = {}) {
+      const headerHeight = options.headerHeight || 22;
+      const rowHeight = options.rowHeight || 22;
+      const title = options.title;
+      const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
+
+      if (title) {
+        ensureSpace(28);
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(options.titleSize || 11)
+          .fillColor('#111827')
+          .text(title, x, y, {
+            width: totalWidth
+          });
+
+        y += 18;
+      }
+
+      ensureSpace(headerHeight + rowHeight);
+
+      let colX = x;
+
+      for (const col of columns) {
+        doc
+          .rect(colX, y, col.width, headerHeight)
+          .fillAndStroke('#F3F4F6', '#111827');
+
+        cellText(col.label, colX, y, col.width, headerHeight, {
+          bold: true,
+          size: options.headerSize || 8,
+          align: col.align || 'left'
         });
 
-      doc
-        .font('Helvetica')
-        .fillColor('#0F172A')
-        .text(String(value ?? '-'));
+        colX += col.width;
+      }
 
-      doc.fillColor('black');
-    }
+      y += headerHeight;
 
-    function paragraph(value) {
-      ensureSpace(42);
+      for (const row of tableRows) {
+        if (y + rowHeight > bottom()) {
+          doc.addPage();
+          y = doc.y;
 
-      doc
-        .font('Helvetica')
-        .fontSize(10)
-        .fillColor('#334155')
-        .text(String(value || ''), {
-          width: contentWidth(),
-          lineGap: 3
-        });
+          colX = x;
+          for (const col of columns) {
+            doc
+              .rect(colX, y, col.width, headerHeight)
+              .fillAndStroke('#F3F4F6', '#111827');
 
-      doc.fillColor('black');
-    }
+            cellText(col.label, colX, y, col.width, headerHeight, {
+              bold: true,
+              size: options.headerSize || 8,
+              align: col.align || 'left'
+            });
 
-    function studentBlock(row) {
-      ensureSpace(112);
-
-      const s = row.student;
-      const status =
-        row.averageQuiz >= 90
-          ? 'Excellent'
-          : row.averageQuiz >= 75
-            ? 'Good'
-            : row.averageQuiz >= 60
-              ? 'Fair'
-              : 'Needs Support';
-
-      doc
-        .font('Helvetica-Bold')
-        .fontSize(11)
-        .fillColor('#0F172A')
-        .text(s.name || 'Unnamed Student', {
-          width: contentWidth()
-        });
-
-      doc
-        .font('Helvetica')
-        .fontSize(9)
-        .fillColor('#475569')
-        .text(
-          `${s.studentCode || 'No ID'} | Grade ${s.gradeLevel} - ${s.section || 'N/A'} | ${s.status || 'active'}`,
-          {
-            width: contentWidth()
+            colX += col.width;
           }
-        );
 
-      doc.moveDown(0.25);
-
-      doc
-        .font('Helvetica')
-        .fontSize(9)
-        .fillColor('#334155')
-        .text(
-          `XP: ${s.xp || 0} | Lessons Completed: ${row.completed || 0} | Completion: ${row.completionPercent || 0}% | Average Quiz: ${row.averageQuiz || 0}% | Best Quiz: ${row.bestQuiz || 0}%`,
-          {
-            width: contentWidth(),
-            lineGap: 2
-          }
-        );
-
-      doc.text(
-        `Pending Writing Reviews: ${row.writingPending || 0} | Speech Attempts: ${row.speechAttempts || 0} | Performance Rating: ${status}`,
-        {
-          width: contentWidth(),
-          lineGap: 2
+          y += headerHeight;
         }
-      );
 
-      doc
-        .moveDown(0.45)
-        .moveTo(doc.page.margins.left, doc.y)
-        .lineTo(doc.page.width - doc.page.margins.right, doc.y)
-        .strokeColor('#E2E8F0')
-        .lineWidth(0.8)
-        .stroke();
+        colX = x;
 
-      doc
-        .moveDown(0.6)
-        .fillColor('black');
+        for (let i = 0; i < columns.length; i += 1) {
+          const col = columns[i];
+
+          doc
+            .rect(colX, y, col.width, rowHeight)
+            .fillAndStroke('#FFFFFF', '#111827');
+
+          cellText(row[i], colX, y, col.width, rowHeight, {
+            size: options.bodySize || 8,
+            align: col.align || 'left'
+          });
+
+          colX += col.width;
+        }
+
+        y += rowHeight;
+      }
+
+      doc.fillColor('#111827');
+      return y + 8;
     }
+
+    function drawHeader() {
+      const x = left();
+      const w = contentWidth();
+      let y = 28;
+
+      doc.rect(x, y, w, 70).strokeColor('#111827').lineWidth(1).stroke();
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(15)
+        .fillColor('#111827')
+        .text('TUKLAS TALINO', x, y + 8, {
+          width: w,
+          align: 'center'
+        });
+
+      doc
+        .fontSize(13)
+        .text('STUDENT MONITORING SUMMARY REPORT', x, y + 28, {
+          width: w,
+          align: 'center'
+        });
+
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .text(
+          `${req.role === 'admin' ? 'Administrator' : 'Teacher'}: ${teacherName}    Date Generated: ${generatedAt.toLocaleString()}`,
+          x,
+          y + 50,
+          {
+            width: w,
+            align: 'center'
+          }
+        );
+
+      doc.y = y + 84;
+    }
+
+    function drawVerticalBarChart(title, data, x, y, w, h, color = '#4F81BD') {
+      doc.rect(x, y, w, h).strokeColor('#9CA3AF').lineWidth(1).stroke();
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(15)
+        .fillColor('#111827')
+        .text(title, x, y + 14, {
+          width: w,
+          align: 'center'
+        });
+
+      const max = Math.max(1, ...data.map(item => Number(item.count || 0)));
+      const chartLeft = x + 52;
+      const chartRight = x + w - 32;
+      const chartTop = y + 58;
+      const chartBottom = y + h - 42;
+      const chartHeight = chartBottom - chartTop;
+      const slot = (chartRight - chartLeft) / Math.max(1, data.length);
+      const barWidth = Math.min(42, slot * 0.48);
+
+      doc
+        .strokeColor('#D1D5DB')
+        .lineWidth(0.8);
+
+      for (let i = 0; i <= 4; i += 1) {
+        const gridY = chartBottom - (chartHeight * i / 4);
+        doc.moveTo(chartLeft - 10, gridY).lineTo(chartRight, gridY).stroke();
+
+        doc
+          .font('Helvetica')
+          .fontSize(7)
+          .fillColor('#374151')
+          .text(String(Math.round(max * i / 4)), x + 10, gridY - 4, {
+            width: 32,
+            align: 'right'
+          });
+      }
+
+      data.forEach((item, index) => {
+        const value = Number(item.count || 0);
+        const barHeight = Math.round((value / max) * chartHeight);
+        const barX = chartLeft + (slot * index) + ((slot - barWidth) / 2);
+        const barY = chartBottom - barHeight;
+
+        doc.rect(barX, barY, barWidth, barHeight).fillColor(color).fill();
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(8)
+          .fillColor('#111827')
+          .text(String(value), barX, barY - 12, {
+            width: barWidth,
+            align: 'center'
+          });
+
+        doc
+          .font('Helvetica')
+          .fontSize(7)
+          .fillColor('#111827')
+          .text(item.short || item.label, barX - 14, chartBottom + 6, {
+            width: barWidth + 28,
+            align: 'center'
+          });
+      });
+
+      doc.fillColor('#111827');
+      return y + h + 14;
+    }
+
+    drawHeader();
+
+    let y = doc.y;
+
+    y = drawTable(
+      left(),
+      y,
+      [
+        { label: 'TOTAL STUDENTS', width: 110, align: 'center' },
+        { label: 'AVG QUIZ %', width: 100, align: 'center' },
+        { label: 'AVG PROGRESS %', width: 120, align: 'center' },
+        { label: 'AVG XP', width: 80, align: 'center' },
+        { label: 'TOTAL PASS', width: 100, align: 'center' },
+        { label: 'NEEDS SUPPORT', width: 120, align: 'center' },
+        { label: 'PENDING REVIEWS', width: 130, align: 'center' }
+      ],
+      [
+        [
+          summary.students,
+          summary.averageQuiz + '%',
+          summary.averageCompletion + '%',
+          summary.averageXp,
+          passingCount + ' / ' + pct(passingCount, summary.students) + '%',
+          summary.intervention.length,
+          totals.pendingWriting
+        ]
+      ],
+      {
+        rowHeight: 28,
+        bodySize: 10,
+        headerSize: 8
+      }
+    );
+
+    const leftTableWidth = 260;
+
+    drawTable(
+      left(),
+      y + 10,
+      [
+        { label: 'PERFORMANCE', width: 145 },
+        { label: 'No', width: 50, align: 'center' },
+        { label: '%', width: 50, align: 'center' }
+      ],
+      distribution.map(item => [
+        item.label,
+        item.count,
+        pct(item.count, summary.students) + '%'
+      ]).concat([
+        ['Total', summary.students, '100%']
+      ]),
+      {
+        title: 'PERFORMANCE DISTRIBUTION',
+        rowHeight: 24,
+        bodySize: 8
+      }
+    );
+
+    const chartX = left() + leftTableWidth + 40;
+    drawVerticalBarChart(
+      'No of students',
+      distribution,
+      chartX,
+      y,
+      right() - chartX,
+      205,
+      '#4F81BD'
+    );
+
+    doc.y = y + 232;
+
+    const classTableRows = classRows.slice(0, 8).map(item => {
+      const averageQuiz = item.students
+        ? Math.round(item.quizTotal / item.students)
+        : 0;
+
+      const averageCompletion = item.students
+        ? Math.round(item.completionTotal / item.students)
+        : 0;
+
+      return [
+        item.label,
+        item.students,
+        averageQuiz + '%',
+        averageCompletion + '%',
+        item.xp,
+        item.pendingWriting
+      ];
+    });
+
+    y = doc.y;
+
+    drawTable(
+      left(),
+      y,
+      [
+        { label: 'CLASS / SECTION', width: 170 },
+        { label: 'Students', width: 70, align: 'center' },
+        { label: 'Avg Quiz', width: 70, align: 'center' },
+        { label: 'Progress', width: 70, align: 'center' },
+        { label: 'XP', width: 60, align: 'center' },
+        { label: 'Pending', width: 70, align: 'center' }
+      ],
+      classTableRows.length ? classTableRows : [['No class data', 0, '0%', '0%', 0, 0]],
+      {
+        title: 'CLASS SUMMARY',
+        rowHeight: 22
+      }
+    );
+
+    if (classRows.length) {
+      const classChartData = classRows.slice(0, 6).map(item => ({
+        label: item.label,
+        short: item.label.replace('Grade ', 'G').replace(' - ', '-'),
+        count: item.students
+      }));
+
+      drawVerticalBarChart(
+        'Class count',
+        classChartData,
+        chartX,
+        y,
+        right() - chartX,
+        190,
+        '#C0504D'
+      );
+    }
+
+    doc.addPage();
+    drawHeader();
 
     doc
       .font('Helvetica-Bold')
-      .fontSize(22)
-      .fillColor('#0F172A')
-      .text('TUKLAS TALINO', {
-        align: 'center',
+      .fontSize(12)
+      .fillColor('#111827')
+      .text('STUDENT MONITORING TABLE', left(), doc.y, {
         width: contentWidth()
       });
 
-    doc
-      .moveDown(0.25)
-      .fontSize(16)
-      .text(reportTitle, {
-        align: 'center',
-        width: contentWidth()
-      });
+    doc.moveDown(0.5);
 
-    doc
-      .moveDown(0.25)
-      .font('Helvetica')
-      .fontSize(10)
-      .fillColor('#475569')
-      .text(reportSubtitle, {
-        align: 'center',
-        width: contentWidth()
-      });
+    drawTable(
+      left(),
+      doc.y,
+      [
+        { label: 'Student Name', width: 130 },
+        { label: 'Student ID / LRN', width: 86 },
+        { label: 'Grade / Section', width: 80 },
+        { label: 'XP', width: 42, align: 'center' },
+        { label: 'Lessons', width: 58, align: 'center' },
+        { label: 'Quiz %', width: 50, align: 'center' },
+        { label: 'Best %', width: 50, align: 'center' },
+        { label: 'Progress', width: 60, align: 'center' },
+        { label: 'Status', width: 100 },
+        { label: 'Remarks', width: 116 }
+      ],
+      rows.map(row => {
+        const s = row.student;
 
-    doc
-      .moveDown(1)
-      .fillColor('black');
-
-    section('Report Overview');
-
-    metric('Generated', new Date().toLocaleString());
-    metric('Students Included', summary.students);
-    metric('Average Quiz Score', `${summary.averageQuiz}%`);
-    metric('Average Lesson Completion', `${summary.averageCompletion}%`);
-    metric('Average XP Earned', summary.averageXp);
-    metric('Pending Writing Reviews', totals.pendingWriting);
-    metric('Speech Attempts', totals.speechAttempts);
-
-    if (summary.highest) {
-      metric('Top Performer', summary.highest.student.name);
-    }
-
-    metric('Students Requiring Intervention', summary.intervention.length);
-
-    if (req.role !== 'admin') {
-      section('Assigned Classes');
-
-      if (!classRows.length) {
-        paragraph('No assigned class data is available for this teacher yet.');
+        return [
+          s.name || 'Unnamed Student',
+          s.studentCode || s.lrn || s.id || '—',
+          `G${s.gradeLevel || '—'} - ${s.section || 'N/A'}`,
+          s.xp || 0,
+          `${row.completed || 0}/${row.lessonCount || 0}`,
+          (row.averageQuiz || 0) + '%',
+          (row.bestQuiz || 0) + '%',
+          (row.completionPercent || 0) + '%',
+          performanceStatus(row),
+          performanceRemark(row)
+        ];
+      }),
+      {
+        rowHeight: 24,
+        bodySize: 7.2,
+        headerSize: 7.4
       }
-
-      for (const item of classRows) {
-        const averageQuiz = item.students
-          ? Math.round(item.quizTotal / item.students)
-          : 0;
-
-        const averageCompletion = item.students
-          ? Math.round(item.completionTotal / item.students)
-          : 0;
-
-        ensureSpace(62);
-
-        doc
-          .font('Helvetica-Bold')
-          .fontSize(11)
-          .fillColor('#0F172A')
-          .text(item.label);
-
-        doc
-          .font('Helvetica')
-          .fontSize(9)
-          .fillColor('#334155')
-          .text(
-            `Students: ${item.students} | Avg Quiz: ${averageQuiz}% | Avg Completion: ${averageCompletion}% | Pending Reviews: ${item.pendingWriting} | Speech Attempts: ${item.speechAttempts}`,
-            {
-              width: contentWidth(),
-              lineGap: 2
-            }
-          );
-
-        doc
-          .moveDown(0.55)
-          .fillColor('black');
-      }
-    }
-
-    section(
-      req.role === 'admin'
-        ? 'System Student Performance'
-        : 'Handled Student Performance'
     );
 
-    if (!rows.length) {
-      paragraph('No student performance data is available yet.');
-    }
+    ensureSpace(110);
 
-    for (const row of rows) {
-      studentBlock(row);
-    }
+    doc.moveDown(1);
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(11)
+      .fillColor('#111827')
+      .text('OVERALL REMARKS', left(), doc.y, {
+        width: contentWidth()
+      });
 
-    section('Students Needing Intervention');
+    doc.moveDown(0.35);
 
-    if (!summary.intervention.length) {
-      paragraph('No students currently require intervention based on the report thresholds.');
-    } else {
-      for (const row of summary.intervention) {
-        ensureSpace(28);
-
-        doc
-          .font('Helvetica')
-          .fontSize(9)
-          .fillColor('#334155')
-          .text(
-            `- ${row.student.name} | Grade ${row.student.gradeLevel} - ${row.student.section || 'N/A'} | Quiz: ${row.averageQuiz}% | Completion: ${row.completionPercent}%`,
-            {
-              width: contentWidth(),
-              lineGap: 2
-            }
-          );
-      }
-
-      doc.fillColor('black');
-    }
-
-    section('Overall Remarks');
-
-    let remarks = 'Intervention is recommended. Provide remediation and individualized support to improve learning outcomes.';
+    let remarks = 'Intervention is recommended. Provide remediation, guided practice, and follow-up for students with low scores or incomplete activities.';
 
     if (summary.averageQuiz >= 90) {
-      remarks = 'Outstanding performance. Learners consistently demonstrate mastery of lessons.';
+      remarks = 'Outstanding overall performance. Students are showing strong mastery of lessons.';
     } else if (summary.averageQuiz >= 80) {
-      remarks = 'Very satisfactory performance. Continue reinforcing higher-order learning activities.';
+      remarks = 'Very satisfactory performance. Continue enrichment and maintain regular monitoring.';
     } else if (summary.averageQuiz >= 75) {
-      remarks = 'Satisfactory performance. Additional practice is recommended for selected learners.';
+      remarks = 'Satisfactory performance. Continue monitoring students who need additional practice.';
     }
 
-    paragraph(remarks);
+    doc
+      .font('Helvetica')
+      .fontSize(9)
+      .fillColor('#374151')
+      .text(remarks, left(), doc.y, {
+        width: contentWidth(),
+        lineGap: 3
+      });
 
-    doc.moveDown(1.6);
-    paragraph('Prepared by:');
+    doc.moveDown(1.4);
+
+    doc
+      .font('Helvetica')
+      .fontSize(9)
+      .fillColor('#111827')
+      .text('Prepared by:', left(), doc.y);
+
     doc.moveDown(1.2);
 
     doc
       .font('Helvetica')
-      .fontSize(10)
-      .fillColor('#0F172A')
+      .fontSize(9)
       .text('__________________________________');
 
     doc.text(
@@ -975,18 +1480,15 @@ router.get('/summary.pdf', async (req, res, next) => {
     for (let i = 0; i < pages.count; i++) {
       doc.switchToPage(pages.start + i);
 
-      const footerY =
-        doc.page.height -
-        doc.page.margins.bottom -
-        14;
+      const footerY = doc.page.height - doc.page.margins.bottom - 12;
 
       doc
         .font('Helvetica')
-        .fontSize(8)
-        .fillColor('#64748B');
+        .fontSize(7)
+        .fillColor('#6B7280');
 
       doc.text(
-        'Tuklas Talino Learning Analytics Report',
+        'Tuklas Talino Student Monitoring Summary Report',
         doc.page.margins.left,
         footerY,
         {
@@ -1010,7 +1512,7 @@ router.get('/summary.pdf', async (req, res, next) => {
         }
       );
 
-      doc.fillColor('black');
+      doc.fillColor('#111827');
     }
 
     doc.end();
@@ -1018,7 +1520,6 @@ router.get('/summary.pdf', async (req, res, next) => {
     next(err);
   }
 });
-
 
 
 router.get('/summary.txt', async (req, res, next) => {

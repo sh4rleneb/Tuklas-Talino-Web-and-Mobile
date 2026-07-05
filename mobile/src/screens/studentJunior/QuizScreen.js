@@ -17,7 +17,7 @@ import { api } from '../../api/client';
 import Card from '../../components/Card';
 import { colors } from '../../styles/theme';
 
-const MAX_QUIZ_ATTEMPTS = 5;
+const MAX_QUIZ_ATTEMPTS = 2;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -52,6 +52,27 @@ function stableShuffleOptions(options = [], seed = '') {
   }
 
   return rows;
+}
+
+
+function randomizeQuizChoicesForAttempt(quiz = {}, attemptNo = 1) {
+  const seed = [
+    quiz.quizId || quiz.id || quiz.legacyQuizId || 'quiz',
+    attemptNo,
+    Date.now(),
+    Math.random(),
+  ].join('-');
+
+  return {
+    ...quiz,
+    questions: asArray(quiz.questions).map((question, questionIndex) => ({
+      ...question,
+      options: stableShuffleOptions(
+        asArray(question.options),
+        `${seed}-${question.id || questionIndex}`
+      ),
+    })),
+  };
 }
 
 function buildFallbackOptions(correctText, alternates = []) {
@@ -114,7 +135,7 @@ function buildQuizQuestionsFromLesson(lesson = {}) {
       questions.push({
         id: String(question.id || `${lesson.id || 'lesson'}-${activityIndex}-${questionIndex}`),
         type: 'mcq',
-        source: activity.title || 'Pagsusulit sa Aralin',
+        source: formatTuklasQuizPreviewTitle({ lessonTitle: activity?.lessonTitle || activity?.lesson?.title || activity?.title, quizTitle: activity?.title, gradeLevel: activity?.gradeLevel || activity?.lesson?.gradeLevel || activity?.lessonGradeLevel }),
         question: prompt,
         prompt,
         options,
@@ -144,7 +165,7 @@ function quizCatalog(dashboard) {
         legacyQuizId: `lesson-${lesson.id}`,
         lessonId: lesson.id,
         lessonTitle,
-        title: lessonTitle,
+        title: formatTuklasQuizPreviewTitle({ lessonTitle, gradeLevel: lesson.gradeLevel || lesson.grade || lesson.level, studentGradeLevel: dashboard?.student?.gradeLevel }),
         subject: lesson.subject || 'Filipino',
         gradeLevel: lesson.gradeLevel || dashboard?.student?.gradeLevel || '—',
         xpReward: Math.max(5, Math.round(Number(lesson.xpReward || 20) / 2)),
@@ -162,6 +183,127 @@ function getQuizAttempts(attempts = {}, quiz = {}) {
 
 function optionLetter(index) {
   return String.fromCharCode(65 + index);
+}
+
+
+
+function quizQuestionText(question = {}) {
+  return (
+    question.question ||
+    question.prompt ||
+    question.text ||
+    question.title ||
+    ''
+  );
+}
+
+function quizOptionText(option = {}) {
+  return (
+    option.optionText ||
+    option.text ||
+    option.label ||
+    option.value ||
+    ''
+  );
+}
+
+function titleCasePagsusulitText(value = '') {
+  const smallWords = new Set(['ang', 'ng', 'sa', 'si', 'ni', 'kay', 'at', 'ay', 'mga', 'na', 'po']);
+
+  return String(value || '')
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word, index) => {
+      if (index > 0 && smallWords.has(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
+function cleanPagsusulitTitleSeed(value = '') {
+  let seed = String(value || '')
+    .replace(/[“”"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  seed = seed
+    .replace(/^mission\s*:\s*/i, '')
+    .replace(/^tanong\s*\d+\s*[:.-]?\s*/i, '')
+    .replace(/^question\s*\d+\s*[:.-]?\s*/i, '')
+    .replace(/\s*quiz\s*$/i, '')
+    .trim();
+
+  [
+    /^ano ang\s+/i,
+    /^alin ang\s+/i,
+    /^sino ang\s+/i,
+    /^saan\s+/i,
+    /^kailan\s+/i,
+    /^bakit\s+/i,
+    /^paano\s+/i,
+    /^piliin ang\s+/i,
+    /^hanapin ang\s+/i,
+    /^tukuyin ang\s+/i,
+    /^isulat ang\s+/i,
+    /^bigkasin\s*:?\s*/i,
+    /^basahin\s*:?\s*/i,
+    /^ayusin ang\s+/i,
+    /^buuin ang\s+/i,
+    /^kumpletuhin ang\s+/i,
+    /^sagutin ang\s+/i,
+  ].forEach((pattern) => {
+    seed = seed.replace(pattern, '');
+  });
+
+  seed = seed
+    .replace(/[?.!]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return titleCasePagsusulitText(seed.split(/\s+/).filter(Boolean).slice(0, 6).join(' '));
+}
+
+function specificQuizCardTitle(quiz = {}) {
+  const lessonTitle =
+    quiz.lessonTitle ||
+    quiz.lesson?.title ||
+    quiz.lesson?.name ||
+    quiz.moduleTitle ||
+    quiz.title ||
+    'Lessons';
+
+  return formatTuklasQuizPreviewTitle({
+    lessonTitle,
+    quizTitle: quiz.title,
+    gradeLevel: quiz.gradeLevel || quiz.lessonGradeLevel || quiz.lesson?.gradeLevel || quiz.grade || quiz.moduleGradeLevel,
+    studentGradeLevel: quiz.studentGradeLevel,
+  });
+}
+
+
+function extractTuklasGradeNumber(...values) {
+  for (const value of values) {
+    const text = String(value ?? '').trim();
+    const match = text.match(/\b(?:grade|baitang|level)?\s*([1-6])\b/i);
+    if (match) return match[1];
+  }
+  return '';
+}
+
+function cleanTuklasQuizLessonTitle(value, fallback = 'Lessons') {
+  return String(value ?? fallback)
+    .trim()
+    .replace(/^\s*(?:quizzes?|pagsusulit)\s+sa\s+/i, '')
+    .replace(/^\s*sa\s+/i, '')
+    .replace(/^\s*bokabularyo\s*[1-6]\s*:\s*/i, '')
+    .replace(/\s*quiz\s*$/i, '')
+    .trim() || fallback;
+}
+
+function formatTuklasQuizPreviewTitle({ lessonTitle, quizTitle, gradeLevel, studentGradeLevel, fallback = 'Lessons' } = {}) {
+  const lesson = cleanTuklasQuizLessonTitle(lessonTitle || quizTitle, fallback);
+  return `Pagsusulit sa ${lesson}`;
 }
 
 export default function QuizScreen({ navigation }) {
@@ -215,7 +357,7 @@ export default function QuizScreen({ navigation }) {
 
   function openQuizPreview(quiz) {
     setPreviewQuiz(null);
-    setActiveQuiz(quiz);
+    setActiveQuiz(randomizeQuizChoicesForAttempt(quiz, getQuizAttempts(quizAttempts, quiz).length + 1));
     setQuestionIndex(-1);
     setAnswers({});
     setResult(null);
@@ -260,6 +402,11 @@ const closeQuizPreview = useCallback(() => {
   );
   async function submitQuiz() {
     if (!activeQuiz || submitting) return;
+
+    if (activeQuizAttempts.length >= MAX_QUIZ_ATTEMPTS) {
+      Alert.alert('Pagsusulit', 'Naubos na ang 2 pagsubok para sa pagsusulit na ito.');
+      return;
+    }
 
     const review = activeQuiz.questions.map((item, index) => {
       const selectedOptionId = answers[item.id];
@@ -387,7 +534,7 @@ const closeQuizPreview = useCallback(() => {
           showsVerticalScrollIndicator={false}
         >
           <TouchableOpacity
-            style={styles.quizBackButton}
+            style={[styles.quizBackButton, { marginBottom: 18 }]}
             onPress={closeQuiz}
             activeOpacity={0.85}
           >
@@ -396,8 +543,11 @@ const closeQuizPreview = useCallback(() => {
 
           <View style={styles.activeHero}>
             <Text style={styles.activeEyebrow}>🧠 PAGSUSULIT</Text>
-            <Text style={styles.activeTitle}>{activeQuiz.title}</Text>
+            <Text style={styles.activeTitle}>{specificQuizCardTitle(activeQuiz)}</Text>
             <Text style={styles.activeSubtitle}>{activeQuiz.lessonTitle}</Text>
+          <Text style={styles.attemptPill}>
+            Pagsubok {Math.min(activeQuizAttempts.length, MAX_QUIZ_ATTEMPTS)}/{MAX_QUIZ_ATTEMPTS}
+          </Text>
           </View>
 
           {!result && questionIndex < 0 ? (
@@ -437,7 +587,7 @@ const closeQuizPreview = useCallback(() => {
               </View>
 
               <TouchableOpacity
-                style={styles.primaryButton}
+                style={[styles.primaryButton, { marginTop: 18 }]}
                 onPress={() => startQuiz(activeQuiz)}
                 activeOpacity={0.85}
               >
@@ -497,19 +647,25 @@ const closeQuizPreview = useCallback(() => {
 
               {canRetry && (
                 <TouchableOpacity
-                  style={[styles.primaryButton, styles.retryButton]}
+                  style={[styles.primaryButton, styles.retryButton, styles.resultActionButton, styles.resultRetryButtonSpacing]}
                   onPress={() => {
+                    setActiveQuiz((currentQuiz) =>
+                      randomizeQuizChoicesForAttempt(
+                        currentQuiz,
+                        activeQuizAttempts.length + 1
+                      )
+                    );
                     setResult(null);
                     setAnswers({});
                     setQuestionIndex(0);
                   }}
                 >
-                  <Text style={styles.primaryButtonText}>🔄 Subukan Muli</Text>
+                  <Text style={[styles.primaryButtonText, styles.resultActionButtonText]}>🔄 Subukan Muli</Text>
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity
-                style={styles.primaryButton}
+                style={[styles.primaryButton, styles.resultActionButton, styles.resultBackButtonSpacing]}
                 onPress={closeQuiz}
               >
                 <Text style={styles.primaryButtonText}>
@@ -579,7 +735,7 @@ const closeQuizPreview = useCallback(() => {
                 )}
 
                 <TouchableOpacity
-                  style={[styles.primaryButton, !selectedOptionId && styles.buttonDisabled]}
+                  style={[styles.quizNextButtonSpacing, styles.primaryButton, !selectedOptionId && styles.buttonDisabled]}
                   onPress={continueQuiz}
                   disabled={!selectedOptionId || submitting}
                 >
@@ -635,7 +791,7 @@ const closeQuizPreview = useCallback(() => {
           </View>
 
           <View style={styles.summaryChip}>
-            <Text style={styles.summaryValue}>5</Text>
+            <Text style={styles.summaryValue}>{MAX_QUIZ_ATTEMPTS}</Text>
             <Text style={styles.summaryLabel}>Pagsubok</Text>
           </View>
         </View>
@@ -664,7 +820,7 @@ const closeQuizPreview = useCallback(() => {
                     </View>
 
                     <View style={styles.quizCardText}>
-                      <Text style={styles.quizTitle}>{quiz.title}</Text>
+                      <Text style={styles.quizTitle}>{specificQuizCardTitle(quiz)}</Text>
                       <Text style={styles.muted}>{quiz.subject} • Grade {quiz.gradeLevel}</Text>
                     <Text style={styles.muted}>{quiz.type}</Text>
                     </View>
@@ -697,7 +853,7 @@ const closeQuizPreview = useCallback(() => {
                     activeOpacity={0.85}
                   >
                     <Text style={styles.primaryButtonText}>
-                      {limitReached ? 'Naubos na ang 5 Pagsubok' : 'Simulan ang Pagsusulit'}
+                      {limitReached ? 'Naubos na ang 2 Pagsubok' : 'Simulan ang Pagsusulit'}
                     </Text>
                   </TouchableOpacity>
                 </Card>
@@ -1053,6 +1209,45 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     lineHeight: 34,
     marginTop: 8,
+  },
+
+  resultActionButtonText: {
+    textAlign: 'center',
+    flexShrink: 1,
+    width: '100%',
+  },
+
+  resultActionButton: {
+    alignSelf: 'stretch',
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: '100%',
+    paddingHorizontal: 18,
+  },
+
+  resultRetryButtonSpacing: {
+    marginTop: 34,
+    marginBottom: 10,
+  },
+
+  resultBackButtonSpacing: {
+    marginTop: 0,
+  },
+
+  attemptPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#ECFDF5',
+    color: '#166534',
+    borderRadius: 999,
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    fontSize: 13,
+    fontWeight: '900',
+    marginTop: 12,
+  },
+  quizNextButtonSpacing: {
+    marginTop: 14,
   },
 
   activeSubtitle: {

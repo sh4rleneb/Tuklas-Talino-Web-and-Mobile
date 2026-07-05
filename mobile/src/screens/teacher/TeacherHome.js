@@ -468,6 +468,7 @@ export default function TeacherHome({ navigation }) {
   const [studentReport, setStudentReport] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
+  const [reportBusy, setReportBusy] = useState('');
   const [error, setError] = useState('');
   const [builderStep, setBuilderStep] = useState(0);
   const [editingLesson, setEditingLesson] = useState(null);
@@ -647,6 +648,24 @@ export default function TeacherHome({ navigation }) {
 
   function confirmLogout() {
     setLogoutVisible(true);
+  }
+
+
+  async function runTeacherReportExport(type, action) {
+    if (reportBusy) return;
+
+    setReportBusy(type);
+
+    try {
+      await action();
+    } catch (err) {
+      Alert.alert(
+        'Report Export Failed',
+        err?.message || 'Unable to prepare the monitoring report.'
+      );
+    } finally {
+      setReportBusy('');
+    }
   }
 
 async function handleLogout() {
@@ -2670,7 +2689,7 @@ async function handleLogout() {
         </SectionCard>
 
         <SectionCard>
-          <Text style={styles.cardTitle}>Student Monitoring</Text>
+          <Text style={styles.cardTitle}>Student Monitoring Report</Text>
         {currentStudents.map((student) => (
           <View key={student.id} style={styles.studentCard}>
             <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
@@ -2692,38 +2711,48 @@ async function handleLogout() {
     return (
       <>
         <SectionCard>
-          <Text style={styles.cardTitle}>Report Downloads</Text>
+          <Text style={styles.cardTitle}>Student Monitoring Report Downloads</Text>
 
           <SmallButton
-            disabled={Boolean(busy)}
+            disabled={Boolean(busy) || Boolean(reportBusy)}
             onPress={() =>
-              downloadTextReport({
-                title: 'Teacher Summary CSV',
-                filename: 'teacher-summary-report.csv',
-                mimeType: 'text/csv',
-                loader: getSummaryReportCsv,
-              })
+              runTeacherReportExport('csv', () =>
+                downloadTextReport({
+                  title: 'Teacher CSV Monitoring Report',
+                  filename: 'tuklas-talino-teacher-monitoring-report.csv',
+                  mimeType: 'text/csv',
+                  loader: getSummaryReportCsv,
+                })
+              )
             }
           >
-            Download Teacher Summary CSV
+            {reportBusy === 'csv' ? 'Preparing CSV...' : 'CSV Monitoring Report'}
           </SmallButton>
 
           <SmallButton
-            disabled={Boolean(busy)}
+            disabled={Boolean(busy) || Boolean(reportBusy)}
             onPress={() =>
-              downloadPdfReport({
-                title: 'Teacher Summary Report',
-                filename: 'teacher-summary-report.pdf',
-                loader: getSummaryReportPdf,
-              })
+              runTeacherReportExport('pdf', () =>
+                downloadPdfReport({
+                  title: 'Teacher PDF Monitoring Summary',
+                  filename: 'tuklas-talino-teacher-monitoring-summary-report.pdf',
+                  loader: getSummaryReportPdf,
+                })
+              )
             }
           >
-            Download Teacher Summary PDF
+            {reportBusy === 'pdf' ? 'Preparing PDF...' : 'PDF Monitoring Summary'}
           </SmallButton>
+
+          {reportBusy ? (
+            <Text style={styles.muted}>
+              Preparing report file. The export popup will open shortly...
+            </Text>
+          ) : null}
         </SectionCard>
 
         <SectionCard>
-          <Text style={styles.cardTitle}>Current Summary</Text>
+          <Text style={styles.cardTitle}>Current Monitoring Summary</Text>
           <Text style={styles.body}>Students: {reportSummary?.students || 0}</Text>
           <Text style={styles.body}>Published lessons: {reportSummary?.lessons || 0}</Text>
           <Text style={styles.body}>Total XP: {reportSummary?.totalXp || 0}</Text>

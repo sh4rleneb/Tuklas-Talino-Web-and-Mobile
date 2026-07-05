@@ -127,3 +127,7 @@ export async function getSummaryReportCsv() {
 export async function getSummaryReportPdf() {
   return apiBinary('/reports/summary.pdf');
 }
+
+export async function getAuditTrailReportPdf() {
+  return apiBinary('/reports/audit-trail.pdf');
+}

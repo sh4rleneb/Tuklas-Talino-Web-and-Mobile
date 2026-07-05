@@ -59,6 +59,31 @@ function lessonTheme(subject) {
 }
 
 
+
+function extractTuklasGradeNumber(...values) {
+  for (const value of values) {
+    const text = String(value ?? '').trim();
+    const match = text.match(/\b(?:grade|baitang|level)?\s*([1-6])\b/i);
+    if (match) return match[1];
+  }
+  return '';
+}
+
+function cleanTuklasQuizLessonTitle(value, fallback = 'Lessons') {
+  return String(value ?? fallback)
+    .trim()
+    .replace(/^\s*(?:quizzes?|pagsusulit)\s+sa\s+/i, '')
+    .replace(/^\s*sa\s+/i, '')
+    .replace(/^\s*bokabularyo\s*[1-6]\s*:\s*/i, '')
+    .replace(/\s*quiz\s*$/i, '')
+    .trim() || fallback;
+}
+
+function formatTuklasQuizPreviewTitle({ lessonTitle, quizTitle, gradeLevel, studentGradeLevel, fallback = 'Lessons' } = {}) {
+  const lesson = cleanTuklasQuizLessonTitle(lessonTitle || quizTitle, fallback);
+  return `Pagsusulit sa ${lesson}`;
+}
+
 export default function ModulesScreen({ navigation }) {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -191,7 +216,7 @@ export default function ModulesScreen({ navigation }) {
           <Text style={styles.backText}>← Bumalik</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>Lessons</Text>
+        <Text style={styles.title}>Aralin</Text>
 
         <View style={styles.spacer} />
       </View>
