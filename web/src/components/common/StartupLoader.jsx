@@ -59,7 +59,7 @@ export default function StartupLoader() {
               fontWeight: 1000
             }}
           >
-            Loading Tuklas Talino
+            Nilo-load ang Tuklas Talino
           </h1>
 
           <p
@@ -70,7 +70,7 @@ export default function StartupLoader() {
               fontWeight: 900
             }}
           >
-            Please wait<span style={{ letterSpacing: 3 }}>...</span>
+            Mangyaring maghintay<span style={{ letterSpacing: 3 }}>...</span>
           </p>
         </div>
       </div>

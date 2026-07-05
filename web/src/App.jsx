@@ -24,6 +24,29 @@ import StartupLoader from './components/common/StartupLoader';
 import StudentGroupSubmissionReview from './components/student/StudentGroupSubmissionReview';
 import Grade46MobileNav from './components/student/Grade46MobileNav';
 
+const STUDENT_SUBJECT_DISPLAY_LABELS = {
+  'Oral Comm': 'Komunikasyong Pagsasalita',
+  'Oral Communication': 'Komunikasyong Pagsasalita',
+  'Pasalitang Komunikasyon': 'Komunikasyong Pagsasalita',
+};
+
+function formatStudentSubjectDisplay(subject) {
+  const value = String(subject || '').trim();
+  return STUDENT_SUBJECT_DISPLAY_LABELS[value] || subject || 'Filipino';
+}
+
+function studentSubjectMatches(subject, filter) {
+  const rawSubject = String(subject || '').trim();
+  const rawFilter = String(filter || '').trim();
+
+  if (!rawFilter || rawFilter === 'ALL' || rawFilter === 'Lahat') return true;
+  if (rawSubject === rawFilter) return true;
+
+  return formatStudentSubjectDisplay(rawSubject) === formatStudentSubjectDisplay(rawFilter);
+}
+
+
+
 
 function subjectIconSrc(subject = "") {
   const key = String(subject || "").toLowerCase();
@@ -1747,7 +1770,7 @@ async function archiveTeacher(id) {
     const lessons = studentDash?.lessons || [];
     return SUBJECTS.map(subject => ({
       ...subject,
-      lessons: lessons.filter(lesson => lesson.subject === subject.name)
+      lessons: lessons.filter(lesson => studentSubjectMatches(lesson.subject, subject.name))
     }));
   }, [studentDash]);
 
@@ -1755,7 +1778,7 @@ async function archiveTeacher(id) {
     const lessons = studentDash?.lessons || [];
     return subjectFilter === 'ALL'
       ? lessons
-      : lessons.filter(lesson => lesson.subject === subjectFilter);
+      : lessons.filter(lesson => studentSubjectMatches(lesson.subject, subjectFilter));
   }, [studentDash, subjectFilter]);
 
   const hasSavedSession = typeof window !== 'undefined' && Boolean(window.localStorage.getItem('tuklas_token'));
@@ -3678,7 +3701,7 @@ async function archiveTeacher(id) {
         transform: none;
       }
 
-      /* === Word Match shuffled picture polish START === */
+      /* === Pagtutugma ng Salita shuffled picture polish START === */
     
 
       .word-match-game {
@@ -3740,7 +3763,7 @@ async function archiveTeacher(id) {
         }
       }
 
-      /* === Word Match toast overlay polish START === */
+      /* === Pagtutugma ng Salita toast overlay polish START === */
     
     `}
 </style>
@@ -3749,7 +3772,7 @@ async function archiveTeacher(id) {
 
       {loading && (
         <div className="notif-wrap">
-          <div className="notif">⏳ Loading...</div>
+          <div className="notif">⏳ Nilo-load...</div>
         </div>
       )}
       <Screen id="screen-landing" active={screen === 'screen-landing'}>
@@ -4083,7 +4106,7 @@ function stableShuffleOptions(options = [], seed = '') {
 function buildFallbackOptions(correctText, alternates = []) {
   const correct = String(correctText || 'Filipino');
   const choices = [correct, ...alternates.filter(Boolean).filter(item => String(item) !== correct)];
-  const fillers = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Pasalitang Komunikasyon', 'Pagsulat', 'Hindi nabanggit'];
+  const fillers = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Komunikasyong Pagsasalita', 'Pagsulat', 'Hindi nabanggit'];
   fillers.forEach(item => {
     if (choices.length < 4 && !choices.includes(item)) choices.push(item);
   });
@@ -4259,7 +4282,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
   const level = levelForXp(s.xp);
   const xpPct = xpPercent(s.xp);
 
-  const mainSubjects = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Pasalitang Komunikasyon', 'Pagsulat'];
+  const mainSubjects = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Komunikasyong Pagsasalita', 'Pagsulat'];
   const mainStats = mainSubjects.map((subjectName) => {
     const found = stats.find((item) => item.subj === subjectName);
     const subjectInfo = SUBJECTS.find((item) => item.name === subjectName) || {};
@@ -7540,7 +7563,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
   const groupTask = tasks[0];
   const badgeCatalog = [
     { icon: '🌟', name: 'Reader', requirement: 'Complete a reading lesson' },
-    { icon: '🔤', name: 'Words', requirement: 'Practice vocabulary lessons' },
+    { icon: '🔤', name: 'Words', requirement: 'Handa na vocabulary lessons' },
     { icon: '🎙️', name: 'Tagapagsalita', requirement: 'Finish oral communication practice' },
     { icon: '🏆', name: 'Champion', requirement: 'Complete more learning missions' },
     { icon: '📖', name: 'Story', requirement: 'Finish a Panitikan lesson' },
@@ -7623,9 +7646,9 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
 
   const groupTaskFilterOptions = [
     { value: 'all', label: 'All' },
-    { value: 'pending', label: 'Pending Review' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'returned', label: 'Rejected' },
+    { value: 'pending', label: 'Naghihintay ng Pagsusuri' },
+    { value: 'approved', label: 'Naaprubahan' },
+    { value: 'returned', label: 'Ibinalik' },
     { value: 'not_submitted', label: 'Hindi Pa Naipapasa' }
   ];
 
@@ -7644,9 +7667,9 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
           <section className="g46-ref-panel">
             <div className="g46-ref-panel-head">
               <div>
-                <h2>Your lessons</h2>
+                <h2>Mga Aralin Mo</h2>
               </div>
-              <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('lessons')}>All lessons →</button>
+              <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('lessons')}>Lahat ng aralin →</button>
             </div>
 
             {planCards.length ? (
@@ -7834,7 +7857,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">📚 Lesson Library</h2>
+            <h2 className="g12-section-title">📚 Aklatan ng Aralin</h2>
 
           </div>
         </div>
@@ -7855,7 +7878,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
         <div className="g12-card-grid">
           {lessons.map(lesson => {
             const meta = subjectTheme(lesson.subject);
-            const subjectInfo = SUBJECTS.find(subject => subject.name === lesson.subject) || {};
+            const subjectInfo = SUBJECTS.find(subject => studentSubjectMatches(lesson.subject, subject.name)) || {};
             const tone = subjectInfo.tone || 'green';
 
             return (
@@ -7870,7 +7893,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
                 </div>
                 <div className="g12-lesson-tile-body">
                   <h3>{shortEarlyLessonTitle(lesson)}</h3>
-                  <p>{lesson.subject || 'Filipino'} • ⭐ {lesson.xpReward || 0} XP</p>
+                  <p>{formatStudentSubjectDisplay(lesson.subject || 'Filipino')} • ⭐ {lesson.xpReward || 0} XP</p>
                   {lesson.completed && (
                     <span className="g12-status-pill">✅ Summary</span>
                   )}
@@ -7918,8 +7941,8 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
-            <h2>Lesson Library</h2>
-            <p className="g46-ref-muted">{lessons.length} lesson{lessons.length === 1 ? '' : 's'} available for your grade.</p>
+            <h2>Aklatan ng Aralin</h2>
+            <p className="g46-ref-muted">{lessons.length} {lessons.length === 1 ? 'aralin' : 'mga aralin'} ang available para sa iyong baitang.</p>
           </div>
         </div>
 
@@ -7939,7 +7962,7 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
         <div className="g46-ref-card-grid">
           {lessons.map(lesson => {
             const meta = subjectTheme(lesson.subject);
-            const subjectInfo = SUBJECTS.find(subject => subject.name === lesson.subject) || {};
+            const subjectInfo = SUBJECTS.find(subject => studentSubjectMatches(lesson.subject, subject.name)) || {};
             const tone = subjectInfo.tone || 'green';
 
             return (
@@ -7954,10 +7977,10 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
                         className="subject-img-icon lesson"
                       />
                     </span>
-                    <span className="g46-ref-tag">{lesson.completed ? '✅ Done' : '▶ Start'}</span>
+                    <span className="g46-ref-tag">{lesson.completed ? '✅ Tapos Na' : '▶ Simulan'}</span>
                   </div>
                   <h4>{lesson.title}</h4>
-                  <p>{lesson.subject} • Baitang {lesson.gradeLevel} • +{lesson.xpReward || 0} XP</p>
+                  <p>{formatStudentSubjectDisplay(lesson.subject)} • Baitang {lesson.gradeLevel} • +{lesson.xpReward || 0} XP</p>
                 </div>
                 <span className="g46-ref-primary-btn" style={{ width: 'max-content' }}>{lesson.completed ? 'Summary' : 'Simulan'}</span>
               </button>
@@ -8347,7 +8370,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
         logout={logout}
         icon="✅"
         title={lesson?.title || "Lesson Summary"}
-        subtitle={`Tapos Na • Baitang ${lesson?.gradeLevel || '—'} • ${lesson?.subject || 'Filipino'}`}
+        subtitle={`Tapos Na • Baitang ${lesson?.gradeLevel || '—'} • ${formatStudentSubjectDisplay(lesson?.subject || 'Filipino')}`}
         titleAction={
           <button
             type="button"
@@ -8407,7 +8430,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
             <section className="g46-ref-panel">
               <div className="g46-ref-panel-head">
                 <div>
-                  <h2>Review Lesson Material</h2>
+                  <h2>Balikan ang Materyal ng Aralin</h2>
                   <p className="g46-ref-muted">You can still open the attached slides or PDF for review.</p>
                 </div>
               </div>
@@ -8480,7 +8503,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
                   marginBottom: 10,
                 }}
               >
-                Baitang {lesson?.gradeLevel || '—'} • {lesson?.subject || 'Filipino'}
+                Baitang {lesson?.gradeLevel || '—'} • {formatStudentSubjectDisplay(lesson?.subject || 'Filipino')}
               </div>
 
               <h2 style={{ margin: '4px 0 8px', fontSize: 28, lineHeight: 1.1 }}>
@@ -8741,7 +8764,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
       logout={logout}
       icon={theme.icon || "📘"}
       title={lesson?.title || "Lesson"}
-      subtitle={`Baitang ${lesson?.gradeLevel || '—'} • ${lesson?.subject || 'Filipino'} • +${lesson?.xpReward || 0} XP`}
+      subtitle={`Baitang ${lesson?.gradeLevel || '—'} • ${formatStudentSubjectDisplay(lesson?.subject || 'Filipino')} • +${lesson?.xpReward || 0} XP`}
       titleAction={
         <button
           type="button"
@@ -9576,7 +9599,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
       go={go}
       icon={theme.icon || '📘'}
       title="Misyong Pang-aral"
-      subtitle={`${lesson?.subject || 'Filipino'} • Baitang ${lesson?.gradeLevel || '—'} • ${isReviewMode ? 'Pagbabalik-aral' : `+${lesson?.xpReward || 0} XP`}`}
+      subtitle={`${formatStudentSubjectDisplay(lesson?.subject || 'Filipino')} • Baitang ${lesson?.gradeLevel || '—'} • ${isReviewMode ? 'Pagbabalik-aral' : `+${lesson?.xpReward || 0} XP`}`}
     >
       <style>{`
         .g12-mission-wrap {
@@ -10810,7 +10833,7 @@ function MaterialActivity({ activity, isEarlyGrade, activityBoxStyle }) {
                   fontWeight: 800
                 }}
               >
-                {pdfPreviewError || 'Nilo-load ang preview ng PDF...'}
+                {pdfPreviewError || 'Nilo-load ang paunang tingin ng PDF...'}
               </div>
             )}
           </div>
@@ -10824,7 +10847,7 @@ function MaterialActivity({ activity, isEarlyGrade, activityBoxStyle }) {
             rel="noreferrer"
             style={{ width: 'fit-content', marginTop: 4 }}
           >
-            {isPdf ? 'Open Full PDF' : 'Open Lesson Slides'}
+            {isPdf ? 'Buksan ang Buong PDF' : 'Buksan ang Slides ng Aralin'}
           </a>
         ) : (
           <span className="muted">No lesson file attached.</span>
@@ -11612,7 +11635,7 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
     <div className="card" style={activityBoxStyle}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="section-title">
-          🎤 {isEarlyGrade ? 'Bigkasin Mo' : 'Oral Practice'}
+          🎤 {isEarlyGrade ? 'Bigkasin Mo' : 'Oral Handa na'}
         </div>
 
         <div className="pill">
@@ -12005,12 +12028,12 @@ function getMissionDemo(gameId) {
       success: 'Tama! Ginamit ni Ana ang payong.'
     },
     'sound-and-say': {
-      instruction: 'Practice card muna habang wala pang backend speech scoring.',
+      instruction: 'Handa na card muna habang wala pang backend speech scoring.',
       prompt: 'Bigkasin: “Magandang umaga po.”',
       sample: 'Basahin nang malinaw at malakas.',
       options: ['Nasabi ko na!', 'Ulitin ko muna'],
       correct: 'Nasabi ko na!',
-      success: 'Mahusay! Practice complete. Backend speech scoring can be added later.'
+      success: 'Mahusay! Handa na complete. Backend speech scoring can be added later.'
     },
     'badge-challenge': {
       instruction: 'Tapusin ang munting hamon para makita kung paano mabubuksan ang gantimpala.',
@@ -12108,7 +12131,7 @@ function getSoundAndSayItemsForGrade(gradeLevel = 4) {
       id: 'g4-nagbabasa-sa-aklatan',
       target: 'nagbabasa sa aklatan',
       hint: 'Bigkasin nang tuloy-tuloy.',
-      level: 'Oral Practice'
+      level: 'Oral Handa na'
     },
     {
       id: 'g5-kalikasan-pangalagaan',
@@ -12120,7 +12143,7 @@ function getSoundAndSayItemsForGrade(gradeLevel = 4) {
       id: 'g6-bayanihan',
       target: 'bayanihan ang diwa ng pagtutulungan',
       hint: 'Bigkasin nang may diin.',
-      level: 'Pasalitang Komunikasyon'
+      level: 'Komunikasyong Pagsasalita'
     },
     {
       id: 'g6-responsableng-mamamayan',
@@ -13094,7 +13117,7 @@ function WordMatchStyles() {
         }
       }
 
-      /* === Word Match complete modal polish START === */
+      /* === Pagtutugma ng Salita complete modal polish START === */
 
     `}</style>
   );
@@ -13105,7 +13128,7 @@ function missionGamesForStudent(data) {
   const completedLessons = lessons.filter(lesson => lesson?.completed).length;
 
   return MISSION_GAMES.map((game, index) => {
-    let status = game.baseStatus || 'Bukas na';
+    let status = game.baseStatus || 'Handa na';
 
     if (game.minCompleted && completedLessons < game.minCompleted) {
       status = 'Naka-lock';
@@ -13231,7 +13254,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
         <section className="missions-hero">
           <div className="missions-hero-copy">
             <div className="missions-hero-icon">🚀</div>
-            <h2>{early ? 'Mga Misyon ng Tuklas' : 'Learning Games'}</h2>
+            <h2>{early ? 'Mga Misyon ng Tuklas' : 'Mga Larong Pang-aral'}</h2>
             <p>
               {early
                 ? 'Maglaro, kumita ng XP, at mag-unlock ng badges!'
@@ -13253,8 +13276,8 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
         <section className="missions-section">
           <div className="missions-section-head">
             <div>
-              <h3>🎮 Available Learning Games</h3>
-              <p>Tap Play and Earn XP points!</p>
+              <h3>🎮 Mga Available na Larong Pang-aral</h3>
+              <p>Pindutin ang Maglaro at kumita ng XP!</p>
             </div>
           </div>
 
@@ -13289,7 +13312,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
                     tabIndex={-1}
                     aria-hidden="true"
                   >
-                    {locked ? '🔒 Naka-lock' : '▶ Play'}
+                    {locked ? '🔒 Naka-lock' : '▶ Maglaro'}
                   </span>
                 </button>
               );
@@ -13637,7 +13660,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
         }
       }, 420);
     } catch (_) {
-      // Letter Pop sound is optional.
+      // Opsyonal ang tunog sa Pagpili ng Titik.
     }
   }
 
@@ -13903,7 +13926,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
         method: 'POST',
         body: {
           challengeId: activeChallenge?.id || 'story-quest-default',
-          challengeTitle: activeChallenge?.id || activeChallenge?.title || 'Story Quest',
+          challengeTitle: activeChallenge?.id || activeChallenge?.title || 'Pag-unawa sa Kwento',
           gradeLevel,
           answer: {
             storyId: activeChallenge?.id || 'story-quest-default',
@@ -13928,13 +13951,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
       if (typeof refresh === 'function') {
         refresh().catch((error) => {
-          console.warn('[TuklasTalino] Story Quest dashboard refresh failed:', error);
+          console.warn('[TuklasTalino] Pag-unawa sa Kwento dashboard refresh failed:', error);
         });
       }
     } catch (err) {
       setStoryQuestToast({
         type: 'warn',
-        message: err?.message || 'Hindi na-save ang Story Quest mission. Subukan muli.',
+        message: err?.message || 'Hindi na-save ang Pag-unawa sa Kwento mission. Subukan muli.',
       });
     } finally {
       setMissionSaving(false);
@@ -14012,7 +14035,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
         method: 'POST',
         body: {
           challengeId: activeChallenge?.id || 'sentence-builder-default',
-          challengeTitle: activeChallenge?.id || correctSentence || 'Sentence Builder',
+          challengeTitle: activeChallenge?.id || correctSentence || 'Pagbuo ng Pangungusap',
           gradeLevel,
           answer: submittedWords,
         },
@@ -14034,13 +14057,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
       if (typeof refresh === 'function') {
         refresh().catch((error) => {
-          console.warn('[TuklasTalino] Sentence Builder dashboard refresh failed:', error);
+          console.warn('[TuklasTalino] Pagbuo ng Pangungusap dashboard refresh failed:', error);
         });
       }
     } catch (err) {
       setSentenceBuilderToast({
         type: 'warn',
-        message: err?.message || 'Hindi na-save ang Sentence Builder mission. Subukan muli.',
+        message: err?.message || 'Hindi na-save ang misyong Pagbuo ng Pangungusap. Subukan muli.',
       });
     } finally {
       setMissionSaving(false);
@@ -14187,7 +14210,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
         method: 'POST',
         body: {
           challengeId: activeChallenge?.id || 'picture-guess-default',
-          challengeTitle: activeChallenge?.id || activeChallenge?.prompt || 'Picture Guess',
+          challengeTitle: activeChallenge?.id || activeChallenge?.prompt || 'Hulaan ang Larawan',
           gradeLevel,
           answer: selectedAnswer,
         },
@@ -14209,13 +14232,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
       if (typeof refresh === 'function') {
         refresh().catch((error) => {
-          console.warn('[TuklasTalino] Picture Guess dashboard refresh failed:', error);
+          console.warn('[TuklasTalino] Hulaan ang Larawan dashboard refresh failed:', error);
         });
       }
     } catch (err) {
       setPictureGuessToast({
         type: 'warn',
-        message: err?.message || 'Hindi na-save ang Picture Guess mission. Subukan muli.',
+        message: err?.message || 'Hindi na-save ang misyong Hulaan ang Larawan. Subukan muli.',
       });
     } finally {
       setMissionSaving(false);
@@ -14242,7 +14265,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
         method: 'POST',
         body: {
           challengeId: activeChallenge?.id || 'letter-pop-default',
-          challengeTitle: activeChallenge?.id || activeChallenge?.prompt || 'Letter Pop',
+          challengeTitle: activeChallenge?.id || activeChallenge?.prompt || 'Pagpili ng Titik',
           gradeLevel,
           answer: selectedAnswer,
         },
@@ -14264,13 +14287,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
       if (typeof refresh === 'function') {
         refresh().catch((error) => {
-          console.warn('[TuklasTalino] Letter Pop dashboard refresh failed:', error);
+          console.warn('[TuklasTalino] Pagpili ng Titik dashboard refresh failed:', error);
         });
       }
     } catch (err) {
       setLetterPopToast({
         type: 'warn',
-        message: err?.message || 'Hindi na-save ang Letter Pop mission. Subukan muli.',
+        message: err?.message || 'Hindi na-save ang misyong Pagpili ng Titik. Subukan muli.',
       });
     } finally {
       setMissionSaving(false);
@@ -14332,7 +14355,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                 <p>
                   {locked
                     ? 'Naka-lock pa ang misyong ito. Tapusin ang mas maraming lesson o laro para mabuksan ito.'
-                    : `${selectedGame?.module || 'Filipino'} misyon • +${selectedGame?.xp || 0} preview ng XP • ${selectedGame?.status || 'Bukas na'}`}
+                    : `${selectedGame?.module || 'Filipino'} misyon • +${selectedGame?.xp || 0} preview ng XP • ${selectedGame?.status || 'Handa na'}`}
                 </p>
               </div>
             </div>
@@ -14341,7 +14364,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
             {locked ? (
               <>
                 <div className="mission-prompt-box">
-                  🔒 Locked mission. Complete {selectedGame?.minCompleted || 3} lessons or missions to unlock this challenge.
+                  🔒 Locked mission. Complete {selectedGame?.minCompleted || 3} lessons or missions bubuksan this challenge.
                 </div>
 
                 <div className="mission-play-actions">
@@ -14353,13 +14376,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
             ) : (
               <>
                 {isWordMatch ? (
-                  <div className="word-match-game" aria-label="Word Match game">
+                  <div className="word-match-game" aria-label="Laro sa Pagtutugma ng Salita">
                     <div className="word-match-top-panel">
                       <div className="word-match-guide">
                         Piliin ang salitang Filipino sa kaliwa, pagkatapos piliin ang tamang larawan sa kanan.
                       </div>
 
-                      <div className="word-match-progress-card" aria-label="Word Match progress">
+                      <div className="word-match-progress-card" aria-label="Pag-unlad sa Pagtutugma ng Salita">
                         <span>Matched pairs</span>
                         <strong>{wordMatchDoneCount}/{activeWordMatchItems.length}</strong>
                         <div className="word-match-progress-track">
@@ -14437,7 +14460,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                           <div className="mission-complete-icon">🏆</div>
                           <h3>Tapos na ang Misyon!</h3>
                           <p>
-                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Word Match.'}
+                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Pagtutugma ng Salita.'}
                           </p>
                           <div className="mission-complete-xp">
                             ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Naidagdag` : 'Naibigay na ang XP'}
@@ -14472,7 +14495,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       </div>
                     )}
 
-                    <div className="letter-pop-balloon-field" aria-label="Letter Pop choices">
+                    <div className="letter-pop-balloon-field" aria-label="Mga pagpipilian sa Pagpili ng Titik">
                       {(demo?.options || []).map((choice, index) => {
                         const selected = missionChoice === choice;
                         const correct = choice === demo?.correct;
@@ -14501,12 +14524,12 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                     </div>
 
                     {letterPopCompleteModal && (
-                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Letter Pop mission complete">
+                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Tapos na ang misyong Pagpili ng Titik">
                         <div className="mission-complete-modal">
                           <div className="mission-complete-icon">🎈</div>
-                          <h3>Letter Pop Complete!</h3>
+                          <h3>Tapos na ang Pagpili ng Titik!</h3>
                           <p>
-                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Letter Pop.'}
+                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Pagpili ng Titik.'}
                           </p>
                           <div className="mission-complete-xp">
                             ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Naidagdag` : 'Naibigay na ang XP'}
@@ -14538,7 +14561,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       </div>
 
                       <div className="sound-say-copy">
-                        <span className="sound-say-label">{demo?.level || 'Oral Practice'}</span>
+                        <span className="sound-say-label">{demo?.level || 'Oral Handa na'}</span>
                         <h3>Pakinggan at Bigkasin</h3>
                         <p>🔊 Pakinggan, tapos bigkasin.</p>
                       </div>
@@ -14602,7 +14625,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                   <div className={`story-quest-game ${early ? 'early' : 'standard'} ${storyQuestMode === 'story' ? 'reading' : 'quiz'} ${storyQuestWrongChoice ? 'wrong' : ''} ${storyQuestComplete ? 'complete' : ''}`}>
                     <div className="story-quest-book-card story-quest-book-layout">
                       <div className="story-quest-book-top">
-                        <span className="story-quest-badge">Story Quest</span>
+                        <span className="story-quest-badge">Pag-unawa sa Kwento</span>
                         <span className="story-quest-pages">
                           {storyQuestMode === 'story' ? '📖 Basahin muna' : `📖 ${storyQuestSafeIndex + 1}/${storyQuestTotal}`}
                         </span>
@@ -14717,7 +14740,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                             <div className="story-quest-question-label">Tanong {storyQuestSafeIndex + 1}</div>
                             <h4>{storyQuestQuestion?.question || 'Ano ang sagot sa kuwento?'}</h4>
 
-                            <div className="story-quest-options" aria-label="Story Quest choices">
+                            <div className="story-quest-options" aria-label="Pag-unawa sa Kwento choices">
                               {asArray(storyQuestQuestion?.options).map((choice, index) => {
                                 const label = storyQuestChoiceLabel(choice);
                                 const icon = storyQuestChoiceIcon(choice);
@@ -14746,12 +14769,12 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                             </div>
 
                             {storyQuestCompleteModal && (
-                              <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Story Quest mission complete">
+                              <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Pag-unawa sa Kwento mission complete">
                                 <div className="mission-complete-modal">
                                   <div className="mission-complete-icon">📖</div>
-                                  <h3>Story Quest Complete!</h3>
+                                  <h3>Pag-unawa sa Kwento Complete!</h3>
                                   <p>
-                                    {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Story Quest.'}
+                                    {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Pag-unawa sa Kwento.'}
                                   </p>
                                   <div className="mission-complete-xp">
                                     ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Naidagdag` : 'Naibigay na ang XP'}
@@ -14810,7 +14833,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       })}
                     </div>
 
-                    <div className="sentence-builder-word-bank" aria-label="Sentence Builder word choices">
+                    <div className="sentence-builder-word-bank" aria-label="Mga salita para sa Pagbuo ng Pangungusap">
                       {sentenceBuilderWords.map((word, index) => {
                         const used = sentenceBuilderSelected.includes(index);
 
@@ -14838,10 +14861,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                     </div>
 
                     {sentenceBuilderCompleteModal && (
-                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Sentence Builder mission complete">
+                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Tapos na ang misyong Pagbuo ng Pangungusap">
                         <div className="mission-complete-modal">
                           <div className="mission-complete-icon">🧩</div>
-                          <h3>Sentence Builder Complete!</h3>
+                          <h3>Tapos na ang Pagbuo ng Pangungusap!</h3>
                           <p>
                             {missionCompleteData?.message || 'Ang galing mo! Nabuo mo ang tamang pangungusap.'}
                           </p>
@@ -14880,7 +14903,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       </div>
                     )}
 
-                    <div className="picture-guess-options" aria-label="Picture Guess choices">
+                    <div className="picture-guess-options" aria-label="Mga pagpipilian sa Hulaan ang Larawan">
                       {(demo?.options || []).map((choice, index) => {
                         const selected = missionChoice === choice;
                         const correct = choice === demo?.correct;
@@ -14900,12 +14923,12 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                     </div>
 
                     {pictureGuessCompleteModal && (
-                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Picture Guess mission complete">
+                      <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Tapos na ang misyong Hulaan ang Larawan">
                         <div className="mission-complete-modal">
                           <div className="mission-complete-icon">🖼️</div>
-                          <h3>Picture Guess Complete!</h3>
+                          <h3>Tapos na ang Hulaan ang Larawan!</h3>
                           <p>
-                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Picture Guess.'}
+                            {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Hulaan ang Larawan.'}
                           </p>
                           <div className="mission-complete-xp">
                             ⚡ {missionCompleteData?.xpAwarded > 0 ? `+${missionCompleteData.xpAwarded} XP Naidagdag` : 'Naibigay na ang XP'}
@@ -15217,7 +15240,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                 className={`g12-finished-pill-btn ${flowStep === 'finished' ? 'active' : ''}`}
                 onClick={() => setFlowStep('finished')}
               >
-                ✅ Done {finishedGroups.length ? `(${finishedGroups.length})` : ''}
+                ✅ Tapos Na {finishedGroups.length ? `(${finishedGroups.length})` : ''}
               </button>
             </div>
 
@@ -15429,19 +15452,19 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
 
   const groupTaskFilterOptions = [
     { value: 'all', label: 'All' },
-    { value: 'pending', label: 'Pending Review' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'returned', label: 'Rejected' },
+    { value: 'pending', label: 'Naghihintay ng Pagsusuri' },
+    { value: 'approved', label: 'Naaprubahan' },
+    { value: 'returned', label: 'Ibinalik' },
     { value: 'not_submitted', label: 'Hindi Pa Naipapasa' }
   ];
 
   function getGroupTaskFilterStatus(task) {
     const completion = task.completion || task.completions?.[0] || null;
-    const isApproved = completion?.verificationStatus === 'approved';
+    const isAccepted = completion?.verificationStatus === 'approved';
     const isReturned = completion?.verificationStatus === 'returned';
     const isPending = !isReturned && (completion?.verificationStatus === 'pending' || submittedTasks[task.id]);
 
-    if (isApproved) return 'approved';
+    if (isAccepted) return 'approved';
     if (isReturned) return 'returned';
     if (isPending) return 'pending';
     return 'not_submitted';
@@ -15489,8 +15512,8 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
-            <h2>Group Tasks</h2>
-            <p className="g46-ref-muted">Upload your group output, add your role, and wait for your teacher to review it.</p>
+            <h2>Mga Gawain ng Grupo</h2>
+            <p className="g46-ref-muted">I-upload ang output ng grupo, idagdag ang iyong tungkulin, at hintayin ang pagsusuri ng guro.</p>
           </div>
         </div>
 
@@ -15525,25 +15548,25 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
 
             {(group.tasks || []).map(task => {
               const completion = task.completion || task.completions?.[0] || null;
-              const isApproved = completion?.verificationStatus === 'approved';
+              const isAccepted = completion?.verificationStatus === 'approved';
               const isReturned = completion?.verificationStatus === 'returned';
               const isPending = !isReturned && (completion?.verificationStatus === 'pending' || submittedTasks[task.id]);
-              const isLocked = isApproved || isPending;
-              const statusLabel = isApproved ? 'Approved' : isReturned ? 'Rejected' : isPending ? 'Pending Review' : 'Hindi pa naipapasa';
+              const isLocked = isAccepted || isPending;
+              const statusLabel = isAccepted ? 'Naaprubahan' : isReturned ? 'Ibinalik' : isPending ? 'Naghihintay ng Pagsusuri' : 'Hindi pa naipapasa';
               const isGroupLeader = group.currentStudentIsLeader || group.currentStudentGroupRole === 'leader';
               const submittedRole = taskRoles[task.id] || completion?.studentRole || (isGroupLeader ? 'Leader' : '');
               const submittedFileName = taskFiles[task.id]?.name || completion?.fileName || '';
-              const pct = taskCompletionPercent(task, isApproved || isPending);
+              const pct = taskCompletionPercent(task, isAccepted || isPending);
               return (
                 <div className="g46-ref-task-row" key={task.id} style={{ gridTemplateColumns: '58px minmax(0, 1fr)', alignItems: 'start' }}>
-                  <span className="g46-ref-card-icon">{isApproved ? '🏆' : isReturned ? '↩️' : isPending ? '⏳' : '📝'}</span>
+                  <span className="g46-ref-card-icon">{isAccepted ? '🏆' : isReturned ? '↩️' : isPending ? '⏳' : '📝'}</span>
                   <div>
                     <div className="g46-group-task-head">
                       <div>
                         <h3>{task.title}</h3>
                         <p className="g46-ref-muted">Due: {fmtDate(task.dueAt)} • +{task.xpReward || 0} XP</p>
                       </div>
-                      <span className={`g46-group-status ${isApproved ? 'approved' : isReturned ? 'returned' : isPending ? 'pending' : 'open'}`}>
+                      <span className={`g46-group-status ${isAccepted ? 'approved' : isReturned ? 'returned' : isPending ? 'pending' : 'open'}`}>
                         {statusLabel}
                       </span>
                     </div>
@@ -15628,7 +15651,7 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
                           task={task}
                           submittedRole={submittedRole}
                           submittedFileName={submittedFileName}
-                          isApproved={isApproved}
+                          isAccepted={isAccepted}
                           isPending={isPending}
                         />
                       )}
@@ -15648,7 +15671,7 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
           </div>
         )}
 
-        {!groups.length && <div className="g46-ref-empty">No group tasks yet.</div>}
+        {!groups.length && <div className="g46-ref-empty">Wala pang gawaing panggrupo.</div>}
       </section>
     </Grade46StudentChrome>
   );
@@ -15733,7 +15756,7 @@ function badgeAchievementReason(badge = {}) {
     return description;
   }
 
-  return 'You completed a learning goal to unlock this badge.';
+  return 'You completed a learning goal bubuksan this badge.';
 }
 
 
@@ -15881,9 +15904,9 @@ function EarlyBadgesScreen({ data, go }) {
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">🌟 Achievements</h2>
+            <h2 className="g12-section-title">🌟 Mga Tagumpay</h2>
             <p className="g12-section-subtitle">
-              {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {lockedBadgeGoals.length} to unlock • {s.xp || 0} XP
+              {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {lockedBadgeGoals.length} bubuksan • {s.xp || 0} XP
             </p>
           </div>
         </div>
@@ -15892,7 +15915,7 @@ function EarlyBadgesScreen({ data, go }) {
           <div className="g12-badge-subsection-head">
             <span>🏆</span>
             <div>
-              <strong>Unlocked Badges</strong>
+              <strong>Nabuksang Gantimpala</strong>
               <p>These are the rewards you already earned.</p>
             </div>
           </div>
@@ -15914,7 +15937,7 @@ function EarlyBadgesScreen({ data, go }) {
               ))}
             </div>
           ) : (
-            <div className="g12-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
+            <div className="g12-empty">Wala pang gantimpala. Tapusin ang mga aralin para makakuha!</div>
           )}
         </div>
 
@@ -15922,7 +15945,7 @@ function EarlyBadgesScreen({ data, go }) {
           <div className="g12-badge-subsection-head">
             <span>🔒</span>
             <div>
-              <strong>Next Badges to Unlock</strong>
+              <strong>Susunod na mga Gantimpalang Bubuksan</strong>
               <p>Complete these goals to earn more rewards.</p>
             </div>
           </div>
@@ -15938,7 +15961,7 @@ function EarlyBadgesScreen({ data, go }) {
                   <div>
                     <div className="g12-badge-big g12-badge-big-locked">{goal.icon || '🏅'}</div>
                     <strong>{goal.name || 'Naka-lock na Gantimpala'}</strong>
-                    <p className="g12-badge-reason">How to unlock: {goal.howToUnlock}</p>
+                    <p className="g12-badge-reason">How bubuksan: {goal.howToUnlock}</p>
                   </div>
                 </div>
               ))}
@@ -15972,14 +15995,14 @@ function StudentBadges({ data, go, logout}) {
       logout={logout}
       icon="🏅"
       title="Mga Gantimpala"
-      subtitle="Rewards and achievements from lessons, missions, and activities."
+      subtitle="Mga gantimpala at tagumpay mula sa mga aralin, misyon, at gawain."
     >
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
-            <h2>Achievements</h2>
+            <h2>Mga Tagumpay</h2>
             <p className="g46-ref-muted">
-              {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {g46LockedBadgeGoals.length} to unlock • {data?.student?.xp || 0} XP
+              {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {g46LockedBadgeGoals.length} bubuksan • {data?.student?.xp || 0} XP
             </p>
           </div>
         </div>
@@ -15988,8 +16011,8 @@ function StudentBadges({ data, go, logout}) {
           <div className="g46-badge-subsection-head">
             <span>🏆</span>
             <div>
-              <strong>Unlocked Badges</strong>
-              <p className="g46-ref-muted">Achievements you already earned from lessons, quizzes, missions, and activities.</p>
+              <strong>Nabuksang Gantimpala</strong>
+              <p className="g46-ref-muted">Mga tagumpay na nakuha mo mula sa mga aralin, pagsusulit, misyon, at gawain.</p>
             </div>
           </div>
 
@@ -16010,7 +16033,7 @@ function StudentBadges({ data, go, logout}) {
               ))}
             </div>
           ) : (
-            <div className="g46-ref-empty">Wala pang badge. Tapusin ang lessons para makakuha!</div>
+            <div className="g46-ref-empty">Wala pang gantimpala. Tapusin ang mga aralin para makakuha!</div>
           )}
         </div>
 
@@ -16018,8 +16041,8 @@ function StudentBadges({ data, go, logout}) {
           <div className="g46-badge-subsection-head">
             <span>🔒</span>
             <div>
-              <strong>Next Badges to Unlock</strong>
-              <p className="g46-ref-muted">Use these goals as your next learning targets.</p>
+              <strong>Susunod na mga Gantimpalang Bubuksan</strong>
+              <p className="g46-ref-muted">Gamitin ang mga layuning ito bilang susunod mong target sa pag-aaral.</p>
             </div>
           </div>
 

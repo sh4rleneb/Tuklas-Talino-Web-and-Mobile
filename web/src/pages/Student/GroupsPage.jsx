@@ -20,7 +20,7 @@ export default function GroupsPage() {
 
   return (
     <section>
-      <h1>Group Tasks</h1>
+      <h1>Mga Gawain ng Grupo</h1>
       {message && <div className="alert success">{message}</div>}
       <div className="card-grid">
         {groups.length ? groups.map(group => (

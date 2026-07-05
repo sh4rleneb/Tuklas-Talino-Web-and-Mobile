@@ -3,12 +3,12 @@ export default function StudentGroupSubmissionReview({
   task,
   submittedRole = '',
   submittedFileName = '',
-  isApproved = false,
+  isAccepted = false,
   isPending = false,
   isReturned = false
 }) {
   const teacherFeedback = String(completion?.teacherFeedback || '').trim();
-  const xpEarned = Number(completion?.xpAwarded || (isApproved ? task?.xpReward : 0) || 0);
+  const xpEarned = Number(completion?.xpAwarded || (isAccepted ? task?.xpReward : 0) || 0);
   const submittedAt = completion?.submittedAt
     ? new Date(completion.submittedAt).toLocaleString()
     : '';
@@ -20,7 +20,7 @@ export default function StudentGroupSubmissionReview({
       : ''
   );
 
-  const status = isApproved
+  const status = isAccepted
     ? 'approved'
     : isReturned
       ? 'returned'
@@ -28,14 +28,14 @@ export default function StudentGroupSubmissionReview({
         ? 'pending'
         : 'open';
 
-  const icon = isApproved ? '🏆' : isReturned ? '↩️' : '⏳';
-  const title = isApproved
+  const icon = isAccepted ? '🏆' : isReturned ? '↩️' : '⏳';
+  const title = isAccepted
     ? 'Group output approved'
     : isReturned
       ? 'Group output rejected'
       : 'Naipasa ang output ng grupo';
 
-  const message = isApproved
+  const message = isAccepted
     ? 'Your teacher approved this task and XP has been awarded.'
     : isReturned
       ? 'Ibinalik ng guro ang ipinasa ninyo. Basahin ang puna at magpasa muli.'
@@ -96,7 +96,7 @@ export default function StudentGroupSubmissionReview({
           </div>
         )}
 
-        {isApproved && (
+        {isAccepted && (
           <div>
             <span>XP Earned</span>
             <strong>+{xpEarned} XP</strong>

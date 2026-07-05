@@ -2,6 +2,18 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../../api/client';
 
+const STUDENT_SUBJECT_DISPLAY_LABELS = {
+  'Oral Comm': 'Komunikasyong Pagsasalita',
+  'Oral Communication': 'Komunikasyong Pagsasalita',
+  'Pasalitang Komunikasyon': 'Komunikasyong Pagsasalita',
+};
+
+function formatStudentSubjectDisplay(subject) {
+  const value = String(subject || '').trim();
+  return STUDENT_SUBJECT_DISPLAY_LABELS[value] || subject || 'Filipino';
+}
+
+
 export default function LessonDetailPage() {
   const { id } = useParams();
   const [lesson, setLesson] = useState(null);
@@ -40,7 +52,7 @@ export default function LessonDetailPage() {
   return (
     <section className="lesson-detail">
       <article className="content-card">
-        <p className="eyebrow">Grade {lesson.gradeLevel} • {lesson.subject}</p>
+        <p className="eyebrow">Grade {lesson.gradeLevel} • {formatStudentSubjectDisplay(lesson.subject)}</p>
         <h1>{lesson.title}</h1>
         <p>{lesson.instructions}</p>
         <div className="passage">{lesson.passage}</div>
