@@ -6,6 +6,48 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import logo from '../../../assets/icons/tuklas-logo.png';
 
+const HOME_BADGE_IMAGES = {
+  'batang-mambabasa': require('../../../assets/badges/batang-mambabasa.png'),
+  'bituin-ng-kasipagan': require('../../../assets/badges/bituin-ng-kasipagan.png'),
+  'bituin-sa-pagsagot': require('../../../assets/badges/bituin-sa-pagsagot.png'),
+  'boses-bituin': require('../../../assets/badges/boses-bituin.png'),
+  'henyo-sa-pagsusulit': require('../../../assets/badges/henyo-sa-pagsusulit.png'),
+  'kaagapay-sa-gawain': require('../../../assets/badges/kaagapay-sa-gawain.png'),
+  'tuklas-kampeon': require('../../../assets/badges/tuklas-kampeon.png'),
+  'unang-hakbang': require('../../../assets/badges/unang-hakbang.png'),
+};
+
+function normalizeHomeBadgeSlug(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getHomeBadgeImageSource(badge = {}) {
+  const candidates = [
+    badge.slug,
+    badge.code,
+    badge.key,
+    badge.name,
+    badge.title,
+    badge.badge?.slug,
+    badge.badge?.code,
+    badge.badge?.name,
+    badge.badge?.title,
+  ].map(normalizeHomeBadgeSlug).filter(Boolean);
+
+  for (const slug of candidates) {
+    if (HOME_BADGE_IMAGES[slug]) return HOME_BADGE_IMAGES[slug];
+  }
+
+  return HOME_BADGE_IMAGES['unang-hakbang'];
+}
+
+
 const HIDDEN_GROUP_STATUSES = new Set([
   'archived',
   'deleted',
@@ -302,7 +344,7 @@ export default function StudentJuniorHome({ navigation }) {
             {badgePreview.length ? (
               badgePreview.map((badge) => (
                 <View key={badge.id || badge.name} style={styles.badgeCard}>
-                  <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
+                  <Image source={getHomeBadgeImageSource(badge)} style={styles.homeBadgeImage} resizeMode="contain" />
                   <Text style={styles.badgeName}>{badge.name}</Text>
                   <Text style={styles.badgeMeta}>{localizeBadgeDescription(badge.description)}</Text>
                 </View>
@@ -349,6 +391,15 @@ export default function StudentJuniorHome({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  homeBadgeImage: {
+    width: 72,
+    height: 72,
+    alignSelf: 'center',
+  },
+  homeBadgeImageLocked: {
+    opacity: 0.35,
+  },
+
   safe: {
     flex: 1,
     backgroundColor: '#DDFBE8',

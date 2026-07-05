@@ -17,7 +17,9 @@ export default function AdminDashboard({
   reactivateTeacher,
   assignTeacherClass,
   removeTeacherAssignment,
-  reload
+  reload,
+  exportSummaryCSV,
+  downloadAuditTrailReport,
 }) {
   const [adminTab, setAdminTab] = useState('overview');
 
@@ -585,6 +587,110 @@ function teacherNameForAssignment(assignment) {
                     <span><small>Assignments</small><strong>{teacherAssignments.length}</strong></span>
                   </button>
                 </section>
+
+                                <section className="admin-action-report-shell">
+                  <div className="admin-report-main">
+                    <div className="admin-report-breadcrumb">Admin / Reports / Monitoring Summary</div>
+
+                    <div className="admin-report-title-row">
+                      <div>
+                        <div className="admin-report-icon">📊</div>
+                        <h2>Admin Audit Trail Report</h2>
+                        <p>Review system activity logs and account actions before exporting the admin audit trail report.</p>
+                      </div>
+
+                      <button type="button" className="admin-report-dashboard-button">
+                        Go to Dashboard
+                      </button>
+                    </div>
+
+                    <div className="admin-report-tabs">
+                      <span className="active">List</span>
+                      <span>Summary</span>
+                      <span>Details</span>
+                    </div>
+
+                    <div className="admin-report-table-card">
+                      <div className="admin-report-table-toolbar">
+                        <strong>System Monitoring Report</strong>
+                        <div>
+                          <button type="button">🔍</button>
+                          <button type="button">Export</button>
+                        </div>
+                      </div>
+
+                      <div className="admin-report-selected-bar">
+                        <strong>All available monitoring records selected</strong>
+                        <button type="button">Take Action</button>
+                      </div>
+
+                      <div className="admin-report-all-row">
+                        Audit trail report includes admin actions, account changes, target entities, timestamps, and system activity details.
+                      </div>
+
+                      <div className="admin-report-preview-table">
+                        <div className="admin-report-preview-head">
+                          <span>Name / Group</span>
+                          <span>Role</span>
+                          <span>Grade / Section</span>
+                          <span>Status</span>
+                          <span>Report Data</span>
+                        </div>
+
+                        {['Students', 'Teachers', 'Assignments', 'Archived Accounts', 'Performance Summary', 'Needs Intervention'].map((item) => (
+                          <div className="admin-report-preview-row" key={item}>
+                            <span>{item}</span>
+                            <span>Admin View</span>
+                            <span>All</span>
+                            <span>Included</span>
+                            <span>Monitoring Summary</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <aside className="admin-report-action-panel">
+                    <h3>Take Action: Admin Audit Trail Report</h3>
+
+                    <input
+                      type="text"
+                      value=""
+                      readOnly
+                      placeholder="Search report action"
+                      aria-label="Search report action"
+                    />
+
+                    <div className="admin-report-action-tabs">
+                      <span className="active">System</span>
+                      <span>Students</span>
+                      <span>Accounts</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="admin-report-action-button"
+                      disabled={!exportSummaryCSV}
+                      onClick={exportSummaryCSV}
+                    >
+                      <span>📄</span>
+                      <strong>CSV Admin Audit Trail Report</strong>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="admin-report-action-button"
+                      disabled={!downloadAuditTrailReport}
+                      onClick={downloadAuditTrailReport}
+                    >
+                      <span>🧾</span>
+                      <strong>PDF Admin Audit Trail Report</strong>
+                    </button>
+                  </aside>
+                </section>
+
+
+
 
                 <section className="teacher-workspace-card">
                   <div className="teacher-workspace-heading">

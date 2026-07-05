@@ -41,6 +41,112 @@ import {
   getStructuredLessonLessonAudioText,
 } from '../../utils/structuredLesson';
 
+const BADGE_IMAGE_SOURCES = {
+  'bituin-sa-pagsagot': require('../../../assets/badges/bituin-sa-pagsagot.png'),
+  'henyo-sa-pagsusulit': require('../../../assets/badges/henyo-sa-pagsusulit.png'),
+  'kaagapay-sa-gawain': require('../../../assets/badges/kaagapay-sa-gawain.png'),
+};
+
+function normalizeBadgeSlug(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function normalizeBadgeImageUri(value = '') {
+  const uri = String(value || '').trim();
+
+  if (!uri) return '';
+  if (/^https?:\/\//i.test(uri)) return uri;
+  if (uri.startsWith('/')) return `https://tuklastalino.com${uri}`;
+
+  return '';
+}
+
+function getBadgeImageSource(badge = {}) {
+  const remoteUri = normalizeBadgeImageUri(
+    badge.imageUrl ||
+    badge.iconUrl ||
+    badge.badgeImageUrl ||
+    badge.image ||
+    badge.iconImage ||
+    badge.badge?.imageUrl ||
+    badge.badge?.iconUrl ||
+    ''
+  );
+
+  if (remoteUri) return { uri: remoteUri };
+
+  const slugCandidates = [
+    badge.slug,
+    badge.code,
+    badge.key,
+    badge.name,
+    badge.title,
+    badge.badge?.slug,
+    badge.badge?.name,
+    badge.badge?.title,
+  ].map(normalizeBadgeSlug).filter(Boolean);
+
+  for (const slug of slugCandidates) {
+    if (BADGE_IMAGE_SOURCES[slug]) return BADGE_IMAGE_SOURCES[slug];
+  }
+
+  return BADGE_IMAGE_SOURCES['kaagapay-sa-gawain'];
+}
+
+
+async function createSpeechRecording() {
+  if (Audio?.Recording?.createAsync) {
+    const result = await Audio.Recording.createAsync(
+      Audio.RecordingOptionsPresets?.HIGH_QUALITY || Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY
+    );
+
+    return result?.recording;
+  }
+
+  if (typeof Audio?.Recording === 'function') {
+    const recording = new Audio.Recording();
+    const options =
+      Audio.RecordingOptionsPresets?.HIGH_QUALITY ||
+      Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY;
+
+    if (!options) {
+      throw new Error('Hindi available ang recording options sa device na ito.');
+    }
+
+    await recording.prepareToRecordAsync(options);
+    await recording.startAsync();
+
+    return recording;
+  }
+
+  throw new Error('Hindi available ang microphone recording sa device na ito. I-update ang app o Expo package.');
+}
+
+
+function localizeStudentVisibleMessage(value = '') {
+  const original = String(value || '').trim();
+  if (!original) return '';
+
+  let message = original
+    .replace(/Speech attempt saved\.?/gi, 'Naisave ang pagsubok sa pagbigkas.')
+    .replace(/XP already awarded for this activity\.?/gi, 'Naibigay na ang XP para sa gawaing ito.')
+    .replace(/Already awarded XP for this activity\.?/gi, 'Naibigay na ang XP para sa gawaing ito.');
+
+  message = message
+    .replace(/\s+\./g, '.')
+    .replace(/\.\s*\./g, '.')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return message;
+}
+
 function optionalProgressRequest(request, fallback) {
   return request.catch((err) => {
     if (err.status === 404 || err.message === 'Route not found.') {
@@ -50,6 +156,206 @@ function optionalProgressRequest(request, fallback) {
     throw err;
   });
 }
+
+
+const MAX_MISSION_ATTEMPTS = 2;
+const MISSION_QUESTION_POOL_LIMIT = 6;
+
+function appendMissionQuestionRows(rows, value) {
+  if (!value) return;
+
+  if (Array.isArray(value)) {
+    rows.push(...value);
+    return;
+  }
+
+  if (typeof value === 'object') {
+    Object.values(value).forEach(item => appendMissionQuestionRows(rows, item));
+  }
+}
+
+function normalizeMissionOption(option = {}, index = 0, questionKey = 'question', question = {}) {
+  const isPlainText = typeof option === 'string' || typeof option === 'number';
+
+  const rawText = isPlainText
+    ? option
+    : (
+        option.optionText ??
+        option.text ??
+        option.label ??
+        option.value ??
+        option.answer ??
+        ''
+      );
+
+  const optionText =
+    String(rawText || `Sagot ${index + 1}`).trim() || `Sagot ${index + 1}`;
+
+  const correctIndex = Number(question.correct ?? question.correctIndex);
+  const correctText = String(
+    question.correctAnswer ??
+    question.answer ??
+    question.answerText ??
+    ''
+  ).trim().toLowerCase();
+
+  const isCorrect =
+    (!isPlainText && Boolean(option.isCorrect || option.correct === true || option.correct === 1)) ||
+    (Number.isFinite(correctIndex) && index === correctIndex) ||
+    (!!correctText && optionText.trim().toLowerCase() === correctText);
+
+  return {
+    ...(isPlainText ? {} : option),
+    id: String(
+      isPlainText
+        ? `${questionKey}-option-${index}`
+        : (option.id ?? option.optionId ?? `${questionKey}-option-${index}`)
+    ),
+    optionText,
+    text: optionText,
+    isCorrect,
+  };
+}
+
+function normalizeMissionQuestion(question = {}, index = 0, sourceKey = 'mission') {
+  const questionKey = String(
+    question.id ??
+    question.questionId ??
+    `${sourceKey}-question-${index}`
+  );
+
+  const questionText =
+    String(
+      question.question ??
+      question.text ??
+      question.prompt ??
+      question.title ??
+      `Tanong ${index + 1}`
+    ).trim() || `Tanong ${index + 1}`;
+
+  const rawOptions =
+    question.options ??
+    question.choices ??
+    question.answers ??
+    question.dataJson?.options ??
+    [];
+
+  const options = Array.isArray(rawOptions)
+    ? rawOptions.map((option, optionIndex) =>
+        normalizeMissionOption(option, optionIndex, questionKey, question)
+      )
+    : [];
+
+  return {
+    ...question,
+    id: questionKey,
+    question: questionText,
+    text: questionText,
+    options,
+  };
+}
+
+function uniqueMissionQuestions(questions = []) {
+  const seen = new Set();
+
+  return questions.filter(question => {
+    const key = String(question.id || question.question || question.text || '')
+      .trim()
+      .toLowerCase();
+
+    if (!key || seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function collectMissionQuestionsFromActivity(activity = {}, rows = []) {
+  appendMissionQuestionRows(rows, activity.questions);
+  appendMissionQuestionRows(rows, activity.mcqQuestions);
+  appendMissionQuestionRows(rows, activity.questionPool);
+  appendMissionQuestionRows(rows, activity.questionPools);
+  appendMissionQuestionRows(rows, activity.dataJson?.questions);
+  appendMissionQuestionRows(rows, activity.dataJson?.mcqQuestions);
+  appendMissionQuestionRows(rows, activity.dataJson?.questionPool);
+  appendMissionQuestionRows(rows, activity.dataJson?.questionPools);
+
+  return rows;
+}
+
+function buildMissionQuestionPool(activity = {}, lesson = {}, limit = MISSION_QUESTION_POOL_LIMIT) {
+  const rows = [];
+
+  collectMissionQuestionsFromActivity(activity, rows);
+
+  if (rows.length < limit) {
+    (lesson?.activities || [])
+      .filter(item => String(item?.type || '').toLowerCase() === 'mcq')
+      .forEach(item => collectMissionQuestionsFromActivity(item, rows));
+  }
+
+  return uniqueMissionQuestions(
+    rows.map((question, index) =>
+      normalizeMissionQuestion(
+        question,
+        index,
+        String(activity?.id || activity?.title || lesson?.id || 'mission')
+      )
+    )
+  ).slice(0, limit);
+}
+
+function getMissionAttemptStorageKey(lesson = {}, activity = {}) {
+  const lessonKey = lesson?.id ?? lesson?.lessonId ?? lesson?.title;
+  const activityKey = activity?.id ?? activity?.activityId ?? activity?.title ?? activity?.type;
+
+  if (!lessonKey || !activityKey) return '';
+
+  return `mission-attempts:${lessonKey}:${activityKey}`;
+}
+
+function getServerMissionAttemptCount(lesson = {}, activity = {}) {
+  const candidates = [
+    activity?.attemptCount,
+    activity?.attemptNo,
+    activity?.missionAttemptCount,
+    activity?.quizAttemptCount,
+    activity?.latestAttempt?.attemptNo,
+    activity?.attempt?.attemptNo,
+    activity?.dataJson?.attemptCount,
+    activity?.dataJson?.attemptNo,
+    lesson?.attemptCount,
+    lesson?.quizAttemptCount,
+  ];
+
+  const arrays = [
+    activity?.attempts,
+    activity?.missionAttempts,
+    activity?.quizAttempts,
+    activity?.dataJson?.attempts,
+    lesson?.attempts,
+    lesson?.quizAttempts,
+  ];
+
+  let count = 0;
+
+  candidates.forEach(value => {
+    const numberValue = Number(value || 0);
+    if (Number.isFinite(numberValue)) count = Math.max(count, numberValue);
+  });
+
+  arrays.forEach(value => {
+    if (Array.isArray(value)) count = Math.max(count, value.length);
+  });
+
+  (activity?.questions || []).forEach(question => {
+    const attemptNo = Number(question?.mcqAttempt?.attemptNo || 0);
+    if (Number.isFinite(attemptNo)) count = Math.max(count, attemptNo);
+  });
+
+  return Math.max(0, Math.min(MAX_MISSION_ATTEMPTS, count));
+}
+
 
 export default function StudentJuniorLessonDetail({ navigation, route }) {
   const lessonId = route?.params?.lessonId;
@@ -82,6 +388,8 @@ const [lessonDuration,setLessonDuration]=useState(0);
   
 const [activityNotice, setActivityNotice] = useState(null);
 const [mcqToast, setMcqToast] = useState(null);
+const [missionAttemptCounts, setMissionAttemptCounts] = useState({});
+const [missionAttemptNotice, setMissionAttemptNotice] = useState('');
 const [gateToast, setGateToast] = useState('');
 const [balloonProgress, setBalloonProgress] = useState({});
 
@@ -91,6 +399,7 @@ const [matchedPairs, setMatchedPairs] = useState({});
 const [selectedWords, setSelectedWords] = useState([]);
 
 const [badgePopup, setBadgePopup] = useState(null);
+const activeBadgePopup = badgePopup || {};
 const [animatedXp, setAnimatedXp] = useState(0);
 
 const badgeScale = useRef(new Animated.Value(0.6)).current;
@@ -102,8 +411,7 @@ const continueButtonAnim = useRef(new Animated.Value(0)).current;
 
 const confettiAnim = useRef(new Animated.Value(0)).current;
 const correctAnswerScale = useRef(new Animated.Value(1)).current;
-
-
+const activeMissionAttemptRef = useRef({});
 
 
   const recordingRef = useRef(null);
@@ -256,7 +564,6 @@ const stepScrollRef = useRef(null);
   }, [completed]);
 
 
-
   useEffect(() => {
     const id = xpCounter.addListener(({ value }) => {
       setAnimatedXp(Math.round(value));
@@ -281,28 +588,44 @@ const stepScrollRef = useRef(null);
     return source;
   }, [lesson?.activities, lesson?.gradeLevel, student?.gradeLevel]);
 
-  const missionSteps = useMemo(() => [
-    {
-      type: 'listen',
-      title: 'Layunin',
-    },
-    {
-      type: 'know',
-      title: 'Alamin',
-    },
-    {
-      type: 'read',
-      title: 'Basahin ang Lesson',
-    },
-    ...activities.map(activity => ({
-      type: 'activity',
-      activity,
-    })),
-    {
-      type: 'finish',
-      title: 'Tapusin ang Lesson',
-    },
-  ], [activities]);
+  const missionSteps = useMemo(() => {
+    const materialActivities = activities.filter((activity) => {
+      const type = String(activity?.type || '').toLowerCase();
+      return type === 'material' || type === 'infographic';
+    });
+
+    const learningActivities = activities.filter((activity) => {
+      const type = String(activity?.type || '').toLowerCase();
+      return type !== 'material' && type !== 'infographic';
+    });
+
+    return [
+      {
+        type: 'listen',
+        title: 'Layunin',
+      },
+      {
+        type: 'know',
+        title: 'Alamin',
+      },
+      ...materialActivities.map(activity => ({
+        type: 'activity',
+        activity,
+      })),
+      {
+        type: 'read',
+        title: 'Aralin',
+      },
+      ...learningActivities.map(activity => ({
+        type: 'activity',
+        activity,
+      })),
+      {
+        type: 'finish',
+        title: 'Tapos',
+      },
+    ];
+  }, [activities]);
 
   const totalSteps = missionSteps.length;
 
@@ -313,6 +636,23 @@ const stepScrollRef = useRef(null);
     currentStep?.type === 'activity'
       ? currentStep.activity
       : null;
+
+  const currentMissionAttemptKey = getMissionAttemptStorageKey(lesson, currentActivity);
+  const currentMissionAttemptServerCount = getServerMissionAttemptCount(lesson, currentActivity);
+  const currentMissionAttemptCount = Math.min(
+    MAX_MISSION_ATTEMPTS,
+    Math.max(
+      currentMissionAttemptServerCount,
+      Number(missionAttemptCounts[currentMissionAttemptKey] || 0)
+    )
+  );
+  const currentMissionAttemptLabel = currentActivity
+    ? Math.min(MAX_MISSION_ATTEMPTS, Math.max(1, currentMissionAttemptCount || 1))
+    : 1;
+  const currentMissionAttemptsLeft = Math.max(
+    0,
+    MAX_MISSION_ATTEMPTS - currentMissionAttemptCount
+  );
 
   const lessonText =
     lesson?.passage ||
@@ -337,7 +677,7 @@ const stepScrollRef = useRef(null);
       lesson,
     );
 
-  const aralinAudioText =
+  const lessonAudioText =
     getStructuredLessonLessonAudioText(
       lessonText,
     );
@@ -357,27 +697,27 @@ const stepScrollRef = useRef(null);
     if (stepItem?.type === 'read') return '📖';
     if (stepItem?.type === 'finish') return '⭐';
 
-    const activityType = stepItem?.activity?.type;
-    if (activityType === 'mcq') return '🎮';
+    const activityType = String(stepItem?.activity?.type || '').toLowerCase();
+
+    if (activityType === 'material' || activityType === 'infographic') return '🐾';
+    if (activityType === 'mcq' || activityType === 'quiz') return '🎮';
     if (activityType === 'writing') return '🧩';
     if (activityType === 'speech') return '🎤';
-    if (activityType === 'vocabulary') return '📚';
-    if (activityType === 'matching') return '🧩';
-    if (activityType === 'infographic') return '📎';
+    if (activityType === 'vocabulary' || activityType === 'matching') return '🧩';
 
-    return '🚀';
+    return '🧩';
   }
 
   function missionStepLabel(stepItem) {
     if (stepItem?.title) return stepItem.title;
 
-    const activityType = stepItem?.activity?.type;
-    if (activityType === 'mcq') return 'Oras ng Pagsusulit';
+    const activityType = String(stepItem?.activity?.type || '').toLowerCase();
+
+    if (activityType === 'material' || activityType === 'infographic') return 'Materyal';
+    if (activityType === 'mcq' || activityType === 'quiz') return 'Pagsusulit';
     if (activityType === 'writing') return 'Gawain';
-    if (activityType === 'speech') return 'Pagsasanay sa Pagbigkas';
-    if (activityType === 'vocabulary') return 'Mga Salita';
-    if (activityType === 'matching') return 'Pagtutugma';
-    if (activityType === 'infographic') return 'Materyal';
+    if (activityType === 'speech') return 'Bigkas';
+    if (activityType === 'vocabulary' || activityType === 'matching') return 'Gawain';
 
     return 'Gawain';
   }
@@ -421,8 +761,6 @@ const stepScrollRef = useRef(null);
   }, [gateToast]);
 
 
-
-
   useEffect(() => {
     if (!stepScrollRef.current) return;
 
@@ -441,6 +779,37 @@ const stepScrollRef = useRef(null);
   }, [activities]);
 
 
+  function ensureMissionAttemptStarted(activityOverride = currentActivity) {
+    const attemptKey = getMissionAttemptStorageKey(lesson, activityOverride);
+
+    if (!attemptKey) return true;
+
+    if (activeMissionAttemptRef.current[attemptKey]) return true;
+
+    const existingCount = Math.max(
+      getServerMissionAttemptCount(lesson, activityOverride),
+      Number(missionAttemptCounts[attemptKey] || 0)
+    );
+
+    if (existingCount >= MAX_MISSION_ATTEMPTS) {
+      setMissionAttemptNotice('Nagamit mo na ang 2 pagsubok sa mission na ito.');
+      setMcqToast('Nagamit mo na ang 2 pagsubok sa mission na ito.');
+      return false;
+    }
+
+    const nextCount = Math.min(MAX_MISSION_ATTEMPTS, existingCount + 1);
+
+    activeMissionAttemptRef.current[attemptKey] = true;
+
+    setMissionAttemptCounts(prev => ({
+      ...prev,
+      [attemptKey]: Math.max(Number(prev[attemptKey] || 0), nextCount),
+    }));
+
+    setMissionAttemptNotice(`Pagsubok ${nextCount} sa ${MAX_MISSION_ATTEMPTS}`);
+
+    return true;
+  }
 
   const getGameMeta = activity => {
     const type = String(activity?.type || activity?.activityType || activity?.kind || '').toLowerCase();
@@ -471,7 +840,7 @@ const stepScrollRef = useRef(null);
         title: 'Laro sa Pagpili ng Tamang Sagot',
         mission: 'Piliin ang tamang sagot. Ang bawat tamang sagot ay maglalapit sa iyo sa pagtatapos.',
         steps: ['Basahin', 'Tap', 'Manalo'],
-        button: '🚀 Magpatuloy',
+        button: ' Magpatuloy',
       };
     }
 
@@ -480,7 +849,7 @@ const stepScrollRef = useRef(null);
       title: 'Laro sa Pagkatuto',
       mission: 'Tapusin ang hamon, mangolekta ng mga bituin, at buksan ang susunod na gawain.',
       steps: ['Tingnan', 'Patugtugin', 'Manalo'],
-      button: '🚀 Magpatuloy',
+      button: ' Magpatuloy',
     };
   };
 
@@ -517,16 +886,16 @@ const stepScrollRef = useRef(null);
       moon: '🌙',
       star: '⭐',
       ball: '⚽',
-      book: '📚',
+      book: '',
       pencil: '✏️',
       school: '🏫',
-      house: '🏠',
+      house: '',
       teacher: '👩‍🏫',
       boy: '👦',
       girl: '👧',
     };
 
-    return emojiMap[value] || '🎈';
+    return emojiMap[value] || '';
   };
 
   const renderGameHeader = activity => {
@@ -594,7 +963,6 @@ const stepScrollRef = useRef(null);
   }, [lessonListening]);
 
 
-
   const formatAudioTime = (ms=0)=>{
     const total=Math.floor(ms/1000);
     const m=Math.floor(total/60);
@@ -610,7 +978,7 @@ const stepScrollRef = useRef(null);
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Mikropono', 'Kailangan ang pahintulot sa mikropono upang makapagrekord ng iyong pagbigkas.');
+        setSpeechStatus('Kailangan ang pahintulot sa mikropono upang makapagrekord ng iyong pagbigkas.');
         return;
       }
 
@@ -629,7 +997,7 @@ const stepScrollRef = useRef(null);
       setRecording(true);
       setSpeechStatus('Kasalukuyang nagre-record...');
     } catch (err) {
-      Alert.alert('Mikropono', err.message || 'Hindi masimulan ang pagrekord.');
+      setSpeechStatus('Hindi masimulan ang pagrekord. Pakisubukan muli.');
     }
   }
 
@@ -646,7 +1014,7 @@ const stepScrollRef = useRef(null);
       setRecordingUri(uri);
       setSpeechStatus(uri ? 'Handa nang patugtugin ang rekording.' : 'Huminto na ang pagrekord.');
     } catch (err) {
-      Alert.alert('Mikropono', err.message || 'Hindi maihinto ang pagrekord.');
+      setSpeechStatus('Hindi maihinto ang pagrekord. Pakisubukan muli.');
     }
   }
 
@@ -664,7 +1032,7 @@ const stepScrollRef = useRef(null);
       );
       soundRef.current = result.sound;
       setPlaying(true);
-      setSpeechStatus('Playing your recording...');
+      setSpeechStatus('Pinapatugtog ang iyong rekording...');
     } catch (err) {
       Alert.alert('Pagpapatugtog', err.message || 'Hindi maipatugtog ang iyong rekording.');
     }
@@ -704,6 +1072,9 @@ const stepScrollRef = useRef(null);
   }
 
   async function answerQuestion(question, option) {
+    const canStartMissionAttempt = ensureMissionAttemptStarted(currentActivity);
+    if (!canStartMissionAttempt) return;
+
     if (submitting) return;
     setSubmitting(true);
     try {
@@ -819,13 +1190,13 @@ const stepScrollRef = useRef(null);
   async function submitSpeech() {
     const task = currentActivity?.speechTask;
     if (!task?.id) {
-      Alert.alert('Pagbigkas', 'Wala pang gawaing pagbigkas para sa aktibidad na ito.');
+      Alert.alert('Pagbigkas', localizeStudentVisibleMessage('Wala pang gawaing pagbigkas para sa aktibidad na ito.'));
       return;
     }
     if (!recordingUri) {
       Alert.alert(
         'Laro sa Pagbigkas',
-        'Record your voice first.'
+        'Irekord muna ang iyong boses.'
       );
       return;
     }
@@ -846,7 +1217,7 @@ const stepScrollRef = useRef(null);
             uploadedAudio?.audioUrl || null,
         },
       });
-      Alert.alert('Pagbigkas', data.message || 'Naisave na ang iyong pagbigkas.');
+      Alert.alert('Pagbigkas', localizeStudentVisibleMessage(data.message || 'Naisave na ang iyong pagbigkas.'));
       setSpeechStatus(
         littleLearnerGame
           ? '⭐ Tapos na ang pagbigkas! Matagumpay na naisave ang iyong rekording.'
@@ -854,7 +1225,7 @@ const stepScrollRef = useRef(null);
       );
       await saveNextStep('speech');
     } catch (err) {
-      Alert.alert('Pagbigkas', err.message || 'Hindi maisave ang iyong pagbigkas.');
+      Alert.alert('Pagbigkas', localizeStudentVisibleMessage(err.message || 'Hindi maisave ang iyong pagbigkas.'));
     } finally {
       setSubmitting(false);
     }
@@ -1122,7 +1493,7 @@ const stepScrollRef = useRef(null);
                 color:'#166534',
               }}
             >
-              👂 Goal
+              👂 Layunin
             </Text>
 
             <Text
@@ -1301,7 +1672,7 @@ const stepScrollRef = useRef(null);
             onPress={() => {
               if (lessonListening) return;
               if (!lessonListened) {
-                setGateToast('Makinig muna sa layunin.');
+                setGateToast('Pakinggan muna ang layunin.');
                 return;
               }
               advance('listen');
@@ -1337,7 +1708,7 @@ const stepScrollRef = useRef(null);
                 color:'#1D4ED8',
               }}
             >
-              💡 Learn
+              💡 Alamin
             </Text>
 
             {!!alaminDisplayText && (
@@ -1357,13 +1728,13 @@ const stepScrollRef = useRef(null);
           </View>
 
           <TouchableOpacity
-            style={[styles.secondaryButton, { alignSelf: 'center', minWidth: '60%' }]}
+            style={[styles.secondaryButton, styles.equalAlaminActionButton, { alignSelf: 'center' }]}
             onPress={() => {
               setKnowListened(true);
               speakText(knowAudioText);
             }}
           >
-            <Text style={styles.secondaryText}>
+            <Text style={[styles.secondaryText, styles.equalAlaminActionText]}>
               {knowListened ? '🔁 Makinig Muli' : '🔊 Makinig'}
             </Text>
           </TouchableOpacity>
@@ -1382,14 +1753,14 @@ const stepScrollRef = useRef(null);
             }}
           >
             <TouchableOpacity
-              style={[styles.secondaryButton, { flex: 1 }]}
+              style={[styles.secondaryButton, styles.equalAlaminActionButton]}
               onPress={goToPreviousStep}
             >
-              <Text style={styles.secondaryText}>← Bumalik</Text>
+              <Text style={[styles.secondaryText, styles.equalAlaminActionText]}>← Bumalik</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.primaryButton, { flex: 1 }, !knowListened && styles.disabledButton]}
+              style={[styles.primaryButton, styles.equalAlaminActionButton, !knowListened && styles.disabledButton]}
               onPress={() => {
                 if (!knowListened) {
                   setGateToast('Makinig muna sa hakbang na ito.');
@@ -1398,8 +1769,8 @@ const stepScrollRef = useRef(null);
                 advance('know');
               }}
             >
-              <Text style={styles.primaryText}>
-                {knowListened ? 'Basahin ang Lesson →' : 'Makinig muna'}
+              <Text style={[styles.primaryText, styles.equalAlaminActionText]}>
+                {knowListened ? 'Basahin ang Aralin' : 'Makinig muna'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1425,24 +1796,11 @@ const stepScrollRef = useRef(null);
                   style={{
                     flexDirection: 'row',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
+                    alignItems: 'stretch',
                     marginBottom: 18,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View
-                      style={{
-                        width: 62,
-                        height: 62,
-                        borderRadius: 20,
-                        backgroundColor: '#EFF6FF',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        marginRight: 14,
-                      }}
-                    >
-                      <Text style={{ fontSize: 34 }}>📖</Text>
-                    </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'stretch', flex: 1 }}>
 
                     <Text
                       style={{
@@ -1452,7 +1810,7 @@ const stepScrollRef = useRef(null);
                         flexShrink: 1,
                       }}
                     >
-                      Basahin ang Lesson
+                      Basahin ang Aralin
                     </Text>
                   </View>
 
@@ -1468,7 +1826,7 @@ const stepScrollRef = useRef(null);
                       borderColor: '#BFDBFE',
                     }}
                   >
-                    <Text style={{ fontSize: 48 }}>📚</Text>
+                    <Text style={{ fontSize: 48 }}>📖</Text>
                   </View>
                 </View>
 
@@ -1498,7 +1856,7 @@ const stepScrollRef = useRef(null);
               </>
             ) : (
               <>
-                <Text style={styles.title}>📖 Basahin ang Lesson</Text>
+                <Text style={styles.title}>📖 Basahin ang Aralin</Text>
 
                 {!!aralinDisplayText && (
                   Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 3 ? (
@@ -1517,7 +1875,7 @@ const stepScrollRef = useRef(null);
               style={[styles.secondaryButton, { alignSelf: 'center', minWidth: '60%' }]}
               onPress={() => {
                 setReadListened(true);
-                speakText(aralinAudioText);
+                speakText(lessonAudioText);
               }}
             >
               <Text style={styles.secondaryText}>
@@ -1528,6 +1886,12 @@ const stepScrollRef = useRef(null);
             {gateToast ? (
               <View style={[styles.feedbackCard, styles.feedbackWarning]}>
                 <Text style={styles.feedbackMessage}>{gateToast}</Text>
+              </View>
+            ) : null}
+
+            {missionAttemptNotice ? (
+              <View style={[styles.feedbackCard, styles.feedbackWarning]}>
+                <Text style={styles.feedbackMessage}>{missionAttemptNotice}</Text>
               </View>
             ) : null}
 
@@ -1553,7 +1917,7 @@ const stepScrollRef = useRef(null);
 
     if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
  {
-      const questions = (currentActivity.questions || []).slice(0, 1);
+            const questions = buildMissionQuestionPool(currentActivity, lesson);
       const allAnswered = questions.length > 0 && questions.every((question) => mcqAnswers[question.id]);
       return (
         <View style={styles.card}>
@@ -1647,7 +2011,7 @@ const stepScrollRef = useRef(null);
                   </Text>
                 </View>
               )}
-              {(question.options || []).map((option) => {
+              {(question.options || []).map((option, index) => {
                 const answer = mcqAnswers[question.id];
                 const selected = answer?.selectedOptionId === option.id;
                 return (
@@ -1664,44 +2028,22 @@ const stepScrollRef = useRef(null);
                   <TouchableOpacity
                     style={[
                       styles.option,
-                      littleLearnerGame && {
-                        minHeight: 82,
-                        borderRadius: 22,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: '#F0FDF4',
-                        borderColor: '#86EFAC',
-                        marginBottom: 8,
-                      },
                       selected && (answer.correct ? styles.optionCorrect : styles.optionIncorrect),
                     ]}
                     onPress={() => answerQuestion(question, option)}
                     disabled={submitting}
                   >
-                    {littleLearnerGame ? (
-                      <>
-                        <Text style={styles.optionEmoji}>
-                          {getOptionEmoji(option.optionText)}
+                    <View style={styles.optionContent}>
+                      <View style={styles.optionLetterBadge}>
+                        <Text style={styles.optionLetterText}>
+                          {String.fromCharCode(65 + index)}
                         </Text>
+                      </View>
 
-                        <Text
-                          style={[
-                            styles.optionText,
-                            {
-                              fontSize: 24,
-                              textAlign: 'center',
-                              lineHeight: 28,
-                            },
-                          ]}
-                        >
-                          {option.optionText}
-                        </Text>
-                      </>
-                    ) : (
                       <Text style={styles.optionText}>
                         {option.optionText}
                       </Text>
-                    )}
+                    </View>
                   </TouchableOpacity>
                   </Animated.View>
                 );
@@ -1786,7 +2128,7 @@ const stepScrollRef = useRef(null);
                 marginBottom: 8,
               }}
             >
-              ⭐ Question {currentQuestionIndex + 1} of {questions.length}
+              ⭐ Tanong {currentQuestionIndex + 1} sa {questions.length} • Pagsubok {currentMissionAttemptLabel} sa {MAX_MISSION_ATTEMPTS}
             </Text>
           )}
 
@@ -1833,7 +2175,7 @@ const stepScrollRef = useRef(null);
                   {activityNotice.title}
                 </Text>
                 <Text style={styles.feedbackMessage}>
-                  {activityNotice.message}
+                  {localizeStudentVisibleMessage(activityNotice.message)}
                 </Text>
               </View>
             )
@@ -1883,7 +2225,7 @@ const stepScrollRef = useRef(null);
             <Text
               style={{
                 textAlign: 'center',
-                fontSize: 26,
+                fontSize: 22,
                 marginBottom: 10,
               }}
             >
@@ -1957,7 +2299,7 @@ const stepScrollRef = useRef(null);
                 littleLearnerGame && {
                   borderColor: '#86EFAC',
                   backgroundColor: '#FFFFFF',
-                  minHeight: 130,
+                  minHeight: 92,
                   fontSize: 18,
                 },
               ]}
@@ -2006,7 +2348,7 @@ const stepScrollRef = useRef(null);
               <Text
                 style={{
                   textAlign: 'center',
-                  fontSize: 28,
+                  fontSize: 22,
                   marginBottom: 10,
                 }}
               >
@@ -2087,7 +2429,7 @@ const stepScrollRef = useRef(null);
             <Text
               style={{
                 textAlign: 'center',
-                fontSize: 26,
+                fontSize: 22,
                 marginBottom: 10,
               }}
             >
@@ -2212,7 +2554,7 @@ const stepScrollRef = useRef(null);
               icon={recording ? '⏹' : '🎤'}
               label={
                 littleLearnerGame
-                  ? (recording ? 'Itigil' : 'Record')
+                  ? (recording ? 'Itigil' : 'Irekord')
                   : (recording ? 'Ihinto ang Pagrekord' : 'Simulan ang Pagrekord')
               }
               danger={recording}
@@ -2253,7 +2595,7 @@ const stepScrollRef = useRef(null);
               }}
             />
           </View>
-          {speechStatus ? <Text style={styles.statusMessage}>{speechStatus}</Text> : null}
+          {speechStatus ? <Text style={styles.statusMessage}>{localizeStudentVisibleMessage(speechStatus)}</Text> : null}
           {littleLearnerGame ? null : (
           <TextInput
             style={[
@@ -2300,7 +2642,7 @@ const stepScrollRef = useRef(null);
             <Text
               style={{
                 textAlign: 'center',
-                fontSize: 26,
+                fontSize: 22,
                 marginBottom: 10,
               }}
             >
@@ -2368,7 +2710,7 @@ const stepScrollRef = useRef(null);
                 textAlign: 'center',
               }}
             >
-              🎈 Pindutin ang tamang sagot!
+              Pindutin ang tamang sagot!
             </Text>
 
             {vocabulary.map((item, index) => (
@@ -2404,7 +2746,7 @@ const stepScrollRef = useRef(null);
                   }}
                 >
                   <Text style={{textAlign:'center',fontWeight:'900'}}>
-                    🎈 {item.meaning}
+                    {item.meaning}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -2658,13 +3000,13 @@ const stepScrollRef = useRef(null);
               }}
             >
               {(currentStep?.type === 'listen'
-                ? '👂 Goal'
+                ? '👂 Layunin'
                 : currentStep?.type === 'know'
-                ? '💡 Learn'
+                ? '💡 Alamin'
                 : currentStep?.type === 'read'
-                ? '📖 Basahin ang Lesson'
+                ? '📖 Basahin ang Aralin'
                 : currentStep?.type === 'finish'
-                ? '🏁 Tapos na ang Lesson'
+                ? '🏁 Tapos na ang Aralin'
                 : currentActivity?.type === 'mcq'
                 ? '🎮 Oras ng Pagsusulit'
                 : currentActivity?.type === 'writing'
@@ -2672,12 +3014,12 @@ const stepScrollRef = useRef(null);
                 : currentActivity?.type === 'speech'
                 ? '🎤 Pagsasanay sa Pagbigkas'
                 : currentActivity?.type === 'vocabulary'
-                ? '📚 Words'
+                ? ' Words'
                 : currentActivity?.type === 'matching'
                 ? '🧩 Laro sa Pagtutugma'
                 : currentActivity?.type === 'infographic'
                 ? '📖 Basahin Muna'
-                : '🚀 Mission') + ' ⭐'}
+                : ' Mission') + ' ⭐'}
             </Text>
 
             <Text
@@ -2862,7 +3204,7 @@ const stepScrollRef = useRef(null);
                     marginTop:4,
                   }}
                 >
-                  Tapos na ang Lesson!
+                  Tapos na ang Aralin!
                 </Text>
 
                 <Text
@@ -2888,7 +3230,7 @@ const stepScrollRef = useRef(null);
                   }}
                 >
                   <Text style={{fontSize:16,fontWeight:'900',color:'#166534'}}>
-                    ⚡ XP Earned
+                    ⚡ Nakuhang XP
                   </Text>
 
                   <Text
@@ -2942,7 +3284,7 @@ const stepScrollRef = useRef(null);
                         marginTop:2,
                       }}
                     >
-                      Keep Learning!
+                      Patuloy na matuto!
                     </Text>
                   </View>
 
@@ -2955,7 +3297,7 @@ const stepScrollRef = useRef(null);
                       alignItems:'center',
                     }}
                   >
-                    <Text style={{fontSize:22}}>🏅</Text>
+                    <Image source={getBadgeImageSource(completionResult?.newBadges?.[0] || activeBadgePopup)} style={styles.badgeImage} resizeMode="contain" />
                     <Text
                       style={{
                         fontWeight:'900',
@@ -2974,7 +3316,7 @@ const stepScrollRef = useRef(null);
                         marginTop:2,
                       }}
                     >
-                      New Badges
+                      Mga Bagong Badge
                     </Text>
                   </View>
                 </View>
@@ -2982,7 +3324,7 @@ const stepScrollRef = useRef(null);
 
               {(completionResult?.newBadges || []).map((badge) => (
                 <View key={badge.id || badge.code} style={styles.badgeRow}>
-                  <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
+                  <Image source={getBadgeImageSource(badge)} style={styles.badgeImage} resizeMode="contain" />
                   <View>
                     <Text
                       style={{
@@ -2991,7 +3333,7 @@ const stepScrollRef = useRef(null);
                         color:'#92400E',
                       }}
                     >
-                      🏅 Bagong Badge
+                      Bagong Badge
                     </Text>
 
                     <Text
@@ -3039,19 +3381,16 @@ const stepScrollRef = useRef(null);
                       })
                     }
                   >
-                    <Text style={styles.finishHeroIcon}>🚀</Text>
 
                     <View style={styles.finishHeroTextWrap}>
                       <Text style={styles.finishHeroTitle}>
-                        Susunod na Lesson
+                        Susunod na Aralin
                       </Text>
 
                       <Text style={styles.finishHeroSubtitle}>
-                        Magpatuloy your learning adventure!
+                        Magpatuloy sa susunod na aralin.
                       </Text>
                     </View>
-
-                    <Text style={styles.finishHeroIcon}>➡️</Text>
                   </TouchableOpacity>
                 ) : null}
 
@@ -3063,19 +3402,16 @@ const stepScrollRef = useRef(null);
                       })
                     }
                   >
-                    <Text style={styles.finishCardIcon}>📚</Text>
 
                     <View style={styles.finishCardTextWrap}>
                       <Text style={styles.finishCardTitle}>
-                        Bumalik sa mga Lesson
+                        Bumalik sa mga Aralin
                       </Text>
 
                       <Text style={styles.finishCardSubtitle}>
                         Pumili ng ibang aralin
                       </Text>
                     </View>
-
-                    <Text style={styles.finishCardArrow}>›</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -3086,7 +3422,6 @@ const stepScrollRef = useRef(null);
                       })
                     }
                   >
-                    <Text style={styles.finishCardIcon}>🏠</Text>
 
                     <View style={styles.finishCardTextWrap}>
                       <Text style={styles.finishCardTitle}>
@@ -3097,8 +3432,6 @@ const stepScrollRef = useRef(null);
                         Return to your dashboard
                       </Text>
                     </View>
-
-                    <Text style={styles.finishCardArrow}>›</Text>
                   </TouchableOpacity>
               </Animated.View>
             </View>
@@ -3127,14 +3460,7 @@ const stepScrollRef = useRef(null);
             transform:[{ scale: badgeScale }],
           }}
         >
-          <Text
-            style={{
-              fontSize:42,
-              marginRight:14,
-            }}
-          >
-            {badgePopup?.icon || '🏅'}
-          </Text>
+          <Image source={getBadgeImageSource(activeBadgePopup)} style={styles.badgePopupImage} resizeMode="contain" />
 
           <View style={{ flex:1 }}>
             <Text
@@ -3188,7 +3514,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   completionToastIcon: {
-    fontSize: 26,
+    fontSize: 22,
   },
   completionToastCopy: {
     flex: 1,
@@ -3279,7 +3605,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFBEB',
     borderWidth: 2,
     borderColor: '#FDE68A',
-    borderRadius: 18,
+    borderRadius: 16,
     paddingVertical: 10,
     paddingHorizontal: 18,
     marginBottom: 18,
@@ -3486,28 +3812,45 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   option: {
-    borderWidth: 3,
-    borderColor: '#F9A8D4',
-    backgroundColor: '#FCE7F3',
-    borderRadius: 999,
-    paddingVertical: 22,
-    paddingHorizontal: 18,
-    marginTop: 14,
-    minHeight: 72,
+    borderWidth: 2,
+    borderColor: '#86EFAC',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 10,
+    minHeight: 58,
     justifyContent: 'center',
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  optionLetterBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#22C55E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionLetterText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
   },
   optionCorrect: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
   optionIncorrect: { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
-  optionEmoji: {
-    fontSize: 54,
-    marginBottom: 8,
-  },
+
 
   optionText: {
     color: '#0F172A',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '900',
-    textAlign: 'center',
+    lineHeight: 22,
+    flex: 1,
   },
   feedbackCard: {
     borderRadius: 999,
@@ -3547,9 +3890,46 @@ const styles = StyleSheet.create({
   input: { borderWidth: 2, borderColor: '#D1FAE5', borderRadius: 14, minHeight: 110, padding: 12, marginTop: 10,
     alignSelf: 'center',
     minWidth: '75%', textAlignVertical: 'top' },
-  primaryButton: { backgroundColor: '#16A34A', borderRadius: 999, alignItems: 'center', paddingVertical: 14, marginTop: 18 },
-  secondaryButton: { backgroundColor: '#E0F2FE', borderRadius: 999, alignItems: 'center', paddingVertical: 13, paddingHorizontal: 14, marginTop: 12 },
+  primaryButton: {
+    backgroundColor: '#16A34A',
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    marginTop: 18,
+  },
+  secondaryButton: {
+    backgroundColor: '#E0F2FE',
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    marginTop: 12,
+  },
 
+  equalAlaminActionButton: {
+    width: '48%',
+    height: 60,
+    minHeight: 60,
+    maxHeight: 60,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 0,
+    marginTop: 0,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  equalAlaminActionText: {
+    width: '100%',
+    textAlign: 'center',
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '900',
+    includeFontPadding: false,
+  },
   finishHeroButton: {
     marginTop: 24,
     backgroundColor: '#16A34A',
@@ -3558,7 +3938,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     elevation: 4,
   },
 
@@ -3566,14 +3946,14 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 16,
     justifyContent: 'center',
-  },
+    alignItems: 'center',},
 
   finishHeroTitle: {
     color: '#FFFFFF',
     fontSize: 24,
     fontWeight: '900',
     lineHeight: 28,
-  },
+    textAlign: 'center',},
 
   finishHeroSubtitle: {
     color: '#DCFCE7',
@@ -3581,11 +3961,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
     marginTop: 2,
-  },
-
-  finishHeroIcon: {
-    fontSize: 42,
-  },
+    textAlign: 'center',},
 
   finishCardButton: {
     marginTop: 16,
@@ -3600,47 +3976,33 @@ const styles = StyleSheet.create({
 
     flexDirection: 'row',
     alignItems: 'center',
-  },
-
-  finishCardIcon: {
-    width: 42,
-    fontSize: 34,
-    textAlign: 'center',
-  },
+    justifyContent: 'center',},
 
   finishCardTextWrap: {
     flex: 1,
-    marginLeft: 16,
     justifyContent: 'center',
-  },
+    alignItems: 'center',},
 
   finishCardTitle: {
     color: '#166534',
     fontSize: 20,
     fontWeight: '900',
     lineHeight: 24,
-  },
+    textAlign: 'center',},
 
   finishCardSubtitle: {
     color: '#64748B',
     fontSize: 13,
     lineHeight: 18,
     marginTop: 1,
-  },
-
-  finishCardArrow: {
-    fontSize: 30,
-    color: '#16A34A',
-    fontWeight: '900',
-    marginLeft: 10,
-  },
+    textAlign: 'center',},
   recordingButton: { backgroundColor: '#FEE2E2' },
   secondaryText: {
     color: '#166534',
     fontWeight: '900',
     fontSize: 20,
     textAlign: 'center',
-},
+    width: '100%',},
 
   kidSpeechButton: {
     width: '100%',
@@ -3711,8 +4073,21 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   badgeIcon: { fontSize: 32 },
+  badgeImage: {
+    width: 38,
+    height: 38,
+  },
+  badgePopupImage: {
+    width: 96,
+    height: 96,
+    marginRight: 14,
+  },
+
+
   disabledButton: { backgroundColor: '#CBD5E1' },
-  primaryText: { color: '#FFF', fontWeight: '900' },
+  primaryText: { color: '#FFF', fontWeight: '900',
+    textAlign: 'center',
+    width: '100%',},
   reward: { color: '#F97316', fontSize: 28, fontWeight: '900', marginTop: 14 },
   error: { color: '#B91C1C', textAlign: 'center' },
 });

@@ -1,3 +1,28 @@
+function shuffle(items = []) {
+  const copy = [...items];
+
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+
+  return copy;
+}
+
+function shuffleStoryChoicesForAttempt(stories = []) {
+  return stories.map((story) => ({
+    ...story,
+    questions: Array.isArray(story.questions)
+      ? story.questions.map((question) => ({
+          ...question,
+          options: Array.isArray(question.options)
+            ? shuffle(question.options)
+            : question.options,
+        }))
+      : story.questions,
+  }));
+}
+
 const EARLY_ITEMS = [
   {
     id: 'g1-ana-payong',
@@ -245,6 +270,5 @@ export function getStoryQuestItemsForGrade(gradeLevel = 4) {
 }
 
 export function getStoryQuestAttemptItems(gradeLevel = 4) {
-  return [...getStoryQuestItemsForGrade(gradeLevel)]
-    .sort(() => Math.random() - 0.5);
+  return shuffleStoryChoicesForAttempt(shuffle(getStoryQuestItemsForGrade(gradeLevel)));
 }

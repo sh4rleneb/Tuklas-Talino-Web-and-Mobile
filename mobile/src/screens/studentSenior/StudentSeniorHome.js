@@ -22,6 +22,48 @@ import {
 import { SafeAreaView }
 from 'react-native-safe-area-context';
 
+const HOME_BADGE_IMAGES = {
+  'batang-mambabasa': require('../../../assets/badges/batang-mambabasa.png'),
+  'bituin-ng-kasipagan': require('../../../assets/badges/bituin-ng-kasipagan.png'),
+  'bituin-sa-pagsagot': require('../../../assets/badges/bituin-sa-pagsagot.png'),
+  'boses-bituin': require('../../../assets/badges/boses-bituin.png'),
+  'henyo-sa-pagsusulit': require('../../../assets/badges/henyo-sa-pagsusulit.png'),
+  'kaagapay-sa-gawain': require('../../../assets/badges/kaagapay-sa-gawain.png'),
+  'tuklas-kampeon': require('../../../assets/badges/tuklas-kampeon.png'),
+  'unang-hakbang': require('../../../assets/badges/unang-hakbang.png'),
+};
+
+function normalizeHomeBadgeSlug(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getHomeBadgeImageSource(badge = {}) {
+  const candidates = [
+    badge.slug,
+    badge.code,
+    badge.key,
+    badge.name,
+    badge.title,
+    badge.badge?.slug,
+    badge.badge?.code,
+    badge.badge?.name,
+    badge.badge?.title,
+  ].map(normalizeHomeBadgeSlug).filter(Boolean);
+
+  for (const slug of candidates) {
+    if (HOME_BADGE_IMAGES[slug]) return HOME_BADGE_IMAGES[slug];
+  }
+
+  return HOME_BADGE_IMAGES['unang-hakbang'];
+}
+
+
 export default function StudentSeniorHome({
   navigation,
 }) {
@@ -489,9 +531,14 @@ const lessonColors = [
                           : styles.badgeLocked
                       }
                     >
-                      <Text style={styles.badgeEmoji}>
-                        {unlocked ? badge.icon : '🔒'}
-                      </Text>
+                      <Image
+                        source={getHomeBadgeImageSource(badge)}
+                        style={[
+                          styles.homeBadgeImage,
+                          !unlocked && styles.homeBadgeImageLocked,
+                        ]}
+                        resizeMode="contain"
+                      />
 
                       <Text
                         style={
@@ -528,6 +575,15 @@ const lessonColors = [
 }
 
 const styles = StyleSheet.create({
+  homeBadgeImage: {
+    width: 72,
+    height: 72,
+    alignSelf: 'center',
+  },
+  homeBadgeImageLocked: {
+    opacity: 0.35,
+  },
+
 
   safe: {
 

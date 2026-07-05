@@ -116,6 +116,7 @@ export async function downloadPdfReport({
   title,
   filename,
   loader,
+  url = 'https://tuklastalino.com/api/reports/summary.pdf',
 }) {
   void loader;
 
@@ -130,7 +131,7 @@ export async function downloadPdfReport({
   console.log('[PDF] Downloading with File.downloadFileAsync');
 
   const file = await File.downloadFileAsync(
-    'https://tuklastalino.com/api/reports/summary.pdf',
+    url,
     destination,
     {
       idempotent: true,

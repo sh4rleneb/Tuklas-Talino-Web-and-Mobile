@@ -41,9 +41,7 @@ import {
   getArchivedStudents,
   getArchivedTeachers,
   getReportSummary,
-  getSummaryReportCsv,
-  getSummaryReportPdf,
-  getStudentReportCsv,
+  getAuditTrailReportPdf,
   getActivityLogsCsv,
   reactivateStudent,
   reactivateTeacher,
@@ -1643,73 +1641,46 @@ function renderLogs() {
     return (
       <>
         <Card>
-          <Text style={styles.cardTitle}>Admin Reports</Text>
+          <Text style={styles.cardTitle}>Take Action: Admin Audit Trail Report</Text>
           <Text style={styles.body}>
-            Download the administrator summary report in CSV or PDF format.
+            Choose an admin audit trail action for system activity logs, account actions, timestamps, and target records.
           </Text>
 
           <Button
             disabled={Boolean(busy)}
             onPress={() =>
-              runExport('admin-summary-csv', () =>
+              runExport('admin-audit-csv', () =>
                 downloadTextReport({
-                  title: 'Administrator Summary CSV',
-                  filename: 'administrator-summary-report.csv',
-                  mimeType: 'text/csv',
-                  loader: getSummaryReportCsv,
-                })
-              )
-            }
-          >
-            {busy === 'admin-summary-csv' ? 'Preparing Summary CSV...' : 'Download Summary CSV'}
-          </Button>
-
-          <Button
-            disabled={Boolean(busy)}
-            onPress={() =>
-              runExport('admin-summary-pdf', () =>
-                downloadPdfReport({
-                  title: 'Administrator Summary PDF',
-                  filename: 'administrator-summary-report.pdf',
-                  loader: getSummaryReportPdf,
-                })
-              )
-            }
-          >
-            {busy === 'admin-summary-pdf' ? 'Preparing Summary PDF...' : 'Download Summary PDF'}
-          </Button>
-
-          <Button
-            disabled={Boolean(busy)}
-            onPress={() =>
-              runExport('admin-student-csv', () =>
-                downloadTextReport({
-                  title: 'Student Report CSV',
-                  filename: 'student-report.csv',
-                  mimeType: 'text/csv',
-                  loader: getStudentReportCsv,
-                })
-              )
-            }
-          >
-            {busy === 'admin-student-csv' ? 'Preparing Student CSV...' : 'Download Student Report CSV'}
-          </Button>
-
-          <Button
-            disabled={Boolean(busy)}
-            onPress={() =>
-              runExport('admin-activity-csv', () =>
-                downloadTextReport({
-                  title: 'Activity Logs CSV',
-                  filename: 'activity-logs.csv',
+                  title: 'Administrator CSV Audit Trail Report',
+                  filename: 'tuklas-talino-admin-audit-trail-report.csv',
                   mimeType: 'text/csv',
                   loader: getActivityLogsCsv,
                 })
               )
             }
           >
-            {busy === 'admin-activity-csv' ? 'Preparing Activity CSV...' : 'Download Activity Logs CSV'}
+            {busy === 'admin-audit-csv' ? 'Preparing Admin CSV...' : 'CSV Admin Audit Trail Report'}
           </Button>
+
+          <Button
+            disabled={Boolean(busy)}
+            onPress={() =>
+              runExport('admin-audit-pdf', () =>
+                downloadPdfReport({
+                  title: 'Administrator PDF Audit Trail Report',
+                  filename: 'tuklas-talino-admin-audit-trail-report.pdf',
+                  loader: getAuditTrailReportPdf,
+                  url: 'https://tuklastalino.com/api/reports/audit-trail.pdf',
+                })
+              )
+            }
+          >
+            {busy === 'admin-audit-pdf' ? 'Preparing Admin PDF...' : 'PDF Admin Audit Trail Report'}
+          </Button>
+
+          
+
+          
         </Card>
         <Card>
           <Text style={styles.cardTitle}>System Summary</Text>

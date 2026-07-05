@@ -1848,20 +1848,32 @@ async function archiveTeacher(id) {
 
   async function exportStudentsCSV() {
     await safeRun(async () => {
-      await downloadFile('/reports/students.csv', 'tuklas-talino-students.csv');
+      await downloadFile('/reports/students.csv', 'tuklas-talino-teacher-monitoring-report.csv');
     }, 'Hindi ma-download ang students CSV.');
   }
 
   async function exportLogsCSV() {
     await safeRun(async () => {
-      await downloadFile('/reports/activity-logs.csv', 'tuklas-talino-activity-logs.csv');
+      await downloadFile('/reports/activity-logs.csv', 'tuklas-talino-admin-audit-trail-report.csv');
     }, 'Hindi ma-download ang activity logs CSV.');
+  }
+
+  async function exportSummaryCSV() {
+    await safeRun(async () => {
+      await downloadFile('/reports/activity-logs.csv', 'tuklas-talino-admin-audit-trail-report.csv');
+    }, 'Hindi ma-download ang admin audit trail CSV.');
   }
 
   async function downloadBuodReport() {
     await safeRun(async () => {
-      await downloadFile('/reports/summary.txt', 'tuklas-talino-summary-report.txt');
-    }, 'Hindi ma-download ang summary report.');
+      await downloadFile('/reports/summary.pdf', 'tuklas-talino-teacher-monitoring-summary-report.pdf');
+    }, 'Hindi ma-download ang PDF monitoring summary.');
+  }
+
+  async function downloadAuditTrailReport() {
+    await safeRun(async () => {
+      await downloadFile('/reports/audit-trail.pdf', 'tuklas-talino-admin-audit-trail-report.pdf');
+    }, 'Hindi ma-download ang admin audit trail PDF.');
   }
 
   const lessonsBySubject = useMemo(() => {
@@ -3959,7 +3971,7 @@ async function archiveTeacher(id) {
       quiz={selectedQuizzes}
       go={go}
       logout={doLogout}
-      submitQuizzes={submitQuizzes}
+      submitQuiz={submitQuizzes}
       quizAttempts={quizAttempts}
       getBestQuizAttempt={getBestQuizAttempt}
       EarlyStudentChrome={EarlyStudentChrome}
@@ -4103,6 +4115,8 @@ async function archiveTeacher(id) {
   assignTeacherClass={assignTeacherClass}
   removeTeacherAssignment={removeTeacherAssignment}
   reload={() => safeRun(loadAdminDashboard)}
+          exportSummaryCSV={exportSummaryCSV}
+          downloadAuditTrailReport={downloadAuditTrailReport}
 />
       </Screen>
     </>
