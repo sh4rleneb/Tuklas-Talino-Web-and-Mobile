@@ -363,7 +363,7 @@ export default function GroupsScreen({ navigation }) {
             setCompletedTaskId(null);
           }}
         >
-          Bumalik sa mga Pangkat
+          <Text style={styles.primaryButtonText}>Bumalik sa mga Pangkat</Text>
         </PrimaryButton>
       </Card>
     );
@@ -506,7 +506,7 @@ export default function GroupsScreen({ navigation }) {
           <Card style={styles.errorCard}>
             <Text style={styles.error}>{error}</Text>
             <PrimaryButton variant="secondary" onPress={() => load()}>
-              Subukan Muli
+              <Text style={styles.primaryButtonText}>Subukan Muli</Text>
             </PrimaryButton>
           </Card>
         ) : filteredGroups.length ? (

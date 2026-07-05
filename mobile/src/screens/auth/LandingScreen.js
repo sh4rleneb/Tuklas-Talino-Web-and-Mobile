@@ -211,11 +211,16 @@ export default function LandingScreen({
               at subaybayan ang iyong pag-unlad.
             </Text>
 
-            <View style={styles.studentButton}><Text style={styles.buttonText}>
+            <TouchableOpacity
+              style={styles.studentButton}
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate('StudentLogin')}
+            >
+              <Text style={styles.buttonText}>
                 Mag-aaral →
               </Text>
 
-            </View>
+            </TouchableOpacity>
 
           </View>
 
