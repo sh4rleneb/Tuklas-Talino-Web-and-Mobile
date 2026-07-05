@@ -73,7 +73,6 @@ export function LandingScreen({ go }) {
   const lmsTools = [
     { icon: '📝', title: 'Quizzes', desc: 'Students answer assessments while attempts, scores, and progress are recorded.', tone: 'blue' },
     { icon: '🎮', title: 'Missions', desc: 'Game-like learning tasks help students practice lessons in a more engaging way.', tone: 'purple' },
-    { icon: '👥', title: 'Groups', desc: 'Students can work on collaborative tasks guided by teacher-created groups.', tone: 'yellow' },
     { icon: '🏅', title: 'XP & Badges', desc: 'Reward features encourage participation, completion, and consistent learning.', tone: 'pink' },
     { icon: '📊', title: 'Monitoring', desc: 'Teachers can track lesson completion, quiz performance, XP, and learner status.', tone: 'blue' },
   ];

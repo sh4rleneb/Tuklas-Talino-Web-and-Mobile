@@ -4,7 +4,7 @@ const sectionLabels = {
   layunin: { title: 'Layunin', icon: '🎯' },
   alamin: { title: 'Alamin', icon: '💡' },
   panimula: { title: 'Panimula', icon: '🌟' },
-  aralin: { title: 'Aralin', icon: '📖' },
+  aralin: { title: 'Lessons', icon: '📖' },
   gawain: { title: 'Gawain', icon: '📝' }
 };
 
@@ -20,11 +20,11 @@ function splitLessonText(text = '') {
 
   if (!raw) return [];
 
-  const pattern = /(Layunin|Alamin|Panimula|Aralin|Gawain)\s*:/gi;
+  const pattern = /(Layunin|Alamin|Panimula|Lessons|Gawain)\s*:/gi;
   const matches = [...raw.matchAll(pattern)];
 
   if (!matches.length) {
-    return [{ key: 'aralin', title: 'Aralin', content: raw }];
+    return [{ key: 'aralin', title: 'Lessons', content: raw }];
   }
 
   return matches
@@ -174,7 +174,7 @@ function aralinGuideFor(lesson, aralinText = '') {
   }
 
   return {
-    label: 'Basahin ang Aralin',
+    label: 'Basahin ang Lessons',
     helper: 'Basahin muna ito bago sagutan ang gawain.'
   };
 }
@@ -238,7 +238,7 @@ function visualForLesson(lesson, aralinText = '') {
   if (hasWord(parts.subject, 'oral')) return { icon: '🎙️', label: 'Bigkas' };
   if (hasWord(parts.subject, 'pagsulat')) return { icon: '✍️', label: 'Sulat' };
 
-  return { icon: '📚', label: 'Aralin' };
+  return { icon: '📚', label: 'Lessons' };
 }
 
 function topicInfoForLesson(lesson, aralinText = '') {
@@ -414,7 +414,7 @@ export function getStructuredLessonKnowAudioText(text, lesson) {
   return [info.label, info.info, info.reminder].filter(Boolean).join('\n\n');
 }
 
-export function getStructuredLessonAralinAudioText(text) {
+export function getStructuredLessonLessonsAudioText(text) {
   const sections = splitLessonText(text);
   const aralinText = sectionContent(sections, 'aralin') || String(text || '').trim();
 

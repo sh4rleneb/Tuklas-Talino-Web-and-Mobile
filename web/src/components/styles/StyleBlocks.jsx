@@ -10,6 +10,36 @@ function isTuklasKaagapayBadge(badge) {
   return name === 'kaagapay sa gawain' || code === 'group_1' || code.includes('kaagapay');
 }
 
+const TUKLAS_BADGE_IMAGE_BY_CODE = {
+  first_lesson: '/badges/unang-hakbang.png',
+  firstlesson: '/badges/unang-hakbang.png',
+  reader: '/badges/batang-mambabasa.png',
+  reader_3: '/badges/batang-mambabasa.png',
+  quiz_perfect: '/badges/henyo-sa-pagsusulit.png',
+  writing_3: '/badges/bituin-sa-pagsagot.png',
+  speech_3: '/badges/boses-bituin.png',
+  group_1: '/badges/kaagapay-sa-gawain.png',
+  xp_100: '/badges/bituin-ng-kasipagan.png',
+  level_10: '/badges/tuklas-kampeon.png',
+};
+
+const TUKLAS_BADGE_IMAGE_BY_NAME = {
+  'unang hakbang': '/badges/unang-hakbang.png',
+  'batang mambabasa': '/badges/batang-mambabasa.png',
+  'henyo sa pagsusulit': '/badges/henyo-sa-pagsusulit.png',
+  'bituin sa pagsagot': '/badges/bituin-sa-pagsagot.png',
+  'boses bituin': '/badges/boses-bituin.png',
+  'kaagapay sa gawain': '/badges/kaagapay-sa-gawain.png',
+  'bituin ng kasipagan': '/badges/bituin-ng-kasipagan.png',
+  'tuklas kampeon': '/badges/tuklas-kampeon.png',
+};
+
+function getTuklasBadgeImage(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return TUKLAS_BADGE_IMAGE_BY_CODE[code] || TUKLAS_BADGE_IMAGE_BY_NAME[name] || '';
+}
+
 function isTuklasHenyoBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
   const code = String(badge?.code || '').trim().toLowerCase();
@@ -23,11 +53,22 @@ function isTuklasBituinBadge(badge) {
 }
 
 function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
+  const mappedTuklasBadgeImage = getTuklasBadgeImage(badge);
+  if (mappedTuklasBadgeImage) {
+    return (
+      <img
+        src={mappedTuklasBadgeImage}
+        alt={badge?.name || 'Badge'}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
   if (isTuklasHenyoBadge(badge)) {
     return (
       <img
         src={TUKLAS_HENYO_BADGE_IMAGE}
-        alt={badge?.name || 'Henyo sa Pagsusulit'}
+        alt={badge?.name || 'Henyo sa Quizzes'}
         style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
       />
     );
@@ -1680,7 +1721,7 @@ export function EarlyStudentSubpageStyles() {
         line-height: 1;
       }
 
-      /* Grade 1-2 shared Kid Curious UI for Lessons, Mga Misyon, Groups, Badges, and Profile. */
+      /* Grade 1-2 shared Kid Curious UI for Lessons, Missions, Groups, Badges, and Profile. */
       .g12-page {
         background:
           radial-gradient(circle at 14% 18%, rgba(255, 245, 207, 0.95), transparent 24%),
@@ -5335,7 +5376,7 @@ export function MissionStyles() {
       }
 
 
-      /* Grade 1-2 Mga Misyon and game screen balanced font sizing. */
+      /* Grade 1-2 Missions and game screen balanced font sizing. */
       .missions-wrap.early .missions-section,
       .missions-wrap.early .missions-badge-card,
       .missions-wrap.early .missions-stat-card,

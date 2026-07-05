@@ -263,14 +263,14 @@ export default function TeacherStudentLessonPreview({
     rows.push(
       {
         key: 'aralin',
-        title: 'Aralin',
+        title: 'Lessons',
         subtitle: 'Main lesson content',
         render: () => (
           <TextLessonCard
-            title="Aralin"
+            title="Lessons"
             subtitle="Student reading card"
             paragraphs={previewParagraphs(lessonDraft.aralin || lessonDraft.passage)}
-            emptyText="No Aralin added yet."
+            emptyText="No Lessons added yet."
           />
         )
       },

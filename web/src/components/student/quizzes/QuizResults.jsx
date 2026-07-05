@@ -164,7 +164,7 @@ export default function QuizResults({
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
-                {showReview ? "Balikan ang mga Sagot" : "Naisave ang Pagsubok sa Pagsusulit"}
+                {showReview ? "Balikan ang mga Sagot" : "Naisave ang Pagsubok sa Quizzes"}
               </h2>
 
               <p className={early ? "g12-section-subtitle" : "g46-ref-muted"}>
@@ -286,7 +286,7 @@ export default function QuizResults({
         activeTab="quizzes"
         go={go}
         icon={mastery.icon || "🏆"}
-        title="Resulta ng Pagsusulit"
+        title="Resulta ng Quizzes"
         subtitle={mastery.label}
       >
         {resultContent}
@@ -302,7 +302,7 @@ export default function QuizResults({
         go={go}
         logout={logout}
         icon={mastery.icon || "🏆"}
-        title="Resulta ng Pagsusulit"
+        title="Resulta ng Quizzes"
         subtitle={`${mastery.label} • ${result.score}/${result.total}`}
       >
         {resultContent}

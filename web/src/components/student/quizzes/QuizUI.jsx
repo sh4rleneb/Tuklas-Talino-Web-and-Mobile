@@ -71,7 +71,7 @@ function subjectTheme(subject) {
       icon: "📚",
       bg: "#F6F6F6",
       accent: "#95A5A6",
-      tag: "Aralin",
+      tag: "Lessons",
     }
   );
 }
@@ -1167,9 +1167,9 @@ function QuizGameHeader({ quiz, best, go, onBack }) {
         </span>
 
         <div>
-          <h2>{quiz?.title || "Pagsusulit"}</h2>
+          <h2>{quiz?.title || "Quizzes"}</h2>
           <small>
-            {quiz?.subject || "Filipino"} • {quiz?.type || "Pagsasanay na Pagsusulit"}{" "}
+            {quiz?.subject || "Filipino"} • {quiz?.type || "Pagsasanay na Quizzes"}{" "}
             {best ? `• Best ${best.percent}%` : ""}
           </small>
         </div>
@@ -1305,7 +1305,7 @@ function QuizQuestionCard({ quiz, question, currentIndex, total }) {
   return (
     <section className="quiz-question-box" aria-label={`Question ${currentIndex + 1}`}>
       <div>
-        <small>{quiz?.subject || "Filipino"} • {question?.source || "Suriin ang Pagsusulit"}</small>
+        <small>{quiz?.subject || "Filipino"} • {question?.source || "Suriin ang Quizzes"}</small>
         <h2>{question?.prompt || "Piliin ang tamang sagot."}</h2>
       </div>
 

@@ -229,7 +229,7 @@ export default function QuizPlayer({
         activeTab="quizzes"
         go={go}
         icon="🧠"
-        title={started ? "Oras ng Pagsusulit" : "Hamon sa Pagsusulit"}
+        title={started ? "Oras ng Quizzes" : "Hamon sa Quizzes"}
         subtitle={
           started
             ? "Tapusin muna ang pagsusulit bago lumipat sa ibang tab."
@@ -250,7 +250,7 @@ export default function QuizPlayer({
         go={go}
         logout={logout}
         icon="🧠"
-        title={quiz?.title || "Pagsusulit"}
+        title={quiz?.title || "Quizzes"}
         subtitle="" 
         titleAction={
           <button

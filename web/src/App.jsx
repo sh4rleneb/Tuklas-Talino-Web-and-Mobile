@@ -11,7 +11,7 @@ import { useAuth } from './contexts/AuthContext';
 import QuizzesPage from './pages/Student/QuizzesPage';
 import QuizPlayer from './components/student/quizzes/QuizPlayer';
 import QuizResults from './components/student/quizzes/QuizResults';
-import StructuredLessonFlow, { StructuredLessonKnowCard, getStructuredLessonAralinAudioText, getStructuredLessonKnowAudioText, getStructuredLessonSectionText } from './components/student/StructuredLessonFlow';
+import StructuredLessonFlow, { StructuredLessonKnowCard, getStructuredLessonLessonsAudioText, getStructuredLessonKnowAudioText, getStructuredLessonSectionText } from './components/student/StructuredLessonFlow';
 import { AVATARS, SUBJECTS, MISSION_GAMES } from './constants/studentConstants';
 import { asArray, displayDue, effectivenessBand, fmtDate, getBestQuizAttempt, lessonAssessmentProfile, lessonXp, levelForXp, levelTitleForXp, shortLevelTitleForXp, masteryFromPercent, rolesForGradeLevel, subjectTheme, taskCompletionPercent, xpPercent } from './utils/studentHelpers';
 import { EarlyStudentSubpageStyles, Grade46ReferenceStyles, MissionStyles } from './components/styles/StyleBlocks';
@@ -34,6 +34,36 @@ function isTuklasKaagapayBadge(badge) {
   return name === 'kaagapay sa gawain' || code === 'group_1' || code.includes('kaagapay');
 }
 
+const TUKLAS_BADGE_IMAGE_BY_CODE = {
+  first_lesson: '/badges/unang-hakbang.png',
+  firstlesson: '/badges/unang-hakbang.png',
+  reader: '/badges/batang-mambabasa.png',
+  reader_3: '/badges/batang-mambabasa.png',
+  quiz_perfect: '/badges/henyo-sa-pagsusulit.png',
+  writing_3: '/badges/bituin-sa-pagsagot.png',
+  speech_3: '/badges/boses-bituin.png',
+  group_1: '/badges/kaagapay-sa-gawain.png',
+  xp_100: '/badges/bituin-ng-kasipagan.png',
+  level_10: '/badges/tuklas-kampeon.png',
+};
+
+const TUKLAS_BADGE_IMAGE_BY_NAME = {
+  'unang hakbang': '/badges/unang-hakbang.png',
+  'batang mambabasa': '/badges/batang-mambabasa.png',
+  'henyo sa pagsusulit': '/badges/henyo-sa-pagsusulit.png',
+  'bituin sa pagsagot': '/badges/bituin-sa-pagsagot.png',
+  'boses bituin': '/badges/boses-bituin.png',
+  'kaagapay sa gawain': '/badges/kaagapay-sa-gawain.png',
+  'bituin ng kasipagan': '/badges/bituin-ng-kasipagan.png',
+  'tuklas kampeon': '/badges/tuklas-kampeon.png',
+};
+
+function getTuklasBadgeImage(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return TUKLAS_BADGE_IMAGE_BY_CODE[code] || TUKLAS_BADGE_IMAGE_BY_NAME[name] || '';
+}
+
 function isTuklasHenyoBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
   const code = String(badge?.code || '').trim().toLowerCase();
@@ -47,11 +77,22 @@ function isTuklasBituinBadge(badge) {
 }
 
 function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
+  const mappedTuklasBadgeImage = getTuklasBadgeImage(badge);
+  if (mappedTuklasBadgeImage) {
+    return (
+      <img
+        src={mappedTuklasBadgeImage}
+        alt={badge?.name || 'Badge'}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
   if (isTuklasHenyoBadge(badge)) {
     return (
       <img
         src={TUKLAS_HENYO_BADGE_IMAGE}
-        alt={badge?.name || 'Henyo sa Pagsusulit'}
+        alt={badge?.name || 'Henyo sa Quizzes'}
         style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
       />
     );
@@ -446,7 +487,7 @@ export default function App() {
   const [selectedAvatar, setSelectedAvatar] = useState('🦊');
   const [studentDash, setStudentDash] = useState(null);
   const [selectedLesson, setSelectedLesson] = useState(null);
-  const [selectedPagsusulit, setSelectedPagsusulit] = useState(null);
+  const [selectedQuizzes, setSelectedQuizzes] = useState(null);
   const [quizResult, setQuizResult] = useState(null);
   const [quizAttempts, setQuizAttempts] = useState({});
   const [selectedMissionGameId, setSelectedMissionGameId] = useState('word-match');
@@ -573,12 +614,12 @@ useEffect(() => {
       payload.selectedLessonId = selectedLesson.id;
     }
 
-    if (!['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedPagsusulitId === undefined) {
-      payload.selectedPagsusulitId = null;
+    if (!['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedQuizzesId === undefined) {
+      payload.selectedQuizzesId = null;
     }
 
-    if (['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedPagsusulitId === undefined && selectedPagsusulit?.id) {
-      payload.selectedPagsusulitId = selectedPagsusulit.id;
+    if (['screen-stu-quiz-play', 'screen-stu-quiz-result'].includes(id) && extra.selectedQuizzesId === undefined && selectedQuizzes?.id) {
+      payload.selectedQuizzesId = selectedQuizzes.id;
     }
 
     if (id !== 'screen-stu-mission-play' && extra.selectedMissionGameId === undefined) {
@@ -604,11 +645,11 @@ useEffect(() => {
     rememberStudentScreen(screen);
   }, [subjectFilter]);
 
-  function getStudentPagsusulitzesForRestore() {
+  function getStudentQuizzesForRestore() {
     const quizzes = [];
 
     try {
-      quizzes.push(...asArray(buildStudentPagsusulitzes(studentDash)));
+      quizzes.push(...asArray(buildStudentQuizzes(studentDash)));
     } catch {
       // If quiz building fails for any reason, fallback sources below still keep the app safe.
     }
@@ -627,11 +668,11 @@ useEffect(() => {
     return Array.from(unique.values());
   }
 
-  function findStudentPagsusulitForRestore(quizId) {
+  function findStudentQuizzesForRestore(quizId) {
     const targetId = String(quizId || '');
     if (!targetId) return null;
 
-    return getStudentPagsusulitzesForRestore().find(quiz =>
+    return getStudentQuizzesForRestore().find(quiz =>
       String(quiz?.id || quiz?.quizId || '') === targetId
     ) || null;
   }
@@ -639,8 +680,8 @@ useEffect(() => {
   function getLatestQuizAttemptForRestore(quiz) {
     if (!quiz?.id) return null;
 
-    const attemptsByPagsusulit = studentDash?.quizAttempts || quizAttempts || {};
-    const attempts = asArray(attemptsByPagsusulit?.[quiz.id]);
+    const attemptsByQuizzes = studentDash?.quizAttempts || quizAttempts || {};
+    const attempts = asArray(attemptsByQuizzes?.[quiz.id]);
 
     const highestAttemptNo = Math.max(
       0,
@@ -689,7 +730,7 @@ useEffect(() => {
       saveStudentNavigationState({
         screen: 'screen-lessons',
         selectedLessonId: null,
-        selectedPagsusulitId: null,
+        selectedQuizzesId: null,
         selectedMissionGameId: null,
         subjectFilter: saved.subjectFilter || subjectFilter
       });
@@ -697,15 +738,15 @@ useEffect(() => {
     }
 
     if (saved.screen === 'screen-stu-quiz-play') {
-      const quiz = findStudentPagsusulitForRestore(saved.selectedPagsusulitId);
+      const quiz = findStudentQuizzesForRestore(saved.selectedQuizzesId);
 
       if (quiz) {
-        setSelectedPagsusulit(quiz);
+        setSelectedQuizzes(quiz);
         setQuizResult(null);
         setScreen('screen-stu-quiz-play');
         saveStudentNavigationState({
           screen: 'screen-stu-quiz-play',
-          selectedPagsusulitId: quiz.id,
+          selectedQuizzesId: quiz.id,
           selectedLessonId: null,
           selectedMissionGameId: null,
           subjectFilter: saved.subjectFilter || subjectFilter
@@ -716,7 +757,7 @@ useEffect(() => {
       setScreen('screen-stu-quizzes');
       saveStudentNavigationState({
         screen: 'screen-stu-quizzes',
-        selectedPagsusulitId: null,
+        selectedQuizzesId: null,
         selectedLessonId: null,
         selectedMissionGameId: null,
         subjectFilter: saved.subjectFilter || subjectFilter
@@ -725,16 +766,16 @@ useEffect(() => {
     }
 
     if (saved.screen === 'screen-stu-quiz-result') {
-      const quiz = findStudentPagsusulitForRestore(saved.selectedPagsusulitId);
+      const quiz = findStudentQuizzesForRestore(saved.selectedQuizzesId);
       const restoredResult = quiz ? getLatestQuizAttemptForRestore(quiz) : null;
 
       if (quiz && restoredResult) {
-        setSelectedPagsusulit(quiz);
+        setSelectedQuizzes(quiz);
         setQuizResult(restoredResult);
         setScreen('screen-stu-quiz-result');
         saveStudentNavigationState({
           screen: 'screen-stu-quiz-result',
-          selectedPagsusulitId: quiz.id,
+          selectedQuizzesId: quiz.id,
           selectedLessonId: null,
           selectedMissionGameId: null,
           subjectFilter: saved.subjectFilter || subjectFilter
@@ -745,7 +786,7 @@ useEffect(() => {
       setScreen('screen-stu-quizzes');
       saveStudentNavigationState({
         screen: 'screen-stu-quizzes',
-        selectedPagsusulitId: null,
+        selectedQuizzesId: null,
         selectedLessonId: null,
         selectedMissionGameId: null,
         subjectFilter: saved.subjectFilter || subjectFilter
@@ -761,7 +802,7 @@ useEffect(() => {
           screen: 'screen-stu-mission-play',
           selectedMissionGameId: saved.selectedMissionGameId,
           selectedLessonId: null,
-          selectedPagsusulitId: null,
+          selectedQuizzesId: null,
           subjectFilter: saved.subjectFilter || subjectFilter
         });
         return;
@@ -772,7 +813,7 @@ useEffect(() => {
         screen: 'screen-stu-missions',
         selectedMissionGameId: null,
         selectedLessonId: null,
-        selectedPagsusulitId: null,
+        selectedQuizzesId: null,
         subjectFilter: saved.subjectFilter || subjectFilter
       });
       return;
@@ -801,7 +842,7 @@ useEffect(() => {
     restoredStudentNavigationRef.current = false;
     setStudentDash(null);
     setSelectedLesson(null);
-    setSelectedPagsusulit(null);
+    setSelectedQuizzes(null);
     setQuizResult(null);
     setQuizAttempts({});
     setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [], assignedClasses: [] });
@@ -982,12 +1023,12 @@ if (role === 'admin') {
 
   function openQuiz(quiz) {
     if (!quiz) return;
-    setSelectedPagsusulit(quiz);
+    setSelectedQuizzes(quiz);
     setQuizResult(null);
     go('screen-stu-quiz-play');
     saveStudentNavigationState({
       screen: 'screen-stu-quiz-play',
-      selectedPagsusulitId: quiz.id,
+      selectedQuizzesId: quiz.id,
       selectedLessonId: null,
       selectedMissionGameId: null,
       subjectFilter
@@ -1012,7 +1053,7 @@ if (role === 'admin') {
       return;
     }
 
-    setSelectedPagsusulit(quiz);
+    setSelectedQuizzes(quiz);
     setQuizResult({
       ...latestAttempt,
       attemptHistory: attempts,
@@ -1022,14 +1063,14 @@ if (role === 'admin') {
     go('screen-stu-quiz-result');
     saveStudentNavigationState({
       screen: 'screen-stu-quiz-result',
-      selectedPagsusulitId: quiz?.id || selectedPagsusulit?.id || null,
+      selectedQuizzesId: quiz?.id || selectedQuizzes?.id || null,
       selectedLessonId: null,
       selectedMissionGameId: null,
       subjectFilter
     });
   }
 
-  async function submitPagsusulit(quiz, answers) {
+  async function submitQuizzes(quiz, answers) {
     if (!quiz) return null;
 
     const maxQuizAttempts = 2;
@@ -1051,7 +1092,7 @@ if (role === 'admin') {
       go('screen-stu-quiz-result');
     saveStudentNavigationState({
       screen: 'screen-stu-quiz-result',
-      selectedPagsusulitId: quiz?.id || selectedPagsusulit?.id || null,
+      selectedQuizzesId: quiz?.id || selectedQuizzes?.id || null,
       selectedLessonId: null,
       selectedMissionGameId: null,
       subjectFilter
@@ -1084,7 +1125,7 @@ if (role === 'admin') {
     go('screen-stu-quiz-result');
     saveStudentNavigationState({
       screen: 'screen-stu-quiz-result',
-      selectedPagsusulitId: quiz?.id || selectedPagsusulit?.id || null,
+      selectedQuizzesId: quiz?.id || selectedQuizzes?.id || null,
       selectedLessonId: null,
       selectedMissionGameId: null,
       subjectFilter
@@ -1115,10 +1156,10 @@ if (role === 'admin') {
     })
       .then((data) => {
         const saved = data?.quizResult || {};
-        const backendAttemptsForPagsusulit = Array.isArray(data?.quizAttempts) ? data.quizAttempts : null;
+        const backendAttemptsForQuizzes = Array.isArray(data?.quizAttempts) ? data.quizAttempts : null;
 
-        const syncedAttempts = backendAttemptsForPagsusulit
-          ? { ...localUpdatedAttempts, [quiz.id]: backendAttemptsForPagsusulit }
+        const syncedAttempts = backendAttemptsForQuizzes
+          ? { ...localUpdatedAttempts, [quiz.id]: backendAttemptsForQuizzes }
           : localUpdatedAttempts;
 
         const syncedHistory = syncedAttempts?.[quiz.id] || [];
@@ -1154,7 +1195,7 @@ if (role === 'admin') {
       })
       .catch((err) => {
         const message = err?.message || 'Naisave sa device ang pagsusulit, pero hindi naisave sa server.';
-        console.warn('[TuklasTalino] Pagsusulit backend save failed:', err);
+        console.warn('[TuklasTalino] Quizzes backend save failed:', err);
         notify(`${message} Iskor: ${finalResult.score}/${finalResult.total} (${finalResult.percent}%).`, 'bad');
       });
 
@@ -1518,7 +1559,7 @@ if (role === 'admin') {
 
         activities.push({
           type: 'mcq',
-          title: 'Pagsusulit',
+          title: 'Quizzes',
           questions: [
             {
               question,
@@ -3904,7 +3945,7 @@ async function archiveTeacher(id) {
     openQuizResult={openQuizResult}
     quizAttempts={quizAttempts}
     subjects={SUBJECTS}
-    buildStudentPagsusulitzes={buildStudentPagsusulitzes}
+    buildStudentQuizzes={buildStudentQuizzes}
     getBestQuizAttempt={getBestQuizAttempt}
     EarlyStudentChrome={EarlyStudentChrome}
     Grade46StudentChrome={Grade46StudentChrome}
@@ -3912,13 +3953,13 @@ async function archiveTeacher(id) {
 </Screen>
 
 <Screen id="screen-stu-quiz-play" active={screen === 'screen-stu-quiz-play'}>
-  {selectedPagsusulit && (
+  {selectedQuizzes && (
     <QuizPlayer
       data={studentDash}
-      quiz={selectedPagsusulit}
+      quiz={selectedQuizzes}
       go={go}
       logout={doLogout}
-      submitPagsusulit={submitPagsusulit}
+      submitQuizzes={submitQuizzes}
       quizAttempts={quizAttempts}
       getBestQuizAttempt={getBestQuizAttempt}
       EarlyStudentChrome={EarlyStudentChrome}
@@ -3935,7 +3976,7 @@ async function archiveTeacher(id) {
       go={go}
       logout={doLogout}
       openQuiz={openQuiz}
-      buildStudentPagsusulitzes={buildStudentPagsusulitzes}
+      buildStudentQuizzes={buildStudentQuizzes}
       EarlyStudentChrome={EarlyStudentChrome}
       Grade46StudentChrome={Grade46StudentChrome}
     />
@@ -3971,7 +4012,7 @@ async function archiveTeacher(id) {
               screen: 'screen-stu-mission-play',
               selectedMissionGameId: gameId,
               selectedLessonId: null,
-              selectedPagsusulitId: null,
+              selectedQuizzesId: null,
               subjectFilter
             });
           }}
@@ -4132,7 +4173,7 @@ function appendQuizAttempt(studentId, attempts, quizId, result) {
 }
 
 
-function normalizePagsusulitOption(option = {}, index = 0) {
+function normalizeQuizzesOption(option = {}, index = 0) {
   const rawText =
     option?.text ??
     option?.optionText ??
@@ -4177,20 +4218,20 @@ function buildFallbackOptions(correctText, alternates = []) {
   return stableShuffleOptions(options, correct);
 }
 
-function buildPagsusulitQuestionsFromLesson(lesson = {}) {
+function buildQuizzesQuestionsFromLesson(lesson = {}) {
   const activities = asArray(lesson?.activities);
   const questions = [];
 
   activities.forEach((activity, activityIndex) => {
     if (activity?.type === 'mcq') {
       asArray(activity.questions).forEach((question, questionIndex) => {
-        const options = asArray(question.options || question.choices).map(normalizePagsusulitOption);
+        const options = asArray(question.options || question.choices).map(normalizeQuizzesOption);
         if (!options.length) return;
         const hasCorrect = options.some(option => option.isCorrect);
         questions.push({
           id: String(question.id || `${lesson.id || 'lesson'}-${activityIndex}-${questionIndex}`),
           type: 'mcq',
-          source: activity.title || 'Pagsusulit sa Aralin',
+          source: activity.title || 'Quizzes sa Lessons',
           prompt: question.question || question.prompt || 'Piliin ang tamang sagot.',
           options: hasCorrect ? options : options.map((option, idx) => ({ ...option, isCorrect: idx === 0 })),
           points: Number(question.points || 1)
@@ -4202,25 +4243,25 @@ function buildPagsusulitQuestionsFromLesson(lesson = {}) {
   return questions.slice(0, 25);
 }
 
-function buildStudentPagsusulitzes(data = {}) {
+function buildStudentQuizzes(data = {}) {
   return asArray(data?.lessons).map((lesson) => {
-    const questions = buildPagsusulitQuestionsFromLesson(lesson);
+    const questions = buildQuizzesQuestionsFromLesson(lesson);
     return {
       id: `lesson-${lesson.id || lesson.title}-quiz`,
       lessonId: lesson.id,
       lessonTitle: lesson.title || 'Lesson',
-      title: `Pagsusulit sa ${lesson.title || 'Aralin'}`,
+      title: `Quizzes sa ${lesson.title || 'Lessons'}`,
       subject: lesson.subject || 'Filipino',
       gradeLevel: lesson.gradeLevel || data?.student?.gradeLevel || '—',
       xpReward: Math.max(5, Math.round(Number(lesson.xpReward || 20) / 2)),
-      type: lesson.completed ? 'Pagsusulit Pagkatapos ng Aralin' : 'Pagsasanay na Pagsusulit',
+      type: lesson.completed ? 'Quizzes Pagkatapos ng Lessons' : 'Pagsasanay na Quizzes',
       unlocked: true,
       questions
     };
   }).filter(quiz => quiz.questions.length);
 }
 
-function getPagsusulitStats(quizzes = [], attempts = {}) {
+function getQuizzesStats(quizzes = [], attempts = {}) {
   const taken = quizzes.filter(quiz => asArray(attempts?.[quiz.id]).length).length;
   const bestScores = quizzes.map(quiz => getBestQuizAttempt(attempts, quiz.id)).filter(Boolean);
   const average = bestScores.length
@@ -6901,13 +6942,13 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
 
       <nav className="g12-nav" aria-label="Student navigation">
         <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
-        <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulitzes</button>
-        <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
+        <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
+        <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
         <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
         <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
         <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
-        <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>My Profile</button>
+        <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
       </nav>
     </div>
   </>;
@@ -6937,12 +6978,11 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
   const navItems = [
     { id: 'home', icon: '🏠', label: 'Home' },
     { id: 'lessons', icon: '📚', label: 'Lessons' },
-    { id: 'quizzes', icon: '🧠', label: 'Pagsusulitzes' },
-    { id: 'missions', icon: '🎮', label: 'Mga Misyon' },
-    { id: 'groups', icon: '👥', label: 'Groups' },
+    { id: 'quizzes', icon: '🧠', label: 'Quizzes' },
+    { id: 'missions', icon: '🎮', label: 'Missions' },
     { id: 'badges', icon: '🏅', label: 'Badges' },
     { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
-    { id: 'profile', icon: '👤', label: 'My Profile' }
+    { id: 'profile', icon: '👤', label: 'Profile' }
   ];
 
   return (
@@ -7689,7 +7729,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
     .sort((a, b) => g46LessonDateValue(b) - g46LessonDateValue(a))
     .slice(0, 4)
     .map((lesson, index) => {
-      const subject = formatStudentSubjectDisplay(lesson.subject || 'Aralin');
+      const subject = formatStudentSubjectDisplay(lesson.subject || 'Lessons');
       return {
         lesson,
         icon: SUBJECTS.find(item => item.subj === subject)?.icon || '📚',
@@ -7724,7 +7764,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
           <section className="g46-ref-panel">
             <div className="g46-ref-panel-head">
               <div>
-                <h2>Mga Aralin Mo</h2>
+                <h2>Lessons Mo</h2>
               </div>
               <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('lessons')}>Lahat ng aralin →</button>
             </div>
@@ -7888,13 +7928,13 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
 
         <nav className="g12-nav" aria-label="Student navigation">
           <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
-          <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulitzes</button>
-          <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
+          <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
+          <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
           <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
           <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
           <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
-          <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>My Profile</button>
+          <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
         </nav>
       </div>
     </>
@@ -7908,13 +7948,13 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
       activeTab="lessons"
       go={go}
       icon="📖"
-      title="Mga Aralin"
+      title="Lessons"
       subtitle=""
     >
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">📚 Aklatan ng Aralin</h2>
+            <h2 className="g12-section-title">📚 Aklatan ng Lessons</h2>
 
           </div>
         </div>
@@ -7992,13 +8032,13 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
       go={go}
       logout={logout}
       icon="📚"
-      title="Mga Aralin"
+      title="Lessons"
       subtitle="Pumili ng aralin o modyul sa Filipino para magpatuloy."
     >
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
-            <h2>Aklatan ng Aralin</h2>
+            <h2>Aklatan ng Lessons</h2>
             <p className="g46-ref-muted">{lessons.length} {lessons.length === 1 ? 'aralin' : 'mga aralin'} ang available para sa iyong baitang.</p>
           </div>
         </div>
@@ -8183,7 +8223,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     const listenSections = ['layunin', 'panimula', 'aralin']
       .map(section => getStructuredLessonSectionText(lessonPassage, section))
       .filter(Boolean);
-    const aralinAudio = getStructuredLessonAralinAudioText(lessonPassage);
+    const aralinAudio = getStructuredLessonLessonsAudioText(lessonPassage);
     const text = listenSections.length
       ? listenSections.join(' ')
       : aralinAudio || lessonPassage || 'Basahin nang malinaw.';
@@ -8264,13 +8304,13 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     ...(materialActivities.length ? [{
       key: 'material',
       eyebrow: 'Step 2',
-      title: 'Materyal ng Aralin',
+      title: 'Materyal ng Lessons',
       subtitle: 'Buksan muna ang kalakip na slides o PDF bago magbasa at sumagot.'
     }] : []),
     {
       key: 'read',
       eyebrow: `Hakbang ${materialActivities.length ? 3 : 2}`,
-      title: 'Basahin ang Aralin',
+      title: 'Basahin ang Lessons',
       subtitle: 'Review the instructions and lesson text carefully.'
     },
     {
@@ -8284,7 +8324,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     {
       key: 'complete',
       eyebrow: `Hakbang ${materialActivities.length ? 5 : 4}`,
-      title: 'Tapusin ang Aralin',
+      title: 'Tapusin ang Lessons',
       subtitle: 'Ipasa ang pag-unlad sa lesson kapag handa ka na.'
     }
   ];
@@ -8487,7 +8527,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
             <section className="g46-ref-panel">
               <div className="g46-ref-panel-head">
                 <div>
-                  <h2>Balikan ang Materyal ng Aralin</h2>
+                  <h2>Balikan ang Materyal ng Lessons</h2>
                   <p className="g46-ref-muted">You can still open the attached slides or PDF for review.</p>
                 </div>
               </div>
@@ -8632,7 +8672,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
       const structuredSections = [
         { key: 'layunin', label: 'Layunin', icon: '🎯' },
         { key: 'panimula', label: 'Panimula', icon: '💡' },
-        { key: 'aralin', label: 'Aralin', icon: '📖' },
+        { key: 'aralin', label: 'Lessons', icon: '📖' },
       ];
       const hasStructuredText = structuredSections.some(section =>
         Boolean(getStructuredLessonSectionText(lessonPassage, section.key))
@@ -9002,7 +9042,7 @@ function getEarlyLessonTopicTitle(lesson = {}) {
   const subject = String(lesson.subject || "").trim();
   const rawTitle = String(lesson.title || "").trim();
 
-  if (!rawTitle) return compactKidTitle(subject || "Aralin");
+  if (!rawTitle) return compactKidTitle(subject || "Lessons");
 
   const withoutExtra = rawTitle
     .replace(/\s*lesson\s*$/i, "")
@@ -9024,7 +9064,7 @@ function getEarlyLessonTopicTitle(lesson = {}) {
     .trim();
 
   if (!topic || /^[\d\s-–—:]+$/.test(topic)) {
-    topic = subject || withoutExtra || "Aralin";
+    topic = subject || withoutExtra || "Lessons";
   }
 
   return compactKidTitle(topic, 44);
@@ -9043,7 +9083,7 @@ function makeStudentFriendlyPassage(lesson) {
   const extracted = extractSectionFromLessonPlan(
     raw,
     ['Main Lesson / Passage', 'Main Lesson', 'Passage', 'Lesson Content'],
-    ['Vocabulary Words', 'Maikling Pagsusulit', 'Gawain sa Pagtutugma', 'Gawain sa Pagsulat', 'Pagsasanay sa Pagbigkas', 'Teacher Notes']
+    ['Vocabulary Words', 'Maikling Quizzes', 'Gawain sa Pagtutugma', 'Gawain sa Pagsulat', 'Pagsasanay sa Pagbigkas', 'Teacher Notes']
   );
 
   const source = String(extracted || rawInput)
@@ -9059,7 +9099,7 @@ function makeStudentFriendlyPassage(lesson) {
   const withReadableSections = source
     .replace(/\r/g, '')
     .replace(/[ \t]+/g, ' ')
-    .replace(/\s*(Layunin|Panimula|Aralin|Gawain|Mga salita|Mga Salita)\s*:\s*/g, '\n$1: ')
+    .replace(/\s*(Layunin|Panimula|Lessons|Gawain|Mga salita|Mga Salita)\s*:\s*/g, '\n$1: ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
@@ -9080,7 +9120,7 @@ function activityMissionMeta(activity, index = 0) {
     infographic: { icon: '🖼️', label: 'Tingnan' },
     vocabulary: { icon: '🔤', label: 'Salita' },
     matching: { icon: '🧩', label: 'Pares' },
-    mcq: { icon: '🎮', label: 'Pagsusulit' },
+    mcq: { icon: '🎮', label: 'Quizzes' },
     speech: { icon: '🎤', label: 'Bigkas' },
     writing: { icon: '🧩', label: 'Gawain' }
   };
@@ -9139,7 +9179,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     { type: 'listen', icon: '👂', label: 'Layunin' },
     { type: 'know', icon: '💡', label: 'Alamin' },
     ...(materialActivities.length ? [{ type: 'material', icon: '📎', label: 'Materyal' }] : []),
-    { type: 'read', icon: '📖', label: 'Aralin' },
+    { type: 'read', icon: '📖', label: 'Lessons' },
     ...corePracticeActivities.map((activity, index) => ({
       type: 'activity',
       activity,
@@ -9612,7 +9652,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
         <div className="g12-complete-summary">
           <section className="g12-complete-hero">
             <div className="g12-complete-badge">✅</div>
-            <h2>Tapos na ang Aralin!</h2>
+            <h2>Tapos na ang Lessons!</h2>
             <p>{lesson?.title || 'Natapos mo na ang lesson na ito.'}</p>
             <div className="g12-summary-chip-row">
               {summaryItems.map(item => (
@@ -9641,7 +9681,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               🏠 Home
             </button>
             <button type="button" className="g12-summary-btn secondary" onClick={() => go('screen-lessons')}>
-              📖 Mas Maraming Aralin
+              📖 Mas Maraming Lessons
             </button>
           </div>
         </div>
@@ -9655,7 +9695,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
       activeTab="lessons"
       go={go}
       icon={theme.icon || '📘'}
-      title="Misyong Pang-aral"
+      title="Missionsg Pang-aral"
       subtitle={`${formatStudentSubjectDisplay(lesson?.subject || 'Filipino')} • Baitang ${lesson?.gradeLevel || '—'} • ${isReviewMode ? 'Pagbabalik-aral' : `+${lesson?.xpReward || 0} XP`}`}
     >
       <style>{`
@@ -10346,14 +10386,14 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
       <div className="g12-mission-wrap">
         {rewardModal && (
-          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Gantimpala sa Misyon">
+          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Gantimpala sa Missions">
             <div className="g12-reward-modal">
               {['🎊', '⭐', '✨', '🌟', '🎉', '💛', '🌈'].map((piece, index) => (
                 <span className="g12-confetti-piece" key={index}>{piece}</span>
               ))}
 
               <div className="g12-reward-big">🏆</div>
-              <h3>Tapos na ang Misyon!</h3>
+              <h3>Tapos na ang Missions!</h3>
               <p>Ang galing mo! Natapos mo ang aralin.</p>
               <div className="g12-reward-xp">⚡ +{rewardModal.xp || 0} XP</div>
 
@@ -10411,7 +10451,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
             <span className="g12-progress-fill" style={{ width: `${progress}%` }} />
           </div>
 
-          <div className="g12-mission-path" aria-label="Mga Hakbang sa Misyon">
+          <div className="g12-mission-path" aria-label="Mga Hakbang sa Missions">
             {missionSteps.map((step, index) => (
               <button
                 type="button"
@@ -10484,7 +10524,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                   <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Ihinto</button>
                 </div>
                 <div className="g12-mission-actions-right">
-                  <button className="g12-mission-btn purple" onClick={goNext}>{materialActivities.length ? 'Materyal →' : 'Aralin →'}</button>
+                  <button className="g12-mission-btn purple" onClick={goNext}>{materialActivities.length ? 'Materyal →' : 'Lessons →'}</button>
                 </div>
               </div>
             </>
@@ -10520,7 +10560,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
                 </div>
                 <div className="g12-mission-actions-right">
-                  <button className="g12-mission-btn purple" onClick={goNext}>Aralin →</button>
+                  <button className="g12-mission-btn purple" onClick={goNext}>Lessons →</button>
                 </div>
               </div>
             </>
@@ -10531,7 +10571,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-step-head">
                 <div className="g12-mission-big-icon">📖</div>
                 <div>
-                  <h3>Aralin</h3>
+                  <h3>Lessons</h3>
                 </div>
               </div>
 
@@ -10540,11 +10580,11 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
-                  <button className="g12-mission-btn" onClick={() => markStepListened('read', getStructuredLessonAralinAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
+                  <button className="g12-mission-btn" onClick={() => markStepListened('read', getStructuredLessonLessonsAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>
-                    Gawin ang Pagsusulit →
+                    Gawin ang Quizzes →
                   </button>
                 </div>
               </div>
@@ -10605,7 +10645,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-finish-card">
                 <div>
                   <div className="big">{isReviewMode ? '✅' : '🎉'}</div>
-                  <h3>{isReviewMode ? 'Tapos na ang Pagbabalik-aral!' : 'Tapos na ang Misyon!'}</h3>
+                  <h3>{isReviewMode ? 'Tapos na ang Pagbabalik-aral!' : 'Tapos na ang Missions!'}</h3>
                   <p>
                     {isReviewMode
                       ? 'Natapos mo na ang araling ito. Maaari kang bumalik sa Tahanan o pumili ng ibang aralin.'
@@ -10824,7 +10864,7 @@ function MaterialActivity({ activity, isEarlyGrade, activityBoxStyle }) {
     <div className="card" style={activityBoxStyle}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="section-title">
-          {isEarlyGrade ? '📎 Slides ng Aralin' : 'Materyal ng Aralin'}
+          {isEarlyGrade ? '📎 Slides ng Lessons' : 'Materyal ng Lessons'}
         </div>
 
         <div className="pill">
@@ -10904,7 +10944,7 @@ function MaterialActivity({ activity, isEarlyGrade, activityBoxStyle }) {
             rel="noreferrer"
             style={{ width: 'fit-content', marginTop: 4 }}
           >
-            {isPdf ? 'Buksan ang Buong PDF' : 'Buksan ang Slides ng Aralin'}
+            {isPdf ? 'Buksan ang Buong PDF' : 'Buksan ang Slides ng Lessons'}
           </a>
         ) : (
           <span className="muted">No lesson file attached.</span>
@@ -11014,7 +11054,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
     <div className="card" style={activityBoxStyle}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="section-title">
-          {isEarlyGrade ? '🎮 Maikling Pagsusulit' : 'Pagsusulit'}
+          {isEarlyGrade ? '🎮 Maikling Quizzes' : 'Quizzes'}
         </div>
 
         <div className="pill">
@@ -13311,7 +13351,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
         <section className="missions-hero">
           <div className="missions-hero-copy">
             <div className="missions-hero-icon">🚀</div>
-            <h2>{early ? 'Mga Misyon ng Tuklas' : 'Mga Larong Pang-aral'}</h2>
+            <h2>{early ? 'Missions ng Tuklas' : 'Mga Larong Pang-aral'}</h2>
             <p>
               {early
                 ? 'Maglaro, kumita ng XP, at mag-unlock ng badges!'
@@ -13388,7 +13428,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
         activeTab="missions"
         go={go}
         icon="🎮"
-        title="Mga Misyon ng Tuklas"
+        title="Missions ng Tuklas"
         subtitle=""
       >
         {content}
@@ -13403,7 +13443,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
       go={go}
       logout={logout}
       icon="🎮"
-      title="Mga Misyon ng Tuklas"
+      title="Missions ng Tuklas"
       subtitle="Maglaro ng mga larong Filipino na konektado sa bokabularyo, pagbasa, pagsulat, pag-unawa, at pasalitang komunikasyon."
     >
       {content}
@@ -14408,7 +14448,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
             <div className="mission-play-head">
               <div className="mission-play-icon">{selectedGame?.icon || '🎮'}</div>
               <div>
-                <h2>{selectedGame?.title || 'Misyon'}</h2>
+                <h2>{selectedGame?.title || 'Missions'}</h2>
                 <p>
                   {locked
                     ? 'Naka-lock pa ang misyong ito. Tapusin ang mas maraming lesson o laro para mabuksan ito.'
@@ -14426,7 +14466,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                 <div className="mission-play-actions">
                   <button type="button" className="mission-play-action secondary" onClick={backToMissions}>
-                    ← Bumalik sa mga Misyon
+                    ← Bumalik sa mga Missions
                   </button>
                 </div>
               </>
@@ -14515,7 +14555,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Tapos na ang misyon">
                         <div className="mission-complete-modal">
                           <div className="mission-complete-icon">🏆</div>
-                          <h3>Tapos na ang Misyon!</h3>
+                          <h3>Tapos na ang Missions!</h3>
                           <p>
                             {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Pagtutugma ng Salita.'}
                           </p>
@@ -14528,7 +14568,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Mga Misyon
+                              🎮 Missions
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                               🏠 Home
@@ -14597,7 +14637,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Mga Misyon
+                              🎮 Missions
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                               🏠 Home
@@ -14842,7 +14882,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                                       🔄 Maglaro Muli
                                     </button>
                                     <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                                      🎮 Mga Misyon
+                                      🎮 Missions
                                     </button>
                                     <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                                       🏠 Home
@@ -14859,7 +14899,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                 ) : isSentenceBuilder ? (
                   <div className={`sentence-builder-game ${early ? 'early' : 'standard'} ${sentenceBuilderWrong ? 'wrong' : ''} ${sentenceBuilderCorrect ? 'correct' : ''}`}>
                     <div className="sentence-builder-prompt">
-                      <div className="sentence-builder-mini-label">Misyon sa Pangungusap</div>
+                      <div className="sentence-builder-mini-label">Missions sa Pangungusap</div>
                       <h3>Buuin ang pangungusap</h3>
                       <p>💡 {demo?.clue || 'Tapikin ang mga salita sa tamang ayos.'}</p>
                     </div>
@@ -14934,7 +14974,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Mga Misyon
+                              🎮 Missions
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                               🏠 Home
@@ -14996,7 +15036,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Mga Misyon
+                              🎮 Missions
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
                               🏠 Home
@@ -15037,7 +15077,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
                 <div className="mission-play-actions">
                   <button type="button" className="mission-play-action secondary" onClick={backToMissions}>
-                    ← Bumalik sa mga Misyon
+                    ← Bumalik sa mga Missions
                   </button>
                   {!isSentenceBuilder && (
 <button type="button" className="mission-play-action" onClick={restartDemo}>
@@ -15046,7 +15086,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                   )}
                   {isWordMatch ? (
                     <button type="button" className="mission-play-action purple" onClick={completeWordMatchMission} disabled={!wordMatchComplete || missionSaving}>
-                      {missionSaving ? 'Saving...' : '✅ Tapusin ang Misyon'}
+                      {missionSaving ? 'Saving...' : '✅ Tapusin ang Missions'}
                     </button>
                   ) : (isLetterPop || isPictureGuess || isSentenceBuilder || isStoryQuest || isSoundAndSay) ? null : (
                     <button type="button" className="mission-play-action purple" onClick={() => openTab('lessons')}>
@@ -15070,13 +15110,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
           <header className="g12-topbar">
             <button type="button" className="g12-brand" onClick={backToMissions}>
               <span className="g12-brand-icon">{selectedGame?.icon || '🎮'}</span>
-              <span>{selectedGame?.title || 'Misyon'}</span>
+              <span>{selectedGame?.title || 'Missions'}</span>
             </button>
 
             <div className="g12-top-actions">
               <div className="g12-pill">🌸 Baitang {student.gradeLevel || '—'} • {student.section || '—'}</div>
               <div className="g12-pill">⚡ {xp} XP</div>
-              <button type="button" className="g12-action-btn" onClick={backToMissions}>🎮 Mga Misyon</button>
+              <button type="button" className="g12-action-btn" onClick={backToMissions}>🎮 Missions</button>
               <button type="button" className="g12-action-btn" onClick={() => go('screen-student')}>🏠 Tahanan</button>
             </div>
           </header>
@@ -15087,12 +15127,12 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
 
           <nav className="g12-nav g12-mission-play-nav" aria-label="Student navigation">
             <button type="button" onClick={() => openTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
-            <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Mga Aralin</button>
-            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulitzes</button>
-            <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Mga Misyon</button>
+            <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
+            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
+            <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
             <button type="button" onClick={() => openTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
             <button type="button" onClick={() => openTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
-            <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>My Profile</button>
+            <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
           </nav>
         </div>
       </>
@@ -15106,9 +15146,9 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
       go={go}
       logout={logout}
       icon={selectedGame?.icon || '🎮'}
-      title={selectedGame?.title || 'Misyon'}
+      title={selectedGame?.title || 'Missions'}
       subtitle={`${selectedGame?.module || 'Filipino'} misyon • +${selectedGame?.xp || 0} preview ng XP`}
-      titleAction={<button type="button" className="g46-ref-soft-btn" onClick={backToMissions}>← Mga Misyon</button>}
+      titleAction={<button type="button" className="g46-ref-soft-btn" onClick={backToMissions}>← Missions</button>}
       hideTitleCard={isLetterPop}
     >
       {content}
@@ -15227,7 +15267,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       activeTab="groups"
       go={go}
       icon="👥"
-      title="Misyong Panggrupo"
+      title="Missionsg Panggrupo"
       subtitle="Pumili. Tumulong. Tapos."
     >
       <style>{`
@@ -15276,7 +15316,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">👥 Misyon ng Koponan</h2>
+            <h2 className="g12-section-title">👥 Missions ng Koponan</h2>
             <p className="g12-section-subtitle">Pumili. Tumulong. Tapos.</p>
           </div>
         </div>
@@ -15469,7 +15509,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                     {isTaskPending(primaryTask)
                       ? 'Waiting for teacher'
                       : taskRecorded
-                        ? 'Tapos na ang Misyon'
+                        ? 'Tapos na ang Missions'
                         : isTaskReturned(primaryTask)
                           ? 'Ask teacher'
                           : 'Tumulong ako sa aking grupo!'}
@@ -15481,7 +15521,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
             {flowStep === 'done' && (
               <div className="g12-team-flow-card g12-team-done">
                 <div className="done-icon">🎉</div>
-                <h3>{selectedGroupDone ? 'Tapos na ang Misyon!' : 'Waiting for teacher'}</h3>
+                <h3>{selectedGroupDone ? 'Tapos na ang Missions!' : 'Waiting for teacher'}</h3>
                 <p>{selectedGroupDone ? 'Nasuri na ng guro ang misyong panggrupo.' : 'Susuriin ng guro ang inyong gawa.'}</p>
                 <div className="g12-team-actions" style={{ justifyContent: 'center' }}>
                   <button type="button" className="g12-main-btn" onClick={() => setFlowStep('start')}>Back to teams</button>
@@ -15834,7 +15874,7 @@ const GRADE12_BADGE_GOALS = [
   {
     code: 'quiz_perfect',
     icon: '🧠',
-    name: 'Henyo sa Pagsusulit',
+    name: 'Henyo sa Quizzes',
     howToUnlock: 'Makakuha ng perpektong iskor sa isang pagsusulit.'
   },
   {

@@ -17,6 +17,36 @@ function isKaagapayBadge(badge) {
   return name === 'kaagapay sa gawain' || code.includes('kaagapay');
 }
 
+const BADGE_IMAGE_BY_CODE = {
+  first_lesson: require('../../assets/badges/unang-hakbang.png'),
+  firstlesson: require('../../assets/badges/unang-hakbang.png'),
+  reader: require('../../assets/badges/batang-mambabasa.png'),
+  reader_3: require('../../assets/badges/batang-mambabasa.png'),
+  quiz_perfect: require('../../assets/badges/henyo-sa-pagsusulit.png'),
+  writing_3: require('../../assets/badges/bituin-sa-pagsagot.png'),
+  speech_3: require('../../assets/badges/boses-bituin.png'),
+  group_1: require('../../assets/badges/kaagapay-sa-gawain.png'),
+  xp_100: require('../../assets/badges/bituin-ng-kasipagan.png'),
+  level_10: require('../../assets/badges/tuklas-kampeon.png'),
+};
+
+const BADGE_IMAGE_BY_NAME = {
+  'unang hakbang': require('../../assets/badges/unang-hakbang.png'),
+  'batang mambabasa': require('../../assets/badges/batang-mambabasa.png'),
+  'henyo sa pagsusulit': require('../../assets/badges/henyo-sa-pagsusulit.png'),
+  'bituin sa pagsagot': require('../../assets/badges/bituin-sa-pagsagot.png'),
+  'boses bituin': require('../../assets/badges/boses-bituin.png'),
+  'kaagapay sa gawain': require('../../assets/badges/kaagapay-sa-gawain.png'),
+  'bituin ng kasipagan': require('../../assets/badges/bituin-ng-kasipagan.png'),
+  'tuklas kampeon': require('../../assets/badges/tuklas-kampeon.png'),
+};
+
+function getBadgeImage(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return BADGE_IMAGE_BY_CODE[code] || BADGE_IMAGE_BY_NAME[name] || null;
+}
+
 function isHenyoBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
   const code = String(badge?.code || '').trim().toLowerCase();
@@ -30,6 +60,17 @@ function isBituinBadge(badge) {
 }
 
 function BadgeVisual({ badge }) {
+  const mappedBadgeImage = getBadgeImage(badge);
+  if (mappedBadgeImage) {
+    return (
+      <Image
+        source={mappedBadgeImage}
+        style={styles.badgeImage}
+        resizeMode="contain"
+      />
+    );
+  }
+
   if (isHenyoBadge(badge)) {
     return (
       <Image

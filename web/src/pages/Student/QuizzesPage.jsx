@@ -32,7 +32,7 @@ export default function QuizzesPage({
   openQuizResult,
   quizAttempts = {},
   subjects = [],
-  buildStudentPagsusulitzes,
+  buildStudentQuizzes,
   getBestQuizAttempt,
   EarlyStudentChrome,
   Grade46StudentChrome,
@@ -43,8 +43,8 @@ export default function QuizzesPage({
   const [quizSubjectFilter, setQuizSubjectFilter] = React.useState("ALL");
 
   const quizzes =
-    typeof buildStudentPagsusulitzes === "function"
-      ? buildStudentPagsusulitzes(data)
+    typeof buildStudentQuizzes === "function"
+      ? buildStudentQuizzes(data)
       : [];
 
   const getBest =
@@ -83,7 +83,7 @@ export default function QuizzesPage({
     };
   }
 
-  function titleCasePagsusulitText(value = "") {
+  function titleCaseQuizzesText(value = "") {
     const smallWords = new Set(["ang", "ng", "sa", "si", "ni", "kay", "at", "ay", "mga", "na", "po"]);
     const words = String(value || "")
       .toLowerCase()
@@ -98,7 +98,7 @@ export default function QuizzesPage({
       .join(" ");
   }
 
-  function isGenericPagsusulitName(value = "") {
+  function isGenericQuizzesName(value = "") {
     const text = String(value || "")
       .replace(/\s*quiz\s*$/i, "")
       .trim();
@@ -106,7 +106,7 @@ export default function QuizzesPage({
     return /^(bokabularyo|pagbasa|panitikan|bigkas|gawa|patlang|oral comm|pagsulat|quiz)(\s+\d+)?$/i.test(text);
   }
 
-  function cleanPagsusulitTitleSeed(value = "", earlyMode = false) {
+  function cleanQuizzesTitleSeed(value = "", earlyMode = false) {
     let text = String(value || "")
       .replace(/[“”"]/g, "")
       .replace(/\s+/g, " ")
@@ -152,7 +152,7 @@ export default function QuizzesPage({
     const maxWords = earlyMode ? 4 : 6;
     const words = text.split(/\s+/).filter(Boolean);
 
-    return titleCasePagsusulitText(words.slice(0, maxWords).join(" "));
+    return titleCaseQuizzesText(words.slice(0, maxWords).join(" "));
   }
 
   function specificQuizCardTitle(quiz = {}, earlyMode = false) {
@@ -165,31 +165,31 @@ export default function QuizzesPage({
       quiz.subject,
     ];
 
-    const fallback = cleanPagsusulitTitleSeed(quiz.title || quiz.subject || "Pagsusulit", earlyMode) || "Pagsusulit";
+    const fallback = cleanQuizzesTitleSeed(quiz.title || quiz.subject || "Quizzes", earlyMode) || "Quizzes";
 
     const chosen =
       sources
-        .map((source) => cleanPagsusulitTitleSeed(source, earlyMode))
-        .find((candidate) => candidate && candidate.length >= 3 && !isGenericPagsusulitName(candidate)) ||
+        .map((source) => cleanQuizzesTitleSeed(source, earlyMode))
+        .find((candidate) => candidate && candidate.length >= 3 && !isGenericQuizzesName(candidate)) ||
       fallback;
 
-    const finalTitle = chosen.replace(/\s*quiz\s*$/i, "").trim() || "Pagsusulit";
-    return `Pagsusulit sa ${finalTitle}`;
+    const finalTitle = chosen.replace(/\s*quiz\s*$/i, "").trim() || "Quizzes";
+    return `Quizzes sa ${finalTitle}`;
   }
 
   // Keep this function name for existing Grade 1-2 card rendering.
-  function shortEarlyPagsusulitTitle(quiz = {}) {
+  function shortEarlyQuizzesTitle(quiz = {}) {
     return specificQuizCardTitle(quiz, true);
   }
 
-  const visiblePagsusulitzes =
+  const visibleQuizzes =
     quizSubjectFilter === "ALL"
       ? quizzes
       : quizzes.filter((quiz) => quiz.subject === quizSubjectFilter);
 
-  const recommendedPagsusulit =
-    visiblePagsusulitzes.find((quiz) => asArray(quizAttempts?.[quiz.id]).length < maxQuizAttempts) ||
-    visiblePagsusulitzes[0] ||
+  const recommendedQuizzes =
+    visibleQuizzes.find((quiz) => asArray(quizAttempts?.[quiz.id]).length < maxQuizAttempts) ||
+    visibleQuizzes[0] ||
     quizzes[0];
 
   const subjectCounts = subjects
@@ -200,7 +200,7 @@ export default function QuizzesPage({
     .filter((item) => item.count > 0);
 
 
-  const cards = visiblePagsusulitzes.map((quiz, index) => {
+  const cards = visibleQuizzes.map((quiz, index) => {
     const attempts = asArray(quizAttempts?.[quiz.id]);
     const attemptsUsed = attempts.length;
     const attemptsDone = attemptsUsed >= maxQuizAttempts;
@@ -252,7 +252,7 @@ export default function QuizzesPage({
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
-                {early ? "🧠 Oras ng Pagsusulit" : "Listahan ng Pagsusulit"}
+                {early ? "🧠 Oras ng Quizzes" : "Listahan ng Quizzes"}
               </h2>
 
             </div>
@@ -262,7 +262,7 @@ export default function QuizzesPage({
           {subjectCounts.length > 0 && (
             <div
               className="quiz-game-subject-row"
-              aria-label="Pagsusulit subject filters"
+              aria-label="Quizzes subject filters"
               style={!early ? {
                 gap: 12,
                 marginTop: 18,
@@ -327,11 +327,11 @@ export default function QuizzesPage({
 
           {!quizzes.length && (
             <div className={early ? "g12-empty" : "g46-ref-empty"}>
-              No quizzes yet. Create a lesson with a Pagsusulit activity first.
+              No quizzes yet. Create a lesson with a Quizzes activity first.
             </div>
           )}
 
-          {quizzes.length > 0 && !visiblePagsusulitzes.length && (
+          {quizzes.length > 0 && !visibleQuizzes.length && (
             <div className={early ? "g12-empty" : "g46-ref-empty"}>
               No quizzes found for this subject yet.
             </div>
@@ -348,7 +348,7 @@ export default function QuizzesPage({
         activeTab="quizzes"
         go={go}
         icon="🧠"
-        title="Oras ng Pagsusulit"
+        title="Oras ng Quizzes"
         subtitle=""
       >
         {quizContent}
@@ -364,7 +364,7 @@ export default function QuizzesPage({
         go={go}
         logout={logout}
         icon="🧠"
-        title="Mga Pagsusulit"
+        title="Mga Quizzes"
         subtitle=""
       >
         {quizContent}

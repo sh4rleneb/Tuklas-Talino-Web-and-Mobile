@@ -2826,7 +2826,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     }
 
     const lines = rawPlan.split(/\n+/).map(line => line.trim()).filter(Boolean);
-    const titleFromLabel = getLineAfterLabel(rawPlan, ['Title', 'Lesson Title', 'Paksa', 'Aralin', 'Topic']);
+    const titleFromLabel = getLineAfterLabel(rawPlan, ['Title', 'Lesson Title', 'Paksa', 'Lessons', 'Topic']);
     const firstShortLine = lines.find(line => line.length >= 8 && line.length <= 90) || '';
     const generatedTitle = titleFromLabel || firstShortLine || 'Generated Filipino Lesson';
     const generatedSubject = guessSubjectFromPlan(rawPlan);
