@@ -9,11 +9,18 @@ import { colors } from '../styles/theme';
 
 const KAAGAPAY_BADGE_IMAGE = require('../../assets/badges/kaagapay-sa-gawain.png');
 const BITUIN_BADGE_IMAGE = require('../../assets/badges/bituin-sa-pagsagot.png');
+const HENYO_BADGE_IMAGE = require('../../assets/badges/henyo-sa-pagsusulit.png');
 
 function isKaagapayBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
   const code = String(badge?.code || '').trim().toLowerCase();
   return name === 'kaagapay sa gawain' || code.includes('kaagapay');
+}
+
+function isHenyoBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'henyo sa pagsusulit' || code === 'quiz_perfect';
 }
 
 function isBituinBadge(badge) {
@@ -23,6 +30,16 @@ function isBituinBadge(badge) {
 }
 
 function BadgeVisual({ badge }) {
+  if (isHenyoBadge(badge)) {
+    return (
+      <Image
+        source={HENYO_BADGE_IMAGE}
+        style={styles.badgeImage}
+        resizeMode="contain"
+      />
+    );
+  }
+
   if (isBituinBadge(badge)) {
     return (
       <Image

@@ -26,11 +26,18 @@ import Grade46MobileNav from './components/student/Grade46MobileNav';
 
 const TUKLAS_KAAGAPAY_BADGE_IMAGE = '/badges/kaagapay-sa-gawain.png';
 const TUKLAS_BITUIN_BADGE_IMAGE = '/badges/bituin-sa-pagsagot.png';
+const TUKLAS_HENYO_BADGE_IMAGE = '/badges/henyo-sa-pagsusulit.png';
 
 function isTuklasKaagapayBadge(badge) {
   const name = String(badge?.name || '').trim().toLowerCase();
   const code = String(badge?.code || '').trim().toLowerCase();
   return name === 'kaagapay sa gawain' || code === 'group_1' || code.includes('kaagapay');
+}
+
+function isTuklasHenyoBadge(badge) {
+  const name = String(badge?.name || '').trim().toLowerCase();
+  const code = String(badge?.code || '').trim().toLowerCase();
+  return name === 'henyo sa pagsusulit' || code === 'quiz_perfect';
 }
 
 function isTuklasBituinBadge(badge) {
@@ -40,6 +47,16 @@ function isTuklasBituinBadge(badge) {
 }
 
 function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
+  if (isTuklasHenyoBadge(badge)) {
+    return (
+      <img
+        src={TUKLAS_HENYO_BADGE_IMAGE}
+        alt={badge?.name || 'Henyo sa Pagsusulit'}
+        style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
+      />
+    );
+  }
+
   if (isTuklasBituinBadge(badge)) {
     return (
       <img
