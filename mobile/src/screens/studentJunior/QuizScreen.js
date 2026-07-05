@@ -19,18 +19,145 @@ import { colors } from '../../styles/theme';
 
 const MAX_QUIZ_ATTEMPTS = 5;
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeQuizOption(option = {}, index = 0) {
+  const rawText =
+    option?.text ??
+    option?.optionText ??
+    option?.label ??
+    option?.value ??
+    `Choice ${index + 1}`;
+
+  const text = String(rawText || `Choice ${index + 1}`).trim() || `Choice ${index + 1}`;
+
+  return {
+    id: String(option?.id ?? option?.value ?? `opt-${index}-${text}`),
+    text,
+    optionText: text,
+    isCorrect: Boolean(option?.isCorrect || option?.correct),
+  };
+}
+
+function stableShuffleOptions(options = [], seed = '') {
+  const rows = [...options];
+  let hash = String(seed || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+
+  for (let i = rows.length - 1; i > 0; i -= 1) {
+    hash = (hash * 9301 + 49297) % 233280;
+    const j = hash % (i + 1);
+    [rows[i], rows[j]] = [rows[j], rows[i]];
+  }
+
+  return rows;
+}
+
+function buildFallbackOptions(correctText, alternates = []) {
+  const correct = String(correctText || 'Filipino');
+  const choices = [
+    correct,
+    ...alternates
+      .filter(Boolean)
+      .filter((item) => String(item) !== correct),
+  ];
+
+  const fillers = [
+    'Pagbasa',
+    'Bokabularyo',
+    'Panitikan',
+    'Komunikasyong Pagsasalita',
+    'Pagsulat',
+    'Hindi nabanggit',
+  ];
+
+  fillers.forEach((item) => {
+    if (choices.length < 4 && !choices.includes(item)) choices.push(item);
+  });
+
+  const options = choices.slice(0, 4).map((text, index) => ({
+    id: `fallback-${index}-${String(text).replace(/\s+/g, '-').toLowerCase()}`,
+    text,
+    optionText: text,
+    isCorrect: String(text) === correct,
+  }));
+
+  return stableShuffleOptions(options, correct);
+}
+
+function buildQuizQuestionsFromLesson(lesson = {}) {
+  const activities = asArray(lesson?.activities);
+  const questions = [];
+
+  activities.forEach((activity, activityIndex) => {
+    if (activity?.type !== 'mcq') return;
+
+    asArray(activity.questions).forEach((question, questionIndex) => {
+      const normalizedOptions = asArray(question.options || question.choices).map(normalizeQuizOption);
+      if (!normalizedOptions.length) return;
+
+      const hasCorrect = normalizedOptions.some((option) => option.isCorrect);
+      const options = hasCorrect
+        ? normalizedOptions
+        : normalizedOptions.map((option, idx) => ({
+            ...option,
+            isCorrect: idx === 0,
+          }));
+
+      const prompt =
+        question.question ||
+        question.prompt ||
+        question.text ||
+        'Piliin ang tamang sagot.';
+
+      questions.push({
+        id: String(question.id || `${lesson.id || 'lesson'}-${activityIndex}-${questionIndex}`),
+        type: 'mcq',
+        source: activity.title || 'Pagsusulit sa Aralin',
+        question: prompt,
+        prompt,
+        options,
+        points: Number(question.points || 1),
+      });
+    });
+  });
+
+  return questions.slice(0, 25);
+}
+
+function cleanQuizTitle(title, fallback = 'Pagsusulit') {
+  const value = String(title || '').trim();
+  return value || fallback;
+}
+
 function quizCatalog(dashboard) {
-  return (dashboard?.lessons || []).flatMap((lesson) =>
-    (lesson.activities || [])
-      .filter((activity) => activity.type === 'mcq' && (activity.questions || []).length)
-      .map((activity) => ({
-        quizId: `lesson-${lesson.id}`,
+  return asArray(dashboard?.lessons)
+    .map((lesson) => {
+      const questions = buildQuizQuestionsFromLesson(lesson);
+      const lessonTitle = cleanQuizTitle(lesson.title, 'Aralin');
+      const quizId = `lesson-${lesson.id || lesson.title}-quiz`;
+
+      return {
+        id: quizId,
+        quizId,
+        legacyQuizId: `lesson-${lesson.id}`,
         lessonId: lesson.id,
-        lessonTitle: lesson.title,
-        title: activity.title || `Pagsusulit sa ${lesson.title}`,
-        questions: activity.questions || [],
-      }))
-  );
+        lessonTitle,
+        title: lessonTitle,
+        subject: lesson.subject || 'Filipino',
+        gradeLevel: lesson.gradeLevel || dashboard?.student?.gradeLevel || '—',
+        xpReward: Math.max(5, Math.round(Number(lesson.xpReward || 20) / 2)),
+        type: lesson.completed ? 'Pagsusulit Pagkatapos ng Aralin' : 'Pagsasanay na Pagsusulit',
+        unlocked: true,
+        questions,
+      };
+    })
+    .filter((quiz) => quiz.questions.length);
+}
+
+function getQuizAttempts(attempts = {}, quiz = {}) {
+  return attempts[quiz.quizId] || attempts[quiz.id] || attempts[quiz.legacyQuizId] || [];
 }
 
 function optionLetter(index) {
@@ -42,6 +169,8 @@ export default function QuizScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeQuiz, setActiveQuiz] = useState(null);
+
+ const [previewQuiz, setPreviewQuiz] = useState(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
@@ -69,7 +198,14 @@ export default function QuizScreen({ navigation }) {
   const quizzes = useMemo(() => quizCatalog(dashboard), [dashboard]);
   const student = dashboard?.student;
   const attempts = dashboard?.quizAttempts || {};
-  const activeQuizAttempts = activeQuiz ? (attempts[activeQuiz.quizId] || []) : [];
+
+ const previewQuizAttempts = previewQuiz ? (attempts[previewQuiz.quizId] || []) : [];
+
+ const previewBest = previewQuizAttempts.reduce(
+  (value, attempt) => Math.max(value, attempt.percent || 0),
+  0
+ );
+  const activeQuizAttempts = activeQuiz ? getQuizAttempts(attempts, activeQuiz) : [];
   const canRetry = activeQuizAttempts.length < MAX_QUIZ_ATTEMPTS;
   const question = activeQuiz?.questions?.[questionIndex];
   const selectedOptionId = question ? answers[question.id] : null;
@@ -77,7 +213,20 @@ export default function QuizScreen({ navigation }) {
     ? Math.round(((questionIndex + 1) / activeQuiz.questions.length) * 100)
     : 0;
 
-  function startQuiz(quiz) {
+  function openQuizPreview(quiz) {
+    setPreviewQuiz(null);
+    setActiveQuiz(quiz);
+    setQuestionIndex(-1);
+    setAnswers({});
+    setResult(null);
+  }
+
+const closeQuizPreview = useCallback(() => {
+  setPreviewQuiz(null);
+ }, []);
+
+ function startQuiz(quiz) {
+    setPreviewQuiz(null);
     setActiveQuiz(quiz);
     setQuestionIndex(0);
     setAnswers({});
@@ -85,7 +234,8 @@ export default function QuizScreen({ navigation }) {
   }
 
   const closeQuiz = useCallback(() => {
-    setActiveQuiz(null);
+  setActiveQuiz(null);
+  setPreviewQuiz(null);
     setQuestionIndex(0);
     setAnswers({});
     setResult(null);
@@ -93,36 +243,62 @@ export default function QuizScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
-      if (!activeQuiz) return undefined;
+      if (!activeQuiz && !previewQuiz) return undefined;
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-        closeQuiz();
-        return true;
-      });
+  if (activeQuiz) {
+    closeQuiz();
+  } else {
+    closeQuizPreview();
+  }
+
+  return true;
+ });
 
       return () => subscription.remove();
-    }, [activeQuiz, closeQuiz])
+    }, [activeQuiz, closeQuiz, closeQuizPreview, previewQuiz])
   );
-
   async function submitQuiz() {
     if (!activeQuiz || submitting) return;
 
-    const review = activeQuiz.questions.map((item) => ({
-      questionId: item.id,
-      selectedOptionId: answers[item.id],
-    }));
+    const review = activeQuiz.questions.map((item, index) => {
+      const selectedOptionId = answers[item.id];
+      const selectedOption = (item.options || []).find(
+        (candidate) => String(candidate.id) === String(selectedOptionId)
+      );
+      const correctOption =
+        (item.options || []).find((candidate) => candidate.isCorrect || candidate.correct) ||
+        (item.options || [])[0];
+
+      const points = Number(item.points || 1);
+      const correct = Boolean(
+        selectedOption &&
+          correctOption &&
+          String(selectedOption.id) === String(correctOption.id)
+      );
+
+      return {
+        index: index + 1,
+        questionId: item.id,
+        prompt: item.prompt || item.question,
+        selectedOptionId,
+        correctOptionId: correctOption?.id || null,
+        selectedText: selectedOption?.text || selectedOption?.optionText || 'Walang sagot',
+        correctText: correctOption?.text || correctOption?.optionText || '—',
+        isCorrect: correct,
+        correct,
+        pointsEarned: correct ? points : 0,
+        points,
+      };
+    });
 
     if (review.some((item) => !item.selectedOptionId)) {
       Alert.alert('Pagsusulit', 'Sagutin muna ang lahat ng tanong bago ipasa ang pagsusulit.');
       return;
     }
 
-    const score = activeQuiz.questions.reduce((total, item) => {
-      const option = (item.options || []).find((candidate) => candidate.id === answers[item.id]);
-      return total + (option?.isCorrect ? 1 : 0);
-    }, 0);
-
-    const total = activeQuiz.questions.length;
+    const score = review.reduce((total, item) => total + Number(item.pointsEarned || 0), 0);
+    const total = review.reduce((sum, item) => sum + Number(item.points || 1), 0);
     const percent = total ? Math.round((score / total) * 100) : 0;
 
     setSubmitting(true);
@@ -133,6 +309,11 @@ export default function QuizScreen({ navigation }) {
         body: {
           quizId: activeQuiz.quizId,
           quizTitle: activeQuiz.title,
+          lessonTitle: activeQuiz.lessonTitle,
+          subject: activeQuiz.subject,
+          gradeLevel: activeQuiz.gradeLevel,
+          xpReward: activeQuiz.xpReward,
+          type: activeQuiz.type,
           score,
           total,
           percent,
@@ -144,9 +325,27 @@ export default function QuizScreen({ navigation }) {
       const savedAttempts = data.quizAttempts || [];
       const reviewItems = savedAttempts.length
         ? (savedAttempts[savedAttempts.length - 1].review || [])
-        : [];
+        : review;
 
-      setResult(quizResult ? { ...quizResult, review: reviewItems } : null);
+      setResult(
+        quizResult
+          ? {
+              ...quizResult,
+              review: reviewItems,
+            }
+          : {
+              quizId: activeQuiz.quizId,
+              quizTitle: activeQuiz.title,
+              lessonTitle: activeQuiz.lessonTitle,
+              score,
+              total,
+              percent,
+              xpAwarded: Math.round((Number(activeQuiz.xpReward || 10) * percent) / 100),
+              masteryLabel: percent >= 75 ? 'Mahusay' : 'Subukan muli',
+              review,
+            }
+      );
+
       await load();
     } catch (err) {
       Alert.alert('Pagsusulit', err.message || 'Hindi maipasa ang pagsusulit.');
@@ -201,7 +400,59 @@ export default function QuizScreen({ navigation }) {
             <Text style={styles.activeSubtitle}>{activeQuiz.lessonTitle}</Text>
           </View>
 
-          {result ? (
+          {!result && questionIndex < 0 ? (
+            <Card style={styles.previewCard}>
+              <Text style={styles.previewEmoji}>📝</Text>
+              <Text style={styles.previewTitle}>Handa ka na ba?</Text>
+              <Text style={styles.previewText}>
+                Basahin muna ang detalye ng pagsusulit bago magsimula. Kapag pinindot mo ang simulan, lalabas agad ang unang tanong.
+              </Text>
+
+              <View style={styles.previewStatsRow}>
+                <View style={styles.previewStat}>
+                  <Text style={styles.previewStatValue}>{activeQuiz.questions.length}</Text>
+                  <Text style={styles.previewStatLabel}>Tanong</Text>
+                </View>
+
+                <View style={styles.previewStat}>
+                  <Text style={styles.previewStatValue}>
+                    {activeQuizAttempts.length}/{MAX_QUIZ_ATTEMPTS}
+                  </Text>
+                  <Text style={styles.previewStatLabel}>Pagsubok</Text>
+                </View>
+
+                <View style={styles.previewStat}>
+                  <Text style={styles.previewStatValue}>
+                    {activeQuizAttempts.reduce((value, attempt) => Math.max(value, attempt.percent || 0), 0)}%
+                  </Text>
+                  <Text style={styles.previewStatLabel}>Best</Text>
+                </View>
+              </View>
+
+              <View style={styles.previewRules}>
+                <Text style={styles.previewRuleTitle}>Bago magsimula</Text>
+                <Text style={styles.previewRule}>• Basahin nang mabuti ang bawat tanong.</Text>
+                <Text style={styles.previewRule}>• Pumili ng isang sagot bago magpatuloy.</Text>
+                <Text style={styles.previewRule}>• Maaari kang bumalik sa nakaraang tanong habang hindi pa naipapasa.</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => startQuiz(activeQuiz)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.primaryButtonText}>Simulan Ngayon</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.primaryButton, styles.secondaryButton]}
+                onPress={closeQuiz}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.secondaryButtonText}>Hindi Muna</Text>
+              </TouchableOpacity>
+            </Card>
+          ) : result ? (
             <View style={styles.resultCard}>
               <Text style={styles.resultEmoji}>🎉</Text>
               <Text style={styles.resultTitle}>Magaling!</Text>
@@ -237,7 +488,7 @@ export default function QuizScreen({ navigation }) {
                       ]}
                     >
                       <Text style={styles.reviewItemText}>
-                        {index + 1}. {item.isCorrect ? '✅ Tama' : '❌ Mali'}
+                        {index + 1}. {item.isCorrect || item.correct ? '✅ Tama' : '❌ Mali'}
                       </Text>
                     </View>
                   ))}
@@ -285,7 +536,10 @@ export default function QuizScreen({ navigation }) {
               </View>
 
               <Card style={styles.questionCard}>
-                <Text style={styles.question}>{question.question}</Text>
+                {!!question.source && (
+                  <Text style={styles.questionSource}>{question.source}</Text>
+                )}
+                <Text style={styles.question}>{question.prompt || question.question}</Text>
 
                 {(question.options || []).map((option, index) => {
                   const selected = selectedOptionId === option.id;
@@ -309,7 +563,7 @@ export default function QuizScreen({ navigation }) {
                       </View>
 
                       <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                        {option.optionText}
+                        {option.text || option.optionText}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -395,7 +649,7 @@ export default function QuizScreen({ navigation }) {
         ) : quizzes.length ? (
           <View style={styles.quizList}>
             {quizzes.map((quiz, index) => {
-              const quizAttempts = attempts[quiz.quizId] || [];
+              const quizAttempts = getQuizAttempts(attempts, quiz);
               const limitReached = quizAttempts.length >= MAX_QUIZ_ATTEMPTS;
               const best = quizAttempts.reduce(
                 (value, attempt) => Math.max(value, attempt.percent || 0),
@@ -411,7 +665,8 @@ export default function QuizScreen({ navigation }) {
 
                     <View style={styles.quizCardText}>
                       <Text style={styles.quizTitle}>{quiz.title}</Text>
-                      <Text style={styles.muted}>{quiz.lessonTitle}</Text>
+                      <Text style={styles.muted}>{quiz.subject} • Grade {quiz.gradeLevel}</Text>
+                    <Text style={styles.muted}>{quiz.type}</Text>
                     </View>
                   </View>
 
@@ -437,7 +692,7 @@ export default function QuizScreen({ navigation }) {
 
                   <TouchableOpacity
                     style={[styles.primaryButton, limitReached && styles.buttonDisabled]}
-                    onPress={() => startQuiz(quiz)}
+                    onPress={() => openQuizPreview(quiz)}
                     disabled={limitReached}
                     activeOpacity={0.85}
                   >
@@ -679,6 +934,96 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
+
+  previewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 30,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+
+  previewEmoji: {
+    fontSize: 46,
+    textAlign: 'center',
+  },
+
+  previewTitle: {
+    color: '#0F172A',
+    fontSize: 26,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  previewText: {
+    color: '#64748B',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  previewStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+
+  previewStat: {
+    flex: 1,
+    backgroundColor: '#ECFDF5',
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+
+  previewStatValue: {
+    color: '#16A34A',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  previewStatLabel: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+
+  previewRules: {
+    marginTop: 18,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  previewRuleTitle: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  previewRule: {
+    color: '#475569',
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+
   activeHero: {
     backgroundColor: '#FFFFFF',
     borderRadius: 30,
@@ -790,6 +1135,15 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
+  },
+
+  questionSource: {
+    color: '#16A34A',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 8,
   },
 
   question: {
