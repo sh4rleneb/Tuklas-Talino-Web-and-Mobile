@@ -350,7 +350,7 @@ function showBadgeUnlockPopup(badges = []) {
       card.innerHTML = `
         <div class="badge-unlock-icon">${icon}</div>
         <div>
-          <p class="badge-unlock-eyebrow">Badge Unlocked!</p>
+          <p class="badge-unlock-eyebrow">Nabuksang Gantimpala!</p>
           <h3 class="badge-unlock-title">${name}</h3>
           <p class="badge-unlock-desc">${description}</p>
         </div>
@@ -1760,7 +1760,7 @@ async function archiveTeacher(id) {
     }, 'Hindi ma-download ang activity logs CSV.');
   }
 
-  async function downloadSummaryReport() {
+  async function downloadBuodReport() {
     await safeRun(async () => {
       await downloadFile('/reports/summary.txt', 'tuklas-talino-summary-report.txt');
     }, 'Hindi ma-download ang summary report.');
@@ -3984,7 +3984,7 @@ async function archiveTeacher(id) {
           deleteLesson={teacherDeleteLesson}
           exportStudentsCSV={exportStudentsCSV}
           exportLogsCSV={exportLogsCSV}
-          downloadSummaryReport={downloadSummaryReport}
+          downloadBuodReport={downloadBuodReport}
           gradeWritingSubmission={teacherGradeWritingSubmission}
         />
       </Screen>
@@ -6619,7 +6619,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         }
 
         .g46-ref-badge-animated::after {
-          content: 'Earned';
+          content: 'Nakamit';
           position: absolute;
           top: 12px;
           right: 12px;
@@ -7632,7 +7632,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
     .sort((a, b) => g46LessonDateValue(b) - g46LessonDateValue(a))
     .slice(0, 4)
     .map((lesson, index) => {
-      const subject = lesson.subject || 'Aralin';
+      const subject = formatStudentSubjectDisplay(lesson.subject || 'Aralin');
       return {
         lesson,
         icon: SUBJECTS.find(item => item.subj === subject)?.icon || '📚',
@@ -7863,7 +7863,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
         </div>
 
         <div className="g12-filter-row">
-          <button className={`g12-chip ${subjectFilter === 'ALL' ? 'active' : ''}`} onClick={() => setSubjectFilter('ALL')}>🌎 All</button>
+          <button className={`g12-chip ${subjectFilter === 'ALL' ? 'active' : ''}`} onClick={() => setSubjectFilter('ALL')}>🌎 Lahat</button>
           {SUBJECTS.map(subject => (
             <button
               key={subject.name}
@@ -7885,7 +7885,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
               <button type="button" className={`g12-tile ${tone}`} key={lesson.id} onClick={() => openLesson(lesson)}>
                 <div className="g12-tile-icon">
                   <SubjectImageIcon
-                    subject={lesson.subject}
+                    subject={formatStudentSubjectDisplay(lesson.subject)}
                     src={subjectInfo.iconSrc || meta.iconSrc}
                     fallback={meta.icon}
                     className="subject-img-icon lesson"
@@ -7895,7 +7895,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
                   <h3>{shortEarlyLessonTitle(lesson)}</h3>
                   <p>{formatStudentSubjectDisplay(lesson.subject || 'Filipino')} • ⭐ {lesson.xpReward || 0} XP</p>
                   {lesson.completed && (
-                    <span className="g12-status-pill">✅ Summary</span>
+                    <span className="g12-status-pill">✅ Buod</span>
                   )}
                 </div>
                 <div className="g12-arrow" aria-hidden="true">›</div>
@@ -7905,7 +7905,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
         </div>
 
         {!lessons.length && (
-          <div className="g12-empty">No lessons found for this filter yet.</div>
+          <div className="g12-empty">Wala pang aralin para sa filter na ito.</div>
         )}
       </section>
     </EarlyStudentChrome>
@@ -7947,7 +7947,7 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
         </div>
 
         <div className="g46-ref-filter-row">
-          <button className={subjectFilter === 'ALL' ? 'active' : ''} onClick={() => setSubjectFilter('ALL')}>🌎 All</button>
+          <button className={subjectFilter === 'ALL' ? 'active' : ''} onClick={() => setSubjectFilter('ALL')}>🌎 Lahat</button>
           {SUBJECTS.map(subject => (
             <button
               key={subject.name}
@@ -7971,7 +7971,7 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
                   <div className="g46-ref-card-top">
                     <span className="g46-ref-card-icon">
                       <SubjectImageIcon
-                        subject={lesson.subject}
+                        subject={formatStudentSubjectDisplay(lesson.subject)}
                         src={subjectInfo.iconSrc || meta.iconSrc}
                         fallback={meta.icon}
                         className="subject-img-icon lesson"
@@ -7982,13 +7982,13 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
                   <h4>{lesson.title}</h4>
                   <p>{formatStudentSubjectDisplay(lesson.subject)} • Baitang {lesson.gradeLevel} • +{lesson.xpReward || 0} XP</p>
                 </div>
-                <span className="g46-ref-primary-btn" style={{ width: 'max-content' }}>{lesson.completed ? 'Summary' : 'Simulan'}</span>
+                <span className="g46-ref-primary-btn" style={{ width: 'max-content' }}>{lesson.completed ? 'Buod' : 'Simulan'}</span>
               </button>
             );
           })}
         </div>
 
-        {!lessons.length && <div className="g46-ref-empty">No lessons found for this filter yet.</div>}
+        {!lessons.length && <div className="g46-ref-empty">Wala pang aralin para sa filter na ito.</div>}
       </section>
     </Grade46StudentChrome>
   );
@@ -8361,7 +8361,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     );
   }
 
-  function renderCompletedSummary() {
+  function renderCompletedBuod() {
     return (
       <Grade46StudentChrome
         data={data}
@@ -8369,7 +8369,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
         go={go}
         logout={logout}
         icon="✅"
-        title={lesson?.title || "Lesson Summary"}
+        title={lesson?.title || "Lesson Buod"}
         subtitle={`Tapos Na • Baitang ${lesson?.gradeLevel || '—'} • ${formatStudentSubjectDisplay(lesson?.subject || 'Filipino')}`}
         titleAction={
           <button
@@ -8392,7 +8392,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
             <div className="g46-ref-panel-head">
               <div>
                 <span className="g46-ref-tag">✅ Completed</span>
-                <h2 style={{ marginTop: 8 }}>Lesson Summary</h2>
+                <h2 style={{ marginTop: 8 }}>Lesson Buod</h2>
                 <p className="g46-ref-muted">
                   You already completed this lesson. Review the material if needed, or go back to the lesson library.
                 </p>
@@ -8401,7 +8401,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginTop: 16 }}>
               {[
-                { icon: '📘', label: 'Subject', value: lesson?.subject || 'Filipino' },
+                { icon: '📘', label: 'Asignatura', value: formatStudentSubjectDisplay(lesson?.subject || 'Filipino') },
                 { icon: '🎯', label: 'Mga Gawain', value: `${activityTotal} ${activityTotal === 1 ? 'Gawain' : 'Mga Gawain'}` },
                 { icon: '⚡', label: 'Reward', value: `+${lesson?.xpReward || 0} XP` }
               ].map(item => (
@@ -8480,7 +8480,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   }
 
   if (lesson?.completed) {
-    return renderCompletedSummary();
+    return renderCompletedBuod();
   }
 
   function renderStepContent() {
@@ -9364,7 +9364,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
         activeTab="lessons"
         go={go}
         icon="✅"
-        title="Lesson Summary"
+        title="Lesson Buod"
       >
         <style>{`
           .g12-complete-summary {
@@ -9568,7 +9568,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           </section>
 
           <section className="g12-summary-card">
-            <h3>Maikling Summary</h3>
+            <h3>Maikling Buod</h3>
             <div className="g12-summary-text">
               {kidPassage}
             </div>
@@ -10302,7 +10302,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
               {Array.isArray(rewardModal.badges) && rewardModal.badges.length > 0 && (
                 <div className="g12-reward-badges">
-                  <p className="g12-reward-badge-eyebrow">🏅 New Badge Unlocked!</p>
+                  <p className="g12-reward-badge-eyebrow">🏅 Bagong Nabuksang Gantimpala!</p>
 
                   <div className="g12-reward-badge-list">
                     {rewardModal.badges.slice(0, 2).map((badge, badgeIndex) => (
@@ -14364,7 +14364,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
             {locked ? (
               <>
                 <div className="mission-prompt-box">
-                  🔒 Locked mission. Complete {selectedGame?.minCompleted || 3} lessons or missions bubuksan this challenge.
+                  🔒 Naka-lock na misyon. Tapusin ang {selectedGame?.minCompleted || 3} aralin o misyon para mabuksan ang hamong ito.
                 </div>
 
                 <div className="mission-play-actions">
@@ -14605,7 +14605,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                         <div className="sound-say-meter">
                           <i style={{ width: `${Math.max(0, Math.min(100, soundAndSayScoreValue))}%` }} />
                         </div>
-                        <small>Goal: {soundAndSayThreshold}% pataas</small>
+                        <small>Layunin: {soundAndSayThreshold}% pataas</small>
                       </div>
                     </div>
 
@@ -14772,7 +14772,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Pag-unawa sa Kwento mission complete">
                                 <div className="mission-complete-modal">
                                   <div className="mission-complete-icon">📖</div>
-                                  <h3>Pag-unawa sa Kwento Complete!</h3>
+                                  <h3>Tapos na ang Pag-unawa sa Kwento!</h3>
                                   <p>
                                     {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Pag-unawa sa Kwento.'}
                                   </p>
@@ -15506,7 +15506,7 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
       go={go}
       logout={logout}
       icon="👥"
-      title="Group Collaboration"
+      title="Pakikipagtulungan ng Grupo"
       subtitle="Ipasa ang output ng grupo at ang iyong tungkulin para masuri ng guro."
     >
       <section className="g46-ref-panel">
@@ -15696,18 +15696,18 @@ function badgeDisplayDescription(badge = {}) {
   const name = String(badge.name || '').trim();
 
   if (code === 'writing_3' || /manunulat|writer|sagot/i.test(name)) {
-    return 'Completed 3 Gawain activities.';
+    return 'Natapos ang 3 gawain.';
   }
 
   if (code === 'reader_3' || /mambabasa|reader/i.test(name)) {
-    return 'Completed 3 lessons.';
+    return 'Natapos ang 3 aralin.';
   }
 
   if (code === 'first_lesson') return 'Natapos ang unang aralin.';
   if (code === 'quiz_perfect') return 'Nakakuha ng perpektong iskor sa isang pagsusulit.';
-  if (code === 'speech_3') return 'Completed 3 speech attempts.';
+  if (code === 'speech_3') return 'Natapos ang 3 pagbigkas.';
   if (code === 'group_1') return 'Natapos ang 1 aprubadong gawaing panggrupo.';
-  if (code === 'xp_100') return 'Reached 100 XP.';
+  if (code === 'xp_100') return 'Umabot sa 100 XP.';
   if (code === 'level_10') return 'Umabot sa Antas 10.';
 
   return badge.description || 'May bago kang tagumpay!';
@@ -15721,11 +15721,11 @@ function badgeAchievementReason(badge = {}) {
   const value = `${code} ${name}`.toLowerCase();
 
   if (normalizedCode === 'writing_3' || value.includes('manunulat') || value.includes('writer') || value.includes('sagot')) {
-    return 'Completed 3 Gawain activities.';
+    return 'Natapos ang 3 gawain.';
   }
 
   if (normalizedCode === 'reader_3' || value.includes('reader') || value.includes('mambabasa')) {
-    return 'Completed 3 lessons.';
+    return 'Natapos ang 3 aralin.';
   }
 
   if (normalizedCode === 'first_lesson' || value.includes('unang hakbang')) {
@@ -15737,7 +15737,7 @@ function badgeAchievementReason(badge = {}) {
   }
 
   if (normalizedCode === 'speech_3' || value.includes('speaker') || value.includes('speech') || value.includes('magsalita') || value.includes('boses')) {
-    return 'Completed 3 speech attempts.';
+    return 'Natapos ang 3 pagbigkas.';
   }
 
   if (normalizedCode === 'group_1' || value.includes('teamwork') || value.includes('group') || value.includes('pangkat') || value.includes('kasama') || value.includes('kaagapay')) {
@@ -15745,7 +15745,7 @@ function badgeAchievementReason(badge = {}) {
   }
 
   if (normalizedCode === 'xp_100' || value.includes('sipag')) {
-    return 'Reached 100 XP.';
+    return 'Umabot sa 100 XP.';
   }
 
   if (normalizedCode === 'level_10' || value.includes('kampeon')) {
@@ -15772,7 +15772,7 @@ const GRADE12_BADGE_GOALS = [
     code: 'reader_3',
     icon: '📖',
     name: 'Batang Mambabasa',
-    howToUnlock: 'Complete 3 lessons.'
+    howToUnlock: 'Tapusin ang 3 aralin.'
   },
   {
     code: 'quiz_perfect',
@@ -15790,7 +15790,7 @@ const GRADE12_BADGE_GOALS = [
     code: 'speech_3',
     icon: '🎤',
     name: 'Boses Bituin',
-    howToUnlock: 'Submit 3 speech attempts.'
+    howToUnlock: 'Magsumite ng 3 pagbigkas.'
   },
   {
     code: 'group_1',
@@ -15802,7 +15802,7 @@ const GRADE12_BADGE_GOALS = [
     code: 'xp_100',
     icon: '⭐',
     name: 'Bituin ng Kasipagan',
-    howToUnlock: 'Reach 100 XP.'
+    howToUnlock: 'Umabot sa 100 XP.'
   },
   {
     code: 'level_10',
@@ -15899,14 +15899,14 @@ function EarlyBadgesScreen({ data, go }) {
       go={go}
       icon="🏅"
       title="Mga Gantimpala"
-      subtitle="Makikita dito ang rewards na nakuha mo sa lessons at activities."
+      subtitle="Makikita dito ang mga gantimpala na nakuha mo sa mga aralin at gawain."
     >
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
             <h2 className="g12-section-title">🌟 Mga Tagumpay</h2>
             <p className="g12-section-subtitle">
-              {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {lockedBadgeGoals.length} bubuksan • {s.xp || 0} XP
+              {badges.length} {badges.length === 1 ? 'gantimpala ang nabuksan' : 'mga gantimpala ang nabuksan'} • {lockedBadgeGoals.length} bubuksan • {s.xp || 0} XP
             </p>
           </div>
         </div>
@@ -15946,7 +15946,7 @@ function EarlyBadgesScreen({ data, go }) {
             <span>🔒</span>
             <div>
               <strong>Susunod na mga Gantimpalang Bubuksan</strong>
-              <p>Complete these goals to earn more rewards.</p>
+              <p>Tapusin ang mga layuning ito para makakuha pa ng gantimpala.</p>
             </div>
           </div>
 
@@ -16002,7 +16002,7 @@ function StudentBadges({ data, go, logout}) {
           <div>
             <h2>Mga Tagumpay</h2>
             <p className="g46-ref-muted">
-              {badges.length} badge{badges.length === 1 ? '' : 's'} unlocked • {g46LockedBadgeGoals.length} bubuksan • {data?.student?.xp || 0} XP
+              {badges.length} {badges.length === 1 ? 'gantimpala ang nabuksan' : 'mga gantimpala ang nabuksan'} • {g46LockedBadgeGoals.length} bubuksan • {data?.student?.xp || 0} XP
             </p>
           </div>
         </div>
@@ -16108,7 +16108,7 @@ function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
       go={go}
       icon="🐰"
       title="Aking Tala"
-      subtitle="Piliin ang avatar mo at tingnan ang learning summary."
+      subtitle="Piliin ang avatar mo at tingnan ang buod ng pag-aaral."
     >
       <section className="g12-section-card">
         <div className="g12-section-head">
@@ -16136,15 +16136,15 @@ function EarlyProfileScreen({ data, selectedAvatar, updateAvatar, go }) {
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">📊 Summary</h2>
-            <p className="g12-section-subtitle">Basic profile and progress information.</p>
+            <h2 className="g12-section-title">📊 Buod</h2>
+            <p className="g12-section-subtitle">Pangunahing impormasyon sa profile at progreso.</p>
           </div>
         </div>
 
         <div className="g12-summary-grid">
-          <div className="g12-summary-box"><span>👤</span><div><b>{s.name || '—'}</b><small>Name</small></div></div>
+          <div className="g12-summary-box"><span>👤</span><div><b>{s.name || '—'}</b><small>Pangalan</small></div></div>
           <div className="g12-summary-box"><span>🎒</span><div><b>Baitang {s.gradeLevel || '—'}</b><small>Baitang</small></div></div>
-          <div className="g12-summary-box"><span>🌸</span><div><b>{s.section || '—'}</b><small>Section</small></div></div>
+          <div className="g12-summary-box"><span>🌸</span><div><b>{s.section || '—'}</b><small>Seksyon</small></div></div>
           <div className="g12-summary-box"><span>⚡</span><div><b>{s.xp || 0} XP</b><small>XP</small></div></div>
         </div>
       </section>
@@ -16333,7 +16333,7 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go, logout}) {
       logout={logout}
       icon="👤"
       title="Aking Tala"
-      subtitle="Piliin ang avatar mo at tingnan ang learning summary."
+      subtitle="Piliin ang avatar mo at tingnan ang buod ng pag-aaral."
     >
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
@@ -16361,15 +16361,15 @@ function StudentProfile({ data, selectedAvatar, updateAvatar, go, logout}) {
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
-            <h2>Summary</h2>
-            <p className="g46-ref-muted">Basic profile and progress information.</p>
+            <h2>Buod</h2>
+            <p className="g46-ref-muted">Pangunahing impormasyon sa profile at progreso.</p>
           </div>
         </div>
 
         <div className="g46-ref-card-grid">
-          <div className="g46-ref-card green"><span className="g46-ref-card-icon">👤</span><h4>{s.name || '—'}</h4><p>Name</p></div>
+          <div className="g46-ref-card green"><span className="g46-ref-card-icon">👤</span><h4>{s.name || '—'}</h4><p>Pangalan</p></div>
           <div className="g46-ref-card yellow"><span className="g46-ref-card-icon">🎒</span><h4>Baitang {s.gradeLevel || '—'}</h4><p>Baitang</p></div>
-          <div className="g46-ref-card blue"><span className="g46-ref-card-icon">🌸</span><h4>{s.section || '—'}</h4><p>Section</p></div>
+          <div className="g46-ref-card blue"><span className="g46-ref-card-icon">🌸</span><h4>{s.section || '—'}</h4><p>Seksyon</p></div>
           <div className="g46-ref-card purple"><span className="g46-ref-card-icon">⚡</span><h4>{s.xp || 0} XP</h4><p>XP</p></div>
         </div>
       </section>
