@@ -1,11 +1,12 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Modal,
+  Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   downloadPdfReport,
@@ -22,10 +24,12 @@ import {
 
 import {
   addGroupMember,
+  removeGroupMember,
   addGroupTask,
   approveGroupTask,
   archiveLesson,
   createGroup,
+  deleteGroup,
   createLesson,
   createStudentAccount,
   getActiveStudents,
@@ -43,9 +47,9 @@ import {
   gradeWritingSubmission,
   reviewSpeechAttempt,
   returnGroupTask,
+  setGroupLeader,
   updateLesson,
-  uploadLessonMaterial,
-} from '../../api/teacher';
+  uploadLessonMaterial,} from '../../api/teacher';
 import { logout } from '../../api/auth';
 
 const NAV_ITEMS = [
@@ -76,15 +80,16 @@ const GRADE_SELECT_OPTIONS = ['1', '2', '3', '4', '5', '6'].map((grade) => ({
   label: `Grade ${grade}`,
 }));
 const ACTIVITY_TYPE_OPTIONS = [
-  { value: 'mcq', label: '? Quiz' },
-  { value: 'writing', label: '✎ Writing' },
-  { value: 'speech', label: '🎙️ Speech' },
-  { value: 'infographic', label: 'Info Card' },
+  { value: 'mcq', label: 'Quiz' },
+  { value: 'writing', label: 'Writing' },
+  { value: 'speech', label: 'Speech' },
 ];
 const WRITING_ACTIVITY_TYPE_OPTIONS = [
   { value: 'complete_sentence', label: 'Complete the Sentence' },
   { value: 'writing_task', label: 'Writing Task' },
 ];
+const ACTIVITY_CHOICE_KEYS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
 
 function normalizeXpRewardInput(value) {
   const digits = String(value || '').replace(/[^0-9]/g, '');
@@ -305,6 +310,8 @@ function getTeacherActivityValidationMessage(activity = {}) {
     activity.optionB,
     activity.optionC,
     activity.optionD,
+    activity.optionE,
+    activity.optionF,
     ...(Array.isArray(activity.options)
       ? activity.options.map((option) => option?.text ?? option?.label ?? option?.value ?? option)
       : []),
@@ -448,6 +455,245 @@ function getTeacherLessonBuilderValidationMessage(draft = {}, activities = [], a
 }
 
 
+
+
+function getTaskDeadlineDate(value) {
+  const parts = String(value || '').split('-').map((part) => Number(part));
+
+  if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
+    const [year, month, day] = parts;
+    const parsed = new Date(year, month - 1, day);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return new Date();
+}
+
+function formatTaskDeadlineValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function buildTaskDeadlineOptions(dayCount = 90) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+
+    return {
+      value: formatTaskDeadlineValue(date),
+      day: String(date.getDate()),
+      month: date.toLocaleDateString(undefined, { month: 'short' }),
+      weekday: date.toLocaleDateString(undefined, { weekday: 'short' }),
+    };
+  });
+}
+
+
+
+function getTeacherSpeechTargetText(item = {}) {
+  if (typeof item === 'string') {
+    return cleanTeacherLessonText(item);
+  }
+
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+
+  const speechTask = item.speechTask || item.speech_task || {};
+
+  return cleanTeacherLessonText(
+    item.targetText ||
+    item.speechTarget ||
+    item.speech_target ||
+    speechTask.targetText ||
+    speechTask.text ||
+    item.content ||
+    item.prompt ||
+    item.instructions ||
+    ''
+  );
+}
+
+
+function getTeacherLessonSpeechFallback(draft = {}, editingLesson = {}) {
+  const draftActivities = Array.isArray(draft.activities) ? draft.activities : [];
+  const editingActivities = Array.isArray(editingLesson.activities) ? editingLesson.activities : [];
+
+  return cleanTeacherLessonText(
+    draft.speechTarget ||
+    draft.speech_target ||
+    getTeacherSpeechTargetText(draftActivities.find((activity) => activity?.type === 'speech')) ||
+    getTeacherSpeechTargetText(editingActivities.find((activity) => activity?.type === 'speech')) ||
+    editingLesson.speechTarget ||
+    editingLesson.speech_target ||
+    editingLesson.targetText ||
+    getTeacherSpeechTargetText(editingLesson.speechTask || editingLesson.speech_task) ||
+    ''
+  );
+}
+
+function formatActivityDeadlineValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getActivityDeadlineDate(value) {
+  const parts = String(value || '').split('-').map((part) => Number(part));
+
+  if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
+    const [year, month, day] = parts;
+    const parsed = new Date(year, month - 1, day);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return new Date();
+}
+
+
+function getTeacherActiveGroupRows(groupData = {}) {
+  const rows = Array.isArray(groupData)
+    ? groupData
+    : Array.isArray(groupData.groups)
+    ? groupData.groups
+    : [];
+
+  return rows.filter((group) => group?.status !== 'archived' && group?.status !== 'deleted');
+}
+
+function getPendingGroupCheckRows(payload = {}) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  return Array.isArray(payload.rows)
+    ? payload.rows
+    : Array.isArray(payload.pending)
+    ? payload.pending
+    : Array.isArray(payload.data)
+    ? payload.data
+    : [];
+}
+
+function getPendingGroupCheckGroupId(row = {}) {
+  const candidates = [
+    row.groupId,
+    row.GroupId,
+    row.group_id,
+    row.group?.id,
+    row.Group?.id,
+    row.task?.groupId,
+    row.task?.GroupId,
+    row.Task?.groupId,
+    row.Task?.GroupId,
+    row.groupTask?.groupId,
+    row.groupTask?.GroupId,
+    row.GroupTask?.groupId,
+    row.GroupTask?.GroupId,
+  ];
+
+  const found = candidates
+    .map((value) => Number(value))
+    .find((value) => Number.isFinite(value) && value > 0);
+
+  return found || null;
+}
+
+function getPendingGroupCheckGroupName(row = {}) {
+  return cleanTeacherLessonText(
+    row.groupName ||
+    row.group?.name ||
+    row.Group?.name ||
+    row.task?.groupName ||
+    row.task?.group?.name ||
+    row.Task?.groupName ||
+    row.Task?.Group?.name ||
+    ''
+  ).toLowerCase();
+}
+
+function buildPendingGroupChecksPayload(source = {}, rows = []) {
+  const base = Array.isArray(source) ? {} : source || {};
+
+  return {
+    ...base,
+    rows,
+    summary: {
+      ...(base.summary || {}),
+      total: rows.length,
+      pending: rows.length,
+      count: rows.length,
+    },
+  };
+}
+
+function filterPendingGroupChecksForActiveGroups(pending = {}, activeGroups = []) {
+  const activeIds = new Set(
+    activeGroups
+      .map((group) => Number(group.id))
+      .filter((value) => Number.isFinite(value) && value > 0)
+  );
+
+  const activeNames = new Set(
+    activeGroups
+      .map((group) => cleanTeacherLessonText(group.name).toLowerCase())
+      .filter(Boolean)
+  );
+
+  const rows = getPendingGroupCheckRows(pending).filter((row) => {
+    const groupId = getPendingGroupCheckGroupId(row);
+    const groupName = getPendingGroupCheckGroupName(row);
+
+    if (groupId) {
+      return activeIds.has(Number(groupId));
+    }
+
+    if (groupName) {
+      return activeNames.has(groupName);
+    }
+
+    return true;
+  });
+
+  return buildPendingGroupChecksPayload(pending, rows);
+}
+
+function removeGroupFromPendingChecksState(pending = {}, deletedGroup = {}) {
+  const deletedId = Number(deletedGroup.id);
+  const deletedName = cleanTeacherLessonText(deletedGroup.name).toLowerCase();
+
+  const rows = getPendingGroupCheckRows(pending).filter((row) => {
+    const groupId = getPendingGroupCheckGroupId(row);
+    const groupName = getPendingGroupCheckGroupName(row);
+
+    if (Number.isFinite(deletedId) && deletedId > 0 && Number(groupId) === deletedId) {
+      return false;
+    }
+
+    if (deletedName && groupName === deletedName) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return buildPendingGroupChecksPayload(pending, rows);
+}
+
 export default function TeacherHome({ navigation }) {
   const insets = useSafeAreaInsets();
   const [section, setSection] = useState('dashboard');
@@ -461,6 +707,8 @@ export default function TeacherHome({ navigation }) {
   const [reviewQueue, setReviewQueue] = useState({ summary: {}, writing: [], speech: [] });
   const [selectedReviewStudentKey, setSelectedReviewStudentKey] = useState('');
   const [reviewDrafts, setReviewDrafts] = useState({});
+  const [showAllSpeechAttempts, setShowAllSpeechAttempts] = useState(false);
+  const [reviewGradeFilter, setReviewGradeFilter] = useState('all');
   const [reviewModal, setReviewModal] = useState(null);
   const [groups, setGroups] = useState([]);
   const [lessons, setLessons] = useState([]);
@@ -473,21 +721,30 @@ export default function TeacherHome({ navigation }) {
   const [builderStep, setBuilderStep] = useState(0);
   const [editingLesson, setEditingLesson] = useState(null);
   const [draft, setDraft] = useState(emptyLessonDraft);
+  const [activityDeadlinePickerVisible, setActivityDeadlinePickerVisible] = useState(false);
   const [newActivity, setNewActivity] = useState({
-    type: 'infographic',
+    type: 'mcq',
       gawainType: 'writing_task',
     title: '',
+    deadline: '',
+    hasDeadline: false,
     instructions: '',
     content: '',
     question: '',
     optionA: '',
     optionB: '',
     correctOption: 'A',
+    choiceCount: 2,
+    optionC: '',
+    optionD: '',
+    optionE: '',
+    optionF: '',
   });
-  const [groupForm, setGroupForm] = useState({ name: '', description: '', gradeLevel: '1' });
+  const [groupForm, setGroupForm] = useState({ name: '', description: '', section: '', gradeLevel: '1' });
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [openGroupTools, setOpenGroupTools] = useState({});
   const [taskForm, setTaskForm] = useState({ title: '', description: '', deadline: '', xpReward: '10' });
+  const [taskDeadlinePickerVisible, setTaskDeadlinePickerVisible] = useState(false);
   const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
   const [createdStudentAccount, setCreatedStudentAccount] = useState(null);
   const [quizFilter, setQuizFilter] = useState('All');
@@ -515,8 +772,9 @@ export default function TeacherHome({ navigation }) {
       setMonitoring(monitor);
       setAllStudents(normalizeStudentRows(activeStudentsData));
       setQuizPerformance(quiz);
-      setPendingChecks(pending);
-      setGroups((groupData.groups || []).filter((group) => group.status !== 'archived'));
+      const activeGroups = getTeacherActiveGroupRows(groupData);
+      setPendingChecks(filterPendingGroupChecksForActiveGroups(pending, activeGroups));
+      setGroups(activeGroups);
       setLessons(lessonData.lessons || []);
       setReportSummary(summary);
       setReviewQueue(reviews || { summary: {}, writing: [], speech: [] });
@@ -528,9 +786,34 @@ export default function TeacherHome({ navigation }) {
     }
   }, []);
 
+
+  const refreshPendingGroupChecksRealtime = useCallback(async () => {
+    try {
+      const [pending, groupData] = await Promise.all([
+        getPendingGroupChecks(),
+        getTeacherGroups(),
+      ]);
+
+      const activeGroups = getTeacherActiveGroupRows(groupData);
+      setGroups(activeGroups);
+      setPendingChecks(filterPendingGroupChecksForActiveGroups(pending, activeGroups));
+    } catch (err) {
+      console.warn('[TeacherHome] Pending group checks refresh failed:', err?.message || err);
+    }
+  }, []);
+
   useFocusEffect(useCallback(() => {
     load();
   }, [load]));
+
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refreshPendingGroupChecksRealtime();
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, [refreshPendingGroupChecksRealtime]);
 
   const selectedGroup = groups.find((group) => Number(group.id) === Number(selectedGroupId)) || groups[0];
   const activityCoverage = useMemo(() => lessons.map((lesson) => {
@@ -628,6 +911,54 @@ export default function TeacherHome({ navigation }) {
       .map((section) => ({ value: section, label: section }));
   }, [assignedClassRules, currentStudents, groups]);
 
+  const groupSectionOptions = useMemo(() => {
+    const selectedGrade = Number(groupForm.gradeLevel || 0);
+    const sections = new Set();
+
+    function addSection(value) {
+      const section = normalizeSectionName(value);
+
+      if (section) {
+        sections.add(section);
+      }
+    }
+
+    if (assignedClassRules.length) {
+      assignedClassRules.forEach((rule) => {
+        const ruleGrade = Number(rule.gradeLevel || 0);
+
+        if (!selectedGrade || !ruleGrade || ruleGrade === selectedGrade) {
+          addSection(rule.section);
+        }
+      });
+    }
+
+    currentStudents.forEach((student) => {
+      const studentGrade = Number(getStudentGradeValue(student) || 0);
+
+      if (!selectedGrade || !studentGrade || studentGrade === selectedGrade) {
+        addSection(getStudentSectionValue(student));
+      }
+    });
+
+    groups.forEach((group) => {
+      const groupGrade = Number(group.gradeLevel || group.grade || group.classGradeLevel || 0);
+
+      if (!selectedGrade || !groupGrade || groupGrade === selectedGrade) {
+        addSection(group.section);
+        addSection(group.sectionName);
+        addSection(group.classSection);
+        addSection(group.description);
+      }
+    });
+
+    const options = Array.from(sections)
+      .sort((first, second) => first.localeCompare(second))
+      .map((section) => ({ value: section, label: section }));
+
+    return options.length ? options : studentSectionOptions;
+  }, [assignedClassRules, currentStudents, groupForm.gradeLevel, groups, studentSectionOptions]);
+
   const stats = dashboard?.stats || {};
 
   async function run(action, work, success) {
@@ -712,20 +1043,40 @@ async function handleLogout() {
     let activity;
 
     if (type === 'mcq') {
-      if (!newActivity.question.trim() || !newActivity.optionA.trim() || !newActivity.optionB.trim()) {
-        setWorkspaceNotice({ type: 'warning', text: 'Add a question and two answer choices.' });
+      const choiceCount = Math.min(
+        ACTIVITY_CHOICE_KEYS.length,
+        Math.max(2, Number(newActivity.choiceCount || 2))
+      );
+      const activeChoiceKeys = ACTIVITY_CHOICE_KEYS.slice(0, choiceCount);
+      const quizOptions = activeChoiceKeys
+        .map((choice) => ({
+          choice,
+          text: String(newActivity[`option${choice}`] || '').trim(),
+        }))
+        .filter((option) => option.text);
+
+      if (!newActivity.question.trim() || quizOptions.length < 2) {
+        setWorkspaceNotice({ type: 'warning', text: 'Add a question and at least two answer choices.' });
         return;
       }
+
+      if (!quizOptions.some((option) => option.choice === newActivity.correctOption)) {
+        setWorkspaceNotice({ type: 'warning', text: 'Select a correct answer from the filled choices.' });
+        return;
+      }
+
       activity = {
         type,
         title,
         instructions: newActivity.instructions,
+        deadline: newActivity.hasDeadline ? (newActivity.deadline || null) : null,
+        dueAt: newActivity.hasDeadline ? (newActivity.deadline || null) : null,
         questions: [{
           question: newActivity.question,
-          options: [
-            { text: newActivity.optionA, isCorrect: newActivity.correctOption === 'A' },
-            { text: newActivity.optionB, isCorrect: newActivity.correctOption === 'B' },
-          ],
+          options: quizOptions.map((option) => ({
+            text: option.text,
+            isCorrect: newActivity.correctOption === option.choice,
+          })),
         }],
       };
     } else if (type === 'writing') {
@@ -733,32 +1084,66 @@ async function handleLogout() {
         setWorkspaceNotice({ type: 'warning', text: 'Add a writing prompt first.' });
         return;
       }
-      activity = { type, title, instructions: newActivity.instructions, prompt: newActivity.content, gawainType: newActivity.gawainType || 'writing_task' };
+      activity = { type, title, instructions: newActivity.instructions, prompt: newActivity.content, gawainType: newActivity.gawainType || 'writing_task', deadline: newActivity.hasDeadline ? (newActivity.deadline || null) : null, dueAt: newActivity.hasDeadline ? (newActivity.deadline || null) : null };
     } else if (type === 'speech') {
       if (!newActivity.content.trim()) {
         setWorkspaceNotice({ type: 'warning', text: 'Add the exact words students should say in Speech Target Only.' });
         return;
       }
-      activity = { type, title, instructions: '', targetText: newActivity.content };
+      activity = { type, title, instructions: '', targetText: newActivity.content, content: newActivity.content, deadline: newActivity.hasDeadline ? (newActivity.deadline || null) : null, dueAt: newActivity.hasDeadline ? (newActivity.deadline || null) : null };
     } else {
       if (!newActivity.content.trim()) {
         setWorkspaceNotice({ type: 'warning', text: 'Add lesson-note content first.' });
         return;
       }
-      activity = { type: 'infographic', title, instructions: newActivity.instructions, content: newActivity.content };
+      activity = { type: 'infographic', title, instructions: newActivity.instructions, content: newActivity.content, deadline: newActivity.hasDeadline ? (newActivity.deadline || null) : null, dueAt: newActivity.hasDeadline ? (newActivity.deadline || null) : null };
     }
 
-    setDraft((current) => ({ ...current, activities: [...current.activities, activity] }));
+    setDraft((current) => {
+      const currentActivities = Array.isArray(current.activities) ? current.activities : [];
+
+      if (type === 'speech') {
+        const existingSpeechIndex = currentActivities.findIndex((item) => item?.type === 'speech');
+        const nextActivities = [...currentActivities];
+
+        if (existingSpeechIndex >= 0) {
+          nextActivities[existingSpeechIndex] = {
+            ...nextActivities[existingSpeechIndex],
+            ...activity,
+          };
+        } else {
+          nextActivities.push(activity);
+        }
+
+        return {
+          ...current,
+          speechTarget: getTeacherSpeechTargetText(activity) || current.speechTarget || '',
+          activities: nextActivities,
+        };
+      }
+
+      return {
+        ...current,
+        activities: [...currentActivities, activity],
+      };
+    });
     setNewActivity({
-      type: 'infographic',
+      type: 'mcq',
       gawainType: 'writing_task',
       title: '',
+      deadline: '',
+      hasDeadline: false,
       instructions: '',
       content: '',
       question: '',
       optionA: '',
       optionB: '',
       correctOption: 'A',
+      choiceCount: 2,
+      optionC: '',
+      optionD: '',
+      optionE: '',
+      optionF: '',
     });
   }
 
@@ -766,6 +1151,41 @@ async function handleLogout() {
     const activities = Array.isArray(lesson.activities) ? lesson.activities : [];
     const materialActivity = activities.find((activity) => activity.type === 'material') || null;
     const editableActivities = activities.filter((activity) => activity.type !== 'material');
+    const legacySpeechTarget = getTeacherSpeechTargetText({
+      targetText: lesson.speechTarget || lesson.speech_target || lesson.targetText,
+      speechTask: lesson.speechTask || lesson.speech_task,
+    });
+    const hasSpeechActivity = editableActivities.some(
+      (activity) => activity?.type === 'speech' && getTeacherSpeechTargetText(activity)
+    );
+    const normalizedEditableActivities =
+      hasSpeechActivity
+        ? editableActivities.map((activity) => {
+            if (activity?.type !== 'speech') {
+              return activity;
+            }
+
+            const target = getTeacherSpeechTargetText(activity) || legacySpeechTarget;
+
+            return {
+              ...activity,
+              targetText: target,
+              content: target,
+              instructions: '',
+            };
+          })
+        : legacySpeechTarget
+        ? [
+            ...editableActivities,
+            {
+              type: 'speech',
+              title: 'Speech Practice',
+              instructions: '',
+              targetText: legacySpeechTarget,
+              content: legacySpeechTarget,
+            },
+          ]
+        : editableActivities;
 
     return {
       gradeLevel: String(lesson.gradeLevel || '1'),
@@ -776,7 +1196,7 @@ async function handleLogout() {
       passage: lesson.passage || '',
       ...splitStructuredLessonPassage(lesson.passage || ''),
       instructions: lesson.instructions || materialActivity?.instructions || '',
-      speechTarget: lesson.speechTarget || '',
+      speechTarget: legacySpeechTarget || lesson.speechTarget || '',
       material: materialActivity
         ? {
             fileName: materialActivity.fileName || materialActivity.name || 'Lesson Material',
@@ -786,7 +1206,7 @@ async function handleLogout() {
             ...materialActivity,
           }
         : null,
-      activities: editableActivities,
+      activities: normalizedEditableActivities,
     };
   }
 
@@ -812,6 +1232,57 @@ async function handleLogout() {
         return total;
       }, 0);
   }
+
+  function getTeacherLessonActivityTypeLabel(activity = {}) {
+    const type = cleanTeacherLessonText(
+      activity.type ||
+      activity.activityType ||
+      activity.gawainType ||
+      ''
+    ).toLowerCase();
+
+    if (type === 'mcq' || type.includes('quiz') || type.includes('choice')) {
+      return 'Quiz';
+    }
+
+    if (type === 'writing' || type.includes('writing') || type.includes('sentence')) {
+      return 'Writing';
+    }
+
+    if (type === 'speech' || type.includes('speech') || type.includes('read')) {
+      return 'Speech';
+    }
+
+    if (type === 'material') {
+      return 'Material';
+    }
+
+    if (type === 'infographic' || type.includes('info')) {
+      return 'Info';
+    }
+
+    return type ? type.charAt(0).toUpperCase() + type.slice(1) : 'Activity';
+  }
+
+  function getTeacherLessonActivityTypeSummary(lesson = {}) {
+    const activities = getLessonActivities(lesson)
+      .filter((activity) => activity?.type !== 'material');
+
+    if (!activities.length) {
+      return 'No activity yet';
+    }
+
+    const counts = activities.reduce((acc, activity) => {
+      const label = getTeacherLessonActivityTypeLabel(activity);
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(counts)
+      .map(([label, count]) => count > 1 ? `${label} (${count})` : label)
+      .join(' • ');
+  }
+
 
   function formatTeacherLessonDate(value) {
     if (!value) return 'No date';
@@ -862,14 +1333,52 @@ async function handleLogout() {
       ].filter(Boolean)),
     ];
 
+    const validationActivities = Array.isArray(draft.activities) ? draft.activities : [];
+    const speechValidationTarget = getTeacherLessonSpeechFallback(draft, editingLesson || {});
+    const validationDraft = {
+      ...draft,
+      speechTarget: speechValidationTarget || draft.speechTarget || '',
+      speech_target: speechValidationTarget || draft.speech_target || '',
+      activities: validationActivities.map((activity) => {
+        if (activity?.type !== 'speech') {
+          return activity;
+        }
+
+        const target = getTeacherSpeechTargetText(activity) || speechValidationTarget;
+
+        return {
+          ...activity,
+          targetText: target,
+          content: target,
+          instructions: '',
+        };
+      }),
+    };
+
     const lessonValidationMessage = getTeacherLessonBuilderValidationMessage(
-      draft,
-      Array.isArray(draft.activities) ? draft.activities : [],
+      validationDraft,
+      validationDraft.activities,
       []
     );
     if (lessonValidationMessage) {
       return Alert.alert('Lesson Builder', lessonValidationMessage);
     }
+
+    const speechFallbackTarget = getTeacherLessonSpeechFallback(draft, editingLesson || {});
+    const draftActivitiesForSave = (Array.isArray(draft.activities) ? draft.activities : []).map((activity) => {
+      if (activity?.type !== 'speech') {
+        return activity;
+      }
+
+      const target = getTeacherSpeechTargetText(activity) || speechFallbackTarget;
+
+      return {
+        ...activity,
+        targetText: target,
+        content: target,
+        instructions: '',
+      };
+    });
 
     const activities = [
       ...(draft.material ? [{
@@ -878,8 +1387,12 @@ async function handleLogout() {
         instructions: draft.instructions,
         ...draft.material,
       }] : []),
-      ...draft.activities,
+      ...draftActivitiesForSave,
     ];
+
+    const speechActivityTarget =
+      getTeacherSpeechTargetText(activities.find((activity) => activity?.type === 'speech')) ||
+      speechFallbackTarget;
 
     const payload = {
       gradeLevel: Number(draft.gradeLevel),
@@ -889,7 +1402,7 @@ async function handleLogout() {
       xpReward: getXpRewardValue(draft.xpReward),
       passage: buildStructuredLessonPassage(draft) || null,
       instructions: draft.instructions || null,
-      speechTarget: draft.speechTarget || null,
+      speechTarget: speechActivityTarget || draft.speechTarget || null,
       status,
       activities,
     };
@@ -1078,19 +1591,211 @@ async function handleLogout() {
                 label="Activity Type"
                 value={newActivity.type}
                 options={ACTIVITY_TYPE_OPTIONS}
-                onSelect={(type) => setNewActivity((current) => ({ ...current, type }))}
+                onSelect={(type) => {
+                  if (type === 'speech') {
+                    const existingSpeechActivity = (Array.isArray(draft.activities) ? draft.activities : []).find(
+                      (activity) => activity?.type === 'speech'
+                    );
+
+                    if (existingSpeechActivity) {
+                      const existingDeadline =
+                        existingSpeechActivity.deadline ||
+                        existingSpeechActivity.dueAt ||
+                        existingSpeechActivity.dueDate ||
+                        '';
+
+                      setNewActivity((current) => ({
+                        ...current,
+                        type,
+                        title: existingSpeechActivity.title || current.title || '',
+                        content: getTeacherSpeechTargetText(existingSpeechActivity),
+                        instructions: '',
+                        deadline: existingDeadline || '',
+                        hasDeadline: Boolean(existingDeadline),
+                      }));
+                      return;
+                    }
+                  }
+
+                  setNewActivity((current) => ({ ...current, type }));
+                }}
               />
             <Field label="Activity Title" value={newActivity.title} onChangeText={(value) => setNewActivity((current) => ({ ...current, title: value }))} />
+
+            <Text style={styles.fieldLabel}>Deadline Option</Text>
+            <View style={styles.choiceRow}>
+              <SmallButton
+                tone={!newActivity.hasDeadline ? 'green' : 'slate'}
+                onPress={() => {
+                  setActivityDeadlinePickerVisible(false);
+                  setNewActivity((current) => ({
+                    ...current,
+                    hasDeadline: false,
+                    deadline: '',
+                  }));
+                }}
+              >
+                No Deadline
+              </SmallButton>
+              <SmallButton
+                tone={newActivity.hasDeadline ? 'green' : 'slate'}
+                onPress={() =>
+                  setNewActivity((current) => ({
+                    ...current,
+                    hasDeadline: true,
+                  }))
+                }
+              >
+                With Deadline
+              </SmallButton>
+            </View>
+
+            {newActivity.hasDeadline ? (
+              <>
+                <Text style={styles.fieldLabel}>Deadline</Text>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setActivityDeadlinePickerVisible(true)}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 16,
+                    paddingVertical: 14,
+                    paddingHorizontal: 14,
+                    marginBottom: 12,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: newActivity.deadline ? '#0F172A' : '#94A3B8',
+                      fontWeight: '800',
+                    }}
+                  >
+                    {newActivity.deadline ? `Deadline: ${newActivity.deadline}` : 'Select activity deadline'}
+                  </Text>
+                </TouchableOpacity>
+
+                {activityDeadlinePickerVisible ? (
+                  <DateTimePicker
+                    value={getActivityDeadlineDate(newActivity.deadline)}
+                    mode="date"
+                    display={Platform.OS === 'android' ? 'calendar' : 'default'}
+                    minimumDate={new Date()}
+                    onChange={(event, selectedDate) => {
+                      setActivityDeadlinePickerVisible(false);
+
+                      if (event?.type === 'set' && selectedDate) {
+                        setNewActivity((current) => ({
+                          ...current,
+                          hasDeadline: true,
+                          deadline: formatActivityDeadlineValue(selectedDate),
+                        }));
+                      }
+                    }}
+                  />
+                ) : null}
+
+                {newActivity.deadline ? (
+                  <SmallButton
+                    tone="slate"
+                    onPress={() => setNewActivity((current) => ({ ...current, deadline: '' }))}
+                  >
+                    Clear Deadline
+                  </SmallButton>
+                ) : null}
+              </>
+            ) : null}
+
             {newActivity.type !== 'speech' ? (
               <Field label="Instructions" value={newActivity.instructions} onChangeText={(value) => setNewActivity((current) => ({ ...current, instructions: value }))} multiline />
             ) : null}
             {newActivity.type === 'mcq' ? (
               <>
                 <Field label="Question" value={newActivity.question} onChangeText={(value) => setNewActivity((current) => ({ ...current, question: value }))} />
-                <Field label="Choice A" value={newActivity.optionA} onChangeText={(value) => setNewActivity((current) => ({ ...current, optionA: value }))} />
-                <Field label="Choice B" value={newActivity.optionB} onChangeText={(value) => setNewActivity((current) => ({ ...current, optionB: value }))} />
+
+                {ACTIVITY_CHOICE_KEYS.slice(
+                  0,
+                  Math.min(ACTIVITY_CHOICE_KEYS.length, Math.max(2, Number(newActivity.choiceCount || 2)))
+                ).map((choice) => {
+                  const optionKey = `option${choice}`;
+
+                  return (
+                    <Field
+                      key={choice}
+                      label={`Choice ${choice}`}
+                      value={newActivity[optionKey] || ''}
+                      onChangeText={(value) =>
+                        setNewActivity((current) => ({
+                          ...current,
+                          [optionKey]: value,
+                        }))
+                      }
+                    />
+                  );
+                })}
+
+                <View style={styles.choiceRow}>
+                  <SmallButton
+                    tone="slate"
+                    disabled={Number(newActivity.choiceCount || 2) >= ACTIVITY_CHOICE_KEYS.length}
+                    onPress={() =>
+                      setNewActivity((current) => ({
+                        ...current,
+                        choiceCount: Math.min(
+                          ACTIVITY_CHOICE_KEYS.length,
+                          Math.max(2, Number(current.choiceCount || 2)) + 1
+                        ),
+                      }))
+                    }
+                  >
+                    Add More Choice
+                  </SmallButton>
+
+                  {Number(newActivity.choiceCount || 2) > 2 ? (
+                    <SmallButton
+                      tone="red"
+                      onPress={() =>
+                        setNewActivity((current) => {
+                          const currentCount = Math.min(
+                            ACTIVITY_CHOICE_KEYS.length,
+                            Math.max(2, Number(current.choiceCount || 2))
+                          );
+                          const nextCount = Math.max(2, currentCount - 1);
+                          const removedChoice = ACTIVITY_CHOICE_KEYS[currentCount - 1];
+
+                          return {
+                            ...current,
+                            choiceCount: nextCount,
+                            [`option${removedChoice}`]: '',
+                            correctOption:
+                              current.correctOption === removedChoice
+                                ? 'A'
+                                : current.correctOption,
+                          };
+                        })
+                      }
+                    >
+                      Remove Last Choice
+                    </SmallButton>
+                  ) : null}
+                </View>
+
                 <Text style={styles.fieldLabel}>Correct Choice</Text>
-                <View style={styles.choiceRow}>{['A', 'B'].map((choice) => <SmallButton key={choice} tone={newActivity.correctOption === choice ? 'green' : 'slate'} onPress={() => setNewActivity((current) => ({ ...current, correctOption: choice }))}>{choice}</SmallButton>)}</View>
+                <View style={styles.choiceRow}>
+                  {ACTIVITY_CHOICE_KEYS.slice(
+                    0,
+                    Math.min(ACTIVITY_CHOICE_KEYS.length, Math.max(2, Number(newActivity.choiceCount || 2)))
+                  ).map((choice) => (
+                    <SmallButton
+                      key={choice}
+                      tone={newActivity.correctOption === choice ? 'green' : 'slate'}
+                      onPress={() => setNewActivity((current) => ({ ...current, correctOption: choice }))}
+                    >
+                      {choice}
+                    </SmallButton>
+                  ))}
+                </View>
               </>
             ) : (
               <>
@@ -1124,16 +1829,147 @@ async function handleLogout() {
 
         {builderStep === 3 && (
           <SectionCard>
-            <Text style={styles.cardTitle}>{editingLesson?.id ? 'Edit Lesson Preview' : 'Student Lesson Preview'}</Text>
-            <Text style={styles.previewTitle}>{draft.title || 'Untitled Lesson'}</Text>
-            <Text style={styles.muted}>Grade {draft.gradeLevel} • {draft.subject} • +{draft.xpReward || 0} XP</Text>
-            <Text style={styles.body}>{buildStructuredLessonPassage(draft) || 'No reading material has been added yet.'}</Text>
-            <Text style={styles.rowTitle}>{draft.activities.length} activity block{draft.activities.length === 1 ? '' : 's'} in this lesson</Text>
-            <View style={styles.buttonRow}>
-              {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson(editingLesson.status || 'draft')}>💾 Save Changes</SmallButton> : <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson('draft')}>📋 Save Draft</SmallButton>}
-              {editingLesson?.status !== 'published' ? <SmallButton disabled={Boolean(busy)} onPress={() => saveLesson('published')}>🚀 Publish Lesson</SmallButton> : null}
-              {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={resetLessonBuilder}>Cancel Edit</SmallButton> : null}
-            </View>
+            {(() => {
+              const previewActivities = Array.isArray(draft.activities) ? draft.activities : [];
+              const previewPassage = buildStructuredLessonPassage(draft);
+              const hasPreviewContent = Boolean(
+                String(draft.title || '').trim() ||
+                String(draft.instructions || '').trim() ||
+                String(draft.speechTarget || '').trim() ||
+                draft.material ||
+                previewPassage ||
+                previewActivities.length
+              );
+
+              if (!hasPreviewContent) {
+                return (
+                  <>
+                    <Text style={styles.cardTitle}>Student Lesson Preview</Text>
+                    <View style={styles.softRow}>
+                      <Text style={styles.rowTitle}>No lesson preview yet.</Text>
+                      <Text style={styles.muted}>
+                        Add lesson details, reading material, or activities first before previewing the student lesson.
+                      </Text>
+                    </View>
+                    <View style={styles.buttonRow}>
+                      <SmallButton tone="slate" onPress={() => setBuilderStep(1)}>
+                        Go to Lesson Details
+                      </SmallButton>
+                      <SmallButton onPress={() => setBuilderStep(2)}>
+                        Add Activities
+                      </SmallButton>
+                    </View>
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  <Text style={styles.cardTitle}>{editingLesson?.id ? 'Edit Lesson Preview' : 'Student Lesson Preview'}</Text>
+                  <Text style={styles.previewTitle}>
+                    {String(draft.title || '').trim() || 'Lesson title not yet added'}
+                  </Text>
+                  <Text style={styles.muted}>
+                    Grade {draft.gradeLevel || '-'} • {draft.subject || 'No subject'} • +{draft.xpReward || 0} XP
+                  </Text>
+                  <Text style={styles.body}>{previewPassage || 'No reading material has been added yet.'}</Text>
+                  <Text style={styles.rowTitle}>{previewActivities.length} activity block{previewActivities.length === 1 ? '' : 's'} in this lesson</Text>
+
+                  {previewActivities.length ? (
+                    <View style={{ marginTop: 12, gap: 10 }}>
+                      {previewActivities.map((activity, index) => {
+                        const activityDeadline = activity.deadline || activity.dueAt || activity.dueDate || '';
+                        const activityTypeLabel =
+                          activity.type === 'mcq'
+                            ? 'Quiz'
+                            : activity.type === 'writing'
+                            ? 'Writing'
+                            : activity.type === 'speech'
+                            ? 'Speech'
+                            : activity.type === 'infographic'
+                            ? 'Info'
+                            : activity.type || 'Activity';
+
+                        return (
+                          <View key={`${activity.type}-${index}-preview`} style={styles.softRow}>
+                            <Text style={styles.rowTitle}>
+                              {index + 1}. {activity.title || `${activityTypeLabel} Activity`}
+                            </Text>
+                            <Text style={styles.muted}>Type: {activityTypeLabel}</Text>
+                            <Text style={styles.muted}>
+                              Deadline: {activityDeadline ? formatTeacherLessonDate(activityDeadline) : 'No Deadline'}
+                            </Text>
+
+                            {activity.instructions ? (
+                              <Text style={styles.body}>Instructions: {activity.instructions}</Text>
+                            ) : null}
+
+                            {activity.type === 'mcq' && Array.isArray(activity.questions) ? (
+                              <View style={{ marginTop: 8, gap: 8 }}>
+                                {activity.questions.map((question, questionIndex) => (
+                                  <View key={`preview-question-${questionIndex}`} style={styles.softRow}>
+                                    <Text style={styles.rowTitle}>
+                                      Question {questionIndex + 1}: {question.question || question.prompt || 'Untitled question'}
+                                    </Text>
+
+                                    {Array.isArray(question.options) && question.options.length ? (
+                                      <View style={{ marginTop: 6, gap: 4 }}>
+                                        {question.options.map((option, optionIndex) => {
+                                          const choiceLabel = String.fromCharCode(65 + optionIndex);
+                                          const optionText =
+                                            typeof option === 'string'
+                                              ? option
+                                              : option.text || option.label || option.value || '';
+
+                                          const isCorrect =
+                                            typeof option === 'object' &&
+                                            Boolean(option.isCorrect || option.correct);
+
+                                          return (
+                                            <Text
+                                              key={`preview-option-${questionIndex}-${optionIndex}`}
+                                              style={isCorrect ? styles.rowTitle : styles.muted}
+                                            >
+                                              {choiceLabel}. {optionText || 'Blank choice'}{isCorrect ? ' — Correct answer' : ''}
+                                            </Text>
+                                          );
+                                        })}
+                                      </View>
+                                    ) : (
+                                      <Text style={styles.muted}>No answer choices added.</Text>
+                                    )}
+                                  </View>
+                                ))}
+                              </View>
+                            ) : null}
+
+                            {activity.type === 'writing' ? (
+                              <Text style={styles.body}>
+                                Prompt: {activity.prompt || activity.content || 'No writing prompt added.'}
+                              </Text>
+                            ) : null}
+
+                            {activity.type === 'speech' ? (
+                              <Text style={styles.body}>
+                                Reading Text: {getTeacherSpeechTargetText(activity) || getTeacherLessonSpeechFallback(draft, editingLesson || {}) || 'No speech text added.'}
+                              </Text>
+                            ) : null}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <Text style={styles.muted}>No activities added yet.</Text>
+                  )}
+
+                  <View style={styles.buttonRow}>
+                    {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson(editingLesson.status || 'draft')}>💾 Save Changes</SmallButton> : <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => saveLesson('draft')}>📋 Save Draft</SmallButton>}
+                    {editingLesson?.status !== 'published' ? <SmallButton disabled={Boolean(busy)} onPress={() => saveLesson('published')}>🚀 Publish Lesson</SmallButton> : null}
+                    {editingLesson?.id ? <SmallButton tone="slate" disabled={Boolean(busy)} onPress={resetLessonBuilder}>Cancel Edit</SmallButton> : null}
+                  </View>
+                </>
+              );
+            })()}
           </SectionCard>
         )}
 
@@ -1150,6 +1986,9 @@ async function handleLogout() {
                     <View style={styles.flex}>
                       <Text style={styles.rowTitle}>📘 {lesson.title || 'Untitled Lesson'}</Text>
                       <Text style={styles.muted}>Grade {lesson.gradeLevel} • {lesson.subject}</Text>
+                  <Text style={styles.muted}>
+                    Activities: {getTeacherLessonActivityTypeSummary(lesson)}
+                  </Text>
                     </View>
                     <Text style={[styles.lessonStatusChip, isPublished ? styles.lessonStatusPublished : styles.lessonStatusDraft]}>
                       ● {isPublished ? 'Published' : 'Draft'}
@@ -1279,6 +2118,39 @@ async function handleLogout() {
     if (saved) await load();
   }
 
+  function confirmRemoveGroupMember(group = {}, member = {}) {
+    const student = getMemberStudent(member);
+    const studentId = student.id || member.studentId;
+    const studentName = student.name || 'this student';
+    const groupName = group.name || 'this group';
+
+    if (!group.id || !studentId) {
+      Alert.alert('Group Manager', 'Missing member details.');
+      return;
+    }
+
+    Alert.alert(
+      'Remove Member',
+      `Remove "${studentName}" from "${groupName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            const removed = await run(
+              `member-remove-${group.id}-${studentId}`,
+              () => removeGroupMember(group.id, studentId),
+              'Member removed from group.'
+            );
+
+            if (removed) await load();
+          },
+        },
+      ]
+    );
+  }
+
   function confirmDeleteGroup(group = {}) {
     const groupName = group.name || 'this group';
 
@@ -1299,7 +2171,14 @@ async function handleLogout() {
 
             if (removed) {
               setGroups((current) => current.filter((item) => Number(item.id) !== Number(group.id)));
-              setSelectedGroupId(null);
+              setPendingChecks((current) => removeGroupFromPendingChecksState(current, group));
+              setSelectedGroupId((current) => Number(current) === Number(group.id) ? null : current);
+              setTaskForm((current) =>
+                Number(current.groupId) === Number(group.id)
+                  ? { ...current, groupId: '' }
+                  : current
+              );
+              await refreshPendingGroupChecksRealtime();
               await load();
             }
           },
@@ -1324,7 +2203,6 @@ async function handleLogout() {
         </SectionCard>
 
         <SectionCard>
-          <Text style={styles.cardIcon}>➕</Text>
           <Text style={styles.cardTitle}>Create Group</Text>
           <Text style={styles.muted}>Set up a group, class section, or collaborative activity team.</Text>
 
@@ -1335,12 +2213,18 @@ async function handleLogout() {
             placeholder="Group name"
           />
 
-          <Field
-            label="Description / Section"
-            value={groupForm.description}
-            onChangeText={(description) => setGroupForm((current) => ({ ...current, description }))}
-            placeholder="Description / Section"
-            multiline
+          <SelectMenu
+            label="Section"
+            value={groupForm.section || groupForm.description || ''}
+            options={groupSectionOptions}
+            disabled={!groupSectionOptions.length || Boolean(busy)}
+            onSelect={(section) =>
+              setGroupForm((current) => ({
+                ...current,
+                section,
+                description: section,
+              }))
+            }
           />
 
           <SelectMenu
@@ -1348,10 +2232,10 @@ async function handleLogout() {
             value={groupForm.gradeLevel}
             options={usableGradeOptions}
             disabled={Boolean(busy)}
-            onSelect={(gradeLevel) => setGroupForm((current) => ({ ...current, gradeLevel }))}
+            onSelect={(gradeLevel) => setGroupForm((current) => ({ ...current, gradeLevel, section: '', description: '' }))}
           />
 
-          <SmallButton disabled={!groupForm.name.trim() || Boolean(busy)} onPress={async () => {
+          <SmallButton disabled={!groupForm.name.trim() || !(groupForm.section || groupForm.description || '').trim() || Boolean(busy)} onPress={async () => {
             const groupGradeLevel = Number(groupForm.gradeLevel);
 
             if (![1, 2, 3, 4, 5, 6].includes(groupGradeLevel)) {
@@ -1359,7 +2243,24 @@ async function handleLogout() {
               return;
             }
 
-            const groupPayload = { ...groupForm, gradeLevel: groupGradeLevel };
+            const groupSection = normalizeSectionName(groupForm.section || groupForm.description);
+
+            if (!groupSection) {
+              Alert.alert('Group Creation', 'Select a section for this group.');
+              return;
+            }
+
+            if (!canUseGradeSection(groupGradeLevel, groupSection)) {
+              Alert.alert('Group Creation', 'You can only create groups for your assigned grade level or section.');
+              return;
+            }
+
+            const groupPayload = {
+              ...groupForm,
+              gradeLevel: groupGradeLevel,
+              section: groupSection,
+              description: groupSection,
+            };
             const saved = await run('group-create', () => createGroup(groupPayload), 'Group created.');
 
             if (saved) {
@@ -1368,7 +2269,7 @@ async function handleLogout() {
                 ...current.filter((group) => Number(group.id) !== Number(saved.id)),
               ]);
               setSelectedGroupId(saved.id);
-              setGroupForm({ name: '', description: '', gradeLevel: String(groupGradeLevel) });
+              setGroupForm({ name: '', description: '', section: '', gradeLevel: String(groupGradeLevel) });
             }
           }}>Create Group</SmallButton>
         </SectionCard>
@@ -1396,12 +2297,48 @@ async function handleLogout() {
             placeholder="Task title"
           />
 
-          <Field
-            label="Deadline"
-            value={taskForm.deadline}
-            onChangeText={(deadline) => setTaskForm((current) => ({ ...current, deadline }))}
-            placeholder="YYYY-MM-DD"
-          />
+          <Text style={styles.fieldLabel}>Deadline</Text>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => setTaskDeadlinePickerVisible(true)}
+            style={{
+              borderWidth: 1,
+              borderColor: '#CBD5E1',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              paddingVertical: 14,
+              paddingHorizontal: 14,
+              marginBottom: 12,
+            }}
+          >
+            <Text
+              style={{
+                color: taskForm.deadline ? '#0F172A' : '#94A3B8',
+                fontWeight: '800',
+              }}
+            >
+              {taskForm.deadline ? `Deadline: ${taskForm.deadline}` : 'Select deadline'}
+            </Text>
+          </TouchableOpacity>
+
+          {taskDeadlinePickerVisible ? (
+            <DateTimePicker
+              value={getTaskDeadlineDate(taskForm.deadline)}
+              mode="date"
+              display={Platform.OS === 'android' ? 'calendar' : 'default'}
+              minimumDate={new Date()}
+              onChange={(event, selectedDate) => {
+                setTaskDeadlinePickerVisible(false);
+
+                if (event?.type === 'set' && selectedDate) {
+                  setTaskForm((current) => ({
+                    ...current,
+                    deadline: formatTaskDeadlineValue(selectedDate),
+                  }));
+                }
+              }}
+            />
+          ) : null}
 
           <Field
             label="XP Reward"
@@ -1500,6 +2437,13 @@ async function handleLogout() {
                             Set as Leader
                           </SmallButton>
                         ) : null}
+                        <SmallButton
+                          tone="red"
+                          disabled={Boolean(busy)}
+                          onPress={() => confirmRemoveGroupMember(group, member)}
+                        >
+                          Remove
+                        </SmallButton>
                       </View>
                     );
                   }) : (
@@ -2085,6 +3029,211 @@ async function handleLogout() {
     );
   }
 
+
+
+  function getReviewItemGradeLevel(item = {}) {
+    const candidates = [
+      item.gradeLevel,
+      item.grade,
+      item.studentGradeLevel,
+      item.studentGrade,
+      item.Student?.gradeLevel,
+      item.Student?.grade,
+      item.student?.gradeLevel,
+      item.student?.grade,
+      item.learner?.gradeLevel,
+      item.learner?.grade,
+      item.user?.gradeLevel,
+      item.user?.grade,
+      item.submission?.gradeLevel,
+      item.submission?.student?.gradeLevel,
+      item.speechAttempt?.gradeLevel,
+      item.speechAttempt?.student?.gradeLevel,
+      item.SpeechAttempt?.gradeLevel,
+      item.SpeechAttempt?.Student?.gradeLevel,
+    ];
+
+    const found = candidates.find((value) => value !== undefined && value !== null && String(value).trim());
+
+    if (!found) {
+      return '';
+    }
+
+    const normalized = String(found).replace(/grade/ig, '').trim();
+    const number = Number(normalized);
+
+    return Number.isFinite(number) && number > 0 ? String(number) : normalized;
+  }
+
+  function getReviewGradeFilterOptions() {
+    const queue = reviewQueue || {};
+    const rows = Object.values(queue).flatMap((value) => Array.isArray(value) ? value : []);
+    const gradeLevels = [...new Set(rows.map(getReviewItemGradeLevel).filter(Boolean))].sort((a, b) => {
+      const left = Number(a);
+      const right = Number(b);
+
+      if (Number.isFinite(left) && Number.isFinite(right)) {
+        return left - right;
+      }
+
+      return String(a).localeCompare(String(b));
+    });
+
+    const defaultGradeLevels = ['1', '2', '3', '4', '5', '6'];
+    const allGradeLevels = [...new Set([...defaultGradeLevels, ...gradeLevels])].sort((a, b) => {
+      const left = Number(a);
+      const right = Number(b);
+
+      if (Number.isFinite(left) && Number.isFinite(right)) {
+        return left - right;
+      }
+
+      return String(a).localeCompare(String(b));
+    });
+
+    return [
+      { value: 'all', label: 'All Grade Levels' },
+      ...allGradeLevels.map((grade) => ({
+        value: String(grade),
+        label: `Grade ${grade}`,
+      })),
+    ];
+  }
+
+  function filterReviewRowsByGrade(rows = []) {
+    const list = Array.isArray(rows) ? rows : [];
+
+    if (!reviewGradeFilter || reviewGradeFilter === 'all') {
+      return list;
+    }
+
+    return list.filter((item) => String(getReviewItemGradeLevel(item)) === String(reviewGradeFilter));
+  }
+
+  function getSpeechReviewAttemptId(item = {}) {
+    const candidates = [
+      item.id,
+      item.attemptId,
+      item.speechAttemptId,
+      item.speech_attempt_id,
+      item.submissionId,
+      item.SpeechAttempt?.id,
+      item.speechAttempt?.id,
+      item.attempt?.id,
+    ];
+
+    const found = candidates.find((value) => value !== undefined && value !== null && String(value).trim());
+
+    return found ? String(found) : '';
+  }
+
+  function getSpeechReviewDraftKey(item = {}) {
+    return `speech-${getSpeechReviewAttemptId(item) || item.studentId || item.studentName || Date.now()}`;
+  }
+
+  function normalizeSpeechReviewScoreInput(value) {
+    return String(value || '').replace(/[^0-9]/g, '').slice(0, 2);
+  }
+
+  function isValidSpeechReviewScore(value) {
+    const scoreText = String(value ?? '').trim();
+
+    if (!scoreText) {
+      return false;
+    }
+
+    const score = Number(scoreText);
+
+    return Number.isInteger(score) && score >= 1 && score <= 10;
+  }
+
+  function getSpeechReviewRecordingUrl(item = {}) {
+    return (
+      item.recordingUrl ||
+      item.audioUrl ||
+      item.fileUrl ||
+      item.url ||
+      item.recording_url ||
+      item.audio_url ||
+      item.file_url ||
+      item.SpeechAttempt?.recordingUrl ||
+      item.speechAttempt?.recordingUrl ||
+      item.audio?.url ||
+      ''
+    );
+  }
+
+  function getSpeechReviewTargetText(item = {}) {
+    return cleanTeacherLessonText(
+      item.targetText ||
+      item.speechTarget ||
+      item.speech_target ||
+      item.expectedText ||
+      item.prompt ||
+      item.activityTitle ||
+      item.activity?.targetText ||
+      item.activity?.speechTarget ||
+      item.SpeechTask?.targetText ||
+      item.speechTask?.targetText ||
+      ''
+    );
+  }
+
+  function updateSpeechReviewDraft(item = {}, patch = {}) {
+    const key = getSpeechReviewDraftKey(item);
+
+    setReviewDrafts((current) => ({
+      ...current,
+      [key]: {
+        ...(current[key] || {}),
+        ...patch,
+      },
+    }));
+  }
+
+  async function submitSpeechAttemptReview(item = {}) {
+    const attemptId = getSpeechReviewAttemptId(item);
+    const draftKey = getSpeechReviewDraftKey(item);
+    const draft = reviewDrafts[draftKey] || {};
+    const score = Number(draft.score ?? item.score ?? item.rating ?? '');
+
+    if (!attemptId) {
+      Alert.alert('Speech Review', 'Missing speech attempt ID.');
+      return;
+    }
+
+    if (!isValidSpeechReviewScore(draft.score ?? item.score ?? item.rating ?? '')) {
+      Alert.alert('Speech Review', 'Enter a valid whole number score from 1 to 10 only.');
+      return;
+    }
+
+    const feedback = cleanTeacherLessonText(
+      draft.feedback ??
+      item.teacherFeedback ??
+      item.feedback ??
+      ''
+    );
+
+    const saved = await run(
+      `speech-review-${attemptId}`,
+      () => reviewSpeechAttempt(attemptId, {
+        score,
+        rating: score,
+        feedback,
+        teacherFeedback: feedback,
+      }),
+      'Speech attempt scored.'
+    );
+
+    if (saved) {
+      setReviewDrafts((current) => {
+        const next = { ...current };
+        delete next[draftKey];
+        return next;
+      });
+    }
+  }
+
   function renderReviewGradingModal() {
     if (!reviewModal) {
       return null;
@@ -2275,7 +3424,7 @@ async function handleLogout() {
   }
 
   function renderReview() {
-    const writingReviewRows = Array.isArray(reviewQueue?.writing) ? reviewQueue.writing : [];
+    const writingReviewRows = filterReviewRowsByGrade(Array.isArray(reviewQueue?.writing) ? reviewQueue.writing : []);
     const pendingWritingReviewRows = writingReviewRows.filter((item) => (
       String(item.reviewStatus || 'pending').toLowerCase() === 'pending' &&
       Boolean(item.reviewEligible) &&
@@ -2385,11 +3534,18 @@ async function handleLogout() {
           ))}
         </View>
 
-        <SectionCard>
+<SectionCard>
           <Text style={styles.cardTitle}>Student Submission Review</Text>
-          <Text style={styles.muted}>
-            Grade 3–6 writing submissions and view speech attempts from your assigned learners.
-          </Text>
+          <Text style={styles.muted}>Filter student writing submissions and speech attempts by grade level.</Text>
+          <SelectMenu
+            label="Grade Level"
+            value={reviewGradeFilter}
+            options={getReviewGradeFilterOptions()}
+            onSelect={(value) => {
+              setReviewGradeFilter(value);
+              setShowAllSpeechAttempts(false);
+            }}
+          />
         </SectionCard>
 
         <SectionCard>
@@ -2398,8 +3554,7 @@ async function handleLogout() {
               <Text style={styles.reviewSectionLabel}>Writing Submissions</Text>
               <Text style={styles.cardTitle}>Writing Submissions for Grading</Text>
               <Text style={styles.muted}>
-                Only Grade 3–6 pending writing submissions can be graded here. The score from 1–10 becomes the XP earned.
-              </Text>
+                Student writing submissions that need teacher grading will appear here.</Text>
             </View>
             <View style={styles.reviewMiniPill}>
               <Text style={styles.reviewMiniPillText}>✍️ {pendingWritingReviewRows.length} pending</Text>
@@ -2470,68 +3625,122 @@ async function handleLogout() {
             <View style={styles.reviewEmptyPanel}>
               <Text style={styles.reviewEmptyIcon}>✅</Text>
               <Text style={styles.rowTitle}>No pending writing submissions.</Text>
-              <Text style={styles.muted}>Grade 3–6 writing submissions waiting for grades will appear here.</Text>
+              <Text style={styles.muted}>Student writing submissions waiting for grades will appear here.</Text>
             </View>
           )}
         </SectionCard>
 
         <SectionCard>
-          <View style={styles.reviewSectionHeader}>
-            <View style={styles.flex1}>
-              <Text style={styles.reviewSectionLabel}>Speech Review</Text>
-              <Text style={styles.cardTitle}>Speech Attempts</Text>
-              <Text style={styles.muted}>
-                View student speech attempts, transcript, target text, and recording if available.
-              </Text>
-            </View>
-            <View style={styles.reviewMiniPill}>
-              <Text style={styles.reviewMiniPillText}>🎙️ {speechReviewRows.length} attempts</Text>
-            </View>
-          </View>
+          {(() => {
+            const speechRows = filterReviewRowsByGrade(Array.isArray(reviewQueue?.speech) ? reviewQueue.speech : []);
+            const visibleSpeechRows = showAllSpeechAttempts ? speechRows : speechRows.slice(0, 1);
+            const hiddenSpeechCount = Math.max(0, speechRows.length - visibleSpeechRows.length);
 
-          {speechReviewRows.length ? speechReviewRows.map((item) => (
-            <View key={`speech-review-${getReviewSubmissionId(item)}`} style={styles.reviewCard}>
-              {renderReviewIdentity(item, 'View Only')}
-
-              <View style={styles.reviewEvidenceGrid}>
-                <View style={styles.reviewEvidenceItem}>
-                  <Text style={styles.reviewEvidenceLabel}>Submitted Date</Text>
-                  <Text style={styles.reviewEvidenceValue}>{formatReviewDate(item.submittedAt)}</Text>
+            return (
+              <>
+                <View style={styles.reviewSectionHeader}>
+                  <View style={styles.flex1}>
+                    <Text style={styles.reviewSectionLabel}>Speech Attempts</Text>
+                    <Text style={styles.cardTitle}>Speech Attempts for Scoring</Text>
+                    <Text style={styles.muted}>
+                      Listen to each attempt, give a score from 1–10, and add optional feedback.
+                    </Text>
+                  </View>
+                  <View style={styles.reviewMiniPill}>
+                    <Text style={styles.reviewMiniPillText}>🎙️ {speechRows.length} attempt{speechRows.length === 1 ? '' : 's'}</Text>
+                  </View>
                 </View>
-                <View style={styles.reviewEvidenceItem}>
-                  <Text style={styles.reviewEvidenceLabel}>Speech Score</Text>
-                  <Text style={styles.reviewEvidenceValue}>{item.score ?? 'Not scored'}</Text>
-                </View>
-              </View>
 
-              <View style={styles.reviewContentBlock}>
-                <Text style={styles.reviewBlockLabel}>Target Text</Text>
-                <Text style={styles.reviewBlockText}>{item.task?.targetText || 'No target text available.'}</Text>
-              </View>
+                {speechRows.length ? (
+                  <>
+                    {visibleSpeechRows.map((item) => {
+                  const attemptId = getSpeechReviewAttemptId(item);
+                  const draftKey = getSpeechReviewDraftKey(item);
+                  const speechDraft = reviewDrafts[draftKey] || {};
+                  const scoreValue = String(speechDraft.score ?? item.score ?? item.rating ?? '');
+                  const feedbackValue = String(speechDraft.feedback ?? item.teacherFeedback ?? item.feedback ?? '');
+                  const recordingUrl = getSpeechReviewRecordingUrl(item);
+                  const targetText = getSpeechReviewTargetText(item);
 
-              <View style={styles.reviewContentBlock}>
-                <Text style={styles.reviewBlockLabel}>Student Transcript</Text>
-                <Text style={styles.reviewBlockText}>{item.transcript || 'No transcript available.'}</Text>
-              </View>
+                  return (
+                    <View key={`speech-review-${attemptId || draftKey}`} style={styles.reviewCardCompact}>
+                      {renderReviewIdentity(item, item.lessonTitle || item.activityTitle || 'Speech attempt')}
 
-              {item.audioUrl ? (
-                <TouchableOpacity
-                  style={styles.reviewFileButton}
-                  onPress={() => Linking.openURL(item.audioUrl).catch(() => Alert.alert('Speech Review', 'Unable to open recording link.'))}
-                >
-                  <Text style={styles.reviewFileButtonText}>▶ Play Recording</Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={styles.muted}>No recording link available.</Text>
-              )}
-            </View>
-          )) : (
-            <View style={styles.reviewEmptyPanel}>
-              <Text style={styles.reviewEmptyIcon}>🎙️</Text>
-              <Text style={styles.rowTitle}>No speech attempts yet.</Text>
-              <Text style={styles.muted}>Speech attempts from assigned learners will appear here.</Text>
-            </View>
-          )}
+                      {targetText ? (
+                        <Text style={styles.reviewFeedbackText}>Target Text: {targetText}</Text>
+                      ) : null}
+
+                      {recordingUrl ? (
+                        <>
+                          <Text selectable style={styles.muted}>Recording: {recordingUrl}</Text>
+                          <SmallButton
+                            tone="slate"
+                            onPress={() => Linking.openURL(recordingUrl)}
+                          >
+                            Open Recording
+                          </SmallButton>
+                        </>
+                      ) : (
+                        <Text style={styles.muted}>No recording link available.</Text>
+                      )}
+
+                      <Field
+                        label="Speech Score (1–10)"
+                        value={scoreValue}
+                        keyboardType="numeric"
+                        onChangeText={(score) =>
+                          updateSpeechReviewDraft(item, {
+                            score: normalizeSpeechReviewScoreInput(score),
+                          })
+                        }
+                        placeholder="Score"
+                      />
+
+                      {scoreValue && !isValidSpeechReviewScore(scoreValue) ? (
+                        <Text style={styles.error}>Score must be a whole number from 1 to 10 only.</Text>
+                      ) : null}
+
+                      <Field
+                        label="Teacher Feedback"
+                        value={feedbackValue}
+                        onChangeText={(feedback) => updateSpeechReviewDraft(item, { feedback })}
+                        placeholder="Optional feedback"
+                        multiline
+                      />
+
+                      <SmallButton
+                        disabled={Boolean(busy) || !isValidSpeechReviewScore(scoreValue)}
+                        onPress={() => submitSpeechAttemptReview(item)}
+                      >
+                        Save Speech Score
+                      </SmallButton>
+                    </View>
+                  );
+                    })}
+
+                    {speechRows.length > 1 ? (
+                  <View style={styles.buttonRow}>
+                    <SmallButton
+                      tone="slate"
+                      onPress={() => setShowAllSpeechAttempts((current) => !current)}
+                    >
+                      {showAllSpeechAttempts
+                        ? 'Show Less'
+                        : `View All Speech Attempts (${hiddenSpeechCount} more)`}
+                    </SmallButton>
+                  </View>
+                    ) : null}
+                  </>
+                ) : (
+                  <View style={styles.reviewEmptyPanel}>
+                    <Text style={styles.reviewEmptyIcon}>🎙️</Text>
+                    <Text style={styles.rowTitle}>No speech attempts yet.</Text>
+                    <Text style={styles.muted}>Student speech attempts will appear here.</Text>
+                  </View>
+                )}
+              </>
+            );
+          })()}
         </SectionCard>
 
         <SectionCard>

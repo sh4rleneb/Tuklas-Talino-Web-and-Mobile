@@ -74,6 +74,12 @@ export async function setGroupLeader(groupId, studentId) {
   });
 }
 
+export async function removeGroupMember(groupId, studentId) {
+  return api(`/groups/${groupId}/members/${studentId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function deleteGroup(groupId) {
   return api(`/groups/${groupId}`, {
     method: 'DELETE',

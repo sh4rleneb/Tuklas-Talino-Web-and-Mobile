@@ -22,7 +22,9 @@
           "microphonePermission": "Allow Tuklas Talino to access your microphone for speech activities."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker",
+      "expo-asset"
     ],
     "android": {
       "permissions": [
@@ -31,12 +33,12 @@
       ],
       "package": "com.anonymous.tuklastalino",
       "softwareKeyboardLayoutMode": "pan",
-      "icon": "./assets/tuklas-talino-icon.png",
+      "icon": "./assets/icons/tuklas-logo.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/tuklas-talino-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "foregroundImage": "./assets/icons/tuklas-logo.png",
+        "backgroundColor": "#ffffff"
       }
     },
-    "icon": "./assets/tuklas-talino-icon.png"
+    "icon": "./assets/icons/tuklas-logo.png"
   }
 }
