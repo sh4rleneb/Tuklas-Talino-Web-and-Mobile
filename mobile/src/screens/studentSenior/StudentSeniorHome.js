@@ -441,7 +441,7 @@ const lessonColors = [
                 <TouchableOpacity
                   onPress={() =>
                     navigation.navigate(
-                      'StudentSeniorLessons'
+                      'Lessons'
                     )
                   }
                 >

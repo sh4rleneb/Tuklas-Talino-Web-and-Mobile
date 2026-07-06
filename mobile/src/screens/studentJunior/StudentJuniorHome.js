@@ -129,7 +129,28 @@ export default function StudentJuniorHome({ navigation }) {
   const completedLesson = lessons.filter((lesson) => lesson?.completed).length;
   const totalLesson = lessons.length;
   const nextLesson = lessons.find((lesson) => !lesson?.completed) || lessons[0];
-  const badgePreview = badges.slice(-2).reverse();
+  const getBadgeKey = (badge) =>
+    String(
+      badge.name ||
+      badge.title ||
+      badge.badgeName ||
+      badge.badgeId ||
+      badge.id ||
+      ''
+    )
+      .trim()
+      .toLowerCase();
+
+  const uniqueBadges = badges.filter((badge, index, list) => {
+    const badgeKey = getBadgeKey(badge);
+
+    return (
+      badgeKey &&
+      index === list.findIndex((item) => getBadgeKey(item) === badgeKey)
+    );
+  });
+
+  const badgePreview = [...uniqueBadges].slice(-2).reverse();
   const activeGroupTask = groups.flatMap((group) => group.tasks || []).find((task) => !task.completed) || groups.flatMap((group) => group.tasks || [])[0];
 
   const xp = student?.xp || 0;
@@ -240,7 +261,7 @@ export default function StudentJuniorHome({ navigation }) {
 
               <View style={styles.levelBadge}>
                 <Text style={styles.levelText}>
-                  🏅 {badges.length}
+                  🏅 {uniqueBadges.length}
                 </Text>
               </View>
             </View>
@@ -260,7 +281,7 @@ export default function StudentJuniorHome({ navigation }) {
               <Text style={styles.statLabel}>Natapos</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>🏅 {badges.length}</Text>
+              <Text style={styles.statValue}>🏅 {uniqueBadges.length}</Text>
               <Text style={styles.statLabel}>Badges</Text>
             </View>
           </View>
@@ -271,7 +292,7 @@ export default function StudentJuniorHome({ navigation }) {
             <Text style={styles.sectionTitle}>
               Mga Aralin Mo
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Lesson')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Lessons')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
             </TouchableOpacity>
           </View>
@@ -279,7 +300,7 @@ export default function StudentJuniorHome({ navigation }) {
           {nextLesson ? (
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate('Lesson', {
+                  navigation.navigate('Lessons', {
                     screen: 'StudentJuniorLessonDetail',
                     params: {
                       lessonId: nextLesson.id,
@@ -335,7 +356,7 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Mga Badge</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Badge')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Badges')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
             </TouchableOpacity>
           </View>

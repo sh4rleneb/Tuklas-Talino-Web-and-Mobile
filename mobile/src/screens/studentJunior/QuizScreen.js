@@ -357,7 +357,7 @@ export default function QuizScreen({ navigation }) {
 
   function openQuizPreview(quiz) {
     setPreviewQuiz(null);
-    setActiveQuiz(randomizeQuizChoicesForAttempt(quiz, getQuizAttempts(quizAttempts, quiz).length + 1));
+    setActiveQuiz(randomizeQuizChoicesForAttempt(quiz, getQuizAttempts(attempts, quiz).length + 1));
     setQuestionIndex(-1);
     setAnswers({});
     setResult(null);
