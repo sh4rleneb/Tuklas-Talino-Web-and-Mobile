@@ -15,7 +15,7 @@ import { api } from '../api/client';
 import Card from '../components/Card';
 import { colors } from '../styles/theme';
 
-export default function Mga AbisoScreen({ navigation }) {
+export default function MgaAbisoScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);

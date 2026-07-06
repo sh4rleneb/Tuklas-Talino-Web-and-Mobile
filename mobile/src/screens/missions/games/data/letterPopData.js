@@ -1,3 +1,29 @@
+
+function localShuffleChoicesForAttempt(items = []) {
+  const list = Array.isArray(items) ? [...items] : [];
+
+  return list.map((item, itemIndex) => {
+    if (!item || !Array.isArray(item.choices)) {
+      return item;
+    }
+
+    const choices = [...item.choices];
+
+    for (let index = choices.length - 1; index > 0; index -= 1) {
+      const seed = (itemIndex + 1) * 9301 + index * 49297 + choices.length * 233280;
+      const swapIndex = seed % (index + 1);
+      const temp = choices[index];
+      choices[index] = choices[swapIndex];
+      choices[swapIndex] = temp;
+    }
+
+    return {
+      ...item,
+      choices,
+    };
+  });
+}
+
 function shuffle(items = []) {
   const copy = [...items];
 
@@ -8,13 +34,6 @@ function shuffle(items = []) {
   }
 
 
-function shuffleChoicesForAttempt(items = []) {
-  return items.map((item) => ({
-    ...item,
-    choices: Array.isArray(item.choices) ? shuffle(item.choices) : item.choices,
-    options: Array.isArray(item.options) ? shuffle(item.options) : item.options,
-  }));
-}
 
   return copy;
 }
@@ -68,5 +87,5 @@ export function getLetterPopItemsForGrade(gradeLevel = 1) {
 }
 
 export function getLetterPopAttemptItems(gradeLevel = 1) {
-  return shuffleChoicesForAttempt(shuffle(getLetterPopItemsForGrade(gradeLevel)));
+  return localShuffleChoicesForAttempt(shuffle(getLetterPopItemsForGrade(gradeLevel)));
 }

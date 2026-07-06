@@ -6994,6 +6994,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
     { id: 'lessons', icon: '📚', label: 'Lessons' },
     { id: 'quizzes', icon: '🧠', label: 'Quizzes' },
     { id: 'missions', icon: '🎮', label: 'Missions' },
+    { id: 'groups', icon: '👥', label: 'Groups' },
     { id: 'badges', icon: '🏅', label: 'Badges' },
     { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
     { id: 'profile', icon: '👤', label: 'Profile' }
@@ -15225,7 +15226,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
     const leftCount = Math.max(0, tasks.length - doneCount);
 
     if (!tasks.length) return 'Pindutin para magsimula';
-    if (tasks.some(task => isTaskPending(task))) return 'Waiting for teacher';
+    if (tasks.some(task => isTaskPending(task))) return 'Hinihintay ang Pagsusuri ng Guro';
     if (tasks.some(task => isTaskReturned(task))) return 'Ask teacher';
     if (!leftCount) return 'Done today';
     if (leftCount === 1) return '1 misyon ang natitira';
@@ -15281,7 +15282,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       activeTab="groups"
       go={go}
       icon="👥"
-      title="Missionsg Panggrupo"
+      title="Mga Misyon ng Pangkat"
       subtitle="Pumili. Tumulong. Tapos."
     >
       <style>{`
@@ -15330,7 +15331,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">👥 Missions ng Koponan</h2>
+            <h2 className="g12-section-title">👥 Mga Misyon ng Pangkat</h2>
             <p className="g12-section-subtitle">Pumili. Tumulong. Tapos.</p>
           </div>
         </div>
@@ -15361,7 +15362,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                   <div className="g12-team-mascot">🎉</div>
                   <div>
                     <h3>Done Today</h3>
-                    <p>{finishedGroups.length ? 'You finished these teams.' : 'Wala pang natapos na grupo.'}</p>
+                    <p>{finishedGroups.length ? 'Natapos na ng inyong pangkat ang mga misyong ito.' : 'Wala pang natapos na grupo.'}</p>
                   </div>
                 </div>
 
@@ -15401,8 +15402,8 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                 <div className="g12-team-flow-hero">
                   <div className="g12-team-mascot">👥</div>
                   <div>
-                    <h3>{activeGroups.length ? 'Pick a team' : 'All done today!'}</h3>
-                    <p>{activeGroups.length ? 'Tap one team.' : 'Tap Done to see it.'}</p>
+                    <h3>{activeGroups.length ? 'Pumili ng Pangkat' : 'Tapos na ang mga gawain ngayon!'}</h3>
+                    <p>{activeGroups.length ? 'Pumili ng isang pangkat upang magsimula.' : 'Pindutin ang "Tapos Na" upang makita ito.'}</p>
                   </div>
                 </div>
 
@@ -15521,7 +15522,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                     onClick={() => primaryTask && markTaskDone(primaryTask.id)}
                   >
                     {isTaskPending(primaryTask)
-                      ? 'Waiting for teacher'
+                      ? 'Hinihintay ang Pagsusuri ng Guro'
                       : taskRecorded
                         ? 'Tapos na ang Missions'
                         : isTaskReturned(primaryTask)
@@ -15535,8 +15536,8 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
             {flowStep === 'done' && (
               <div className="g12-team-flow-card g12-team-done">
                 <div className="done-icon">🎉</div>
-                <h3>{selectedGroupDone ? 'Tapos na ang Missions!' : 'Waiting for teacher'}</h3>
-                <p>{selectedGroupDone ? 'Nasuri na ng guro ang misyong panggrupo.' : 'Susuriin ng guro ang inyong gawa.'}</p>
+                <h3>{selectedGroupDone ? 'Tapos na ang Missions!' : 'Hinihintay ang Pagsusuri ng Guro'}</h3>
+                <p>{selectedGroupDone ? 'Nasuri na ng guro ang misyon ng inyong pangkat.' : 'Susuriin ng guro ang inyong gawa.'}</p>
                 <div className="g12-team-actions" style={{ justifyContent: 'center' }}>
                   <button type="button" className="g12-main-btn" onClick={() => setFlowStep('start')}>Back to teams</button>
                 </div>
@@ -15711,7 +15712,7 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
 
                           <div className="g46-submit-grid">
                             <label className="g46-submit-field" htmlFor={`group-role-${task.id}`}>
-                              <span>My Role in the Group</span>
+                              <span>Aking Tungkulin sa Grupo</span>
                               <input
                                 className="input-field"
                                 id={`group-role-${task.id}`}
@@ -15722,7 +15723,7 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
                             </label>
 
                             <div className="g46-submit-field">
-                              <span>Upload Group Output</span>
+                              <span>I-upload ang Output ng Grupo</span>
                               <input
                                 className="g46-file-hidden"
                                 id={`group-file-${task.id}`}

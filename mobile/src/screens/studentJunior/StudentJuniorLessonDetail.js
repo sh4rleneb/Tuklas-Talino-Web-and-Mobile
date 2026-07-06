@@ -357,6 +357,39 @@ function getServerMissionAttemptCount(lesson = {}, activity = {}) {
 }
 
 
+
+function getStableShuffleSeed(value = '') {
+  return String(value || '')
+    .split('')
+    .reduce((hash, char) => {
+      return ((hash << 5) - hash + char.charCodeAt(0)) >>> 0;
+    }, 2166136261);
+}
+
+function shuffleChoicesForAttempt(choices = [], attemptKey = '') {
+  const list = Array.isArray(choices) ? [...choices] : [];
+
+  if (list.length <= 1) {
+    return list;
+  }
+
+  let seed = String(attemptKey || list.join('|'))
+    .split('')
+    .reduce((hash, char) => {
+      return ((hash << 5) - hash + char.charCodeAt(0)) >>> 0;
+    }, 2166136261);
+
+  for (let index = list.length - 1; index > 0; index -= 1) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const swapIndex = seed % (index + 1);
+    const temp = list[index];
+    list[index] = list[swapIndex];
+    list[swapIndex] = temp;
+  }
+
+  return list;
+}
+
 export default function StudentJuniorLessonDetail({ navigation, route }) {
   const lessonId = route?.params?.lessonId;
   const [lesson, setLesson] = useState(null);
@@ -366,6 +399,8 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [completed, setCompleted] = useState(false);
   const [completionResult, setCompletionResult] = useState(null);
   const [mcqAnswers, setMcqAnswers] = useState({});
+  const [mcqPassed, setMcqPassed] = useState({});
+  const [mcqChoiceShuffleNonce, setMcqChoiceShuffleNonce] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [writingAnswer, setWritingAnswer] = useState('');
   const [speechTranscript, setSpeechTranscript] = useState('');
@@ -1059,6 +1094,19 @@ const stepScrollRef = useRef(null);
   }
 
   async function advance(activityType) {
+    if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq') {
+      const quizGateKey = String(currentActivity?.id || currentActivity?.activityId || currentActivity?.title || step);
+
+      if (!mcqPassed[quizGateKey]) {
+        setActivityNotice({
+          type: 'warning',
+          text: 'Sagutan muna nang tama ang pagsusulit bago magpatuloy sa susunod na hakbang.',
+        });
+        return;
+      }
+    }
+
+
     if (submitting) return;
     setSubmitting(true);
     try {
@@ -1085,6 +1133,19 @@ const stepScrollRef = useRef(null);
           selectedOptionId: option.id,
         },
       });
+
+      if (data && !data.correct) {
+        setMcqChoiceShuffleNonce((prev) => prev + 1);
+      }
+
+
+
+      if (data?.correct) {
+        setMcqPassed((prev) => ({
+          ...prev,
+          [String(currentActivity?.id || currentActivity?.activityId || currentActivity?.title || step)]: true,
+        }));
+      }
       setMcqAnswers((answers) => ({
         ...answers,
         [question.id]: {
@@ -1917,7 +1978,7 @@ const stepScrollRef = useRef(null);
 
     if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
  {
-            const questions = buildMissionQuestionPool(currentActivity, lesson);
+            const questions = buildMissionQuestionPool(currentActivity, lesson).slice(0, 1);
       const allAnswered = questions.length > 0 && questions.every((question) => mcqAnswers[question.id]);
       return (
         <View style={styles.card}>
@@ -1994,18 +2055,6 @@ const stepScrollRef = useRef(null);
                     marginBottom:12,
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize:13,
-                      fontWeight:'900',
-                      color:'#1D4ED8',
-                      marginBottom:6,
-                      textTransform:'uppercase',
-                      letterSpacing:0.5,
-                    }}
-                  >
-                    Tanong
-                  </Text>
                   <Text style={styles.question}>
                     {question.question}
                   </Text>
@@ -2117,20 +2166,7 @@ const stepScrollRef = useRef(null);
               <Text style={styles.primaryText}>Susunod →</Text>
             </TouchableOpacity>
           </View>
-          ) : (
-            <Text
-              style={{
-                textAlign: 'center',
-                fontSize: 18,
-                fontWeight: '900',
-                color: '#15803D',
-                marginTop: 12,
-                marginBottom: 8,
-              }}
-            >
-              ⭐ Tanong {currentQuestionIndex + 1} sa {questions.length} • Pagsubok {currentMissionAttemptLabel} sa {MAX_MISSION_ATTEMPTS}
-            </Text>
-          )}
+          ) : null}
 
 {activityNotice ? (
             littleLearnerGame ? (
@@ -2978,7 +3014,7 @@ const stepScrollRef = useRef(null);
         </View>
 
         <Text style={styles.title}>📖 {lesson.title}</Text>
-        <Text style={styles.stepText}>Hakbang {Math.min(step, totalSteps)} sa {totalSteps} • +{lesson.xpReward || 0} XP</Text>
+        <Text style={styles.stepText}>⚡ +{lesson.xpReward || 0} XP</Text>
 
         {littleLearnerGame ? (
           <View
@@ -3029,7 +3065,7 @@ const stepScrollRef = useRef(null);
                 fontWeight:'700',
               }}
             >
-              Hakbang {Math.min(step, totalSteps)} sa {totalSteps}
+              Hakbang {Math.min(step, totalSteps)}
             </Text>
 
             <View
