@@ -174,7 +174,7 @@ export default function QuizzesPage({
       fallback;
 
     const finalTitle = chosen.replace(/\s*quiz\s*$/i, "").trim() || "Quizzes";
-    return `Quizzes sa ${finalTitle}`;
+    return finalTitle;
   }
 
   // Keep this function name for existing Grade 1-2 card rendering.
@@ -185,7 +185,15 @@ export default function QuizzesPage({
   const visibleQuizzes =
     quizSubjectFilter === "ALL"
       ? quizzes
-      : quizzes.filter((quiz) => quiz.subject === quizSubjectFilter);
+      : quizzes.filter((quiz) => {
+        const subject = String(quiz.subject || '').trim();
+        return (
+          subject === quizSubjectFilter ||
+          (subject === 'Oral Comm' && quizSubjectFilter === 'Komunikasyong Pagsasalita') ||
+          (subject === 'Komunikasyong Pagsasalita' && quizSubjectFilter === 'Oral Comm') ||
+          (subject === 'Oral Communication' && quizSubjectFilter === 'Komunikasyong Pagsasalita')
+        );
+      });
 
   const recommendedQuizzes =
     visibleQuizzes.find((quiz) => asArray(quizAttempts?.[quiz.id]).length < maxQuizAttempts) ||
@@ -195,7 +203,15 @@ export default function QuizzesPage({
   const subjectCounts = subjects
     .map((subject) => ({
       ...subject,
-      count: quizzes.filter((quiz) => quiz.subject === subject.name).length,
+      count: quizzes.filter((quiz) => {
+        const value = String(quiz.subject || '').trim();
+        return (
+          value === subject.name ||
+          (value === 'Oral Comm' && subject.name === 'Komunikasyong Pagsasalita') ||
+          (value === 'Komunikasyong Pagsasalita' && subject.name === 'Oral Comm') ||
+          (value === 'Oral Communication' && subject.name === 'Komunikasyong Pagsasalita')
+        );
+      }).length,
     }))
     .filter((item) => item.count > 0);
 
@@ -221,9 +237,9 @@ export default function QuizzesPage({
         ? `Naisave ang pagsubok ${Math.min(attemptsUsed, maxQuizAttempts)}/${maxQuizAttempts}`
         : "Handa nang simulan";
     const actionLabel = attemptsDone
-      ? "Review"
+      ? "Balikan"
       : attemptsUsed
-        ? "Try Again"
+        ? "Subukang Muli"
         : "Simulan";
 
     return {
@@ -252,7 +268,7 @@ export default function QuizzesPage({
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
-                {early ? "🧠 Oras ng Quizzes" : "Listahan ng Quizzes"}
+                {early ? "🧠 Mga Pagsusulit" : "Listahan ng mga Pagsusulit"}
               </h2>
 
             </div>
@@ -262,7 +278,7 @@ export default function QuizzesPage({
           {subjectCounts.length > 0 && (
             <div
               className="quiz-game-subject-row"
-              aria-label="Quizzes subject filters"
+              aria-label="Mga filter ng asignatura"
               style={!early ? {
                 gap: 12,
                 marginTop: 18,
@@ -277,7 +293,7 @@ export default function QuizzesPage({
                 style={grade46FilterStyle(quizSubjectFilter === "ALL", "ALL")}
                 onClick={() => setQuizSubjectFilter("ALL")}
               >
-                🌎 All
+                🌎 Lahat
               </button>
 
               {subjectCounts.map((subject) => (
@@ -327,13 +343,15 @@ export default function QuizzesPage({
 
           {!quizzes.length && (
             <div className={early ? "g12-empty" : "g46-ref-empty"}>
-              No quizzes yet. Create a lesson with a Quizzes activity first.
+              Wala pang mga pagsusulit.
+
+Gumawa muna ng aralin na may aktibidad na pagsusulit.
             </div>
           )}
 
           {quizzes.length > 0 && !visibleQuizzes.length && (
             <div className={early ? "g12-empty" : "g46-ref-empty"}>
-              No quizzes found for this subject yet.
+              Wala pang pagsusulit para sa asignaturang ito.
             </div>
           )}
         </section>
@@ -348,7 +366,7 @@ export default function QuizzesPage({
         activeTab="quizzes"
         go={go}
         icon="🧠"
-        title="Oras ng Quizzes"
+        title="Mga Pagsusulit"
         subtitle=""
       >
         {quizContent}
@@ -364,7 +382,7 @@ export default function QuizzesPage({
         go={go}
         logout={logout}
         icon="🧠"
-        title="Mga Quizzes"
+        title="Mga Pagsusulit"
         subtitle=""
       >
         {quizContent}

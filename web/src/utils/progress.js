@@ -6,5 +6,5 @@ export function percent(value, total) {
   return total ? Math.round((value / total) * 100) : 0;
 }
 
-export const subjects = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Oral Comm', 'Pagsulat'];
+export const subjects = ['Pagbasa', 'Bokabularyo', 'Panitikan', 'Komunikasyong Pagsasalita', 'Pagsulat'];
 export const avatars = ['🦋','🐸','🦊','🐨','🦁','🐼','🐯','🐙','🦉','🐢'];

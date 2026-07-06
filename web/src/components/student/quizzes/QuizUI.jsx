@@ -44,7 +44,7 @@ function subjectTheme(subject) {
       accent: "#F39C12",
       tag: "Tula",
     },
-    "Oral Comm": {
+    "Komunikasyong Pagsasalita": {
       icon: "🎙️",
       iconSrc: "/category-oralcomm.png",
       bg: "#FFE2EA",
@@ -84,7 +84,7 @@ function masteryFromPercent(percent = 0) {
       label: "Advanced",
       icon: "🏆",
       tone: "green",
-      note: "Excellent mastery. You showed strong understanding of the lesson.",
+      note: "Excellent mastery. You showed strong understanding sa the lesson.",
     };
   }
 
@@ -93,7 +93,7 @@ function masteryFromPercent(percent = 0) {
       label: "Proficient",
       icon: "🌟",
       tone: "blue",
-      note: "Great work. You understood most of the lesson.",
+      note: "Great work. You understood most sa the lesson.",
     };
   }
 
@@ -1137,7 +1137,7 @@ function QuizGameProgress({ currentIndex = 0, total = 0, answeredCount = 0 }) {
   return (
     <div className="quiz-progress-line" aria-label="Quiz progress">
       <span>
-        Question {Math.min(currentIndex + 1, Math.max(total, 1))} of{" "}
+        Tanong {Math.min(currentIndex + 1, Math.max(total, 1))} sa{" "}
         {total || 1}
       </span>
 
@@ -1169,7 +1169,7 @@ function QuizGameHeader({ quiz, best, go, onBack }) {
         <div>
           <h2>{quiz?.title || "Quizzes"}</h2>
           <small>
-            {quiz?.subject || "Filipino"} • {quiz?.type || "Pagsasanay na Quizzes"}{" "}
+            {quiz?.subject || "Filipino"} • {quiz?.type || "Pagsusulit"}{" "}
             {best ? `• Best ${best.percent}%` : ""}
           </small>
         </div>
@@ -1202,7 +1202,7 @@ function QuizStartCard({ quiz, best, attemptsUsed = 0, maxAttempts = 2, onStart,
   return (
     <section className="quiz-game-landing-card" aria-label="Quiz start">
       <div className="quiz-game-copy">
-        <h2>Ready ka na sa Quiz?</h2>
+        <h2>Handa ka na ba sa Pagsusulit?</h2>
 
         <p>
           Basahin ang tanong at piliin ang tamang sagot.
@@ -1210,7 +1210,7 @@ function QuizStartCard({ quiz, best, attemptsUsed = 0, maxAttempts = 2, onStart,
 
         {best && (
           <p>
-            <strong>Best score:</strong> {best.score}/{best.total} (
+            <strong>Pinakamataas na Iskor:</strong> {best.score}/{best.total} (
             {best.percent}%) • {best.mastery?.label || "Naisave ang pag-unlad"}
           </p>
         )}
@@ -1224,11 +1224,11 @@ function QuizStartCard({ quiz, best, attemptsUsed = 0, maxAttempts = 2, onStart,
           style={{ justifyContent: "flex-start", marginTop: 18 }}
         >
           <button type="button" className="quiz-game-start-btn" onClick={onStart}>
-            🚀 Start Quiz
+            🚀 Simulan ang Pagsusulit
           </button>
 
           <button type="button" className="quiz-secondary" onClick={onBack}>
-            ← Back to Quizzes
+            ← Bumalik sa Mga Pagsusulit
           </button>
         </div>
       </div>
@@ -1270,7 +1270,7 @@ function QuizFeedbackMessage({ selectedOption, correctOption }) {
 
         <div>
           <h3>Piliin ang sagot mo.</h3>
-          <p>Take your time. Basahin muna ang tanong bago pumili.</p>
+          <p>Maglaan ng oras. Basahin muna ang tanong bago pumili.</p>
         </div>
       </div>
     );
@@ -1287,7 +1287,7 @@ function QuizFeedbackMessage({ selectedOption, correctOption }) {
       <div className="quiz-feedback-icon">{correct ? "🎉" : "🌱"}</div>
 
       <div>
-        <h3>{correct ? "Tama! Great job!" : "Good try! Balikan natin."}</h3>
+        <h3>{correct ? "Tama! Magaling!" : "Magandang pagsubok! Balikan natin."}</h3>
 
         <p>
           {correct
@@ -1303,9 +1303,9 @@ function QuizFeedbackMessage({ selectedOption, correctOption }) {
 
 function QuizQuestionCard({ quiz, question, currentIndex, total }) {
   return (
-    <section className="quiz-question-box" aria-label={`Question ${currentIndex + 1}`}>
+    <section className="quiz-question-box" aria-label={`Tanong ${currentIndex + 1}`}>
       <div>
-        <small>{quiz?.subject || "Filipino"} • {question?.source || "Suriin ang Quizzes"}</small>
+        <small>{quiz?.subject || "Filipino"} • {question?.source || "Suriin ang Pagsusulit"}</small>
         <h2>{question?.prompt || "Piliin ang tamang sagot."}</h2>
       </div>
 
@@ -1394,7 +1394,7 @@ function QuizResultCard({ result }) {
           {result.bestScoreText && (
             <div className="quiz-reward-box" style={rewardBoxStyle}>
               <b>{result.bestScoreText}</b>
-              <span>Best score</span>
+              <span>Pinakamataas na Iskor</span>
             </div>
           )}
 
@@ -1404,7 +1404,7 @@ function QuizResultCard({ result }) {
           </div>
 
           <div className="quiz-reward-box" style={rewardBoxStyle}>
-            <b>{result.attemptNo || 1} of {result.maxAttempts || 2}</b>
+            <b>{result.attemptNo || 1} sa {result.maxAttempts || 2}</b>
             <span>Quiz attempts</span>
           </div>
         </div>

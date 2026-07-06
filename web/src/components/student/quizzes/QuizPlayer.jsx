@@ -111,7 +111,7 @@ export default function QuizPlayer({
             onClick={() => go("screen-stu-quizzes")}
             style={{ marginTop: 18 }}
           >
-            ← Back to Quizzes
+            ← Bumalik sa Mga Pagsusulit
           </button>
         </div>
       </section>
@@ -175,7 +175,7 @@ export default function QuizPlayer({
                   className="quiz-secondary"
                   onClick={() => goWithQuizGuard("screen-stu-quizzes")}
                 >
-                  ← Back to Quizzes
+                  ← Bumalik sa Mga Pagsusulit
                 </button>
               )}
 
@@ -185,7 +185,7 @@ export default function QuizPlayer({
                 onClick={previousQuestion}
                 disabled={currentIndex === 0}
               >
-                Previous
+                Nakaraang Tanong
               </button>
             </div>
 
@@ -196,7 +196,7 @@ export default function QuizPlayer({
                   className="quiz-primary"
                   onClick={nextQuestion}
                 >
-                  {hasSelectedAnswer ? "Susunod na Tanong →" : "Skip for now →"}
+                  {hasSelectedAnswer ? "Susunod na Tanong →" : "Laktawan Muna →"}
                 </button>
               ) : (
                 <button
@@ -204,7 +204,7 @@ export default function QuizPlayer({
                   className="quiz-primary"
                   onClick={finishQuiz}
                 >
-                  Submit Quiz
+                  Isumite ang Quiz
                 </button>
               )}
             </div>
@@ -229,7 +229,7 @@ export default function QuizPlayer({
         activeTab="quizzes"
         go={go}
         icon="🧠"
-        title={started ? "Oras ng Quizzes" : "Hamon sa Quizzes"}
+        title={started ? "Mga Pagsusulit" : "Hamon sa Pagsusulit"}
         subtitle={
           started
             ? "Tapusin muna ang pagsusulit bago lumipat sa ibang tab."
@@ -258,7 +258,7 @@ export default function QuizPlayer({
             className="g46-ref-soft-btn"
             onClick={() => goWithQuizGuard("screen-stu-quizzes")}
           >
-            ← Quizzes
+            ← Mga Pagsusulit
           </button>
         }
         beforeNavigate={beforeQuizNavigate}

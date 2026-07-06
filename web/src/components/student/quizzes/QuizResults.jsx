@@ -36,7 +36,7 @@ function questionPrompt(question, fallback = "") {
   ).trim();
 }
 
-function hydrateAttemptReview(attempt = {}, quiz = {}) {
+function hydrateAttemptBalikan(attempt = {}, quiz = {}) {
   const questions = list(quiz?.questions);
   const reviewItems = list(attempt?.review?.length ? attempt.review : attempt?.details);
 
@@ -109,28 +109,28 @@ export default function QuizResults({
     : [result].filter(Boolean);
   const attemptHistory = rawAttemptHistory.map((attempt) => ({
     ...attempt,
-    review: hydrateAttemptReview(attempt, sourceQuiz),
+    review: hydrateAttemptBalikan(attempt, sourceQuiz),
   }));
   const highestAttemptNo = Math.max(
     0,
     ...attemptHistory.map((attempt) => Number(attempt?.attemptNo || 0))
   );
   const preferredAttemptNo = attemptNo || highestAttemptNo;
-  const preferredReviewIndex = Math.max(
+  const preferredBalikanIndex = Math.max(
     0,
     attemptHistory.findIndex((attempt) => Number(attempt?.attemptNo || 0) === preferredAttemptNo)
   );
-  const [selectedReviewIndex, setSelectedReviewIndex] = useState(preferredReviewIndex);
+  const [selectedBalikanIndex, setSelectedBalikanIndex] = useState(preferredBalikanIndex);
 
   useEffect(() => {
-    setSelectedReviewIndex(preferredReviewIndex);
-  }, [result?.id, result?.attemptNo, result?.submittedAt, preferredReviewIndex]);
+    setSelectedBalikanIndex(preferredBalikanIndex);
+  }, [result?.id, result?.attemptNo, result?.submittedAt, preferredBalikanIndex]);
 
   const canRetake = Boolean(sourceQuiz && attemptHistory.length < maxAttempts);
-  const showReview = !canRetake;
-  const activeReviewIndex = Math.min(selectedReviewIndex, Math.max(0, attemptHistory.length - 1));
-  const activeAttempt = attemptHistory[activeReviewIndex] || result;
-  const activeReviewItems = activeAttempt?.review || activeAttempt?.details || [];
+  const showBalikan = !canRetake;
+  const activeBalikanIndex = Math.min(selectedBalikanIndex, Math.max(0, attemptHistory.length - 1));
+  const activeAttempt = attemptHistory[activeBalikanIndex] || result;
+  const activeBalikanItems = activeAttempt?.review || activeAttempt?.details || [];
   const bestAttempt = attemptHistory.reduce((best, attempt) => {
     const currentPercent = Number(attempt?.percent ?? 0);
     const bestPercent = Number(best?.percent ?? -1);
@@ -164,11 +164,11 @@ export default function QuizResults({
           <div className={early ? "g12-section-head" : "g46-ref-panel-head"}>
             <div>
               <h2 className={early ? "g12-section-title" : ""}>
-                {showReview ? "Balikan ang mga Sagot" : "Naisave ang Pagsubok sa Quizzes"}
+                {showBalikan ? "Balikan ang mga Sagot" : "Naitala ang iyong resulta sa pagsusulit."}
               </h2>
 
               <p className={early ? "g12-section-subtitle" : "g46-ref-muted"}>
-                {showReview
+                {showBalikan
                   ? "Suriin ang iyong mga sagot."
                   : "Subukan muna muli. Susunod ang feedback."}
               </p>
@@ -181,7 +181,7 @@ export default function QuizResults({
                   className="quiz-primary"
                   onClick={() => openQuiz(sourceQuiz)}
                 >
-                  Retake Quiz
+                  Ulitin ang Pagsusulit
                 </button>
               )}
 
@@ -190,12 +190,12 @@ export default function QuizResults({
                 className="quiz-secondary"
                 onClick={() => go("screen-stu-quizzes")}
               >
-                Back to Quizzes
+                Bumalik sa Mga Pagsusulit
               </button>
             </div>
           </div>
 
-          {!showReview ? (
+          {!showBalikan ? (
             <div
               className="quiz-review-item correct"
               style={early ? { fontSize: 24, padding: 26, borderRadius: 30, lineHeight: 1.55 } : { fontSize: 17, lineHeight: 1.45 }}
@@ -207,14 +207,14 @@ export default function QuizResults({
             <div className="quiz-review-list">
               <div className="quiz-result-actions" style={{ justifyContent: "flex-start", marginBottom: 12 }}>
                 {attemptHistory.map((attempt, attemptIndex) => {
-                  const selected = activeReviewIndex === attemptIndex;
+                  const selected = activeBalikanIndex === attemptIndex;
 
                   return (
                     <button
                       type="button"
                       key={attempt.id || attemptIndex}
                       className={selected ? "quiz-primary" : "quiz-secondary"}
-                      onClick={() => setSelectedReviewIndex(attemptIndex)}
+                      onClick={() => setSelectedBalikanIndex(attemptIndex)}
                       style={early ? {
                         fontSize: 20,
                         padding: "14px 22px",
@@ -247,17 +247,17 @@ export default function QuizResults({
 
               <section style={{ display: "grid", gap: 12 }}>
                 <h3 className={early ? "g12-section-title" : ""}>
-                  Try {activeAttempt?.attemptNo || activeReviewIndex + 1} of {maxAttempts}
+                  Try {activeAttempt?.attemptNo || activeBalikanIndex + 1} sa {maxAttempts}
                 </h3>
 
-                {activeReviewItems.map((item, index) => (
+                {activeBalikanItems.map((item, index) => (
                   <article
-                    key={`${activeAttempt?.id || activeReviewIndex}-${item.questionId || index}`}
+                    key={`${activeAttempt?.id || activeBalikanIndex}-${item.questionId || index}`}
                     className={`quiz-review-item ${item.correct ? "correct" : "wrong"}`}
                     style={early ? { fontSize: 24, padding: 26, borderRadius: 30, lineHeight: 1.55 } : { fontSize: 17, lineHeight: 1.45 }}
                   >
                     <b>
-                      Question {index + 1}: {item.correct ? "✅ Correct!" : "❌ Review this"}
+                      Tanong {index + 1}: {item.correct ? "✅ Tama!" : "❌ Balikan Ito"}
                     </b>
 
                     <p>{item.prompt}</p>
@@ -286,7 +286,7 @@ export default function QuizResults({
         activeTab="quizzes"
         go={go}
         icon={mastery.icon || "🏆"}
-        title="Resulta ng Quizzes"
+        title="Resulta ng Pagsusulit"
         subtitle={mastery.label}
       >
         {resultContent}
@@ -302,7 +302,7 @@ export default function QuizResults({
         go={go}
         logout={logout}
         icon={mastery.icon || "🏆"}
-        title="Resulta ng Quizzes"
+        title="Resulta ng Pagsusulit"
         subtitle={`${mastery.label} • ${result.score}/${result.total}`}
       >
         {resultContent}

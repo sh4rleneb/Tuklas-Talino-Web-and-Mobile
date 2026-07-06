@@ -6959,6 +6959,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
         <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
         <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
         <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
+        <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
         <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
         <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
         <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
@@ -7944,6 +7945,7 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
           <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
           <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
           <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
+          <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
           <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
           <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
           <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
