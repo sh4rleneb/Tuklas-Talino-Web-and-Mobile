@@ -15,6 +15,8 @@ export default function AdminDashboard({
   resetTeacherPassword,
   archiveTeacher,
   reactivateTeacher,
+  updateAccountStatus,
+  updateStudentEnrollment,
   assignTeacherClass,
   removeTeacherAssignment,
   reload,
@@ -330,6 +332,9 @@ const filteredLogs = logs.filter(log => {
   const [assignGradeFilter, setAssignGradeFilter] = useState('');
   const [studentGradeFilter, setStudentGradeFilter] = useState('all');
   const [studentSectionFilter, setStudentSectionFilter] = useState('all');
+  const [studentEnrollmentDrafts, setStudentEnrollmentDrafts] = useState({});
+  const [savingEnrollmentId, setSavingEnrollmentId] = useState(null);
+  const [savingAccountStatusId, setSavingAccountStatusId] = useState(null);
   const sectionOptions = [...new Set(
     classOptions
       .filter(option => !assignGradeFilter || Number(option.gradeLevel) === Number(assignGradeFilter))
@@ -377,6 +382,89 @@ const filteredLogs = logs.filter(log => {
 
   function assignmentLabel(assignment) {
     return `Grade ${assignment.gradeLevel} • ${assignment.section}`;
+  }
+
+  const accountStatusOptions = ['active', 'inactive', 'archived'];
+
+  function accountUserIdForEntity(entity = {}) {
+    return (
+      entity?.userId ||
+      entity?.User?.id ||
+      entity?.user?.id ||
+      entity?.Account?.id ||
+      entity?.account?.id ||
+      entity?.accountUserId ||
+      null
+    );
+  }
+
+  function statusForEntity(entity = {}) {
+    return String(
+      entity?.User?.status ||
+      entity?.user?.status ||
+      entity?.status ||
+      'active'
+    ).toLowerCase();
+  }
+
+  function enrollmentDraftForStudent(student = {}) {
+    const existing = studentEnrollmentDrafts[student.id];
+
+    return existing || {
+      gradeLevel: String(student.gradeLevel || student.grade || '1'),
+      section: normalizeSpaces(student.section || student.sectionName || student.classSection || ''),
+    };
+  }
+
+  function updateEnrollmentDraft(studentId, patch) {
+    setStudentEnrollmentDrafts(current => ({
+      ...current,
+      [studentId]: {
+        ...(current[studentId] || {}),
+        ...patch,
+      },
+    }));
+  }
+
+  async function saveStudentEnrollment(student) {
+    if (!updateStudentEnrollment) return;
+
+    const draft = enrollmentDraftForStudent(student);
+    setSavingEnrollmentId(student.id);
+
+    try {
+      await updateStudentEnrollment(student.id, {
+        gradeLevel: Number(draft.gradeLevel),
+        section: normalizeSpaces(draft.section),
+      });
+
+      setStudentEnrollmentDrafts(current => {
+        const next = { ...current };
+        delete next[student.id];
+        return next;
+      });
+    } finally {
+      setSavingEnrollmentId(null);
+    }
+  }
+
+  async function saveAccountStatus(entity, status, label) {
+    if (!updateAccountStatus) return;
+
+    const userId = accountUserIdForEntity(entity);
+
+    if (!userId) {
+      window.alert('Missing linked account ID for this record.');
+      return;
+    }
+
+    setSavingAccountStatusId(userId);
+
+    try {
+      await updateAccountStatus(userId, status, label);
+    } finally {
+      setSavingAccountStatusId(null);
+    }
   }
 
 
@@ -980,29 +1068,77 @@ function teacherNameForAssignment(assignment) {
                       </p>
                     </div>
 
-{filteredStudents.map(s => (
-                    <div className="admin-clean-table-row" key={s.id}>
-                      <span>
-                        <strong>{s.name}</strong>
-                        <small>{s.studentCode}</small>
-                      </span>
+{filteredStudents.map(s => {
+                    const enrollmentDraft = enrollmentDraftForStudent(s);
+                    const isSavingEnrollment = Number(savingEnrollmentId) === Number(s.id);
+                    const userId = accountUserIdForEntity(s);
+                    const isSavingStatus = userId && String(savingAccountStatusId) === String(userId);
+                    const currentStatus = statusForEntity(s);
 
-                      <span>
-                        <strong>Grade {s.gradeLevel}</strong>
-                        <small>{s.section}</small>
-                      </span>
+                    return (
+                      <div className="admin-clean-table-row" key={s.id}>
+                        <span>
+                          <strong>{s.name}</strong>
+                          <small>{s.studentCode}</small>
+                        </span>
 
-                      <span>
-                        <span className="lms-mini-pill">{s.status}</span>
-                      </span>
+                        <span>
+                          <div style={{ display: 'grid', gap: 8 }}>
+                            <select
+                              className="input-field"
+                              value={String(enrollmentDraft.gradeLevel || '')}
+                              onChange={event => updateEnrollmentDraft(s.id, { gradeLevel: event.target.value })}
+                              style={{ minWidth: 120 }}
+                            >
+                              {[1, 2, 3, 4, 5, 6].map(grade => (
+                                <option key={`student-${s.id}-grade-${grade}`} value={grade}>Grade {grade}</option>
+                              ))}
+                            </select>
 
-                      <span className="admin-clean-actions">
-                        <button className="btn btn-outline btn-sm" onClick={() => openVault('Student', s)}>Login Credentials</button>
-                        <button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset Progress</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button>
-                      </span>
-                    </div>
-                  ))}
+                            <input
+                              className="input-field"
+                              value={enrollmentDraft.section || ''}
+                              onChange={event => updateEnrollmentDraft(s.id, { section: event.target.value })}
+                              placeholder="Section"
+                              style={{ minWidth: 120 }}
+                            />
+
+                            <button
+                              className="btn btn-outline btn-sm"
+                              type="button"
+                              disabled={!updateStudentEnrollment || isSavingEnrollment}
+                              onClick={() => saveStudentEnrollment(s)}
+                            >
+                              {isSavingEnrollment ? 'Saving Class...' : 'Save Class'}
+                            </button>
+                          </div>
+                        </span>
+
+                        <span>
+                          <select
+                            className="input-field"
+                            value={accountStatusOptions.includes(currentStatus) ? currentStatus : 'active'}
+                            disabled={!updateAccountStatus || !userId || isSavingStatus}
+                            onChange={event => saveAccountStatus(s, event.target.value, s.name || 'student account')}
+                            title={userId ? 'Update account status' : 'No linked user ID found'}
+                            style={{ minWidth: 130 }}
+                          >
+                            {accountStatusOptions.map(status => (
+                              <option key={`student-${s.id}-status-${status}`} value={status}>
+                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                        </span>
+
+                        <span className="admin-clean-actions">
+                          <button className="btn btn-outline btn-sm" onClick={() => openVault('Student', s)}>Login Credentials</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset Progress</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button>
+                        </span>
+                      </div>
+                    );
+                  })}
 
                   {!students.length && (
                     <div className="lms-empty-line">No active students.</div>
@@ -1041,6 +1177,20 @@ function teacherNameForAssignment(assignment) {
                         </div>
 
                         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+                          <select
+                            className="input-field"
+                            value={accountStatusOptions.includes(statusForEntity(t)) ? statusForEntity(t) : 'active'}
+                            disabled={!updateAccountStatus || !accountUserIdForEntity(t) || String(savingAccountStatusId) === String(accountUserIdForEntity(t))}
+                            onChange={event => saveAccountStatus(t, event.target.value, t.name || 'teacher account')}
+                            title={accountUserIdForEntity(t) ? 'Update account status' : 'No linked user ID found'}
+                            style={{ minWidth: 130 }}
+                          >
+                            {accountStatusOptions.map(status => (
+                              <option key={`teacher-${t.id}-status-${status}`} value={status}>
+                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                              </option>
+                            ))}
+                          </select>
                           <button className="btn btn-outline btn-sm" onClick={() => openVault('Teacher', t)}>Login Credentials</button>
                           <button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button>
                         </div>

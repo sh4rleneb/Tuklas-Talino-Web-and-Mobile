@@ -4,6 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
   Linking,
   Platform,
@@ -697,6 +698,7 @@ function removeGroupFromPendingChecksState(pending = {}, deletedGroup = {}) {
 
 export default function TeacherHome({ navigation }) {
   const insets = useSafeAreaInsets();
+  const keyboardVerticalOffset = Platform.OS === 'ios' ? Math.max(insets.top - 6, 0) : 0;
   const [section, setSection] = useState('dashboard');
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [dashboard, setDashboard] = useState(null);
@@ -4312,6 +4314,11 @@ async function handleLogout() {
 
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={keyboardVerticalOffset}
+        >
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
@@ -4413,8 +4420,9 @@ async function handleLogout() {
           </View>
         </View>
       </Modal>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
   );
 }
 

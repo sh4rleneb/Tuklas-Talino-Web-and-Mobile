@@ -1733,6 +1733,59 @@ async function loadAdminDashboard() {
     }, 'Hindi na-remove ang teacher assignment.');
   }
 
+  async function adminUpdateAccountStatus(userId, status, label = 'account') {
+    if (!userId || !status) {
+      notify('Missing account status details.', 'warn');
+      return null;
+    }
+
+    const confirmed = window.confirm(
+      `Update ${label} status to ${status}?`
+    );
+
+    if (!confirmed) return null;
+
+    return await safeRun(async () => {
+      const data = await api(`/admin/accounts/${userId}/status`, {
+        method: 'PATCH',
+        body: { status },
+      });
+
+      notify('Account status updated.');
+      await loadAdminDashboard();
+      await loadTeacherDashboard().catch(() => null);
+      return data;
+    }, 'Hindi na-update ang account status.');
+  }
+
+  async function adminUpdateStudentEnrollment(studentId, payload = {}) {
+    const gradeLevel = Number(payload.gradeLevel);
+    const section = String(payload.section || '').trim();
+
+    if (!studentId || !Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 6 || !section) {
+      notify('Choose a valid grade level and section.', 'warn');
+      return null;
+    }
+
+    const confirmed = window.confirm(
+      `Update student enrollment to Grade ${gradeLevel} • ${section}?`
+    );
+
+    if (!confirmed) return null;
+
+    return await safeRun(async () => {
+      const data = await api(`/admin/students/${studentId}/enrollment`, {
+        method: 'PATCH',
+        body: { gradeLevel, section },
+      });
+
+      notify('Student enrollment updated.');
+      await loadAdminDashboard();
+      await loadTeacherDashboard().catch(() => null);
+      return data;
+    }, 'Hindi na-update ang student enrollment.');
+  }
+
   async function archiveStudent(id) {
   const confirmed = window.confirm(
     'Archive this student account? The student will not be able to log in until reactivated.'
@@ -4149,6 +4202,8 @@ async function archiveTeacher(id) {
   resetStudent={resetStudent}
   archiveTeacher={archiveTeacher}
   reactivateTeacher={reactivateTeacher}
+  updateAccountStatus={adminUpdateAccountStatus}
+  updateStudentEnrollment={adminUpdateStudentEnrollment}
   assignTeacherClass={assignTeacherClass}
   removeTeacherAssignment={removeTeacherAssignment}
   reload={() => safeRun(loadAdminDashboard)}
