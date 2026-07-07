@@ -687,9 +687,6 @@ function teacherNameForAssignment(assignment) {
                         <p>Review system activity logs and account actions before exporting the admin audit trail report.</p>
                       </div>
 
-                      <button type="button" className="admin-report-dashboard-button">
-                        Go to Dashboard
-                      </button>
                     </div>
 
                     <div className="admin-report-tabs">
