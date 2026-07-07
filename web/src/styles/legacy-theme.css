@@ -2859,3 +2859,22 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
     grid-template-columns: 1fr;
   }
 }
+
+/* Admin sidebar should scroll so Logout remains reachable on shorter screens. */
+.teacher-sidebar-layout > aside:has(.admin-sidebar-logout-button) {
+  max-height: calc(100vh - 104px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 18px;
+}
+
+.teacher-sidebar-layout > aside:has(.admin-sidebar-logout-button)::-webkit-scrollbar {
+  width: 6px;
+}
+
+.teacher-sidebar-layout > aside:has(.admin-sidebar-logout-button)::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.18);
+  border-radius: 999px;
+}
+

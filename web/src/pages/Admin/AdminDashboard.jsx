@@ -628,7 +628,7 @@ function teacherNameForAssignment(assignment) {
               <strong>Audit Logs</strong>
             </button>
 
-            <button className="teacher-sidebar-button danger" type="button" onClick={logout}>
+            <button className="teacher-sidebar-button danger admin-sidebar-logout-button" type="button" onClick={logout}>
               <span>⇥</span>
               <strong>Logout</strong>
             </button>
