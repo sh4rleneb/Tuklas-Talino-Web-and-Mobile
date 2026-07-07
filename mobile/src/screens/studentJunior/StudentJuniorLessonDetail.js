@@ -105,33 +105,52 @@ function normalizeBadgeImageUri(value = '') {
 }
 
 function getBadgeImageSource(badge = {}) {
-  const remoteUri = normalizeBadgeImageUri(
-    badge.imageUrl ||
-    badge.iconUrl ||
-    badge.badgeImageUrl ||
-    badge.image ||
-    badge.iconImage ||
-    badge.badge?.imageUrl ||
-    badge.badge?.iconUrl ||
-    ''
-  );
-
-  if (remoteUri) return { uri: remoteUri };
-
   const slugCandidates = [
-    badge.slug,
-    badge.code,
-    badge.key,
-    badge.name,
-    badge.title,
-    badge.badge?.slug,
-    badge.badge?.name,
-    badge.badge?.title,
+    typeof badge === 'string' ? badge : null,
+    badge?.slug,
+    badge?.badge_slug,
+    badge?.badgeSlug,
+    badge?.id,
+    badge?.key,
+    badge?.code,
+    badge?.badge_code,
+    badge?.badgeCode,
+    badge?.badge_id,
+    badge?.badgeId,
+    badge?.name,
+    badge?.badge_name,
+    badge?.badgeName,
+    badge?.title,
+    badge?.badge?.slug,
+    badge?.badge?.badge_slug,
+    badge?.badge?.badgeSlug,
+    badge?.badge?.id,
+    badge?.badge?.key,
+    badge?.badge?.code,
+    badge?.badge?.badge_code,
+    badge?.badge?.badgeCode,
+    badge?.badge?.name,
+    badge?.badge?.badge_name,
+    badge?.badge?.badgeName,
+    badge?.badge?.title,
   ].map(normalizeBadgeSlug).filter(Boolean);
 
   for (const slug of slugCandidates) {
     if (BADGE_IMAGE_SOURCES[slug]) return BADGE_IMAGE_SOURCES[slug];
   }
+
+  const remoteUri = normalizeBadgeImageUri(
+    badge?.imageUrl ||
+    badge?.iconUrl ||
+    badge?.badgeImageUrl ||
+    badge?.image ||
+    badge?.iconImage ||
+    badge?.badge?.imageUrl ||
+    badge?.badge?.iconUrl ||
+    ''
+  );
+
+  if (remoteUri) return { uri: remoteUri };
 
   return BADGE_IMAGE_SOURCES['tuklas-kampeon'];
 }
@@ -1421,6 +1440,15 @@ const stepScrollRef = useRef(null);
       .trim();
   }
 
+  function getCustomWritingTaskText(activity = {}) {
+    return String(
+      activity?.writingTask?.prompt ||
+      activity?.prompt ||
+      activity?.content ||
+      ''
+    ).trim();
+  }
+
   function getStoryTopics(activity = {}, lessonData = {}) {
     const raw =
       cleanStoryTopic(lessonData?.title) ||
@@ -1466,17 +1494,32 @@ const stepScrollRef = useRef(null);
       ? `Sa pangkatang gawain, napansin ni Mia na tahimik si Leo. Pinag-uusapan ng klase ang ${topic.tagalog}, at sinabi ni Leo na hindi niya alam kung paano magsisimula. Binuksan ni Mia ang libro, itinuro ang unang pangungusap, at niyaya siyang basahin ito kasama niya. Sinalungguhitan nila ang mahalagang ideya at nagsulat ng maikling paliwanag. Nang ipabahagi ng guro ang sagot, handa na si Leo.`
       : `Magkasamang nagbabasa sina Mia at Leo sa klase. Mukhang nag-aalala si Leo dahil nahirapan siya sa aralin tungkol sa ${topic.tagalog}. Sinabi ni Mia, “Basahin natin ito nang paisa-isang pangungusap.” Dahan-dahan silang nagbasa, hinanap ang mahalagang ideya, at pinag-usapan ito. Maya-maya, ngumiti si Leo dahil mas naunawaan niya ang aralin.`;
 
+    const customWritingTask = getCustomWritingTaskText(activity);
+
     return {
-      title: 'Basahin ang maikling kuwento',
+      title: customWritingTask ? 'Iyong Gawain' : 'Basahin ang maikling kuwento',
       story: englishStory,
       storyTranslation: tagalogStory,
-      task: 'Write 2 short sentences about what Mia and Leo did in the story.',
-      taskTranslation: 'Sumulat ng 2 maikling pangungusap tungkol sa ginawa nina Mia at Leo sa kuwento.',
+      task: customWritingTask || 'Write 2 short sentences about what Mia and Leo did in the story.',
+      taskTranslation: customWritingTask ? '' : 'Sumulat ng 2 maikling pangungusap tungkol sa ginawa nina Mia at Leo sa kuwento.',
+      hasCustomWritingTask: Boolean(customWritingTask),
     };
   }
 
   function renderStudentStoryCard(activity = {}, lessonData = {}) {
     const story = buildStudentStory(activity, lessonData);
+
+    if (story.hasCustomWritingTask) {
+      return (
+        <View style={styles.studentStoryCard}>
+          <Text style={styles.studentStoryEyebrow}>✍️ Gawain sa Pagsulat</Text>
+          <View style={styles.studentStoryTaskBox}>
+            <Text style={styles.studentStoryTaskLabel}>Iyong Gawain</Text>
+            <Text style={styles.studentStoryTaskText}>{story.task}</Text>
+          </View>
+        </View>
+      );
+    }
 
     return (
       <View style={styles.studentStoryCard}>

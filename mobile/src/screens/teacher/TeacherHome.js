@@ -2040,7 +2040,7 @@ async function handleLogout() {
             ) : null}
 
             {newActivity.type !== 'speech' ? (
-              <Field label="Instructions" value={newActivity.instructions} onChangeText={(value) => setNewActivity((current) => ({ ...current, instructions: value }))} multiline />
+              <Field label={newActivity.type === 'writing' ? 'Activity Overview / Note' : 'Instructions'} value={newActivity.instructions} onChangeText={(value) => setNewActivity((current) => ({ ...current, instructions: value }))} multiline />
             ) : null}
             {newActivity.type === 'mcq' ? (
               <>
@@ -2139,7 +2139,7 @@ async function handleLogout() {
                     onSelect={(gawainType) => setNewActivity((current) => ({ ...current, gawainType }))}
                   />
                 ) : null}
-                <Field label={newActivity.type === 'writing' ? 'Writing Instructions' : newActivity.type === 'speech' ? 'Reading Text' : 'Content'} value={newActivity.content} onChangeText={(value) => setNewActivity((current) => ({ ...current, content: value }))} multiline />
+                <Field label={newActivity.type === 'writing' ? 'Student Writing Task' : newActivity.type === 'speech' ? 'Reading Text' : 'Content'} value={newActivity.content} onChangeText={(value) => setNewActivity((current) => ({ ...current, content: value }))} multiline />
                 {newActivity.type === 'speech' ? (
                   <View style={styles.softRow}>
                     <Text style={styles.rowTitle}>Speech target only</Text>
@@ -2239,7 +2239,7 @@ async function handleLogout() {
                             </Text>
 
                             {activity.instructions ? (
-                              <Text style={styles.body}>Instructions: {activity.instructions}</Text>
+                              <Text style={styles.body}>{activity.type === 'writing' ? 'Activity Overview / Note' : 'Instructions'}: {activity.instructions}</Text>
                             ) : null}
 
                             {activity.type === 'mcq' && Array.isArray(activity.questions) ? (

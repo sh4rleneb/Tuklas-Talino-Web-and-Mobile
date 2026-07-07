@@ -4082,9 +4082,10 @@ function TeacherActivityBlock({
 
           <input
             className="input-field"
+            aria-label={activity.type === "writing" ? "Activity Overview / Note" : "Instructions"}
             value={activity.instructions}
             onChange={(e) => updateActivity(activity.id, { instructions: e.target.value })}
-            placeholder="Example: Read the question and answer clearly."
+            placeholder={activity.type === "writing" ? "Activity Overview / Note — optional context before the student writing task." : "Example: Read the question and answer clearly."}
             style={{ minHeight: 56, fontSize: 16, padding: '14px 18px' }}
           />
         </div>
@@ -4258,9 +4259,10 @@ function TeacherActivityBlock({
             ) : (
               <textarea
                 className="input-field"
+                aria-label="Student Writing Task"
                 value={activity.prompt}
                 onChange={(e) => updateActivity(activity.id, { prompt: e.target.value })}
-                placeholder={"Writing Task\nExample: Write 2 sentences about the lesson of the story."}
+                placeholder={"Student Writing Task\nExample: Write 2 sentences about the lesson of the story."}
                 rows="4"
                 style={{
                   minHeight: 140,
