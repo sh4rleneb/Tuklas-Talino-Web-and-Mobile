@@ -1442,28 +1442,64 @@ if (role === 'admin') {
 
   async function teacherGradeWritingSubmission(submissionId, payload = {}) {
     if (!submissionId) {
-      notify('Kulang ang detalye ng gawaing pagsulat.', 'warn');
-      return;
+      notify('Missing writing submission details.', 'warn');
+      return null;
     }
 
     const score = Number(payload.score);
+
     if (!Number.isInteger(score) || score < 1 || score > 10) {
-      notify('Ang iskor ay dapat buong bilang mula 1 hanggang 10.', 'warn');
-      return;
+      notify('Please select a score from 1 to 10.', 'warn');
+      return null;
     }
 
     const feedback = String(payload.feedback || '').trim();
 
-    await safeRun(async () => {
+    try {
       const data = await api(`/teachers/reviews/writing/${submissionId}`, {
-        method: 'PATCH',
+        method: 'POST',
         body: { score, feedback }
       });
 
       notify(data.message || `Naisave ang marka sa pagsulat. Nakakuha ang mag-aaral ng +${data.xpAwarded || 0} XP.`);
       await loadTeacherDashboard();
-    });
+      return data;
+    } catch (error) {
+      notify(error.message || 'Hindi ma-save ang writing grade.', 'bad');
+      return null;
+    }
   }
+
+  async function teacherReviewSpeechAttempt(attemptId, payload = {}) {
+    if (!attemptId) {
+      notify('Missing speech attempt details.', 'warn');
+      return null;
+    }
+
+    const score = Number(payload.score);
+
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      notify('Please select a speech score from 1 to 10.', 'warn');
+      return null;
+    }
+
+    const feedback = String(payload.feedback || payload.teacherFeedback || '').trim();
+
+    try {
+      const data = await api(`/teachers/reviews/speech/${attemptId}`, {
+        method: 'POST',
+        body: { score, feedback }
+      });
+
+      notify(data.message || `Naisave ang marka sa pagbigkas. Nakakuha ang mag-aaral ng +${data.xpAwarded || score} XP.`);
+      await loadTeacherDashboard();
+      return data;
+    } catch (error) {
+      notify(error.message || 'Hindi ma-save ang speech review.', 'bad');
+      return null;
+    }
+  }
+
 
   async function teacherCreateGroup() {
     await safeRun(async () => {
@@ -4096,6 +4132,7 @@ async function archiveTeacher(id) {
           exportLogsCSV={exportLogsCSV}
           downloadBuodReport={downloadBuodReport}
           gradeWritingSubmission={teacherGradeWritingSubmission}
+          reviewSpeechAttempt={teacherReviewSpeechAttempt}
         />
       </Screen>
 

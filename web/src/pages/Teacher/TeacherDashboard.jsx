@@ -168,7 +168,8 @@ export default function TeacherDashboard({
   exportLogsCSV,
   downloadSummaryReport,
   downloadBuodReport,
-  gradeWritingSubmission
+  gradeWritingSubmission,
+  reviewSpeechAttempt
 }) {
 
   const handleDownloadMonitoringSummary =
@@ -180,6 +181,7 @@ export default function TeacherDashboard({
   const [openGroupTools, setOpenGroupTools] = useState({});
   const [openGroupProgress, setOpenGroupProgress] = useState({});
   const [gradingWritingIds, setGradingWritingIds] = useState({});
+  const [gradingSpeechIds, setGradingSpeechIds] = useState({});
   const [studentAccountForm, setStudentAccountForm] = useState({ name: '', gradeLevel: '1', section: '' });
   const [studentAccountBusy, setStudentAccountBusy] = useState(false);
   const [studentAccountError, setStudentAccountError] = useState('');
@@ -396,6 +398,34 @@ export default function TeacherDashboard({
     Promise.resolve(gradeWritingSubmission(item.id, { score, feedback }))
       .finally(() => {
         setGradingWritingIds(prev => ({ ...prev, [item.id]: false }));
+      });
+  }
+
+
+  function getSpeechReviewAttemptId(item = {}) {
+    return item.id || item.attemptId || item.speechAttemptId || item.submissionId || null;
+  }
+
+  function handleSaveSpeechReview(item) {
+    const attemptId = getSpeechReviewAttemptId(item);
+
+    if (!attemptId || !reviewSpeechAttempt) return;
+
+    const scoreInputId = `speech-review-score-${attemptId}`;
+    const feedbackInputId = `speech-review-feedback-${attemptId}`;
+    const score = Number(document.getElementById(scoreInputId)?.value || 0);
+    const feedback = String(document.getElementById(feedbackInputId)?.value || '').trim();
+
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      window.alert('Please select a speech score from 1 to 10.');
+      return;
+    }
+
+    setGradingSpeechIds(prev => ({ ...prev, [attemptId]: true }));
+
+    Promise.resolve(reviewSpeechAttempt(attemptId, { score, feedback }))
+      .finally(() => {
+        setGradingSpeechIds(prev => ({ ...prev, [attemptId]: false }));
       });
   }
 
@@ -1453,51 +1483,103 @@ export default function TeacherDashboard({
 
               {speechReviewRows.length ? (
                 <div className="teacher-groups-grid">
-                  {speechReviewRows.map(item => (
-                    <div className="teacher-group-item" key={`speech-review-${item.id}`}>
-                      {renderReviewIdentity(item, 'View Only')}
+                  {speechReviewRows.map(item => {
+                    const attemptId = getSpeechReviewAttemptId(item);
+                    const scoreInputId = `speech-review-score-${attemptId}`;
+                    const feedbackInputId = `speech-review-feedback-${attemptId}`;
+                    const isSaving = Boolean(gradingSpeechIds[attemptId]);
+                    const alreadyScored = item.score === 0 || item.score;
 
-                      <div className="teacher-group-submission-evidence">
-                        <div>
-                          <span>Submitted Date</span>
-                          <strong>{formatReviewDate(item.submittedAt)}</strong>
+                    return (
+                      <div className="teacher-group-item" key={`speech-review-${attemptId || item.id}`}>
+                        {renderReviewIdentity(item, alreadyScored ? 'Reviewed Speech' : 'Needs Speech Score')}
+
+                        <div className="teacher-group-submission-evidence">
+                          <div>
+                            <span>Submitted Date</span>
+                            <strong>{formatReviewDate(item.submittedAt)}</strong>
+                          </div>
+
+                          <div>
+                            <span>Speech Score</span>
+                            <strong>{item.score ?? 'Not scored'}</strong>
+                          </div>
                         </div>
 
-                        <div>
-                          <span>Speech Score</span>
-                          <strong>{item.score ?? 'Not scored'}</strong>
+                        <div style={{ marginTop: 14 }}>
+                          <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Target Text</div>
+                          <div className="teacher-group-detail-section" style={{ minHeight: 'auto' }}>
+                            {item.task?.targetText || 'No target text available.'}
+                          </div>
                         </div>
-                      </div>
 
-                      <div style={{ marginTop: 14 }}>
-                        <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Target Text</div>
-                        <div className="teacher-group-detail-section" style={{ minHeight: 'auto' }}>
-                          {item.task?.targetText || 'No target text available.'}
+                        <div style={{ marginTop: 14 }}>
+                          <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Student Transcript</div>
+                          <div className="teacher-group-detail-section" style={{ minHeight: 'auto', whiteSpace: 'pre-wrap' }}>
+                            {item.transcript || 'No transcript available.'}
+                          </div>
                         </div>
-                      </div>
 
-                      <div style={{ marginTop: 14 }}>
-                        <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Student Transcript</div>
-                        <div className="teacher-group-detail-section" style={{ minHeight: 'auto', whiteSpace: 'pre-wrap' }}>
-                          {item.transcript || 'No transcript available.'}
-                        </div>
-                      </div>
+                        {item.audioUrl ? (
+                          <a
+                            className="teacher-file-link"
+                            href={item.audioUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ marginTop: 12, display: 'inline-flex' }}
+                          >
+                            ▶ Play Recording
+                          </a>
+                        ) : (
+                          <p className="g46-ref-muted" style={{ marginTop: 12 }}>No recording link available.</p>
+                        )}
 
-                      {item.audioUrl ? (
-                        <a
-                          className="teacher-file-link"
-                          href={item.audioUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ marginTop: 12, display: 'inline-flex' }}
+                        <label className="g46-ref-muted" htmlFor={scoreInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
+                          Speech Score
+                          <select
+                            id={scoreInputId}
+                            className="input-field"
+                            defaultValue={item.score || ''}
+                            style={{ width: '100%', minHeight: 46 }}
+                          >
+                            <option value="">Select score from 1 to 10</option>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(score => (
+                              <option key={score} value={score}>{score}/10 → +{score} XP</option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="g46-ref-muted" htmlFor={feedbackInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
+                          Teacher Feedback
+                          <textarea
+                            id={feedbackInputId}
+                            className="input-field"
+                            defaultValue={item.teacherFeedback || item.feedback || ''}
+                            placeholder="Optional feedback for the student's speech attempt."
+                            rows="3"
+                            style={{
+                              width: '100%',
+                              minHeight: 92,
+                              resize: 'vertical',
+                              fontSize: 15,
+                              lineHeight: 1.45,
+                              padding: '13px 15px'
+                            }}
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          className="lms-main-action full"
+                          style={{ marginTop: 12 }}
+                          disabled={isSaving}
+                          onClick={() => handleSaveSpeechReview(item)}
                         >
-                          ▶ Play Recording
-                        </a>
-                      ) : (
-                        <p className="g46-ref-muted" style={{ marginTop: 12 }}>No recording link available.</p>
-                      )}
-                    </div>
-                  ))}
+                          {isSaving ? 'Saving Speech Review...' : 'Save Speech Review'}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="teacher-empty-panel">
