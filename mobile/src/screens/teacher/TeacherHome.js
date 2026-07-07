@@ -3974,15 +3974,7 @@ async function handleLogout() {
 
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            styles.teacherScrollContentInset,
-            { paddingBottom: Math.max(insets.bottom + 32, 48) },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+        <View style={styles.teacherMainTabsWrap}>
           <View style={styles.header}>
             <View style={styles.flex}>
               <Text style={styles.title}>Teacher Workspace</Text>
@@ -4075,7 +4067,7 @@ async function handleLogout() {
           </View>
         </View>
       </Modal>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -5009,6 +5001,59 @@ const styles = StyleSheet.create({
   reviewEmptyIcon: {
     fontSize: 28,
     marginBottom: 8,
+  },
+
+  teacherMainTabsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 14,
+    paddingHorizontal: 2,
+    overflow: 'visible',
+  },
+  builderTabs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    gap: 10,
+    paddingBottom: 12,
+    overflow: 'visible',
+  },
+  stepChip: {
+    backgroundColor: '#FFF',
+    borderRadius: 99,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 46,
+    minWidth: 120,
+    flexGrow: 1,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  stepChipActive: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#22C55E',
+  },
+  stepText: {
+    color: '#64748B',
+    fontWeight: '800',
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+  stepTextActive: {
+    color: '#166534',
+    fontWeight: '900',
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
 
 });
