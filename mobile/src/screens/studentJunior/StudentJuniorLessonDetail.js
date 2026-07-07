@@ -42,9 +42,46 @@ import {
 } from '../../utils/structuredLesson';
 
 const BADGE_IMAGE_SOURCES = {
-  'bituin-sa-pagsagot': require('../../../assets/badges/bituin-sa-pagsagot.png'),
+  'unang-hakbang': require('../../../assets/badges/unang-hakbang.png'),
+  'unang hakbang': require('../../../assets/badges/unang-hakbang.png'),
+  'first-lesson': require('../../../assets/badges/unang-hakbang.png'),
+  first_lesson: require('../../../assets/badges/unang-hakbang.png'),
+
+  'batang-mambabasa': require('../../../assets/badges/batang-mambabasa.png'),
+  'batang mambabasa': require('../../../assets/badges/batang-mambabasa.png'),
+  reader: require('../../../assets/badges/batang-mambabasa.png'),
+  'reader-3': require('../../../assets/badges/batang-mambabasa.png'),
+  reader_3: require('../../../assets/badges/batang-mambabasa.png'),
+
   'henyo-sa-pagsusulit': require('../../../assets/badges/henyo-sa-pagsusulit.png'),
+  'henyo sa pagsusulit': require('../../../assets/badges/henyo-sa-pagsusulit.png'),
+  'quiz-perfect': require('../../../assets/badges/henyo-sa-pagsusulit.png'),
+  quiz_perfect: require('../../../assets/badges/henyo-sa-pagsusulit.png'),
+
+  'bituin-sa-pagsagot': require('../../../assets/badges/bituin-sa-pagsagot.png'),
+  'bituin sa pagsagot': require('../../../assets/badges/bituin-sa-pagsagot.png'),
+  'writing-3': require('../../../assets/badges/bituin-sa-pagsagot.png'),
+  writing_3: require('../../../assets/badges/bituin-sa-pagsagot.png'),
+
+  'boses-bituin': require('../../../assets/badges/boses-bituin.png'),
+  'boses bituin': require('../../../assets/badges/boses-bituin.png'),
+  'speech-3': require('../../../assets/badges/boses-bituin.png'),
+  speech_3: require('../../../assets/badges/boses-bituin.png'),
+
   'kaagapay-sa-gawain': require('../../../assets/badges/kaagapay-sa-gawain.png'),
+  'kaagapay sa gawain': require('../../../assets/badges/kaagapay-sa-gawain.png'),
+  'group-1': require('../../../assets/badges/kaagapay-sa-gawain.png'),
+  group_1: require('../../../assets/badges/kaagapay-sa-gawain.png'),
+
+  'bituin-ng-kasipagan': require('../../../assets/badges/bituin-ng-kasipagan.png'),
+  'bituin ng kasipagan': require('../../../assets/badges/bituin-ng-kasipagan.png'),
+  'xp-100': require('../../../assets/badges/bituin-ng-kasipagan.png'),
+  xp_100: require('../../../assets/badges/bituin-ng-kasipagan.png'),
+
+  'tuklas-kampeon': require('../../../assets/badges/tuklas-kampeon.png'),
+  'tuklas kampeon': require('../../../assets/badges/tuklas-kampeon.png'),
+  'level-10': require('../../../assets/badges/tuklas-kampeon.png'),
+  level_10: require('../../../assets/badges/tuklas-kampeon.png'),
 };
 
 function normalizeBadgeSlug(value = '') {
@@ -96,7 +133,7 @@ function getBadgeImageSource(badge = {}) {
     if (BADGE_IMAGE_SOURCES[slug]) return BADGE_IMAGE_SOURCES[slug];
   }
 
-  return BADGE_IMAGE_SOURCES['kaagapay-sa-gawain'];
+  return BADGE_IMAGE_SOURCES['tuklas-kampeon'];
 }
 
 
