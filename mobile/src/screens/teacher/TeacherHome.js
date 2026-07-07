@@ -49,7 +49,8 @@ import {
   returnGroupTask,
   setGroupLeader,
   updateLesson,
-  uploadLessonMaterial,} from '../../api/teacher';
+  uploadLessonMaterial,
+} from '../../api/teacher';
 import { logout } from '../../api/auth';
 
 const NAV_ITEMS = [
@@ -728,6 +729,7 @@ export default function TeacherHome({ navigation }) {
     title: '',
     deadline: '',
     hasDeadline: false,
+    editingActivityIndex: null,
     instructions: '',
     content: '',
     question: '',
@@ -1027,6 +1029,152 @@ async function handleLogout() {
     }
   }
 
+
+  function normalizeActivityBuilderType(activityOrType = {}) {
+    const raw = typeof activityOrType === 'string'
+      ? activityOrType
+      : activityOrType?.type || activityOrType?.activityType || activityOrType?.gawainType || '';
+
+    const type = String(raw || '').toLowerCase();
+
+    if (type === 'quiz' || type === 'choice' || type === 'multiple_choice') return 'mcq';
+    if (type.includes('writing') || type.includes('sentence')) return 'writing';
+    if (type.includes('speech') || type.includes('read')) return 'speech';
+
+    return type || 'mcq';
+  }
+
+  function getActivityBuilderDeadlineState(activity = {}) {
+    const deadline = activity.deadline || activity.dueAt || activity.dueDate || '';
+
+    return {
+      deadline: deadline || '',
+      hasDeadline: Boolean(deadline),
+    };
+  }
+
+  function getActivityBuilderOptionText(option = {}) {
+    if (typeof option === 'string') {
+      return option;
+    }
+
+    return String(option.text || option.label || option.value || option.title || '').trim();
+  }
+
+  function hydrateActivityBuilderFromExisting(activity = {}, index = null, current = {}) {
+    const type = normalizeActivityBuilderType(activity);
+    const deadlineState = getActivityBuilderDeadlineState(activity);
+    const editingIndex = Number.isInteger(index) ? index : null;
+
+    const base = {
+      ...current,
+      type,
+      editingActivityIndex: editingIndex,
+      title: activity.title || current.title || '',
+      instructions: type === 'speech' ? '' : activity.instructions || current.instructions || '',
+      deadline: deadlineState.deadline,
+      hasDeadline: deadlineState.hasDeadline,
+    };
+
+    if (type === 'mcq') {
+      const firstQuestion = Array.isArray(activity.questions) && activity.questions.length
+        ? activity.questions[0]
+        : activity;
+
+      const options = Array.isArray(firstQuestion.options)
+        ? firstQuestion.options
+        : Array.isArray(activity.options)
+        ? activity.options
+        : [];
+
+      const next = {
+        ...base,
+        question: firstQuestion.question || firstQuestion.prompt || activity.question || '',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        optionE: '',
+        optionF: '',
+        correctOption: activity.correctOption || firstQuestion.correctOption || 'A',
+        choiceCount: Math.min(ACTIVITY_CHOICE_KEYS.length, Math.max(2, options.length || Number(current.choiceCount || 2))),
+      };
+
+      ACTIVITY_CHOICE_KEYS.forEach((choice) => {
+        const fieldValue = activity[`option${choice}`] || firstQuestion[`option${choice}`] || '';
+        if (fieldValue) {
+          next[`option${choice}`] = fieldValue;
+        }
+      });
+
+      options.slice(0, ACTIVITY_CHOICE_KEYS.length).forEach((option, optionIndex) => {
+        const choice = ACTIVITY_CHOICE_KEYS[optionIndex];
+        const optionText = getActivityBuilderOptionText(option);
+
+        next[`option${choice}`] = optionText;
+
+        if (
+          typeof option === 'object' &&
+          Boolean(option.isCorrect || option.correct)
+        ) {
+          next.correctOption = choice;
+        }
+      });
+
+      next.choiceCount = Math.min(
+        ACTIVITY_CHOICE_KEYS.length,
+        Math.max(
+          2,
+          ACTIVITY_CHOICE_KEYS.filter((choice) => String(next[`option${choice}`] || '').trim()).length || next.choiceCount
+        )
+      );
+
+      if (!ACTIVITY_CHOICE_KEYS.slice(0, next.choiceCount).includes(next.correctOption)) {
+        next.correctOption = 'A';
+      }
+
+      return next;
+    }
+
+    if (type === 'writing') {
+      return {
+        ...base,
+        gawainType: activity.gawainType || current.gawainType || 'writing_task',
+        content: activity.prompt || activity.content || activity.targetText || current.content || '',
+      };
+    }
+
+    if (type === 'speech') {
+      return {
+        ...base,
+        instructions: '',
+        content: getTeacherSpeechTargetText(activity) || activity.targetText || activity.content || current.content || '',
+      };
+    }
+
+    return {
+      ...base,
+      content: activity.content || activity.prompt || current.content || '',
+    };
+  }
+
+  function handleSelectActivityType(type) {
+    const normalizedType = normalizeActivityBuilderType(type);
+    const activities = Array.isArray(draft.activities) ? draft.activities : [];
+    const existingIndex = activities.findIndex((activity) => normalizeActivityBuilderType(activity) === normalizedType);
+
+    if (existingIndex >= 0) {
+      setNewActivity((current) => hydrateActivityBuilderFromExisting(activities[existingIndex], existingIndex, current));
+      return;
+    }
+
+    setNewActivity((current) => ({
+      ...current,
+      type: normalizedType,
+      editingActivityIndex: null,
+    }));
+  }
+
   function addActivity() {
     const type = newActivity.type;
     const activityValidationMessage = getTeacherActivityValidationMessage(newActivity);
@@ -1101,6 +1249,27 @@ async function handleLogout() {
 
     setDraft((current) => {
       const currentActivities = Array.isArray(current.activities) ? current.activities : [];
+      const editingActivityIndex =
+        typeof newActivity.editingActivityIndex === 'number'
+          ? newActivity.editingActivityIndex
+          : -1;
+
+      if (editingActivityIndex >= 0 && editingActivityIndex < currentActivities.length) {
+        const nextActivities = [...currentActivities];
+
+        nextActivities[editingActivityIndex] = {
+          ...nextActivities[editingActivityIndex],
+          ...activity,
+        };
+
+        return {
+          ...current,
+          speechTarget: type === 'speech'
+            ? getTeacherSpeechTargetText(activity) || current.speechTarget || ''
+            : current.speechTarget,
+          activities: nextActivities,
+        };
+      }
 
       if (type === 'speech') {
         const existingSpeechIndex = currentActivities.findIndex((item) => item?.type === 'speech');
@@ -1133,6 +1302,7 @@ async function handleLogout() {
       title: '',
       deadline: '',
       hasDeadline: false,
+      editingActivityIndex: null,
       instructions: '',
       content: '',
       question: '',
@@ -1334,9 +1504,40 @@ async function handleLogout() {
     ];
 
     const validationActivities = Array.isArray(draft.activities) ? draft.activities : [];
+    const validationQuizItems = validationActivities
+      .filter((activity) => {
+        const type = String(activity?.type || activity?.activityType || '').toLowerCase();
+        return type === 'mcq' || type === 'quiz' || type.includes('quiz');
+      })
+      .flatMap((activity) => {
+        if (Array.isArray(activity.questions) && activity.questions.length) {
+          return activity.questions.map((question) => ({
+            ...question,
+            question: question.question || question.prompt || '',
+            options: Array.isArray(question.options) ? question.options : [],
+          }));
+        }
+
+        if (activity.question || Array.isArray(activity.options)) {
+          return [{
+            question: activity.question || activity.prompt || '',
+            options: Array.isArray(activity.options) ? activity.options : [],
+          }];
+        }
+
+        return [];
+      })
+      .filter((question) => {
+        const questionText = String(question.question || question.prompt || '').trim();
+        const options = Array.isArray(question.options) ? question.options : [];
+        return questionText && options.length >= 2;
+      });
+
     const speechValidationTarget = getTeacherLessonSpeechFallback(draft, editingLesson || {});
     const validationDraft = {
       ...draft,
+      quizItems: validationQuizItems,
+      assessmentItems: validationQuizItems,
       speechTarget: speechValidationTarget || draft.speechTarget || '',
       speech_target: speechValidationTarget || draft.speech_target || '',
       activities: validationActivities.map((activity) => {
@@ -1355,11 +1556,19 @@ async function handleLogout() {
       }),
     };
 
-    const lessonValidationMessage = getTeacherLessonBuilderValidationMessage(
+    let lessonValidationMessage = getTeacherLessonBuilderValidationMessage(
       validationDraft,
       validationDraft.activities,
-      []
+      validationQuizItems
     );
+
+    if (
+      lessonValidationMessage &&
+      String(lessonValidationMessage).toLowerCase().includes('quiz question') &&
+      validationQuizItems.length
+    ) {
+      lessonValidationMessage = '';
+    }
     if (lessonValidationMessage) {
       return Alert.alert('Lesson Builder', lessonValidationMessage);
     }
@@ -1439,6 +1648,136 @@ async function handleLogout() {
     );
   }
 
+
+  function getPendingGroupCheckTaskId(row = {}) {
+    const candidates = [
+      row.groupTaskId,
+      row.taskId,
+      row.GroupTaskId,
+      row.task_id,
+      row.group_task_id,
+      row.task?.id,
+      row.Task?.id,
+      row.groupTask?.id,
+      row.GroupTask?.id,
+    ];
+
+    const found = candidates.find((value) => value !== undefined && value !== null && String(value).trim());
+
+    return found ? String(found) : '';
+  }
+
+  function getPendingGroupCheckStudentId(row = {}) {
+    const candidates = [
+      row.submittedByStudentId,
+      row.studentId,
+      row.StudentId,
+      row.student_id,
+      row.learnerId,
+      row.userId,
+      row.student?.id,
+      row.Student?.id,
+      row.learner?.id,
+      row.user?.id,
+    ];
+
+    const found = candidates.find((value) => value !== undefined && value !== null && String(value).trim());
+
+    return found ? String(found) : '';
+  }
+
+  function getPendingGroupCheckActionKey(row = {}) {
+    const taskId = getPendingGroupCheckTaskId(row);
+    const studentId = getPendingGroupCheckStudentId(row);
+
+    if (taskId && studentId) {
+      return `${taskId}-${studentId}`;
+    }
+
+    return String(row.id || row.checkId || row.groupCheckId || row.submissionId || '');
+  }
+
+  function removePendingGroupCheckRow(row = {}) {
+    const targetKey = getPendingGroupCheckActionKey(row);
+
+    setPendingChecks((current) => {
+      const rows = getPendingGroupCheckRows(current).filter((item) => {
+        const itemKey = getPendingGroupCheckActionKey(item);
+
+        if (targetKey && itemKey) {
+          return String(itemKey) !== String(targetKey);
+        }
+
+        return item !== row;
+      });
+
+      return buildPendingGroupChecksPayload(current, rows);
+    });
+  }
+
+  async function handleApprovePendingGroupCheck(row = {}) {
+    const taskId = getPendingGroupCheckTaskId(row);
+    const studentId = getPendingGroupCheckStudentId(row);
+
+    if (!taskId || !studentId) {
+      Alert.alert('Pending Group Checks', 'Missing task or student details.');
+      return;
+    }
+
+    console.log('[PendingGroupCheck] Approving with:', { taskId, studentId });
+
+    const saved = await run(
+      `pending-group-approve-${taskId}-${studentId}`,
+      () => approveGroupTask(taskId, studentId, ''),
+      'Group check approved.'
+    );
+
+    console.log('[PendingGroupCheck] Approve saved result:', saved);
+
+    if (saved) {
+      removePendingGroupCheckRow(row);
+      await refreshPendingGroupChecksRealtime();
+    }
+  }
+
+  function handleRevisePendingGroupCheck(row = {}) {
+    const taskId = getPendingGroupCheckTaskId(row);
+    const studentId = getPendingGroupCheckStudentId(row);
+
+    if (!taskId || !studentId) {
+      Alert.alert('Pending Group Checks', 'Missing task or student details.');
+      return;
+    }
+
+    Alert.alert(
+      'Return for Revision',
+      'Send this group task back for revision?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revise',
+          style: 'destructive',
+          onPress: async () => {
+            console.log('[PendingGroupCheck] Returning with:', { taskId, studentId });
+
+            const saved = await run(
+              `pending-group-revise-${taskId}-${studentId}`,
+              () => returnGroupTask(taskId, studentId, 'Please revise and resubmit.'),
+              'Group check returned for revision.'
+            );
+
+            console.log('[PendingGroupCheck] Return saved result:', saved);
+
+            if (saved) {
+              removePendingGroupCheckRow(row);
+              await refreshPendingGroupChecksRealtime();
+            }
+          },
+        },
+      ]
+    );
+  }
+
   function renderDashboard() {
     return (
       <>
@@ -1471,14 +1810,34 @@ async function handleLogout() {
 
         <SectionCard>
           <Text style={styles.cardTitle}>Pending Group Checks</Text>
-          {(pendingChecks.rows || []).slice(0, 4).map((row) => (
-            <View key={row.id} style={styles.actionRow}>
-              <View style={styles.flex}>
-                <Text style={styles.rowTitle}>{row.groupName}</Text>
-                <Text style={styles.muted}>{row.taskTitle} • {row.studentName}</Text>
+          {(pendingChecks.rows || []).slice(0, 4).map((row) => {
+            const actionId = getPendingGroupCheckActionKey(row);
+
+            return (
+              <View key={actionId || row.id || `${row.groupName}-${row.taskTitle}-${row.studentName}`} style={styles.softRow}>
+                <Text style={styles.rowTitle}>{row.groupName || row.group?.name || 'Group'}</Text>
+                <Text style={styles.muted}>
+                  {row.taskTitle || row.task?.title || 'Task'} • {row.studentName || row.student?.name || 'Student'}
+                </Text>
+
+                <View style={styles.buttonRow}>
+                  <SmallButton
+                    disabled={Boolean(busy)}
+                    onPress={() => handleApprovePendingGroupCheck(row)}
+                  >
+                    Approve
+                  </SmallButton>
+                  <SmallButton
+                    tone="slate"
+                    disabled={Boolean(busy)}
+                    onPress={() => handleRevisePendingGroupCheck(row)}
+                  >
+                    Revise
+                  </SmallButton>
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
           {!(pendingChecks.rows || []).length && (
             <Text style={styles.muted}>No pending group checks.</Text>
           )}
@@ -1591,34 +1950,7 @@ async function handleLogout() {
                 label="Activity Type"
                 value={newActivity.type}
                 options={ACTIVITY_TYPE_OPTIONS}
-                onSelect={(type) => {
-                  if (type === 'speech') {
-                    const existingSpeechActivity = (Array.isArray(draft.activities) ? draft.activities : []).find(
-                      (activity) => activity?.type === 'speech'
-                    );
-
-                    if (existingSpeechActivity) {
-                      const existingDeadline =
-                        existingSpeechActivity.deadline ||
-                        existingSpeechActivity.dueAt ||
-                        existingSpeechActivity.dueDate ||
-                        '';
-
-                      setNewActivity((current) => ({
-                        ...current,
-                        type,
-                        title: existingSpeechActivity.title || current.title || '',
-                        content: getTeacherSpeechTargetText(existingSpeechActivity),
-                        instructions: '',
-                        deadline: existingDeadline || '',
-                        hasDeadline: Boolean(existingDeadline),
-                      }));
-                      return;
-                    }
-                  }
-
-                  setNewActivity((current) => ({ ...current, type }));
-                }}
+                onSelect={handleSelectActivityType}
               />
             <Field label="Activity Title" value={newActivity.title} onChangeText={(value) => setNewActivity((current) => ({ ...current, title: value }))} />
 
@@ -1816,11 +2148,17 @@ async function handleLogout() {
                 ) : null}
               </>
             )}
-            <SmallButton onPress={addActivity}>Add Activity Block</SmallButton>
+            <SmallButton onPress={addActivity}>{typeof newActivity.editingActivityIndex === 'number' ? 'Update Activity Block' : 'Add Activity Block'}</SmallButton>
             {draft.activities.map((activity, index) => (
               <View key={`${activity.type}-${index}`} style={styles.softRow}>
                 <Text style={styles.rowTitle}>{index + 1}. {activity.title}</Text>
-                <Text style={styles.muted}>{activity.type}</Text>
+                <Text style={styles.muted}>Type: {typeof getTeacherLessonActivityTypeLabel === 'function' ? getTeacherLessonActivityTypeLabel(activity) : activity.type}</Text>
+                <SmallButton
+                  tone="slate"
+                  onPress={() => setNewActivity((current) => hydrateActivityBuilderFromExisting(activity, index, current))}
+                >
+                  Edit This Activity
+                </SmallButton>
               </View>
             ))}
             <SmallButton onPress={() => setBuilderStep(3)}>Next: Preview →</SmallButton>
@@ -3974,7 +4312,15 @@ async function handleLogout() {
 
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <View style={styles.teacherMainTabsWrap}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            styles.teacherScrollContentInset,
+            { paddingBottom: Math.max(insets.bottom + 32, 48) },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.header}>
             <View style={styles.flex}>
               <Text style={styles.title}>Teacher Workspace</Text>
@@ -4067,7 +4413,7 @@ async function handleLogout() {
           </View>
         </View>
       </Modal>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -4587,11 +4933,11 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.5 },
   smallButtonText: { color: '#FFF', fontWeight: '900', fontSize: 12 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 4 },
-  builderTabs: { gap: 7, paddingBottom: 12 },
-  stepChip: { backgroundColor: '#FFF', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 8 },
-  stepChipActive: { backgroundColor: '#DCFCE7' },
-  stepText: { color: '#64748B', fontWeight: '800' },
-  stepTextActive: { color: '#166534', fontWeight: '900' },
+  builderTabs: { gap: 6, paddingBottom: 12, paddingHorizontal: 4, alignItems: 'center' },
+  stepChip: { backgroundColor: '#FFF', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 8, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+  stepChipActive: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
+  stepText: { color: '#64748B', fontWeight: '800', fontSize: 12, lineHeight: 16, textAlign: 'center', includeFontPadding: false },
+  stepTextActive: { color: '#166534', fontWeight: '900', fontSize: 12, lineHeight: 16, textAlign: 'center', includeFontPadding: false },
   previewTitle: { color: '#166534', fontSize: 24, fontWeight: '900' },
   buttonRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   studentCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
@@ -5003,57 +5349,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  teacherMainTabsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'stretch',
-    gap: 10,
-    marginTop: 12,
-    marginBottom: 14,
-    paddingHorizontal: 2,
-    overflow: 'visible',
-  },
-  builderTabs: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'stretch',
-    gap: 10,
-    paddingBottom: 12,
-    overflow: 'visible',
-  },
-  stepChip: {
-    backgroundColor: '#FFF',
-    borderRadius: 99,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 46,
-    minWidth: 120,
+
+  scrollContent: {
     flexGrow: 1,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  stepChipActive: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#22C55E',
-  },
-  stepText: {
-    color: '#64748B',
-    fontWeight: '800',
-    fontSize: 14,
-    lineHeight: 18,
-    textAlign: 'center',
-    includeFontPadding: false,
-  },
-  stepTextActive: {
-    color: '#166534',
-    fontWeight: '900',
-    fontSize: 14,
-    lineHeight: 18,
-    textAlign: 'center',
-    includeFontPadding: false,
   },
 
 });

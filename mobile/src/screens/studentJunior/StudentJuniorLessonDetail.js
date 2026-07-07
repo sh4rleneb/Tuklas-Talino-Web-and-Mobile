@@ -420,7 +420,7 @@ const [lessonDuration,setLessonDuration]=useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  
+
 const [activityNotice, setActivityNotice] = useState(null);
 const [mcqToast, setMcqToast] = useState(null);
 const [missionAttemptCounts, setMissionAttemptCounts] = useState({});
@@ -452,7 +452,7 @@ const activeMissionAttemptRef = useRef({});
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
   const celebrationScale = useRef(new Animated.Value(0.92)).current;
-  
+
 const trackerPulse = useRef(new Animated.Value(1)).current;
 
 useEffect(() => {
@@ -1620,8 +1620,8 @@ const stepScrollRef = useRef(null);
 
               if (lessonListening) {
                 await stopSpeech();
-                
-                
+
+
                 return;
               }
 
@@ -1631,12 +1631,12 @@ const stepScrollRef = useRef(null);
                 layuninDisplayText,
                 {
                   onStart: () => {
-                    
+
                   },
 
                   onFinish: () => {
-                    
-                    
+
+
                   },
                 }
               );
@@ -2388,7 +2388,7 @@ const stepScrollRef = useRef(null);
                   marginBottom: 10,
                 }}
               >
-                🎉 ⭐ 🌈 ⭐ 🎈
+                 ⭐ 🌈 ⭐ 🎈
               </Text>
 
               <Text
@@ -3042,7 +3042,7 @@ const stepScrollRef = useRef(null);
                 : currentStep?.type === 'read'
                 ? '📖 Basahin ang Aralin'
                 : currentStep?.type === 'finish'
-                ? '🏁 Tapos na ang Aralin'
+                ? 'Tapos na ang Aralin'
                 : currentActivity?.type === 'mcq'
                 ? '🎮 Oras ng Pagsusulit'
                 : currentActivity?.type === 'writing'
@@ -3205,7 +3205,7 @@ const stepScrollRef = useRef(null);
                       ],
                     }}
                   >
-                    🎊 🎉 ✨ ⭐ 🌟 ✨ 🎉 🎊
+                       ⭐ 🌟
                   </Animated.Text>
 
                   <Animated.Text
@@ -3218,7 +3218,7 @@ const stepScrollRef = useRef(null);
                       ],
                     }}
                   >
-                    ⭐ 🌟 ✨
+                    ⭐ 🌟
                   </Animated.Text>
 
                   <Animated.View
