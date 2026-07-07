@@ -698,15 +698,10 @@ function teacherNameForAssignment(assignment) {
                     <div className="admin-report-table-card">
                       <div className="admin-report-table-toolbar">
                         <strong>System Monitoring Report</strong>
-                        <div>
-                          <button type="button">🔍</button>
-                          <button type="button">Export</button>
-                        </div>
                       </div>
 
                       <div className="admin-report-selected-bar">
                         <strong>All available monitoring records selected</strong>
-                        <button type="button">Take Action</button>
                       </div>
 
                       <div className="admin-report-all-row">
@@ -736,21 +731,7 @@ function teacherNameForAssignment(assignment) {
                   </div>
 
                   <aside className="admin-report-action-panel">
-                    <h3>Take Action: Admin Audit Trail Report</h3>
-
-                    <input
-                      type="text"
-                      value=""
-                      readOnly
-                      placeholder="Search report action"
-                      aria-label="Search report action"
-                    />
-
-                    <div className="admin-report-action-tabs">
-                      <span className="active">System</span>
-                      <span>Students</span>
-                      <span>Accounts</span>
-                    </div>
+                    <h3>Admin Audit Trail Report</h3>
 
                     <button
                       type="button"
