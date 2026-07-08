@@ -3840,21 +3840,24 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                       </td>
                       <td>{fmtDate(lesson.updatedAt || lesson.createdAt)}</td>
                       <td>
-                        <button
-                          className="lms-action-secondary"
-                          type="button"
-                          onClick={() => editExistingLesson(lesson)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="lms-outline-action"
-                          style={{ color: '#b42318', borderColor: 'rgba(180, 35, 24, 0.28)', whiteSpace: 'nowrap' }}
-                          onClick={() => deleteLesson(lesson.id, lesson.title)}
-                        >
-                          Remove Lesson
-                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', minWidth: 132 }}>
+                          <button
+                            className="lms-action-secondary"
+                            type="button"
+                            style={{ width: '100%', minWidth: 120, justifyContent: 'center' }}
+                            onClick={() => editExistingLesson(lesson)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="lms-outline-action"
+                            style={{ width: '100%', minWidth: 120, justifyContent: 'center', color: '#b42318', borderColor: 'rgba(180, 35, 24, 0.28)', whiteSpace: 'nowrap' }}
+                            onClick={() => deleteLesson(lesson.id, lesson.title)}
+                          >
+                            Remove Lesson
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
