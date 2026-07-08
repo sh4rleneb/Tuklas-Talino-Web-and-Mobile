@@ -3,16 +3,16 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const defaults = {
-  student: { label: 'Student ID', sample: 'STU-2025-001', password: 'student123', icon: '🧒' },
-  teacher: { label: 'Username', sample: 'teacher1', password: 'teach123', icon: '👩‍🏫' },
-  admin: { label: 'Username', sample: 'admin', password: 'admin123', icon: '🛡️' }
+  student: { label: 'Student ID', placeholder: 'Enter your Student ID', icon: '🧒' },
+  teacher: { label: 'Username', placeholder: 'Enter your username', icon: '👩‍🏫' },
+  admin: { label: 'Username', placeholder: 'Enter your username', icon: '🛡️' }
 };
 
 export default function LoginPage() {
   const { role = 'student' } = useParams();
   const meta = defaults[role] || defaults.student;
-  const [identifier, setIdentifier] = useState(meta.sample);
-  const [password, setPassword] = useState(meta.password);
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -39,7 +39,6 @@ export default function LoginPage() {
         <Link to="/" className="back-link">← Back</Link>
         <div className="auth-icon">{meta.icon}</div>
         <h1>{role[0].toUpperCase() + role.slice(1)} Login</h1>
-        <p>Demo: <code>{meta.sample}</code> / <code>{meta.password}</code></p>
 
         <label>{meta.label}
           <input value={identifier} onChange={e => setIdentifier(e.target.value)} required />

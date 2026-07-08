@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 import {
   View,
@@ -10,7 +10,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 
 import { Ionicons }
@@ -18,10 +17,6 @@ from '@expo/vector-icons';
 
 import { loginAdmin }
 from '../../api/auth';
-
-import { api }
-from '../../api/client';
-
 function cleanLoginIdentifierInput(value, shouldUppercase = false) {
   const cleaned = String(value || '')
     .replace(/\s+/g, '')
@@ -49,70 +44,7 @@ export default function AdminLogin({
 
   const [showPassword, setShowPassword] =
     useState(false);
-
-  const [accountValid, setAccountValid] =
-    useState(false);
-
-  const [accountChecking, setAccountChecking] =
-    useState(false);
-
-  const [accountValidationMessage, setAccountValidationMessage] =
-    useState('');
-
-
-  useEffect(() => {
-    const value = identifier.trim();
-
-    if (!value) {
-      setAccountValid(false);
-      setAccountChecking(false);
-      setAccountValidationMessage('');
-      return undefined;
-    }
-
-    if (value.length < 3) {
-      setAccountValid(false);
-      setAccountChecking(false);
-      setAccountValidationMessage('Ilagay ang username o ID.');
-      return undefined;
-    }
-
-    let active = true;
-    setAccountValid(false);
-    setAccountChecking(true);
-    setAccountValidationMessage('Sinusuri ang admin account...');
-
-    const timer = setTimeout(async () => {
-      try {
-        const data = await api(`/auth/check-admin/${encodeURIComponent(value)}`);
-
-        if (!active) return;
-
-        setAccountValid(Boolean(data.exists));
-        setAccountValidationMessage(
-          data.exists
-            ? `Natagpuan: ${data.name || 'Admin account'}`
-            : 'Hindi nakita o hindi aktibo ang admin account.'
-        );
-      } catch (error) {
-        if (!active) return;
-
-        setAccountValid(false);
-        setAccountValidationMessage(
-          error.message || 'Hindi masuri ang account.'
-        );
-      } finally {
-        if (active) setAccountChecking(false);
-      }
-    }, 350);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [identifier]);
-
-  function handleIdentifierChange(value) {
+function handleIdentifierChange(value) {
     setIdentifier(cleanLoginIdentifierInput(value, false));
   }
 
@@ -120,7 +52,7 @@ export default function AdminLogin({
 
     if (loading) return;
 
-    if (!identifier || !password || !accountValid) {
+    if (!identifier || !password) {
 
       Alert.alert(
         'May Kulang',
@@ -237,15 +169,7 @@ export default function AdminLogin({
             👤 Username
           </Text>
 
-          <View
-            style={[
-              styles.inputBox,
-              identifier.length > 0 &&
-                !accountChecking &&
-                !accountValid &&
-                styles.invalidInput,
-            ]}
-          >
+          <View style={styles.inputBox}>
 
             <Text style={styles.icon}>
               👤
@@ -262,33 +186,7 @@ export default function AdminLogin({
               autoCapitalize="none"
             />
 
-            {accountValid && (
-              <View style={styles.validCircle}>
-                <Text style={styles.validIcon}>
-                  ✔
-                </Text>
-              </View>
-            )}
-
-            {accountChecking && (
-              <ActivityIndicator
-                size="small"
-                color="#7C3AED"
-              />
-            )}
-
           </View>
-
-          {accountValidationMessage ? (
-            <Text
-              style={[
-                styles.accountValidationText,
-                accountValid && styles.accountSuccessText,
-              ]}
-            >
-              {accountValidationMessage}
-            </Text>
-          ) : null}
 
           {/* PASSWORD */}
 
@@ -343,23 +241,9 @@ export default function AdminLogin({
           {/* LOGIN */}
 
           <TouchableOpacity
-            style={[
-              styles.loginButton,
-              (
-                loading ||
-                accountChecking ||
-                !accountValid ||
-                !password.trim()
-              ) &&
-              styles.disabledButton,
-            ]}
+            style={[styles.loginButton, (loading || !identifier.trim() || !password.trim()) && styles.disabledButton]}
             onPress={handleLogin}
-            disabled={
-              loading ||
-              accountChecking ||
-              !accountValid ||
-              !password.trim()
-            }
+            disabled={loading || !identifier.trim() || !password.trim()}
           >
 
             <Text
@@ -600,18 +484,6 @@ const styles = StyleSheet.create({
   invalidInput: {
     borderColor: '#EF4444',
     backgroundColor: '#FEF2F2',
-  },
-
-  accountValidationText: {
-    marginTop: 8,
-    marginBottom: 8,
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#DC2626',
-  },
-
-  accountSuccessText: {
-    color: '#7C3AED',
   },
 
   validCircle: {

@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { api } from '../../api/client';
-
+import React, { useState } from 'react';
 const EyeIcon = () => (
   <svg viewBox="0 0 24 24" className="password-eye-svg" aria-hidden="true">
     <path d="M2.25 12s3.5-6.75 9.75-6.75S21.75 12 21.75 12s-3.5 6.75-9.75 6.75S2.25 12 2.25 12Z" />
@@ -17,124 +15,14 @@ const EyeOffIcon = () => (
   </svg>
 );
 
-
-function useRealtimeLoginCheck(role, identifier) {
-  const [state, setState] = useState({
-    checking: false,
-    exists: false,
-    message: '',
-    name: '',
-  });
-
-  useEffect(() => {
-    const value = String(identifier || '').trim();
-
-    if (!value) {
-      setState({ checking: false, exists: false, message: '', name: '' });
-      return undefined;
-    }
-
-    if (value.length < 3) {
-      setState({
-        checking: false,
-        exists: false,
-        message: 'Enter at least 3 characters.',
-        name: '',
-      });
-      return undefined;
-    }
-
-    let active = true;
-    const roleLabel = role === 'teacher' ? 'teacher' : 'admin';
-
-    setState({
-      checking: true,
-      exists: false,
-      message: `Checking ${roleLabel} account...`,
-      name: '',
-    });
-
-    const timeout = setTimeout(async () => {
-      try {
-        const data = await api(`/auth/check-${role}/${encodeURIComponent(value)}`);
-
-        if (!active) return;
-
-        setState({
-          checking: false,
-          exists: Boolean(data.exists),
-          message: data.exists
-            ? `Found: ${data.name || `${roleLabel} account`}`
-            : `No active ${roleLabel} account found.`,
-          name: data.name || '',
-        });
-      } catch (error) {
-        if (!active) return;
-
-        setState({
-          checking: false,
-          exists: false,
-          message: error.message || `Could not check ${roleLabel} account.`,
-          name: '',
-        });
-      }
-    }, 350);
-
-    return () => {
-      active = false;
-      clearTimeout(timeout);
-    };
-  }, [role, identifier]);
-
-  return state;
-}
-
-function LoginCheckMessage({ check }) {
-  if (!check?.message) return null;
-
-  return (
-    <p
-      style={{
-        margin: '8px 0 0',
-        fontSize: 13,
-        fontWeight: 800,
-        color: check.exists ? '#16A34A' : '#DC2626',
-      }}
-    >
-      {check.message}
-    </p>
-  );
-}
-
 export function StudentLogin({ go, onLogin }) {
   const [studentIdValue, setStudentIdValue] = useState('');
-  const [studentIdExists, setStudentIdExists] = useState(false);
-  const [showStudentPassword, setShowStudentPassword] = useState(false);
-
-  useEffect(() => {
-    const value = studentIdValue.trim();
-
-    setStudentIdExists(false);
-
-    if (value.length < 4) return;
-
-    const timeout = setTimeout(async () => {
-      try {
-        const data = await api(`/auth/check-student/${encodeURIComponent(value)}`);
-        setStudentIdExists(Boolean(data.exists));
-      } catch {
-        setStudentIdExists(false);
-      }
-    }, 350);
-
-    return () => clearTimeout(timeout);
-  }, [studentIdValue]);
-
-  return <>
+const [showStudentPassword, setShowStudentPassword] = useState(false);
+return <>
     <div className="top-nav login-top-nav login-student-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-home')}>← Home</button><div className="logo">🎒 Student Login</div><div className="login-nav-pill">⭐ Tuklas. Matuto. Magsaya!</div></div>
     <div className="login-stage student-stage"><div className="login-shell student-shell">
       <aside className="login-visual-card student-visual-card"><div className="login-sparkles">✦</div><h2>Mag-login,<br />Estudyante! 👋</h2><p>Ilagay ang Student ID at password para magpatuloy.</p><div className="student-hero-illustration login-hero-png-wrap" aria-hidden="true"><img src="/login-student-girl.png" alt="" className="login-hero-png student" /></div><div className="login-info-card"><span className="info-icon">🛡️</span><div><b>Ligtas • Masaya • Makabuluhan</b><br /><span>Tuklas Talino, kasama mo sa bawat hakbang.</span></div></div></aside>
-      <section className="login-form-panel student-form-panel"><div className="login-form-heading"><span className="heading-badge">🪪</span><div><h3>Mag-login bilang Estudyante</h3><p>Ilagay ang Student ID at password para magpatuloy.</p></div></div><label className="login-label" htmlFor="stu-id">🪪 Student ID</label><div className="input-with-icon"><span>👤</span><input className="input-field" id="stu-id" placeholder="Halimbawa: STU-2025-001" value={studentIdValue} onChange={(event) => setStudentIdValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} />{studentIdExists && <span className="input-check">✓</span>}</div><label className="login-label" htmlFor="stu-password">🔒 Password</label><div className="input-with-icon"><span>🔐</span><input className="input-field" id="stu-password" placeholder="Default: student123" type={showStudentPassword ? "text" : "password"} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /><button type="button" className="password-eye-btn" aria-label={showStudentPassword ? "Hide password" : "Show password"} onClick={() => setShowStudentPassword((value) => !value)}>{showStudentPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div><button className="btn btn-green login-main-btn" onClick={onLogin}>✨ Login</button><p className="secure-note">🔒 Ang iyong impormasyon ay ligtas at protektado.</p></section>
+      <section className="login-form-panel student-form-panel"><div className="login-form-heading"><span className="heading-badge">🪪</span><div><h3>Mag-login bilang Estudyante</h3><p>Ilagay ang Student ID at password para magpatuloy.</p></div></div><label className="login-label" htmlFor="stu-id">🪪 Student ID</label><div className="input-with-icon"><span>👤</span><input className="input-field" id="stu-id" placeholder="Halimbawa: STU-2025-001" value={studentIdValue} onChange={(event) => setStudentIdValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /></div><label className="login-label" htmlFor="stu-password">🔒 Password</label><div className="input-with-icon"><span>🔐</span><input className="input-field" id="stu-password" placeholder="Ilagay ang password" type={showStudentPassword ? "text" : "password"} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /><button type="button" className="password-eye-btn" aria-label={showStudentPassword ? "Hide password" : "Show password"} onClick={() => setShowStudentPassword((value) => !value)}>{showStudentPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div><button className="btn btn-green login-main-btn" onClick={onLogin}>✨ Login</button><p className="secure-note">🔒 Ang iyong impormasyon ay ligtas at protektado.</p></section>
     </div></div>
   </>;
 }
@@ -142,10 +30,8 @@ export function StudentLogin({ go, onLogin }) {
 export function TeacherLogin({ go, onLogin }) {
   const [showTeacherPassword, setShowTeacherPassword] = useState(false);
   const [teacherIdentifier, setTeacherIdentifier] = useState('');
-  const teacherCheck = useRealtimeLoginCheck('teacher', teacherIdentifier);
-  const teacherLoginDisabled = teacherCheck.checking || !teacherCheck.exists;
-
-  function handleTeacherIdentifierChange(event) {
+  const teacherLoginDisabled = false;
+function handleTeacherIdentifierChange(event) {
     const value = event.target.value
       .replace(/\s+/g, '')
       .replace(/[^A-Za-z0-9._@-]/g, '')
@@ -205,7 +91,7 @@ export function TeacherLogin({ go, onLogin }) {
             {teacherCheck.exists && <span className="input-check">✓</span>}
           </div>
 
-          <LoginCheckMessage check={teacherCheck} />
+          
 
           <label className="login-label" htmlFor="t-password">🔒 Password</label>
           <div className="input-with-icon">
@@ -252,10 +138,8 @@ export function TeacherLogin({ go, onLogin }) {
 export function AdminLogin({ go, onLogin }) {
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminIdentifier, setAdminIdentifier] = useState('');
-  const adminCheck = useRealtimeLoginCheck('admin', adminIdentifier);
-  const adminLoginDisabled = adminCheck.checking || !adminCheck.exists;
-
-  function handleAdminIdentifierChange(event) {
+  const adminLoginDisabled = false;
+function handleAdminIdentifierChange(event) {
     const value = event.target.value
       .replace(/\s+/g, '')
       .replace(/[^A-Za-z0-9._@-]/g, '');
@@ -314,7 +198,7 @@ export function AdminLogin({ go, onLogin }) {
             {adminCheck.exists && <span className="input-check">✓</span>}
           </div>
 
-          <LoginCheckMessage check={adminCheck} />
+          
 
           <label className="login-label" htmlFor="a-password">Password</label>
           <div className="input-with-icon admin-input">

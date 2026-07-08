@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 import {
   View,
@@ -10,7 +10,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 
 import { api, setToken } from '../../api/client';
@@ -40,64 +39,7 @@ export default function StudentLogin({
 
   const [showPassword, setShowPassword] =
     useState(false);
-
-  const [studentValid, setStudentValid] =
-    useState(false);
-
-  const [studentChecking, setStudentChecking] =
-    useState(false);
-
-  const [studentValidationMessage, setStudentValidationMessage] =
-    useState('');
-useEffect(() => {
-    const identifier = studentId.trim();
-    const hasValidFormat = /^STU-\d{4}-\d{3}$/.test(identifier);
-
-    if (!identifier) {
-      setStudentValid(false);
-      setStudentChecking(false);
-      setStudentValidationMessage('');
-      return undefined;
-    }
-
-    if (!hasValidFormat) {
-      setStudentValid(false);
-      setStudentChecking(false);
-      setStudentValidationMessage('Halimbawa: STU-2025-001');
-      return undefined;
-    }
-
-    let active = true;
-    setStudentValid(false);
-    setStudentChecking(true);
-    setStudentValidationMessage('Sinusuri ang Mag-aaral ID...');
-
-    const timer = setTimeout(async () => {
-      try {
-        const data = await api(`/auth/check-student/${encodeURIComponent(identifier)}`);
-
-        if (!active) return;
-
-        setStudentValid(Boolean(data.exists));
-        setStudentValidationMessage(
-          data.exists ? '' : 'Hindi nakita o hindi aktibo ang Mag-aaral ID.'
-        );
-      } catch (error) {
-        if (!active) return;
-        setStudentValid(false);
-        setStudentValidationMessage(error.message || 'Hindi masuri ang Mag-aaral ID.');
-      } finally {
-        if (active) setStudentChecking(false);
-      }
-    }, 350);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [studentId]);
-
-  function handleStudentIdChange(value) {
+function handleStudentIdChange(value) {
     const upper = sanitizeStudentLoginIdInput(value);
     setStudentId(upper);
   }
@@ -108,7 +50,7 @@ useEffect(() => {
 
     try {
 
-      if (!studentId || !password || !studentValid) {
+      if (!studentId || !password) {
         Alert.alert(
           'May Kulang',
           'Pakilagay ang wastong Mag-aaral ID at password.'
@@ -234,17 +176,7 @@ useEffect(() => {
             🪪 Mag-aaral ID
           </Text>
 
-          <View
-            style={[
-              styles.inputBox,
-
-              studentId.length > 0 &&
-              !studentChecking &&
-              !studentValid &&
-
-              styles.invalidInput,
-            ]}
-          >
+          <View style={styles.inputBox}>
 
             <Text style={styles.inputIcon}>
               👤
@@ -262,28 +194,7 @@ useEffect(() => {
               autoCorrect={false}
             />
 
-            {studentValid && (
-              <View style={styles.validCircle}>
-                <Text style={styles.validIcon}>
-                  ✔
-                </Text>
-              </View>
-            )}
-
-            {studentChecking && (
-              <ActivityIndicator
-                size="small"
-                color="#16A34A"
-              />
-            )}
-
           </View>
-
-            {studentValidationMessage ? (
-                <Text style={styles.errorText}>
-                  {studentValidationMessage}
-                </Text>
-              ) : null}
 
           {/* PASSWORD */}
 
@@ -322,26 +233,12 @@ useEffect(() => {
           {/* LOGIN */}
 
           <TouchableOpacity
-           style={[
-              styles.loginButton,
-
-              (
-                !studentValid ||
-                studentChecking ||
-                !password.trim()
-              ) &&
-              styles.disabledButton,
-            ]}
+           style={[styles.loginButton, (loading || !studentId.trim() || !password.trim()) && styles.disabledButton]}
 
             activeOpacity={0.8}
             onPress={handleLogin}
 
-            disabled={
-              loading ||
-              !studentValid ||
-              studentChecking ||
-              !password.trim()
-            }
+            disabled={loading || !studentId.trim() || !password.trim()}
           >
 
             <Text style={styles.loginText}>
