@@ -27,8 +27,6 @@ import {
 } from '../../utils/accountValidation';
 
 import {
-  archiveStudent,
-  archiveTeacher,
   assignTeacher,
   createStudentAccount,
   createTeacherAccount,
@@ -153,13 +151,15 @@ const [auditSearch, setAuditSearch] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [accountType, setAccountType] = useState('student');
-  const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
+  const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '', sectionMode: 'existing', newSection: '' });
+  const [studentSectionMenuOpen, setStudentSectionMenuOpen] = useState(false);
   const [teacherForm, setTeacherForm] = useState({ name: '', email: '' });
   const [assignmentForm, setAssignmentForm] = useState({ teacherId: '', gradeLevel: '1', section: '' });
   const [studentGradeFilter, setStudentGradeFilter] = useState('all');
   const [studentSectionFilter, setStudentSectionFilter] = useState('all');
 
-  const studentValidation = studentErrors(studentForm);
+  const studentFormSection = studentForm.sectionMode === 'new' ? normalizeSpaces(studentForm.newSection) : normalizeSpaces(studentForm.section);
+  const studentValidation = studentErrors({ ...studentForm, section: studentFormSection });
   const teacherValidation = teacherErrors(teacherForm);
 
   const studentFormValid = !Object.values(studentValidation).some(Boolean);
@@ -219,7 +219,7 @@ const [auditSearch, setAuditSearch] = useState('');
         getActiveTeachers(),
         getArchivedStudents(),
         getArchivedTeachers(),
-        getAdminAuditLogs(100),
+        getAdminAuditLogs(500),
         getReportSummary(),
       ]);
       setStats(statData.stats || {});
@@ -378,18 +378,23 @@ async function executeVerifiedAction() {
       'auth.login': 'Logged in',
       'auth.logout': 'Logged out',
       'auth.change_password': 'Changed password',
+      'auth.verify_password': 'Verified password',
       'student.create': 'Created student account',
       'student.update': 'Updated student account',
       'student.archive': 'Archived student account',
       'student.reactivate': 'Reactivated student account',
       'student.reset_password': 'Reset student password',
       'student.reset_progress': 'Reset student progress',
+      'student.enrollment.update': 'Updated student class',
       'student.promote': 'Promoted student',
       'teacher.create': 'Created teacher account',
       'teacher.update': 'Updated teacher account',
       'teacher.archive': 'Archived teacher account',
       'teacher.reactivate': 'Reactivated teacher account',
       'teacher.reset_password': 'Reset teacher password',
+      'teacher.assignment.create': 'Assigned teacher class',
+      'teacher.assignment.update': 'Updated teacher assignment',
+      'teacher.assignment.remove': 'Removed teacher assignment',
       'lesson.create': 'Created lesson',
       'lesson.update': 'Updated lesson',
       'lesson.archive': 'Archived lesson',
@@ -620,33 +625,95 @@ async function executeVerifiedAction() {
                 Baitang must be from 1 to 6.
               </Text>
             )}
-            <Field
-              label="Section"
-              value={studentForm.section}
-              onChangeText={(section) =>
-                setStudentForm((current) => ({
-                  ...current,
-                  section: normalizeSpaces(section),
-                }))
-              }
-            />
-              {studentSectionOptions.length ? (
-                <>
-                  <Text style={styles.helperText}>Section suggestions for selected grade:</Text>
-                  <View style={styles.choiceRow}>
-                    {studentSectionOptions.map((sectionOption) => (
-                      <Button
-                        key={`student-section-${sectionOption}`}
-                        tone={normalizeSpaces(studentForm.section) === sectionOption ? 'green' : 'slate'}
-                        disabled={Boolean(busy)}
-                        onPress={() => setStudentForm((current) => ({ ...current, section: sectionOption }))}
-                      >
-                        {sectionOption}
-                      </Button>
-                    ))}
-                  </View>
-                </>
-              ) : null}
+            <Text style={styles.fieldLabel}>Section</Text>
+            <TouchableOpacity
+              style={styles.auditDateDropdownButton}
+              onPress={() => setStudentSectionMenuOpen((current) => !current)}
+              disabled={Boolean(busy)}
+            >
+              <Text style={styles.auditDateDropdownText}>
+                {studentForm.sectionMode === 'new'
+                  ? 'Add new section'
+                  : studentForm.section || 'Select existing section'}
+              </Text>
+              <Text style={styles.auditDateDropdownChevron}>
+                {studentSectionMenuOpen ? '▲' : '▼'}
+              </Text>
+            </TouchableOpacity>
+
+            {studentSectionMenuOpen ? (
+              <View style={styles.auditDateDropdownPanel}>
+                {studentSectionOptions.map((sectionOption) => (
+                  <TouchableOpacity
+                    key={`student-section-${sectionOption}`}
+                    style={[
+                      styles.auditDateDropdownOption,
+                      studentForm.sectionMode !== 'new' && normalizeSpaces(studentForm.section) === sectionOption && styles.auditDateDropdownOptionActive,
+                    ]}
+                    onPress={() => {
+                      setStudentForm((current) => ({
+                        ...current,
+                        section: sectionOption,
+                        sectionMode: 'existing',
+                        newSection: '',
+                      }));
+                      setStudentSectionMenuOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.auditDateDropdownOptionText,
+                        studentForm.sectionMode !== 'new' && normalizeSpaces(studentForm.section) === sectionOption && styles.auditDateDropdownOptionTextActive,
+                      ]}
+                    >
+                      {sectionOption}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+
+                {!studentSectionOptions.length ? (
+                  <Text style={styles.helperText}>No existing sections for this grade.</Text>
+                ) : null}
+
+                <TouchableOpacity
+                  style={[
+                    styles.auditDateDropdownOption,
+                    studentForm.sectionMode === 'new' && styles.auditDateDropdownOptionActive,
+                  ]}
+                  onPress={() => {
+                    setStudentForm((current) => ({
+                      ...current,
+                      section: '',
+                      sectionMode: 'new',
+                      newSection: current.newSection || '',
+                    }));
+                    setStudentSectionMenuOpen(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.auditDateDropdownOptionText,
+                      studentForm.sectionMode === 'new' && styles.auditDateDropdownOptionTextActive,
+                    ]}
+                  >
+                    + Add new section
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {studentForm.sectionMode === 'new' ? (
+              <Field
+                label="New Section Name"
+                value={studentForm.newSection}
+                onChangeText={(newSection) =>
+                  setStudentForm((current) => ({
+                    ...current,
+                    newSection: normalizeSpaces(newSection),
+                  }))
+                }
+              />
+            ) : null}
             {studentValidation.section && (
               <Text style={styles.errorText}>
                 Section is required.
@@ -659,7 +726,7 @@ async function executeVerifiedAction() {
                 ...studentForm,
                 name: normalizeSpaces(studentForm.name),
                 gradeLevel: Number(studentForm.gradeLevel),
-                section: normalizeSpaces(studentForm.section),
+                section: studentFormSection,
                 avatar: '🧒',
               };
 
@@ -695,7 +762,8 @@ async function executeVerifiedAction() {
                   `Username\n\n${saved.username}\n\nTemporary PIN\n\n${saved.temporaryPin}\n\nStudent must change this PIN on first login.`
                 );
 
-                setStudentForm({ name: '', gradeLevel: '1', section: '' });
+                setStudentForm({ name: '', gradeLevel: '1', section: '', sectionMode: 'existing', newSection: '' });
+                setStudentSectionMenuOpen(false);
               }
             }}>Create Student</Button>
           </>
@@ -971,17 +1039,6 @@ async function executeVerifiedAction() {
                 });
                 setVaultVisible(true);
               }}>Login Credentials</Button>
-              <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
-                keyword: 'ARCHIVE',
-                reasonPlaceholder: 'e.g. Student transferred to another class or school',
-                action: (reason) => run(
-                      `student-archive-${student.id}`,
-                      () => archiveStudent(student.id, {
-                        reason
-                      }),
-                      'Student archived.'
-                    )
-              })}>Archive</Button>
             </View>
             <View style={styles.choiceRow}>
               {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
@@ -997,6 +1054,39 @@ async function executeVerifiedAction() {
                       'Enrollment updated.'
                     )
                   })}>G{grade}</Button>)}
+            </View>
+
+            <Text style={styles.fieldLabel}>Section</Text>
+            <View style={styles.choiceRow}>
+              {[
+                ...new Set(
+                  classOptions
+                    .filter((item) => !student.gradeLevel || Number(item.gradeLevel || item.grade) === Number(student.gradeLevel))
+                    .map((item) => normalizeSpaces(item.section || item.sectionName || item.classSection || ''))
+                    .filter(Boolean)
+                ),
+              ].sort((first, second) => first.localeCompare(second)).map((sectionOption) => (
+                <Button
+                  key={`student-section-update-${student.id}-${sectionOption}`}
+                  tone={normalizeSpaces(student.section) === sectionOption ? 'green' : 'slate'}
+                  disabled={Boolean(busy)}
+                  onPress={() => requestProtectedAdminAction({
+                    keyword: 'SECTION',
+                    reasonPlaceholder: 'e.g. Student moved to a different section',
+                    action: (reason) => run(
+                      `section-${student.id}-${sectionOption}`,
+                      () => updateStudentEnrollment(student.id, {
+                        gradeLevel: Number(student.gradeLevel),
+                        section: sectionOption,
+                        promotionReason: reason,
+                      }),
+                      'Enrollment updated.'
+                    ),
+                  })}
+                >
+                  {sectionOption}
+                </Button>
+              ))}
             </View>
           </View>
         ))}
@@ -1039,17 +1129,6 @@ async function executeVerifiedAction() {
                   });
                   setVaultVisible(true);
                 }}>Login Credentials</Button>
-                <Button tone="red" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
-                  keyword: 'TEACHERARCHIVE',
-                  reasonPlaceholder: 'e.g. Teacher no longer works at this school',
-                  action: (reason) => run(
-                    `teacher-archive-${teacher.id}`,
-                    () => archiveTeacher(teacher.id, {
-                      reason
-                    }),
-                    'Teacher archived.'
-                  )
-                })}>Archive</Button>
               </View>
             </View>
           );
