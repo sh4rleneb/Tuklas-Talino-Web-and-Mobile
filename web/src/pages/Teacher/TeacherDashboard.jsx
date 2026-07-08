@@ -3283,87 +3283,101 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
               }
             }
                       /* === My Created Lessons compact table polish === */
-            .teacher-builder-layout .lms-recent-table {
-              table-layout: auto;
+            .teacher-builder-layout .builder-panel-lessons {
+              overflow-x: auto;
             }
 
-            .teacher-builder-layout .lms-recent-table th {
-              padding: 13px 12px;
-              font-size: 0.92rem;
-              line-height: 1.2;
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table {
+              table-layout: fixed;
+              width: 1160px;
+              min-width: 1160px;
+            }
+
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th,
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td {
+              text-align: center;
               vertical-align: middle;
+              padding-left: 12px;
+              padding-right: 12px;
+            }
+
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(1),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(1) {
+              width: 190px;
+            }
+
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(2),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(2) {
+              width: 120px;
+            }
+
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(3),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(3) {
+              width: 95px;
               white-space: nowrap;
             }
 
-            .teacher-builder-layout .lms-recent-table td {
-              padding: 13px 12px;
-              font-size: 0.94rem;
-              line-height: 1.3;
-              vertical-align: middle;
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(4),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(4) {
+              width: 115px;
             }
 
-            .teacher-builder-layout .lms-recent-table td:nth-child(1) {
-              font-weight: 900;
-              max-width: 280px;
-            }
-
-            .teacher-builder-layout .lms-recent-table td:nth-child(6),
-            .teacher-builder-layout .lms-recent-table td:nth-child(7),
-            .teacher-builder-layout .lms-recent-table td:nth-child(8),
-            .teacher-builder-layout .lms-recent-table td:nth-child(9) {
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(5),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(5) {
+              width: 115px;
               white-space: nowrap;
             }
 
-            .teacher-builder-layout .lms-recent-table .lms-status {
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(6),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(6) {
+              width: 80px;
+              white-space: nowrap;
+            }
+
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(7),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(7) {
+              width: 150px;
+            }
+
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(7) .lms-status {
               display: inline-flex;
               align-items: center;
               justify-content: center;
               gap: 6px;
-              padding: 7px 12px;
-              min-width: 0;
-              min-height: 0;
-              border-radius: 999px;
-              font-size: 0.88rem;
-              font-weight: 900;
-              line-height: 1;
+              min-width: 112px;
+              margin-left: auto;
+              margin-right: auto;
               white-space: nowrap;
-              box-shadow: none;
+              padding-left: 12px;
+              padding-right: 12px;
             }
 
-            .teacher-builder-layout .lms-recent-table .lms-status::before {
-              font-size: 0.7rem;
-            }
-
-            .teacher-builder-layout .lms-recent-table .lms-outline-action {
-              padding: 9px 13px !important;
-              border-radius: 14px;
-              font-size: 0.88rem;
-              line-height: 1.1;
-              min-height: 0;
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(8),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(8) {
+              width: 125px;
               white-space: nowrap;
             }
 
-            .teacher-builder-layout .lms-show-more {
-              margin-top: 14px;
-              font-size: 0.92rem;
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table th:nth-child(9),
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(9) {
+              width: 170px;
             }
 
-            @media (max-width: 1280px) {
-              .teacher-builder-layout .lms-recent-table th,
-              .teacher-builder-layout .lms-recent-table td {
-                padding: 11px 9px;
-                font-size: 0.88rem;
-              }
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(9) > div {
+              width: 100%;
+              min-width: 0 !important;
+            }
 
-              .teacher-builder-layout .lms-recent-table .lms-status {
-                padding: 6px 10px;
-                font-size: 0.84rem;
-              }
-
-              .teacher-builder-layout .lms-recent-table .lms-outline-action {
-                padding: 8px 10px !important;
-                font-size: 0.84rem;
-              }
+            .teacher-builder-layout .builder-panel-lessons .lms-recent-table td:nth-child(9) button {
+              width: 100% !important;
+              min-width: 0 !important;
+              max-width: 100%;
+              box-sizing: border-box;
+              justify-content: center;
+              padding-left: 10px;
+              padding-right: 10px;
+              font-size: 14px;
+              white-space: nowrap;
             }
             /* === End My Created Lessons compact table polish === */
 
@@ -3840,11 +3854,11 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                       </td>
                       <td>{fmtDate(lesson.updatedAt || lesson.createdAt)}</td>
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', minWidth: 132 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'stretch', width: '100%' }}>
                           <button
                             className="lms-action-secondary"
                             type="button"
-                            style={{ width: '100%', minWidth: 120, justifyContent: 'center' }}
+                            style={{ width: '100%', justifyContent: 'center' }}
                             onClick={() => editExistingLesson(lesson)}
                           >
                             Edit
@@ -3852,7 +3866,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
                           <button
                             type="button"
                             className="lms-outline-action"
-                            style={{ width: '100%', minWidth: 120, justifyContent: 'center', color: '#b42318', borderColor: 'rgba(180, 35, 24, 0.28)', whiteSpace: 'nowrap' }}
+                            style={{ width: '100%', justifyContent: 'center', color: '#b42318', borderColor: 'rgba(180, 35, 24, 0.28)', whiteSpace: 'nowrap' }}
                             onClick={() => deleteLesson(lesson.id, lesson.title)}
                           >
                             Remove Lesson
