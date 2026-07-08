@@ -11,12 +11,23 @@ import StudentBadgesStack from './StudentBadgesStack';
 import StudentProfileStack from './StudentProfileStack';
 import StudentLeaderboardStack from './StudentLeaderboardStack';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator(); const STUDENT_TAB_LABELS = {
+  Home: 'Tahanan',
+  Lessons: 'Aralin',
+  Quizzes: 'Pagsusulit',
+  Missions: 'Misyon',
+  Groups: 'Pangkat',
+  Leaderboard: 'Ranggo',
+  Badges: 'Gantimpala',
+  Profile: 'Ako',
+};
+
 
 export default function StudentSeniorTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        tabBarLabel: STUDENT_TAB_LABELS[route.name] || route.name,
         headerShown: false,
 
         tabBarActiveTintColor: '#16A34A',

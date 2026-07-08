@@ -1213,7 +1213,7 @@ if (role === 'admin') {
       setSelectedLesson(prev => prev ? { ...prev, completed: true } : prev);
 
       if (!silent) {
-        notify(data.xpAwarded ? `🎉 Natapos! +${data.xpAwarded} XP` : 'Nagawa mo na ang lesson na ito.');
+        notify(data.xpAwarded ? `🎉 Natapos! +${data.xpAwarded} XP` : 'Nagawa mo na ang araling ito.');
       showBadgeUnlockPopup(data?.newBadges);
       }
 
@@ -4291,9 +4291,9 @@ function normalizeQuizzesOption(option = {}, index = 0) {
     option?.optionText ??
     option?.label ??
     option?.value ??
-    `Choice ${index + 1}`;
+    `Pagpipilian ${index + 1}`;
 
-  const text = String(rawText || `Choice ${index + 1}`).trim() || `Choice ${index + 1}`;
+  const text = String(rawText || `Pagpipilian ${index + 1}`).trim() || `Pagpipilian ${index + 1}`;
 
   return {
     id: String(option?.id ?? option?.value ?? `opt-${index}-${text}`),
@@ -4343,7 +4343,7 @@ function buildQuizzesQuestionsFromLesson(lesson = {}) {
         questions.push({
           id: String(question.id || `${lesson.id || 'lesson'}-${activityIndex}-${questionIndex}`),
           type: 'mcq',
-          source: activity.title || 'Quizzes sa Lessons',
+          source: cleanStudentLessonQuizTitle(lesson),
           prompt: question.question || question.prompt || 'Piliin ang tamang sagot.',
           options: hasCorrect ? options : options.map((option, idx) => ({ ...option, isCorrect: idx === 0 })),
           points: Number(question.points || 1)
@@ -4355,18 +4355,48 @@ function buildQuizzesQuestionsFromLesson(lesson = {}) {
   return questions.slice(0, 25);
 }
 
+function cleanStudentVisibleLessonTitle(lesson = {}) {
+  const title = String(
+    lesson?.title ||
+    lesson?.name ||
+    lesson?.lessonTitle ||
+    lesson?.moduleTitle ||
+    'Aralin'
+  )
+    .replace(/^\s*(?:lessons?|mga aralin|missions?|mga misyon)\s*(?:ng|g)?\s*pang-aral\s*$/i, 'Aralin')
+    .replace(/^\s*(?:quizzes?|pagsusulit)\s+sa\s+/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return title || 'Aralin';
+}
+
+function cleanStudentLessonQuizTitle(lesson = {}) {
+  const value = String(lesson?.title || lesson?.name || lesson?.lessonTitle || 'Aralin')
+    .replace(/^\s*(?:quizzes?|pagsusulit)\s+sa\s+/i, '')
+    .replace(/\s*quiz\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return value || 'Aralin';
+}
+
+function formatStudentLessonQuizTitle(lesson = {}) {
+  return cleanStudentLessonQuizTitle(lesson);
+}
+
 function buildStudentQuizzes(data = {}) {
   return asArray(data?.lessons).map((lesson) => {
     const questions = buildQuizzesQuestionsFromLesson(lesson);
     return {
       id: `lesson-${lesson.id || lesson.title}-quiz`,
       lessonId: lesson.id,
-      lessonTitle: lesson.title || 'Lesson',
-      title: `Quizzes sa ${lesson.title || 'Lessons'}`,
+      lessonTitle: lesson.title || 'Aralin',
+      title: cleanStudentLessonQuizTitle(lesson),
       subject: lesson.subject || 'Filipino',
       gradeLevel: lesson.gradeLevel || data?.student?.gradeLevel || '—',
       xpReward: Math.max(5, Math.round(Number(lesson.xpReward || 20) / 2)),
-      type: lesson.completed ? 'Quizzes Pagkatapos ng Lessons' : 'Pagsasanay na Quizzes',
+      type: lesson.completed ? 'Pagsusulit Pagkatapos ng Aralin' : 'Pagsasanay na Pagsusulit',
       unlocked: true,
       questions
     };
@@ -6979,7 +7009,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
                   <div className="g12-home-avatar-badge" title="Napiling avatar mo">
                     {s.avatar || selectedAvatar || '👤'}
                   </div>
-                  <h1>Kamusta, {s.name || 'Learner'}! 👋</h1>
+                  <h1>Kamusta, {s.name || 'Mag-aaral'}! 👋</h1>
                 </div>
               <p>Handa ka na ba sa pag-aaral ngayon?</p>
             </div>
@@ -7033,7 +7063,7 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
                   </div>
                   <div className="g12-subject-body">
                     {pct > 0 && (
-                      <span className="g12-subject-chip">{`${pct}% progress`}</span>
+                      <span className="g12-subject-chip">{`${pct}% tapos`}</span>
                     )}
                     <h3>{previewTitle}</h3>
                     <p>
@@ -7053,14 +7083,14 @@ function EarlyStudentDashboard({ data, openFirstSubjectLesson, goStudentTab, log
       </main>
 
       <nav className="g12-nav" aria-label="Student navigation">
-        <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
-        <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
-        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
-        <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
-        <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-        <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
-        <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
-        <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
+        <button type="button" className="active" onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Tahanan</button>
+        <button type="button" onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Aralin</button>
+        <button type="button" onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulit</button>
+        <button type="button" onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Misyon</button>
+        <button type="button" onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Pangkat</button>
+        <button type="button" onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Gantimpala</button>
+        <button type="button" onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Ranggo</button>
+        <button type="button" onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Ako</button>
       </nav>
     </div>
   </>;
@@ -7088,14 +7118,14 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
   };
 
   const navItems = [
-    { id: 'home', icon: '🏠', label: 'Home' },
+    { id: 'home', icon: '🏠', label: 'Tahanan' },
     { id: 'lessons', icon: '📚', label: 'Aralin' },
-    { id: 'quizzes', icon: '🧠', label: 'Quizzes' },
-    { id: 'missions', icon: '🎮', label: 'Missions' },
-    { id: 'groups', icon: '👥', label: 'Groups' },
-    { id: 'badges', icon: '🏅', label: 'Badges' },
-    { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
-    { id: 'profile', icon: '👤', label: 'Profile' }
+    { id: 'quizzes', icon: '🧠', label: 'Pagsusulit' },
+    { id: 'missions', icon: '🎮', label: 'Misyon' },
+    { id: 'groups', icon: '👥', label: 'Pangkat' },
+    { id: 'badges', icon: '🏅', label: 'Gantimpala' },
+    { id: 'leaderboard', icon: '🏆', label: 'Ranggo' },
+    { id: 'profile', icon: '👤', label: 'Ako' }
   ];
 
   return (
@@ -7698,11 +7728,11 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
                 <span>{pct}%</span>
               </div>
               <b>Antas {level} • {levelTitleForXp(xp)}</b>
-              <small>{xp} XP earned</small>
+              <small>{xp} XP na nakuha</small>
             </div>
 
             {typeof logout === 'function' && (
-              <button type="button" className="g46-ref-logout" onClick={logout}>↩ Logout</button>
+              <button type="button" className="g46-ref-logout" onClick={logout}>↩ Lumabas</button>
             )}
           </aside>
 
@@ -7728,14 +7758,14 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
                 <div className="g46-ref-title-left">
                   <span className="g46-ref-title-icon">{icon}</span>
                   <div>
-                    <h1>{title || `Hi ${s.name || 'Learner'}!`}</h1>
+                    <h1>{title || `Hi ${s.name || 'Mag-aaral'}!`}</h1>
                     <p>{subtitle || 'Handa ka na ba sa pag-aaral ngayon?'}</p>
                   </div>
                 </div>
 
                 <div className="g46-ref-title-side">
                   <div className="g46-ref-level-line g46-ref-xp-animate">
-                    <span>XP Points</span>
+                    <span>Puntos sa XP</span>
                     <strong>{xp} XP</strong>
                     <i><span style={{ width: `${Math.max(6, pct)}%` }} /></i>
                   </div>
@@ -7772,12 +7802,12 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
   const completionPct = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
   const groupTask = tasks[0];
   const badgeCatalog = [
-    { icon: '🌟', name: 'Reader', requirement: 'Complete a reading lesson' },
-    { icon: '🔤', name: 'Words', requirement: 'Handa na vocabulary lessons' },
-    { icon: '🎙️', name: 'Tagapagsalita', requirement: 'Finish oral communication practice' },
-    { icon: '🏆', name: 'Champion', requirement: 'Complete more learning missions' },
-    { icon: '📖', name: 'Story', requirement: 'Finish a Panitikan lesson' },
-    { icon: '✨', name: 'Talino', requirement: 'Keep earning XP and badges' }
+    { icon: '🌟', name: 'Mambabasa', requirement: 'Tapusin ang isang aralin sa pagbasa' },
+    { icon: '🔤', name: 'Mga Salita', requirement: 'Tapusin ang mga aralin sa bokabularyo' },
+    { icon: '🎙️', name: 'Tagapagsalita', requirement: 'Tapusin ang pagsasanay sa pagbigkas' },
+    { icon: '🏆', name: 'Kampeon', requirement: 'Tapusin pa ang maraming misyong pampagkatuto' },
+    { icon: '📖', name: 'Kuwento', requirement: 'Tapusin ang isang aralin sa Panitikan' },
+    { icon: '✨', name: 'Talino', requirement: 'Patuloy na kumuha ng XP at gantimpala' }
   ];
   const normalizeBadgeName = (value = '') => String(value || '').trim().toLowerCase();
   const unlockedBadgeNames = new Set(badges.map(badge => normalizeBadgeName(badge.name)));
@@ -7788,11 +7818,11 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
     if (!cleanReason) return "Natapos mo ang isang layunin sa pag-aaral!";
 
     if (/^completed/i.test(cleanReason)) {
-      return `You ${cleanReason.charAt(0).toLowerCase()}${cleanReason.slice(1)}!`;
+      return studentFilipinoBadgeReason(cleanReason);
     }
 
     if (/^reached/i.test(cleanReason)) {
-      return `You ${cleanReason.charAt(0).toLowerCase()}${cleanReason.slice(1)}!`;
+      return studentFilipinoBadgeReason(cleanReason);
     }
 
     return cleanReason;
@@ -7842,12 +7872,12 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
     .sort((a, b) => g46LessonDateValue(b) - g46LessonDateValue(a))
     .slice(0, 4)
     .map((lesson, index) => {
-      const subject = formatStudentSubjectDisplay(lesson.subject || 'Lessons');
+      const subject = formatStudentSubjectDisplay(lesson.subject || 'Mga Aralin');
       return {
         lesson,
         icon: SUBJECTS.find(item => item.subj === subject)?.icon || '📚',
         iconSrc: subjectIconSrc(subject),
-        title: lesson.title || 'Untitled Lesson',
+        title: cleanStudentLessonQuizTitle(lesson),
         meta: subject,
         tone: g46LessonTone(subject, index),
         action: () => openLesson(lesson)
@@ -7855,7 +7885,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
     });
 
   const groupTaskFilterOptions = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: 'Lahat' },
     { value: 'pending', label: 'Naghihintay ng Pagsusuri' },
     { value: 'approved', label: 'Naaprubahan' },
     { value: 'returned', label: 'Ibinalik' },
@@ -7869,7 +7899,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
       goStudentTab={goStudentTab}
       logout={logout}
       icon={studentAvatar}
-      title={`Hi ${s.name || 'Learner'}!`}
+      title={`Hi ${s.name || 'Mag-aaral'}!`}
       subtitle="Handa ka na ba sa pag-aaral ngayon?"
     >
       <div className="g46-ref-dashboard-grid">
@@ -7916,9 +7946,9 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
           <section className="g46-ref-panel">
             <div className="g46-ref-panel-head">
               <div>
-                <h2>Mga Gawain ng Grupo</h2>
+                <h2>Mga Gawain ng Pangkat</h2>
               </div>
-              <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('groups')}>Buksan ang grupo →</button>
+              <button type="button" className="g46-ref-panel-link" onClick={() => goStudentTab('groups')}>Buksan ang pangkat →</button>
             </div>
 
             {groupTask ? (
@@ -7926,12 +7956,12 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
                 <span className="g46-ref-card-icon">👥</span>
                 <div>
                   <h3 style={{ fontSize: 28 }}>{groupTask.title}</h3>
-                  <p className="g46-ref-muted" style={{ margin: 0 }}>Due {displayDue(groupTask.dueAt)} • +{groupTask.xpReward || 0} XP</p>
+                  <p className="g46-ref-muted" style={{ margin: 0 }}>Takdang petsa {displayDue(groupTask.dueAt)} • +{groupTask.xpReward || 0} XP</p>
                 </div>
                 <button type="button" className="g46-ref-primary-btn" onClick={() => goStudentTab('groups')}>Magpatuloy</button>
               </div>
             ) : (
-              <div className="g46-ref-empty">Wala pang gawaing panggrupo. Magaling! 🎉</div>
+              <div className="g46-ref-empty">Wala pang gawaing pangkat. Magaling! 🎉</div>
             )}
           </section>
         </div>
@@ -7974,7 +8004,7 @@ function Grade46StudentDashboard({ data, openLesson, openFirstSubjectLesson, goS
 
 
 function SubjectCards({ lessonsBySubject, openLesson }) {
-  return <div className="grid grid-3">{lessonsBySubject.map(item => <button className="module-card" key={item.name} onClick={() => item.lessons[0] && openLesson(item.lessons[0])}><div style={{ fontSize: 36 }}>{item.icon}</div><h3>{item.name}</h3><p>{item.lessons.length} lessons</p><ProgressBar value={item.lessons.length ? Math.round((item.lessons.filter(l => l.completed).length / item.lessons.length) * 100) : 0} /></button>)}</div>;
+  return <div className="grid grid-3">{lessonsBySubject.map(item => <button className="module-card" key={item.name} onClick={() => item.lessons[0] && openLesson(item.lessons[0])}><div style={{ fontSize: 36 }}>{item.icon}</div><h3>{item.name}</h3><p>{item.lessons.length} aralin</p><ProgressBar value={item.lessons.length ? Math.round((item.lessons.filter(l => l.completed).length / item.lessons.length) * 100) : 0} /></button>)}</div>;
 }
 
 
@@ -8000,19 +8030,10 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
       <EarlyStudentSubpageStyles />
       <div className="g12-page">
         <header className="g12-topbar">
-          <button type="button" className="g12-brand" onClick={() => goStudentTab('home')} aria-label="Pumunta sa tahanan ng Tuklas Talino">
-            <img
-              src="/tuklas-talino-icon.png"
-              alt=""
-              style={{ width: '74px', height: '74px', objectFit: 'contain', display: 'block' }}
-            />
-            <span>Tuklas Talino</span>
-          </button>
 
           <div className="g12-top-actions">
             <div className="g12-pill">🌸 Baitang {s.gradeLevel || '—'} • {s.section || '—'}</div>
             <div className="g12-pill g12-top-xp-pill"><span className="g12-top-xp-bolt">⚡</span> {s.xp || 0} XP</div>
-            <button type="button" className="g12-action-btn" onClick={() => goStudentTab('home')}>🏠 Tahanan</button>
           </div>
         </header>
 
@@ -8040,14 +8061,14 @@ function EarlyStudentChrome({ data, activeTab, go, title, subtitle, icon, childr
         </main>
 
         <nav className="g12-nav" aria-label="Student navigation">
-          <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
-          <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
-          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
-          <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
-          <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Groups</button>
-          <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
-          <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
-          <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
+          <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => goStudentTab('home')}><span className="g12-nav-icon">🏠</span>Tahanan</button>
+          <button type="button" className={activeTab === 'lessons' ? 'active' : ''} onClick={() => goStudentTab('lessons')}><span className="g12-nav-icon">📖</span>Aralin</button>
+          <button type="button" className={activeTab === 'quizzes' ? 'active' : ''} onClick={() => goStudentTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulit</button>
+          <button type="button" className={activeTab === 'missions' ? 'active' : ''} onClick={() => goStudentTab('missions')}><span className="g12-nav-icon">🎮</span>Misyon</button>
+          <button type="button" className={activeTab === 'groups' ? 'active' : ''} onClick={() => goStudentTab('groups')}><span className="g12-nav-icon">👥</span>Pangkat</button>
+          <button type="button" className={activeTab === 'badges' ? 'active' : ''} onClick={() => goStudentTab('badges')}><span className="g12-nav-icon">🏅</span>Gantimpala</button>
+          <button type="button" className={activeTab === 'leaderboard' ? 'active' : ''} onClick={() => goStudentTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Ranggo</button>
+          <button type="button" className={activeTab === 'profile' ? 'active' : ''} onClick={() => goStudentTab('profile')}><span className="g12-nav-icon">🐰</span>Ako</button>
         </nav>
       </div>
     </>
@@ -8061,7 +8082,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
       activeTab="lessons"
       go={go}
       icon="📖"
-      title="Lessons"
+      title="Mga Aralin"
       subtitle=""
     >
       <section className="g12-section-card">
@@ -8115,7 +8136,7 @@ function EarlyLessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, open
         </div>
 
         {!lessons.length && (
-          <div className="g12-empty">Wala pang aralin para sa filter na ito.</div>
+          <div className="g12-empty">Wala pang aralin para sa piniling salaan.</div>
         )}
       </section>
     </EarlyStudentChrome>
@@ -8145,7 +8166,7 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
       go={go}
       logout={logout}
       icon="📚"
-      title="Lessons"
+      title="Mga Aralin"
       subtitle="Pumili ng aralin o modyul sa Filipino para magpatuloy."
     >
       <section className="g46-ref-panel">
@@ -8198,7 +8219,7 @@ function LessonsScreen({ lessons, subjectFilter, setSubjectFilter, go, openLesso
           })}
         </div>
 
-        {!lessons.length && <div className="g46-ref-empty">Wala pang aralin para sa filter na ito.</div>}
+        {!lessons.length && <div className="g46-ref-empty">Wala pang aralin para sa piniling salaan.</div>}
       </section>
     </Grade46StudentChrome>
   );
@@ -8410,21 +8431,21 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
   const lessonSteps = [
     {
       key: 'overview',
-      eyebrow: 'Step 1',
-      title: 'Lesson Overview',
+      eyebrow: 'Hakbang 1',
+      title: 'Buod ng Aralin',
       subtitle: 'Tingnan ang layunin ng lesson, gantimpala, at kailangang tapusin.'
     },
     ...(materialActivities.length ? [{
       key: 'material',
-      eyebrow: 'Step 2',
-      title: 'Materyal ng Lessons',
+      eyebrow: 'Hakbang 2',
+      title: 'Materyal ng Aralin',
       subtitle: 'Buksan muna ang kalakip na slides o PDF bago magbasa at sumagot.'
     }] : []),
     {
       key: 'read',
       eyebrow: `Hakbang ${materialActivities.length ? 3 : 2}`,
       title: 'Basahin ang Aralin',
-      subtitle: 'Review the instructions and lesson text carefully.'
+      subtitle: 'Basahing mabuti ang panuto at teksto ng aralin.'
     },
     {
       key: 'activities',
@@ -8432,13 +8453,13 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
       title: 'Mga Gawain sa Pagsasanay',
       subtitle: activityTotal
         ? `Gawain ${currentPracticeIndex + 1} sa ${activityTotal}`
-        : 'Wala pang gawaing pagsasanay para sa lesson na ito.'
+        : 'Wala pang gawaing pagsasanay para sa araling ito.'
     },
     {
       key: 'complete',
       eyebrow: `Hakbang ${materialActivities.length ? 5 : 4}`,
-      title: 'Tapusin ang Lessons',
-      subtitle: 'Ipasa ang pag-unlad sa lesson kapag handa ka na.'
+      title: 'Tapusin ang Aralin',
+      subtitle: 'Ipasa ang pag-unlad sa aralin kapag handa ka na.'
     }
   ];
 
@@ -8579,7 +8600,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
         go={go}
         logout={logout}
         icon="✅"
-        title={lesson?.title || "Lesson Buod"}
+        title={lesson?.title || "Buod ng Aralin"}
         subtitle={`Tapos Na • Baitang ${lesson?.gradeLevel || '—'} • ${formatStudentSubjectDisplay(lesson?.subject || 'Filipino')}`}
         titleAction={
           <button
@@ -8602,7 +8623,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
             <div className="g46-ref-panel-head">
               <div>
                 <span className="g46-ref-tag">✅ Completed</span>
-                <h2 style={{ marginTop: 8 }}>Lesson Buod</h2>
+                <h2 style={{ marginTop: 8 }}>Buod ng Aralin</h2>
                 <p className="g46-ref-muted">
                   You already completed this lesson. Review the material if needed, or go back to the lesson library.
                 </p>
@@ -8640,7 +8661,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
             <section className="g46-ref-panel">
               <div className="g46-ref-panel-head">
                 <div>
-                  <h2>Balikan ang Materyal ng Lessons</h2>
+                  <h2>Balikan ang Materyal ng Aralin</h2>
                   <p className="g46-ref-muted">You can still open the attached slides or PDF for review.</p>
                 </div>
               </div>
@@ -8863,11 +8884,11 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
 
           <div className="row" style={{ alignItems: 'center', gap: 12 }}>
             <button className="btn btn-blue" onClick={speakLesson}>
-              🔊 Listen
+              🔊 Pakinggan
             </button>
 
             <button className="btn btn-outline" onClick={() => stopSpeech()}>
-              ⏹ Stop
+              ⏹ Ihinto
             </button>
 
 
@@ -8973,7 +8994,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
       go={go}
       logout={logout}
       icon={theme.icon || "📘"}
-      title={lesson?.title || "Lesson"}
+      title={lesson?.title || "Aralin"}
       subtitle={`Baitang ${lesson?.gradeLevel || '—'} • ${formatStudentSubjectDisplay(lesson?.subject || 'Filipino')} • +${lesson?.xpReward || 0} XP`}
       titleAction={
         <button
@@ -9196,7 +9217,7 @@ function makeStudentFriendlyPassage(lesson) {
   const extracted = extractSectionFromLessonPlan(
     raw,
     ['Main Lesson / Passage', 'Main Lesson', 'Passage', 'Lesson Content'],
-    ['Vocabulary Words', 'Maikling Quizzes', 'Gawain sa Pagtutugma', 'Gawain sa Pagsulat', 'Pagsasanay sa Pagbigkas', 'Teacher Notes']
+    ['Vocabulary Words', 'Maikling Pagsusulit', 'Gawain sa Pagtutugma', 'Gawain sa Pagsulat', 'Pagsasanay sa Pagbigkas', 'Teacher Notes']
   );
 
   const source = String(extracted || rawInput)
@@ -9238,7 +9259,7 @@ function activityMissionMeta(activity, index = 0) {
     infographic: { icon: '🖼️', label: 'Tingnan' },
     vocabulary: { icon: '🔤', label: 'Salita' },
     matching: { icon: '🧩', label: 'Pares' },
-    mcq: { icon: '🎮', label: 'Quizzes' },
+    mcq: { icon: '🎮', label: 'Pagsusulit' },
     speech: { icon: '🎤', label: 'Bigkas' },
     writing: { icon: '🧩', label: 'Gawain' }
   };
@@ -9579,7 +9600,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
         activeTab="lessons"
         go={go}
         icon="✅"
-        title="Lesson Buod"
+        title="Buod ng Aralin"
       >
         <style>{`
           .g12-complete-summary {
@@ -9792,14 +9813,14 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           <div className="g12-summary-actions">
             {nextLesson && (
               <button type="button" className="g12-summary-btn purple" onClick={() => openLesson(nextLesson)}>
-                Susunod na Lesson →
+                Susunod na Aralin →
               </button>
             )}
             <button type="button" className="g12-summary-btn" onClick={() => go('screen-student')}>
-              🏠 Home
+              🏠 Tahanan
             </button>
             <button type="button" className="g12-summary-btn secondary" onClick={() => go('screen-lessons')}>
-              📖 Mas Maraming Lessons
+              📖 Mas Maraming Aralin
             </button>
           </div>
         </div>
@@ -9813,7 +9834,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
       activeTab="lessons"
       go={go}
       icon={theme.icon || '📘'}
-      title="Missionsg Pang-aral"
+      title={lesson?.title || lesson?.name || lesson?.lessonTitle || 'Aralin'}
       subtitle={`${formatStudentSubjectDisplay(lesson?.subject || 'Filipino')} • Baitang ${lesson?.gradeLevel || '—'} • ${isReviewMode ? 'Pagbabalik-aral' : `+${lesson?.xpReward || 0} XP`}`}
     >
       <style>{`
@@ -10504,14 +10525,14 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
       <div className="g12-mission-wrap">
         {rewardModal && (
-          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Gantimpala sa Missions">
+          <div className="g12-reward-overlay" role="dialog" aria-modal="true" aria-label="Gantimpala sa Misyon">
             <div className="g12-reward-modal">
               {['🎊', '⭐', '✨', '🌟', '🎉', '💛', '🌈'].map((piece, index) => (
                 <span className="g12-confetti-piece" key={index}>{piece}</span>
               ))}
 
               <div className="g12-reward-big">🏆</div>
-              <h3>Tapos na ang Missions!</h3>
+              <h3>Tapos na ang Misyon!</h3>
               <p>Ang galing mo! Natapos mo ang aralin.</p>
               <div className="g12-reward-xp">⚡ +{rewardModal.xp || 0} XP</div>
 
@@ -10546,10 +10567,10 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
 
               <div className="g12-reward-actions">
                 <button type="button" className="g12-mission-btn purple" onClick={goNextAfterReward}>
-                  Susunod na Lesson →
+                  Susunod na Aralin →
                 </button>
                 <button type="button" className="g12-mission-btn secondary" onClick={goHomeAfterReward}>
-                  🏠 Home
+                  🏠 Tahanan
                 </button>
               </div>
             </div>
@@ -10560,7 +10581,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
           <div className="g12-mission-topline">
             <div>
               <h2>{shortEarlyLessonTitle(lesson)} 🌟</h2>
-              <p>Hakbang {safeStep + 1} of {missionSteps.length}</p>
+              <p>Hakbang {safeStep + 1} sa {missionSteps.length}</p>
             </div>
             <div className="g12-mission-xp">⚡ +{lesson?.xpReward || 0} XP</div>
           </div>
@@ -10569,7 +10590,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
             <span className="g12-progress-fill" style={{ width: `${progress}%` }} />
           </div>
 
-          <div className="g12-mission-path" aria-label="Mga Hakbang sa Missions">
+          <div className="g12-mission-path" aria-label="Mga Hakbang sa Misyon">
             {missionSteps.map((step, index) => (
               <button
                 type="button"
@@ -10615,7 +10636,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-mission-actions">
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn" onClick={() => markStepListened('listen', getStructuredLessonSectionText(kidPassage, 'layunin') || lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
-                  <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Ihinto</button>
+                  <button className="g12-mission-btn secondary" type="button" onClick={() => stopSpeech()}>⏹️ Ihinto</button>
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>Alamin →</button>
@@ -10639,7 +10660,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
                   <button className="g12-mission-btn" onClick={() => markStepListened('know', getStructuredLessonKnowAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
-                  <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Ihinto</button>
+                    <button className="g12-mission-btn secondary" type="button" onClick={() => stopSpeech()}>⏹️ Ihinto</button>
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>{materialActivities.length ? 'Materyal →' : 'Aralin →'}</button>
@@ -10699,10 +10720,11 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                 <div className="g12-mission-actions-left">
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
                   <button className="g12-mission-btn" onClick={() => markStepListened('read', getStructuredLessonLessonsAudioText(kidPassage, lesson))}>🔊 Pakinggan</button>
+                    <button className="g12-mission-btn secondary" type="button" onClick={() => stopSpeech()}>⏹️ Ihinto</button>
                 </div>
                 <div className="g12-mission-actions-right">
                   <button className="g12-mission-btn purple" onClick={goNext}>
-                    Gawin ang Quizzes →
+                    Gawin ang Pagsusulit →
                   </button>
                 </div>
               </div>
@@ -10763,10 +10785,10 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
               <div className="g12-finish-card">
                 <div>
                   <div className="big">{isReviewMode ? '✅' : '🎉'}</div>
-                  <h3>{isReviewMode ? 'Tapos na ang Pagbabalik-aral!' : 'Tapos na ang Missions!'}</h3>
+                  <h3>{isReviewMode ? 'Tapos na ang Pagbabalik-aral!' : 'Tapos na ang Misyon!'}</h3>
                   <p>
                     {isReviewMode
-                      ? 'Natapos mo na ang araling ito. Maaari kang bumalik sa Tahanan o pumili ng ibang aralin.'
+                      ? 'Natapos mo na ang araling ito. Maaari kang bumalik sa Bahay o pumili ng ibang aralin.'
                       : `Kunin ang gantimpala mo: +${lesson?.xpReward || 0} XP`}
                   </p>
                 </div>
@@ -10796,7 +10818,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                       ⭐ Claim XP
                     </button>
                   ) : (
-                    <button className="g12-mission-btn purple" onClick={() => go('screen-student')}>🏠 Bumalik sa Tahanan</button>
+                    <button className="g12-mission-btn purple" onClick={() => go('screen-student')}>🏠 Bumalik sa Bahay</button>
                   )}
                 </div>
               </div>
@@ -10982,7 +11004,7 @@ function MaterialActivity({ activity, isEarlyGrade, activityBoxStyle }) {
     <div className="card" style={activityBoxStyle}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="section-title">
-          {isEarlyGrade ? '📎 Slides ng Lessons' : 'Materyal ng Lessons'}
+          {isEarlyGrade ? '📎 Slides ng Lessons' : 'Materyal ng Aralin'}
         </div>
 
         <div className="pill">
@@ -11094,7 +11116,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
           ? 'Tamang Sagot!'
           : 'Tama. Nabilang na ang XP.'
         : isEarlyGrade
-          ? 'Review this'
+          ? 'Balikan ito'
           : 'Hindi pa tama. Balikan ang sagot na ito.';
     }
 
@@ -11157,7 +11179,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
               ? 'Tamang Sagot!'
               : 'Tama. Nabilang na ang XP.'
           : isEarlyGrade
-            ? 'Review this'
+            ? 'Balikan ito'
             : 'Hindi pa tama. Balikan ang sagot na ito.';
       }
     }
@@ -11172,7 +11194,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
     <div className="card" style={activityBoxStyle}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="section-title">
-          {isEarlyGrade ? '🎮 Maikling Quizzes' : 'Quizzes'}
+          {isEarlyGrade ? '🎮 Maikling Pagsusulit' : 'Pagsusulit'}
         </div>
 
         <div className="pill">
@@ -11209,7 +11231,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
           }}
         >
           <div className="pill" style={{ marginBottom: 10 }}>
-            Question {qIndex + 1} of {questions.length}
+            Tanong {qIndex + 1} sa {questions.length}
           </div>
 
           <h3 style={{ marginTop: 0, fontSize: isEarlyGrade ? 23 : 17, lineHeight: 1.35 }}>
@@ -11258,7 +11280,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
                 lineHeight: 1.45,
               }}
             >
-              Question {qIndex + 1}: {mcqFeedback[q.id]}
+              Tanong {qIndex + 1}: {mcqFeedback[q.id]}
             </div>
           )}
         </div>
@@ -11299,7 +11321,7 @@ function McqActivity({ activity, index, total, isEarlyGrade, activityBoxStyle, s
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <b style={{ fontSize: isEarlyGrade ? 22 : 16 }}>
-                Score: {correctCount}/{questions.length}
+                Iskor: {correctCount}/{questions.length}
               </b>
               <div className="muted" style={{ fontSize: isEarlyGrade ? 17 : 13 }}>
                 {isEarlyGrade ? 'Magaling na pagsubok! Magpatuloy sa pag-aaral.' : `${band.icon} ${band.label} • ${scorePercent}%`}
@@ -11323,6 +11345,7 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
   const [selectedWords, setSelectedWords] = useState([]);
   const [earlyLocked, setEarlyLocked] = useState(false);
   const [earlyStatus, setEarlyStatus] = useState('');
+  const [earlyWrongPopup, setEarlyWrongPopup] = useState('');
 
   const earlyActivityKey = [
     activity?.id,
@@ -11470,6 +11493,7 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
     if (earlyLocked) return;
 
     setEarlyStatus('');
+    setEarlyWrongPopup('');
     setSelectedWords(prev => prev.slice(0, -1));
   }
 
@@ -11477,26 +11501,135 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
     if (earlyLocked) return;
 
     setEarlyStatus('');
+    setEarlyWrongPopup('');
     setSelectedWords([]);
     setWritingText('');
   }
 
+  function normalizeEarlyFillAnswer(value = '') {
+    return String(value ?? '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9ñ\s]/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function getExpectedEarlyFillWords() {
+    const sources = [
+      writingRubric.correctWords,
+      writingRubric.correctWord,
+      writingRubric.answerWords,
+      writingRubric.answers,
+      writingRubric.answer,
+      activity.correctWords,
+      activity.correctWord,
+      activity.answerWords,
+      activity.answers,
+      activity.answer,
+      activity.writingTask?.correctWords,
+      activity.writingTask?.correctWord,
+      activity.writingTask?.answerWords,
+      activity.writingTask?.answers,
+      activity.writingTask?.answer,
+    ];
+
+    for (const source of sources) {
+      if (Array.isArray(source) && source.filter(Boolean).length) {
+        return source.filter(Boolean).map(item => String(item));
+      }
+
+      if (typeof source === 'string' && source.trim()) {
+        return source
+          .split(/[|,]/)
+          .map(item => item.trim())
+          .filter(Boolean);
+      }
+    }
+
+    const normalizedTemplate = normalizeEarlyFillAnswer(sentenceTemplate || prompt || '');
+
+    if (
+      normalizedTemplate.includes('nagbabasa') &&
+      earlyWordBank.some(word => normalizeEarlyFillAnswer(word) === 'aklat')
+    ) {
+      return ['aklat'];
+    }
+
+    return [];
+  }
+
+  function validateEarlyFillAnswer() {
+    const expectedWords = getExpectedEarlyFillWords();
+
+    if (!expectedWords.length) {
+      return true;
+    }
+
+    const selected = selectedWords
+      .slice(0, Math.max(blankCount, expectedWords.length))
+      .map(normalizeEarlyFillAnswer)
+      .filter(Boolean);
+
+    const expected = expectedWords
+      .slice(0, Math.max(blankCount, expectedWords.length))
+      .map(normalizeEarlyFillAnswer)
+      .filter(Boolean);
+
+    if (selected.length !== expected.length) {
+      return false;
+    }
+
+    return expected.every((word, index) => selected[index] === word);
+  }
+
+  function showEarlyWrongAnswerToast() {
+    const message = 'Hindi pa tama. Balikan ang sagot.';
+
+    setEarlyStatus('');
+
+    if (typeof notify === 'function') {
+      notify(message, 'bad');
+      return;
+    }
+
+    if (typeof showLessonGateToast === 'function') {
+      showLessonGateToast(message);
+      return;
+    }
+
+    setEarlyWrongPopup(message);
+    window.clearTimeout(showEarlyWrongAnswerToast.timer);
+    showEarlyWrongAnswerToast.timer = window.setTimeout(() => {
+      setEarlyWrongPopup('');
+    }, 1800);
+  }
+
   async function submitEarlyWriting() {
+    if (!validateEarlyFillAnswer()) {
+      showEarlyWrongAnswerToast();
+      return;
+    }
+
     setEarlyStatus('Tinitingnan ang sagot...');
 
     const data = await submitWriting(activity.writingTask?.id, filledSentence, { autoChecked: true });
 
     if (!data) {
-      setEarlyStatus('Subukan muli 😊');
+      showEarlyWrongAnswerToast();
+      return;
+    }
+
+    if (!data.correct && !data.alreadySubmitted && !data.locked) {
+      showEarlyWrongAnswerToast();
       return;
     }
 
     const message = data.message ||
       (data.correct
         ? `Tama! +${data.xpAwarded || 10} XP 🌟`
-        : data.alreadySubmitted || data.locked
-          ? 'Nasagutan mo na ito 🌟'
-          : 'Subukan muli 😊');
+        : 'Nasagutan mo na ito 🌟');
 
     setEarlyStatus(message);
 
@@ -11516,7 +11649,7 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
           }}
         >
           <div className="section-title">
-            ✍️ Writing Activity
+            ✍️ Gawain sa Pagsulat
           </div>
 
           <div className="pill">
@@ -11543,7 +11676,7 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
             fontWeight: 700,
           }}
         >
-          <b style={{ fontWeight: 900 }}>Prompt:</b> {prompt}
+          <b style={{ fontWeight: 900 }}>Panuto:</b> {prompt}
         </div>
       )}
 
@@ -11624,6 +11757,57 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
               ))}
             </div>
           </div>
+
+          {earlyWrongPopup && (
+
+            <div
+
+              role="alert"
+
+              aria-live="assertive"
+
+              style={{
+
+                position: 'fixed',
+
+                left: '50%',
+
+                top: '44%',
+
+                transform: 'translate(-50%, -50%)',
+
+                zIndex: 9999,
+
+                padding: '22px 34px',
+
+                borderRadius: 22,
+
+                background: '#FFF5F5',
+
+                border: '3px solid #F28B8B',
+
+                boxShadow: '0 18px 44px rgba(20, 30, 54, 0.22)',
+
+                color: '#111827',
+
+                fontWeight: 900,
+
+                fontSize: 28,
+
+                textAlign: 'center',
+
+                maxWidth: 'min(720px, 86vw)',
+
+              }}
+
+            >
+
+              {earlyWrongPopup}
+
+            </div>
+
+          )}
+
 
           {earlyStatus && (
             <div
@@ -11754,7 +11938,7 @@ function WritingActivity({ activity, index, total, isEarlyGrade, activityBoxStyl
             onClick={() => submitWriting(activity.writingTask?.id, writingText)}
             disabled={!writingText.trim()}
           >
-            ✅ Submit Writing
+            ✅ Ipasa ang Sulatin
           </button>
         </>
       )}
@@ -11885,7 +12069,7 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
 
       <div className="row" style={{ gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
         <button className="btn btn-purple" onClick={speakTarget} style={{ minHeight: isEarlyGrade ? 56 : 48, fontSize: isEarlyGrade ? 18 : 16, padding: '12px 24px', borderRadius: 999 }}>
-          {isEarlyGrade ? '🔊 Pakinggan' : '🔊 Makinig'}
+          {isEarlyGrade ? '🔊 Pakinggan' : '🔊 Pakinggan'}
         </button>
 
         <button className="btn btn-blue" onClick={startSpeechRecognition} disabled={isListening} style={{ minHeight: isEarlyGrade ? 56 : 48, fontSize: isEarlyGrade ? 18 : 16, padding: '12px 24px', borderRadius: 999 }}>
@@ -12265,7 +12449,7 @@ function getMissionDemo(gameId) {
 
 function getWordMatchItemsForGrade(gradeLevel = 4) {
   const earlyItems = [
-    { id: 'bahay', word: 'bahay', picture: '🏠', label: 'Bahay' },
+    { id: 'bahay', word: 'bahay', picture: '🏠', label: 'Tahanan' },
     { id: 'aso', word: 'aso', picture: '🐶', label: 'Aso' },
     { id: 'aklat', word: 'aklat', picture: '📚', label: 'Aklat' },
     { id: 'lapis', word: 'lapis', picture: '✏️', label: 'Lapis' },
@@ -13469,7 +13653,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
         <section className="missions-hero">
           <div className="missions-hero-copy">
             <div className="missions-hero-icon">🚀</div>
-            <h2>{early ? 'Missions ng Tuklas' : 'Mga Larong Pang-aral'}</h2>
+            <h2>{early ? 'Mga Misyon ng Tuklas' : 'Mga Larong Pang-aral'}</h2>
             <p>
               {early
                 ? 'Maglaro, kumita ng XP, at mag-unlock ng badges!'
@@ -13491,8 +13675,8 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
         <section className="missions-section">
           <div className="missions-section-head">
             <div>
-              <h3>🎮 Mga Bukas na Larong Pang-aral</h3>
-              <p>Pindutin ang Maglaro at kumita ng XP!</p>
+              <h3>🎮 Mga Larong Pang-aral na Bukas</h3>
+              <p>Pindutin ang Maglaro upang kumita ng XP!</p>
             </div>
           </div>
 
@@ -13546,7 +13730,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
         activeTab="missions"
         go={go}
         icon="🎮"
-        title="Missions ng Tuklas"
+        title="Mga Misyon ng Tuklas"
         subtitle=""
       >
         {content}
@@ -13561,7 +13745,7 @@ function StudentMissions({ data, go, onPlayMission, logout}) {
       go={go}
       logout={logout}
       icon="🎮"
-      title="Missions ng Tuklas"
+      title="Mga Misyon ng Tuklas"
       subtitle="Maglaro ng mga larong Filipino na konektado sa bokabularyo, pagbasa, pagsulat, pag-unawa, at pasalitang komunikasyon."
     >
       {content}
@@ -14673,7 +14857,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                       <div className="mission-complete-overlay" role="dialog" aria-modal="true" aria-label="Tapos na ang misyon">
                         <div className="mission-complete-modal">
                           <div className="mission-complete-icon">🏆</div>
-                          <h3>Tapos na ang Missions!</h3>
+                          <h3>Tapos na ang Misyon!</h3>
                           <p>
                             {missionCompleteData?.message || 'Ang galing mo! Natapos mo ang Pagtutugma ng Salita.'}
                           </p>
@@ -14686,10 +14870,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Missions
+                              🎮 Misyon
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
-                              🏠 Home
+                              🏠 Tahanan
                             </button>
                           </div>
                         </div>
@@ -14755,10 +14939,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Missions
+                              🎮 Misyon
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
-                              🏠 Home
+                              🏠 Tahanan
                             </button>
                           </div>
                         </div>
@@ -14789,7 +14973,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                     )}
 
                     <div className="sound-say-target-card">
-                      <span>{early ? 'Bibigkasin:' : 'Target phrase:'}</span>
+                      <span>{early ? 'Bibigkasin:' : 'Bibigkasin:'}</span>
                       <strong>{soundAndSayTarget}</strong>
                       <p>{demo?.hint || 'Basahin nang malinaw at malakas.'}</p>
                     </div>
@@ -15000,10 +15184,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                                       🔄 Maglaro Muli
                                     </button>
                                     <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                                      🎮 Missions
+                                      🎮 Misyon
                                     </button>
                                     <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
-                                      🏠 Home
+                                      🏠 Tahanan
                                     </button>
                                   </div>
                                 </div>
@@ -15092,10 +15276,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Missions
+                              🎮 Misyon
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
-                              🏠 Home
+                              🏠 Tahanan
                             </button>
                           </div>
                         </div>
@@ -15154,10 +15338,10 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
                               🔄 Maglaro Muli
                             </button>
                             <button type="button" className="mission-complete-btn" onClick={backToMissions}>
-                              🎮 Missions
+                              🎮 Misyon
                             </button>
                             <button type="button" className="mission-complete-btn light" onClick={() => go('screen-student')}>
-                              🏠 Home
+                              🏠 Tahanan
                             </button>
                           </div>
                         </div>
@@ -15234,8 +15418,7 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
             <div className="g12-top-actions">
               <div className="g12-pill">🌸 Baitang {student.gradeLevel || '—'} • {student.section || '—'}</div>
               <div className="g12-pill">⚡ {xp} XP</div>
-              <button type="button" className="g12-action-btn" onClick={backToMissions}>🎮 Missions</button>
-              <button type="button" className="g12-action-btn" onClick={() => go('screen-student')}>🏠 Tahanan</button>
+              <button type="button" className="g12-action-btn" onClick={backToMissions}>🎮 Misyon</button>
             </div>
           </header>
 
@@ -15244,13 +15427,13 @@ function StudentMissionPlay({ data, go, selectedGameId = 'word-match', onBack, r
           </main>
 
           <nav className="g12-nav g12-mission-play-nav" aria-label="Student navigation">
-            <button type="button" onClick={() => openTab('home')}><span className="g12-nav-icon">🏠</span>Home</button>
-            <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Lessons</button>
-            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Quizzes</button>
-            <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Missions</button>
-            <button type="button" onClick={() => openTab('badges')}><span className="g12-nav-icon">🏅</span>Badges</button>
-            <button type="button" onClick={() => openTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Leaderboard</button>
-            <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>Profile</button>
+            <button type="button" onClick={() => openTab('home')}><span className="g12-nav-icon">🏠</span>Tahanan</button>
+            <button type="button" onClick={() => openTab('lessons')}><span className="g12-nav-icon">📖</span>Aralin</button>
+            <button type="button" onClick={() => openTab('quizzes')}><span className="g12-nav-icon">🧠</span>Pagsusulit</button>
+            <button type="button" className="active" onClick={() => openTab('missions')}><span className="g12-nav-icon">🎮</span>Misyon</button>
+            <button type="button" onClick={() => openTab('badges')}><span className="g12-nav-icon">🏅</span>Gantimpala</button>
+            <button type="button" onClick={() => openTab('leaderboard')}><span className="g12-nav-icon">🏆</span>Ranggo</button>
+            <button type="button" onClick={() => openTab('profile')}><span className="g12-nav-icon">🐰</span>Ako</button>
           </nav>
         </div>
       </>
@@ -15385,8 +15568,8 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       activeTab="groups"
       go={go}
       icon="👥"
-      title="Mga Misyon ng Pangkat"
-      subtitle="Pumili. Tumulong. Tapos."
+      title="Mga Gawain ng Pangkat"
+      subtitle="Pumili. Makipagtulungan. Tapusin."
     >
       <style>{`
         .g12-team-flow-shell { display: grid; gap: 16px; padding-bottom: 24px; }
@@ -15434,17 +15617,17 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
       <section className="g12-section-card">
         <div className="g12-section-head">
           <div>
-            <h2 className="g12-section-title">👥 Mga Misyon ng Pangkat</h2>
-            <p className="g12-section-subtitle">Pumili. Tumulong. Tapos.</p>
+            <h2 className="g12-section-title">👥 Mga Gawain ng Pangkat</h2>
+            <p className="g12-section-subtitle">Pumili. Makipagtulungan. Tapusin.</p>
           </div>
         </div>
 
         {!groups.length ? (
-          <div className="g12-empty">Wala pang misyon ng koponan.</div>
+          <div className="g12-empty">Wala pang gawain ng pangkat.</div>
         ) : (
           <div className="g12-team-flow-shell">
             <div className="g12-team-top-controls">
-              <div className="g12-team-progress" aria-label="Team mission steps">
+              <div className="g12-team-progress" aria-label="Mga hakbang ng gawain ng pangkat">
                 <button type="button" className={flowStep === 'start' ? 'active' : ''} onClick={() => setFlowStep('start')}>Choose</button>
                 <button type="button" className={flowStep === 'role' ? 'active' : ''} disabled={!selectedGroup || selectedGroupDone} onClick={() => selectedGroup && !selectedGroupDone && setFlowStep('role')}>Job</button>
                 <button type="button" className={flowStep === 'task' || flowStep === 'done' ? 'active' : ''} disabled={!selectedGroup} onClick={() => selectedGroup && setFlowStep(selectedGroupDone ? 'done' : 'task')}>Task</button>
@@ -15488,7 +15671,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                 ) : (
                   <div className="g12-mission-box" style={{ textAlign: 'center' }}>
                     <h3>Keep going!</h3>
-                    <p>Finish a team mission first.</p>
+                    <p>Tapusin muna ang gawain ng pangkat.</p>
                   </div>
                 )}
 
@@ -15513,7 +15696,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                 {!activeGroups.length && !!finishedGroups.length && (
                   <div className="g12-mission-box" style={{ textAlign: 'center' }}>
                     <h3>🎉 You did it!</h3>
-                    <p>Your team mission is done.</p>
+                    <p>Tapos na ang gawain ng inyong pangkat.</p>
                     <div className="g12-team-actions" style={{ justifyContent: 'center' }}>
                       <button type="button" className="g12-main-btn" onClick={() => setFlowStep('finished')}>
                         See done teams
@@ -15627,7 +15810,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
                     {isTaskPending(primaryTask)
                       ? 'Hinihintay ang Pagsusuri ng Guro'
                       : taskRecorded
-                        ? 'Tapos na ang Missions'
+                        ? 'Tapos na ang Misyon'
                         : isTaskReturned(primaryTask)
                           ? 'Ask teacher'
                           : 'Tumulong ako sa aking grupo!'}
@@ -15639,7 +15822,7 @@ function EarlyGroupsScreen({ data, go, completeGroupTask }) {
             {flowStep === 'done' && (
               <div className="g12-team-flow-card g12-team-done">
                 <div className="done-icon">🎉</div>
-                <h3>{selectedGroupDone ? 'Tapos na ang Missions!' : 'Hinihintay ang Pagsusuri ng Guro'}</h3>
+                <h3>{selectedGroupDone ? 'Tapos na ang Misyon!' : 'Hinihintay ang Pagsusuri ng Guro'}</h3>
                 <p>{selectedGroupDone ? 'Nasuri na ng guro ang misyon ng inyong pangkat.' : 'Susuriin ng guro ang inyong gawa.'}</p>
                 <div className="g12-team-actions" style={{ justifyContent: 'center' }}>
                   <button type="button" className="g12-main-btn" onClick={() => setFlowStep('start')}>Back to teams</button>
@@ -15666,7 +15849,7 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
   }
 
   const groupTaskFilterOptions = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: 'Lahat' },
     { value: 'pending', label: 'Naghihintay ng Pagsusuri' },
     { value: 'approved', label: 'Naaprubahan' },
     { value: 'returned', label: 'Ibinalik' },
@@ -15727,7 +15910,7 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
       <section className="g46-ref-panel">
         <div className="g46-ref-panel-head">
           <div>
-            <h2>Mga Gawain ng Grupo</h2>
+            <h2>Mga Gawain ng Pangkat</h2>
             <p className="g46-ref-muted">I-upload ang output ng grupo, idagdag ang iyong tungkulin, at hintayin ang pagsusuri ng guro.</p>
           </div>
         </div>
@@ -15886,7 +16069,7 @@ function StudentGroups({ data, go, completeGroupTask, logout}) {
           </div>
         )}
 
-        {!groups.length && <div className="g46-ref-empty">Wala pang gawaing panggrupo.</div>}
+        {!groups.length && <div className="g46-ref-empty">Wala pang gawaing pangkat.</div>}
       </section>
     </Grade46StudentChrome>
   );
@@ -15921,7 +16104,7 @@ function badgeDisplayDescription(badge = {}) {
   if (code === 'first_lesson') return 'Natapos ang unang aralin.';
   if (code === 'quiz_perfect') return 'Nakakuha ng perpektong iskor sa isang pagsusulit.';
   if (code === 'speech_3') return 'Natapos ang 3 pagbigkas.';
-  if (code === 'group_1') return 'Natapos ang 1 aprubadong gawaing panggrupo.';
+  if (code === 'group_1') return 'Natapos ang 1 aprubadong gawaing pangkat.';
   if (code === 'xp_100') return 'Umabot sa 100 XP.';
   if (code === 'level_10') return 'Umabot sa Antas 10.';
 
@@ -15956,7 +16139,7 @@ function badgeAchievementReason(badge = {}) {
   }
 
   if (normalizedCode === 'group_1' || value.includes('teamwork') || value.includes('group') || value.includes('pangkat') || value.includes('kasama') || value.includes('kaagapay')) {
-    return 'Natapos ang 1 aprubadong gawaing panggrupo.';
+    return 'Natapos ang 1 aprubadong gawaing pangkat.';
   }
 
   if (normalizedCode === 'xp_100' || value.includes('sipag')) {
@@ -16011,7 +16194,7 @@ const GRADE12_BADGE_GOALS = [
     code: 'group_1',
     icon: '🤝',
     name: 'Kaagapay sa Gawain',
-    howToUnlock: 'Tapusin ang 1 aprubadong gawaing panggrupo.'
+    howToUnlock: 'Tapusin ang 1 aprubadong gawaing pangkat.'
   },
   {
     code: 'xp_100',

@@ -86,7 +86,7 @@ export default function StudentSeniorHome({
         try {
           setDashboard(await api('/dashboard'));
         } catch (err) {
-          setError(err.message || 'Unable to load your dashboard.');
+          setError(err.message || 'Hindi ma-load ang iyong dashboard.');
         } finally {
           setLoading(false);
         }
@@ -173,7 +173,7 @@ function categoryKey(subject = '') {
     'pagsulat': 'Pagsulat',
   };
 
-  return map[value] || String(subject || 'General');
+  return map[value] || String(subject || 'Pangkalahatan');
 }
 
 function categoryMeta(subject) {
@@ -348,17 +348,17 @@ const lessonColors = [
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>🔥 {student?.currentStreak || 0}</Text>
-                <Text style={styles.achievementLabel}>Kasalukuyang Streak</Text>
+                <Text style={styles.achievementLabel}>Kasalukuyang Sunod-sunod na Araw</Text>
               </View>
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>🏆 {student?.longestStreak || 0}</Text>
-                <Text style={styles.achievementLabel}>Pinakamahabang Streak</Text>
+                <Text style={styles.achievementLabel}>Pinakamahabang Sunod-sunod na Araw</Text>
               </View>
 
               <View style={styles.achievementCard}>
                 <Text style={styles.achievementValue}>🏅 {badges.length}</Text>
-                <Text style={styles.achievementLabel}>Mga Badge</Text>
+                <Text style={styles.achievementLabel}>Mga Gantimpala</Text>
               </View>
 
               <View style={styles.achievementCard}>
@@ -415,7 +415,7 @@ const lessonColors = [
                 <Text
                   style={styles.quickLabel}
                 >
-                  🏅 Mga Badge
+                  🏅 Mga Gantimpala
                 </Text>
 
               </View>
@@ -513,7 +513,7 @@ const lessonColors = [
             <View style={styles.section}>
 
               <Text style={styles.sectionTitle}>
-                🏅 Mga Badge
+                🏅 Mga Gantimpala
               </Text>
 
               <View style={styles.badgeRow}>
@@ -557,7 +557,7 @@ const lessonColors = [
 
               {!allBadges.length && (
                 <Text style={styles.emptyText}>
-                  Lalabas ang progreso ng iyong mga badge kapag nagsimula ka nang mag-aral.
+                  Lalabas ang progreso ng iyong mga gantimpala kapag nagsimula ka nang mag-aral.
                 </Text>
               )}
 

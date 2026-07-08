@@ -170,7 +170,7 @@ async function handleLogout() {
         onPress={() => navigation.goBack()}
       >
         <Text style={styles.homeButtonText}>
-          🏠 Tahanan
+          🏠
         </Text>
       </TouchableOpacity>
 

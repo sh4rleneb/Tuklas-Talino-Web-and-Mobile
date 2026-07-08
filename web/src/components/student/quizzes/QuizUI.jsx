@@ -1216,7 +1216,7 @@ function QuizStartCard({ quiz, best, attemptsUsed = 0, maxAttempts = 2, onStart,
         )}
 
         <p>
-          <strong>Attempts:</strong> {attemptsUsed}/{maxAttempts}
+          <strong>Bilang ng Subok:</strong> {attemptsUsed}/{maxAttempts}
         </p>
 
         <div

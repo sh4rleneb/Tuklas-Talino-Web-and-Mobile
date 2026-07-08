@@ -1812,7 +1812,7 @@ const stepScrollRef = useRef(null);
             }}
           >
             <Text style={styles.primaryText}>
-              {lessonListened ? 'Magpatuloy' : 'Makinig muna'}
+              {lessonListened ? 'Magpatuloy' : 'Pakinggan muna'}
             </Text>
           </TouchableOpacity>
 
@@ -1868,7 +1868,7 @@ const stepScrollRef = useRef(null);
             }}
           >
             <Text style={[styles.secondaryText, styles.equalAlaminActionText]}>
-              {knowListened ? '🔁 Makinig Muli' : '🔊 Makinig'}
+              {knowListened ? '🔁 Pakinggan Muli' : '🔊 Pakinggan'}
             </Text>
           </TouchableOpacity>
 
@@ -1896,14 +1896,14 @@ const stepScrollRef = useRef(null);
               style={[styles.primaryButton, styles.equalAlaminActionButton, !knowListened && styles.disabledButton]}
               onPress={() => {
                 if (!knowListened) {
-                  setGateToast('Makinig muna sa hakbang na ito.');
+                  setGateToast('Pakinggan muna ang hakbang na ito.');
                   return;
                 }
                 advance('know');
               }}
             >
               <Text style={[styles.primaryText, styles.equalAlaminActionText]}>
-                {knowListened ? 'Basahin ang Aralin' : 'Makinig muna'}
+                {knowListened ? 'Basahin ang Aralin' : 'Pakinggan muna'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -2012,7 +2012,7 @@ const stepScrollRef = useRef(null);
               }}
             >
               <Text style={styles.secondaryText}>
-                {readListened ? '🔁 Makinig Muli' : '🔊 Makinig'}
+                {readListened ? '🔁 Pakinggan Muli' : '🔊 Pakinggan'}
               </Text>
             </TouchableOpacity>
 
@@ -2032,7 +2032,7 @@ const stepScrollRef = useRef(null);
               style={[styles.primaryButton, !readListened && styles.disabledButton]}
               onPress={() => {
                 if (!readListened) {
-                  setGateToast('Makinig muna sa aralin.');
+                  setGateToast('Pakinggan muna ang aralin.');
                   return;
                 }
                 advance('read');
@@ -2040,7 +2040,7 @@ const stepScrollRef = useRef(null);
             >
               <Text style={styles.primaryText}>
                 {!readListened
-                  ? 'Makinig muna'
+                  ? 'Pakinggan muna'
                   : littleLearnerGame ? '⭐ Naiintindihan Ko Na!' : 'Magpatuloy'}
               </Text>
             </TouchableOpacity>
@@ -2684,7 +2684,7 @@ const stepScrollRef = useRef(null);
 
             <AudioPlayerButton
               icon="⏹"
-              label={littleLearnerGame ? "Itigil" : "Itigil ang Audio"}
+              label={littleLearnerGame ? "Ihinto" : "Ihinto ang Audio"}
               danger
               onPress={async () => {
                 await stopSpeech();
@@ -2699,7 +2699,7 @@ const stepScrollRef = useRef(null);
                 }
 
                 setPlaying(false);
-                setSpeechStatus('Audio stopped.');
+                setSpeechStatus('Nahinto ang audio.');
               }}
             />
           </View>

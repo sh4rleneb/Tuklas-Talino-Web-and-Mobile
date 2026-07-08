@@ -110,7 +110,7 @@ export default function StudentJuniorHome({ navigation }) {
       const data = await api('/dashboard');
       setDashboard(data);
     } catch (error) {
-      console.warn('Dashboard load failed', error);
+      console.warn('Hindi na-load ang dashboard', error);
     } finally {
       setLoading(false);
     }
@@ -156,7 +156,7 @@ export default function StudentJuniorHome({ navigation }) {
   const xp = student?.xp || 0;
   const level = Math.max(1, Math.floor(xp / 100) + 1);
   const avatar = student?.avatar || '🧒';
-  const name = student?.name || 'Student';
+  const name = student?.name || 'Mag-aaral';
   const grade = student?.gradeLevel || 1;
 
 
@@ -204,7 +204,7 @@ export default function StudentJuniorHome({ navigation }) {
           </View>
 
           <View>
-            <Text style={styles.profileGreeting}>Hello, batang talino! 👋</Text>
+            <Text style={styles.profileGreeting}>Kumusta, batang talino! 👋</Text>
 
             <Text style={styles.profileName}>
               {name}
@@ -227,7 +227,7 @@ export default function StudentJuniorHome({ navigation }) {
 
           <View style={styles.smallChip}>
             <Text style={styles.smallChipText}>
-              ⭐ Lv {level}
+              ⭐ Antas {level}
             </Text>
           </View>
 
@@ -355,7 +355,7 @@ export default function StudentJuniorHome({ navigation }) {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Mga Badge</Text>
+            <Text style={styles.sectionTitle}>Mga Gantimpala</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Badges')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
             </TouchableOpacity>
@@ -373,8 +373,8 @@ export default function StudentJuniorHome({ navigation }) {
             ) : (
               <View style={styles.emptyStateSmall}>
                 <Text style={styles.emptyEmoji}>🌱</Text>
-                <Text style={styles.emptyTitle}>Wala ka pang badge</Text>
-                <Text style={styles.emptyText}>Tapusin ang aralin para makakuha ng badge.</Text>
+                <Text style={styles.emptyTitle}>Wala ka pang gantimpala</Text>
+                <Text style={styles.emptyText}>Tapusin ang aralin para makakuha ng gantimpala.</Text>
               </View>
             )}
           </View>

@@ -29,9 +29,9 @@ function normalizeQuizOption(option = {}, index = 0) {
     option?.optionText ??
     option?.label ??
     option?.value ??
-    `Choice ${index + 1}`;
+    `Pagpipilian ${index + 1}`;
 
-  const text = String(rawText || `Choice ${index + 1}`).trim() || `Choice ${index + 1}`;
+  const text = String(rawText || `Pagpipilian ${index + 1}`).trim() || `Pagpipilian ${index + 1}`;
 
   return {
     id: String(option?.id ?? option?.value ?? `opt-${index}-${text}`),
@@ -135,7 +135,7 @@ function buildQuizQuestionsFromLesson(lesson = {}) {
       questions.push({
         id: String(question.id || `${lesson.id || 'lesson'}-${activityIndex}-${questionIndex}`),
         type: 'mcq',
-        source: formatTuklasQuizPreviewTitle({ lessonTitle: activity?.lessonTitle || activity?.lesson?.title || activity?.title, quizTitle: activity?.title, gradeLevel: activity?.gradeLevel || activity?.lesson?.gradeLevel || activity?.lessonGradeLevel }),
+        source: cleanTuklasQuizLessonTitle(lesson?.title || lesson?.name || lesson?.lessonTitle, 'Aralin'),
         question: prompt,
         prompt,
         options,
@@ -165,7 +165,7 @@ function quizCatalog(dashboard) {
         legacyQuizId: `lesson-${lesson.id}`,
         lessonId: lesson.id,
         lessonTitle,
-        title: formatTuklasQuizPreviewTitle({ lessonTitle, gradeLevel: lesson.gradeLevel || lesson.grade || lesson.level, studentGradeLevel: dashboard?.student?.gradeLevel }),
+        title: lessonTitle,
         subject: lesson.subject || 'Filipino',
         gradeLevel: lesson.gradeLevel || dashboard?.student?.gradeLevel || '—',
         xpReward: Math.max(5, Math.round(Number(lesson.xpReward || 20) / 2)),
@@ -265,20 +265,15 @@ function cleanPagsusulitTitleSeed(value = '') {
 }
 
 function specificQuizCardTitle(quiz = {}) {
-  const lessonTitle =
+  return cleanTuklasQuizLessonTitle(
     quiz.lessonTitle ||
     quiz.lesson?.title ||
     quiz.lesson?.name ||
     quiz.moduleTitle ||
     quiz.title ||
-    'Lessons';
-
-  return formatTuklasQuizPreviewTitle({
-    lessonTitle,
-    quizTitle: quiz.title,
-    gradeLevel: quiz.gradeLevel || quiz.lessonGradeLevel || quiz.lesson?.gradeLevel || quiz.grade || quiz.moduleGradeLevel,
-    studentGradeLevel: quiz.studentGradeLevel,
-  });
+    'Aralin',
+    'Aralin'
+  );
 }
 
 
@@ -291,19 +286,19 @@ function extractTuklasGradeNumber(...values) {
   return '';
 }
 
-function cleanTuklasQuizLessonTitle(value, fallback = 'Lessons') {
+function cleanTuklasQuizLessonTitle(value, fallback = 'Aralin') {
   return String(value ?? fallback)
     .trim()
     .replace(/^\s*(?:quizzes?|pagsusulit)\s+sa\s+/i, '')
     .replace(/^\s*sa\s+/i, '')
     .replace(/^\s*bokabularyo\s*[1-6]\s*:\s*/i, '')
     .replace(/\s*quiz\s*$/i, '')
+    .replace(/\s+/g, ' ')
     .trim() || fallback;
 }
 
-function formatTuklasQuizPreviewTitle({ lessonTitle, quizTitle, gradeLevel, studentGradeLevel, fallback = 'Lessons' } = {}) {
-  const lesson = cleanTuklasQuizLessonTitle(lessonTitle || quizTitle, fallback);
-  return `Pagsusulit sa ${lesson}`;
+function formatTuklasQuizPreviewTitle({ lessonTitle, fallback = 'Aralin' } = {}) {
+  return cleanTuklasQuizLessonTitle(lessonTitle, fallback);
 }
 
 export default function QuizScreen({ navigation }) {
@@ -546,7 +541,7 @@ const closeQuizPreview = useCallback(() => {
             <Text style={styles.activeTitle}>{specificQuizCardTitle(activeQuiz)}</Text>
             <Text style={styles.activeSubtitle}>{activeQuiz.lessonTitle}</Text>
           <Text style={styles.attemptPill}>
-            Pagsubok {Math.min(activeQuizAttempts.length, MAX_QUIZ_ATTEMPTS)}/{MAX_QUIZ_ATTEMPTS}
+            Bilang ng Subok: {Math.min(activeQuizAttempts.length, MAX_QUIZ_ATTEMPTS)}/{MAX_QUIZ_ATTEMPTS}
           </Text>
           </View>
 
@@ -821,7 +816,7 @@ const closeQuizPreview = useCallback(() => {
 
                     <View style={styles.quizCardText}>
                       <Text style={styles.quizTitle}>{specificQuizCardTitle(quiz)}</Text>
-                      <Text style={styles.muted}>{quiz.subject} • Grade {quiz.gradeLevel}</Text>
+                      <Text style={styles.muted}>{quiz.subject} • Baitang {quiz.gradeLevel}</Text>
                     <Text style={styles.muted}>{quiz.type}</Text>
                     </View>
                   </View>
@@ -832,7 +827,7 @@ const closeQuizPreview = useCallback(() => {
                     </Text>
 
                     <Text style={styles.quizInfoPill}>
-                      {quizAttempts.length}/{MAX_QUIZ_ATTEMPTS} pagsubok
+                      Bilang ng Subok: {quizAttempts.length}/{MAX_QUIZ_ATTEMPTS}
                     </Text>
                   </View>
 
@@ -1487,7 +1482,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
 
-  resultScore: {
+  resultIskor: {
     color: '#16A34A',
     fontSize: 46,
     fontWeight: '900',

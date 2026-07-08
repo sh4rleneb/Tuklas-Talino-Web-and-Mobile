@@ -155,29 +155,29 @@ export default function QuizzesPage({
     return titleCaseQuizzesText(words.slice(0, maxWords).join(" "));
   }
 
-  function specificQuizCardTitle(quiz = {}, earlyMode = false) {
-    const firstQuestion = asArray(quiz.questions)[0] || {};
-    const sources = [
-      firstQuestion.prompt,
-      firstQuestion.question,
-      quiz.lessonTitle,
-      quiz.title,
-      quiz.subject,
-    ];
+  function cleanLessonBasedQuizTitle(value = "Aralin") {
+  const cleaned = String(value || "Aralin")
+    .replace(/^\s*(?:quizzes?|pagsusulit)\s+sa\s+/i, "")
+    .replace(/^\s*sa\s+/i, "")
+    .replace(/\s*quiz\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
-    const fallback = cleanQuizzesTitleSeed(quiz.title || quiz.subject || "Quizzes", earlyMode) || "Quizzes";
+  return cleaned || "Aralin";
+}
 
-    const chosen =
-      sources
-        .map((source) => cleanQuizzesTitleSeed(source, earlyMode))
-        .find((candidate) => candidate && candidate.length >= 3 && !isGenericQuizzesName(candidate)) ||
-      fallback;
+function specificQuizCardTitle(quiz = {}, earlyMode = false) {
+  return cleanLessonBasedQuizTitle(
+    quiz.lessonTitle ||
+    quiz.lesson?.title ||
+    quiz.lesson?.name ||
+    quiz.moduleTitle ||
+    quiz.title ||
+    "Aralin"
+  );
+}
 
-    const finalTitle = chosen.replace(/\s*quiz\s*$/i, "").trim() || "Quizzes";
-    return finalTitle;
-  }
-
-  // Keep this function name for existing Grade 1-2 card rendering.
+// Keep this function name for existing Grade 1-2 card rendering.
   function shortEarlyQuizzesTitle(quiz = {}) {
     return specificQuizCardTitle(quiz, true);
   }

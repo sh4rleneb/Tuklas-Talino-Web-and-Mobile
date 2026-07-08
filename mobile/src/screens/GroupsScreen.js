@@ -513,7 +513,7 @@ export default function GroupsScreen({ navigation }) {
           <>
             <Card style={styles.teamMissionCard}>
               <Text style={styles.teamMissionTitle}>
-                👥 Misyon ng Pangkat
+                👥 Gawain ng Pangkat
               </Text>
 
               <Text style={styles.teamMissionSubtitle}>
