@@ -179,8 +179,6 @@ function handleIdentifierChange(value) {
               style={styles.input}
               value={identifier}
               onChangeText={handleIdentifierChange}
-              placeholder="Halimbawa: TCH-2026-001"
-              placeholderTextColor="#94A3B8"
               spellCheck={false}
               autoCorrect={false}
               autoCapitalize="none"
@@ -209,8 +207,6 @@ function handleIdentifierChange(value) {
               }
               value={password}
               onChangeText={(value) => setPassword(cleanLoginPasswordInput(value))}
-              placeholder="Ilagay ang password"
-              placeholderTextColor="#94A3B8"
               spellCheck={false}
               autoCorrect={false}
               autoCapitalize="none"

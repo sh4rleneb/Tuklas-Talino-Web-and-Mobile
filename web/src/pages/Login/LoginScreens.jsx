@@ -22,7 +22,7 @@ return <>
     <div className="top-nav login-top-nav login-student-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-home')}>← Home</button><div className="logo">🎒 Student Login</div><div className="login-nav-pill">⭐ Tuklas. Matuto. Magsaya!</div></div>
     <div className="login-stage student-stage"><div className="login-shell student-shell">
       <aside className="login-visual-card student-visual-card"><div className="login-sparkles">✦</div><h2>Mag-login,<br />Estudyante! 👋</h2><p>Ilagay ang Student ID at password para magpatuloy.</p><div className="student-hero-illustration login-hero-png-wrap" aria-hidden="true"><img src="/login-student-girl.png" alt="" className="login-hero-png student" /></div><div className="login-info-card"><span className="info-icon">🛡️</span><div><b>Ligtas • Masaya • Makabuluhan</b><br /><span>Tuklas Talino, kasama mo sa bawat hakbang.</span></div></div></aside>
-      <section className="login-form-panel student-form-panel"><div className="login-form-heading"><span className="heading-badge">🪪</span><div><h3>Mag-login bilang Estudyante</h3><p>Ilagay ang Student ID at password para magpatuloy.</p></div></div><label className="login-label" htmlFor="stu-id">🪪 Student ID</label><div className="input-with-icon"><span>👤</span><input className="input-field" id="stu-id" placeholder="Halimbawa: STU-2025-001" value={studentIdValue} onChange={(event) => setStudentIdValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /></div><label className="login-label" htmlFor="stu-password">🔒 Password</label><div className="input-with-icon"><span>🔐</span><input className="input-field" id="stu-password" placeholder="Ilagay ang password" type={showStudentPassword ? "text" : "password"} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /><button type="button" className="password-eye-btn" aria-label={showStudentPassword ? "Hide password" : "Show password"} onClick={() => setShowStudentPassword((value) => !value)}>{showStudentPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div><button className="btn btn-green login-main-btn" onClick={onLogin}>✨ Login</button><p className="secure-note">🔒 Ang iyong impormasyon ay ligtas at protektado.</p></section>
+      <section className="login-form-panel student-form-panel"><div className="login-form-heading"><span className="heading-badge">🪪</span><div><h3>Mag-login bilang Estudyante</h3><p>Ilagay ang Student ID at password para magpatuloy.</p></div></div><label className="login-label" htmlFor="stu-id">🪪 Student ID</label><div className="input-with-icon"><span>👤</span><input className="input-field" id="stu-id" value={studentIdValue} onChange={(event) => setStudentIdValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /></div><label className="login-label" htmlFor="stu-password">🔒 Password</label><div className="input-with-icon"><span>🔐</span><input className="input-field" id="stu-password" type={showStudentPassword ? "text" : "password"} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /><button type="button" className="password-eye-btn" aria-label={showStudentPassword ? "Hide password" : "Show password"} onClick={() => setShowStudentPassword((value) => !value)}>{showStudentPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div><button className="btn btn-green login-main-btn" onClick={onLogin}>✨ Login</button><p className="secure-note">🔒 Ang iyong impormasyon ay ligtas at protektado.</p></section>
     </div></div>
   </>;
 }
@@ -82,7 +82,6 @@ function handleTeacherIdentifierChange(event) {
             <input
               className="input-field"
               id="t-username"
-              placeholder="Halimbawa: TCH-2025-001"
               value={teacherIdentifier}
               onChange={handleTeacherIdentifierChange}
               onKeyDown={submitTeacherLogin}
@@ -99,7 +98,6 @@ function handleTeacherIdentifierChange(event) {
             <input
               className="input-field"
               id="t-password"
-              placeholder="Enter your password"
               type={showTeacherPassword ? "text" : "password"}
               onKeyDown={submitTeacherLogin}
             />
@@ -189,7 +187,6 @@ function handleAdminIdentifierChange(event) {
             <input
               className="input-field"
               id="a-username"
-              placeholder="Enter your username"
               value={adminIdentifier}
               onChange={handleAdminIdentifierChange}
               onKeyDown={submitAdminLogin}
@@ -206,7 +203,6 @@ function handleAdminIdentifierChange(event) {
             <input
               className="input-field"
               id="a-password"
-              placeholder="Enter your password"
               type={showAdminPassword ? "text" : "password"}
               onKeyDown={submitAdminLogin}
             />

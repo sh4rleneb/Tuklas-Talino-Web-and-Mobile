@@ -3,9 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const defaults = {
-  student: { label: 'Student ID', placeholder: 'Enter your Student ID', icon: '🧒' },
-  teacher: { label: 'Username', placeholder: 'Enter your username', icon: '👩‍🏫' },
-  admin: { label: 'Username', placeholder: 'Enter your username', icon: '🛡️' }
+  student: { label: 'Student ID', icon: '🧒' },
+  teacher: { label: 'Username', icon: '👩‍🏫' },
+  admin: { label: 'Username', icon: '🛡️' }
 };
 
 export default function LoginPage() {

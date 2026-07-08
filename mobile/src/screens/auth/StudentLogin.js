@@ -188,8 +188,6 @@ function handleStudentIdChange(value) {
               onChangeText={
                 handleStudentIdChange
               }
-              placeholder="Halimbawa: STU-2025-001"
-              placeholderTextColor="#64748B"
               autoCapitalize="characters"
               autoCorrect={false}
             />
@@ -212,8 +210,6 @@ function handleStudentIdChange(value) {
               style={styles.input}
               value={password}
               onChangeText={(value) => setPassword(cleanStudentLoginPasswordInput(value))}
-              placeholder="Ilagay ang password"
-              placeholderTextColor="#64748B"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
             />
