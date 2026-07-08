@@ -666,18 +666,10 @@ const stepScrollRef = useRef(null);
   }, [xpCounter]);
 
 
-  const activities = useMemo(() => {
-    const source = Array.isArray(lesson?.activities) ? lesson.activities : [];
-    const gradeLevel = Number(student?.gradeLevel || lesson?.gradeLevel || 0);
-
-    if (gradeLevel > 0 && gradeLevel <= 3) {
-      return source.filter(
-        (activity) => String(activity?.type || '').toLowerCase() !== 'material'
-      );
-    }
-
-    return source;
-  }, [lesson?.activities, lesson?.gradeLevel, student?.gradeLevel]);
+  const activities = useMemo(
+    () => (Array.isArray(lesson?.activities) ? lesson.activities : []),
+    [lesson?.activities]
+  );
 
   const missionSteps = useMemo(() => {
     const materialActivities = activities.filter((activity) => {

@@ -4,15 +4,18 @@ const sectionLabels = {
   layunin: { title: 'Layunin', icon: '🎯' },
   alamin: { title: 'Alamin', icon: '💡' },
   panimula: { title: 'Panimula', icon: '🌟' },
-  aralin: { title: 'Lessons', icon: '📖' },
+  aralin: { title: 'Aralin', icon: '📖' },
   gawain: { title: 'Gawain', icon: '📝' }
 };
 
 function normalizeKey(label = '') {
-  return String(label || '')
+  const key = String(label || '')
     .toLowerCase()
     .replace(/[^a-zñ]/g, '')
     .trim();
+
+  if (['aralin', 'lesson', 'lessons', 'mgaaralin'].includes(key)) return 'aralin';
+  return key;
 }
 
 function splitLessonText(text = '') {
@@ -20,11 +23,11 @@ function splitLessonText(text = '') {
 
   if (!raw) return [];
 
-  const pattern = /(Layunin|Alamin|Panimula|Lessons|Gawain)\s*:/gi;
+  const pattern = /(Layunin|Alamin|Panimula|Aralin|Lesson|Lessons|Mga Aralin|Gawain)\s*:/gi;
   const matches = [...raw.matchAll(pattern)];
 
   if (!matches.length) {
-    return [{ key: 'aralin', title: 'Lessons', content: raw }];
+    return [{ key: 'aralin', title: 'Aralin', content: raw }];
   }
 
   return matches
@@ -174,7 +177,7 @@ function aralinGuideFor(lesson, aralinText = '') {
   }
 
   return {
-    label: 'Basahin ang Lessons',
+    label: 'Basahin ang Aralin',
     helper: 'Basahin muna ito bago sagutan ang gawain.'
   };
 }
@@ -238,7 +241,7 @@ function visualForLesson(lesson, aralinText = '') {
   if (hasWord(parts.subject, 'oral')) return { icon: '🎙️', label: 'Bigkas' };
   if (hasWord(parts.subject, 'pagsulat')) return { icon: '✍️', label: 'Sulat' };
 
-  return { icon: '📚', label: 'Lessons' };
+  return { icon: '📚', label: 'Aralin' };
 }
 
 function topicInfoForLesson(lesson, aralinText = '') {

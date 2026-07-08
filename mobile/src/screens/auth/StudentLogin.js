@@ -14,8 +14,6 @@ import {
 } from 'react-native';
 
 import { api, setToken } from '../../api/client';
-import { AVATARS } from '../../config/avatars';
-
 function sanitizeStudentLoginIdInput(value) {
   return String(value || '')
     .replace(/\s+/g, '')
@@ -51,23 +49,7 @@ export default function StudentLogin({
 
   const [studentValidationMessage, setStudentValidationMessage] =
     useState('');
-
-  const [selectedAvatar, setSelectedAvatar] =
-    useState('🦊');
-
-    const avatars = [
-    '🦊',
-    '🐼',
-    '🐯',
-    '🐸',
-    '🐵',
-    '🦄',
-    '🐰',
-    '🧒',
-    '👧',
-  ];
-
-  useEffect(() => {
+useEffect(() => {
     const identifier = studentId.trim();
     const hasValidFormat = /^STU-\d{4}-\d{3}$/.test(identifier);
 
@@ -148,7 +130,6 @@ export default function StudentLogin({
             role: 'student',
             identifier: cleanedStudentId,
             password: cleanedPassword,
-            avatar: selectedAvatar,
           },
         }
       );
@@ -248,87 +229,6 @@ export default function StudentLogin({
         {/* CARD */}
 
         <View style={styles.card}>
-
-          {/* AVATAR HEADER */}
-
-          <View style={styles.avatarHeader}>
-
-            <View
-              style={
-                styles.avatarHeaderIcon
-              }
-            >
-              <Text
-                style={
-                  styles.avatarHeaderEmoji
-                }
-              >
-                👤
-              </Text>
-            </View>
-
-            <View style={styles.avatarHeaderText}>
-            <Text
-              style={styles.heading}
-            >
-                Pumili ng Avatar
-              </Text>
-
-              <Text style={styles.sub}>
-                Piliin ang avatar na
-                gusto mong gamitin.
-              </Text>
-
-            </View>
-
-          </View>
-
-          {/* AVATARS */}
-
-          <View style={styles.avatarGrid}>
-
-            {AVATARS.map(
-              (avatar, index) => {
-
-                const selected =
-                  selectedAvatar ===
-                  avatar;
-
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.avatarButton,
-
-                      selected &&
-                        styles.selectedAvatar,
-                    ]}
-                    onPress={() =>
-                      setSelectedAvatar(
-                        avatar
-                      )
-                    }
-                  >
-
-                    <Text
-                      style={
-                        styles.avatarText
-                      }
-                    >
-                      {avatar}
-                    </Text>
-
-                  </TouchableOpacity>
-                );
-              }
-            )}
-
-          </View>
-
-          {/* DIVIDER */}
-
-          <View style={styles.divider} />
-
           {/* MAG-AARAL ID */}
           <Text style={styles.label}>
             🪪 Mag-aaral ID
@@ -513,34 +413,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  avatarHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-
-  avatarHeaderText: {
-  flex: 1,
-  paddingRight: 10,
-  },
-
-  avatarHeaderIcon: {
-    width: 55,
-    height: 55,
-
-    borderRadius: 100,
-
-    backgroundColor: '#DCFCE7',
-
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    marginRight: 14,
-  },
-
-  avatarHeaderEmoji: {
-    fontSize: 24,
-  },
-
   heading: {
     fontSize: 22,
     fontFamily: 'Fredoka_700Bold',
@@ -560,53 +432,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
 
     flexShrink: 1,
-  },
-
-  avatarGrid: {
-    marginTop: 26,
-
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-
-    justifyContent: 'space-between',
-  },
-
-  avatarButton: {
-    width: '22%',
-
-    aspectRatio: 1,
-
-    borderRadius: 100,
-
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    marginBottom: 18,
-
-    backgroundColor: '#FEF9C3',
-
-    borderWidth: 4,
-    borderColor: '#D1FAE5',
-  },
-
-  selectedAvatar: {
-    borderColor: '#22C55E',
-    backgroundColor: '#ECFDF5',
-    shadowColor: '#22C55E',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-
-    elevation: 6,
-
-    transform: [
-      {
-        scale: 1.05,
-      },
-    ],
-  },
-
-  avatarText: {
-    fontSize: 34,
   },
 
   divider: {

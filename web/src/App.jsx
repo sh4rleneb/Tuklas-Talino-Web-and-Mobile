@@ -7083,7 +7083,7 @@ function Grade46StudentChrome({ data, activeTab = 'home', go, goStudentTab, logo
 
   const navItems = [
     { id: 'home', icon: '🏠', label: 'Home' },
-    { id: 'lessons', icon: '📚', label: 'Lessons' },
+    { id: 'lessons', icon: '📚', label: 'Aralin' },
     { id: 'quizzes', icon: '🧠', label: 'Quizzes' },
     { id: 'missions', icon: '🎮', label: 'Missions' },
     { id: 'groups', icon: '👥', label: 'Groups' },
@@ -8338,8 +8338,8 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     await speakText(text);
   }
 
-  const materialActivities = activities.filter(activity => activity?.type === 'material');
-  const practiceActivities = activities.filter(activity => activity?.type !== 'material');
+  const materialActivities = activities.filter(isLessonMaterialActivity);
+  const practiceActivities = activities.filter(activity => !isLessonMaterialActivity(activity));
   const activityTotal = practiceActivities.length;
 
   function getPracticeKey(activity, index) {
@@ -8417,7 +8417,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
     {
       key: 'read',
       eyebrow: `Hakbang ${materialActivities.length ? 3 : 2}`,
-      title: 'Basahin ang Lessons',
+      title: 'Basahin ang Aralin',
       subtitle: 'Review the instructions and lesson text carefully.'
     },
     {
@@ -8779,7 +8779,7 @@ function LessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitW
       const structuredSections = [
         { key: 'layunin', label: 'Layunin', icon: '🎯' },
         { key: 'panimula', label: 'Panimula', icon: '💡' },
-        { key: 'aralin', label: 'Lessons', icon: '📖' },
+        { key: 'aralin', label: 'Aralin', icon: '📖' },
       ];
       const hasStructuredText = structuredSections.some(section =>
         Boolean(getStructuredLessonSectionText(lessonPassage, section.key))
@@ -9206,7 +9206,7 @@ function makeStudentFriendlyPassage(lesson) {
   const withReadableSections = source
     .replace(/\r/g, '')
     .replace(/[ \t]+/g, ' ')
-    .replace(/\s*(Layunin|Panimula|Lessons|Gawain|Mga salita|Mga Salita)\s*:\s*/g, '\n$1: ')
+    .replace(/\s*(Layunin|Alamin|Panimula|Aralin|Lesson|Lessons|Mga Aralin|Gawain|Mga salita|Mga Salita)\s*:\s*/g, '\n$1: ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
@@ -9220,6 +9220,11 @@ function makeStudentFriendlyPassage(lesson) {
   const fallback = cleanLessonTextForKids(source);
 
   return (fullText || fallback || raw).slice(0, 1800);
+}
+
+function isLessonMaterialActivity(activity = {}) {
+  const type = String(activity?.type || '').toLowerCase();
+  return type === 'material' || type === 'infographic';
 }
 
 function activityMissionMeta(activity, index = 0) {
@@ -9237,8 +9242,8 @@ function activityMissionMeta(activity, index = 0) {
 
 function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, submitWriting, submitSpeech, data, openLesson }) {
   const activities = lesson?.activities || [];
-  const materialActivities = activities.filter(activity => activity?.type === 'material');
-  const practiceActivities = activities.filter(activity => activity?.type !== 'material');
+  const materialActivities = activities.filter(isLessonMaterialActivity);
+  const practiceActivities = activities.filter(activity => !isLessonMaterialActivity(activity));
   const corePracticeActivities = practiceActivities.filter(activity =>
     ['mcq', 'writing', 'speech'].includes(activity?.type)
   );
@@ -9286,7 +9291,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
     { type: 'listen', icon: '👂', label: 'Layunin' },
     { type: 'know', icon: '💡', label: 'Alamin' },
     ...(materialActivities.length ? [{ type: 'material', icon: '📎', label: 'Materyal' }] : []),
-    { type: 'read', icon: '📖', label: 'Lessons' },
+    { type: 'read', icon: '📖', label: 'Aralin' },
     ...corePracticeActivities.map((activity, index) => ({
       type: 'activity',
       activity,
@@ -10631,7 +10636,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                   <button className="g12-mission-btn secondary" onClick={() => stopSpeech()}>⏹ Ihinto</button>
                 </div>
                 <div className="g12-mission-actions-right">
-                  <button className="g12-mission-btn purple" onClick={goNext}>{materialActivities.length ? 'Materyal →' : 'Lessons →'}</button>
+                  <button className="g12-mission-btn purple" onClick={goNext}>{materialActivities.length ? 'Materyal →' : 'Aralin →'}</button>
                 </div>
               </div>
             </>
@@ -10667,7 +10672,7 @@ function EarlyLessonScreen({ lesson, feedback, go, completeLesson, submitMcq, su
                   <button className="g12-mission-btn secondary" onClick={goBackStep}>← Balik</button>
                 </div>
                 <div className="g12-mission-actions-right">
-                  <button className="g12-mission-btn purple" onClick={goNext}>Lessons →</button>
+                  <button className="g12-mission-btn purple" onClick={goNext}>Aralin →</button>
                 </div>
               </div>
             </>
