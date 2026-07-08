@@ -29,7 +29,7 @@ export default function AdminDashboard({
   const [toDate, setToDate] = useState('');
 
   // Add Student form state (mirrors mobile AdminHome)
-  const [stuForm, setStuForm] = useState({ name: '', gradeLevel: '', section: '' });
+  const [stuForm, setStuForm] = useState({ name: '', gradeLevel: '', section: '', sectionMode: 'existing', newSection: '' });
   const [stuErrors, setStuErrors] = useState({});
   const [stuSubmitting, setStuSubmitting] = useState(false);
   const [stuCredentials, setStuCredentials] = useState(null);
@@ -63,7 +63,7 @@ export default function AdminDashboard({
     return {
       name: !isValidName(form.name),
       gradeLevel: !isValidGrade(form.gradeLevel),
-      section: !normalizeSpaces(form.section),
+      section: !(form.sectionMode === 'new' ? normalizeSpaces(form.newSection) : normalizeSpaces(form.section)),
     };
   }
   function validateTeacher(form) {
@@ -87,13 +87,13 @@ export default function AdminDashboard({
       const payload = {
         name: normalizeSpaces(stuForm.name),
         gradeLevel: Number(stuForm.gradeLevel),
-        section: normalizeSpaces(stuForm.section),
+        section: stuForm.sectionMode === 'new' ? normalizeSpaces(stuForm.newSection) : normalizeSpaces(stuForm.section),
         avatar: '🧒',
       };
       const saved = await addStudent(payload);
       if (saved) {
         setStuCredentials({ username: saved.username, pin: saved.temporaryPin });
-        setStuForm({ name: '', gradeLevel: '', section: '' });
+        setStuForm({ name: '', gradeLevel: '', section: '', sectionMode: 'existing', newSection: '' });
         setStuErrors({});
       }
     } finally {
@@ -818,7 +818,7 @@ function teacherNameForAssignment(assignment) {
                       <select
                         className="input-field"
                         value={stuForm.gradeLevel}
-                        onChange={e => setStuForm(f => ({ ...f, gradeLevel: e.target.value }))}
+                        onChange={e => setStuForm(f => ({ ...f, gradeLevel: e.target.value, section: '', sectionMode: 'existing', newSection: '' }))}
                       >
                         <option value="">Select Grade</option>
                         {[1,2,3,4,5,6].map(grade => (
@@ -829,21 +829,39 @@ function teacherNameForAssignment(assignment) {
 
                       <div style={{ height: 10 }} />
                       <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>Section</label>
-                      <input
+                      <select
                         className="input-field"
-                        placeholder={stuSectionOptions.length ? 'Pumili o mag-type ng section' : 'Type section name'}
-                        list="stu-section-list"
-                        value={stuForm.section}
-                        onChange={e => setStuForm(f => ({ ...f, section: e.target.value }))}
-                        autoComplete="off"
-                      />
-                      {stuSectionOptions.length > 0 && (
-                        <datalist id="stu-section-list">
-                          {stuSectionOptions.map(sec => (
-                            <option key={sec} value={sec} />
-                          ))}
-                        </datalist>
+                        value={stuForm.sectionMode === 'new' ? '__new__' : stuForm.section}
+                        onChange={e => {
+                          const value = e.target.value;
+
+                          setStuForm(f => (
+                            value === '__new__'
+                              ? { ...f, sectionMode: 'new', section: '', newSection: f.newSection || '' }
+                              : { ...f, sectionMode: 'existing', section: value, newSection: '' }
+                          ));
+                        }}
+                      >
+                        <option value="">Select existing section</option>
+                        {stuSectionOptions.map(sec => (
+                          <option key={sec} value={sec}>{sec}</option>
+                        ))}
+                        <option value="__new__">+ Add new section</option>
+                      </select>
+
+                      {stuForm.sectionMode === 'new' && (
+                        <>
+                          <div style={{ height: 10 }} />
+                          <label style={{ display: 'block', marginBottom: 4, fontWeight: 700 }}>New Section Name</label>
+                          <input
+                            className="input-field"
+                            value={stuForm.newSection}
+                            onChange={e => setStuForm(f => ({ ...f, newSection: e.target.value }))}
+                            autoComplete="off"
+                          />
+                        </>
                       )}
+
                       {stuErrors.section && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Section is required.</p>}
 
                       <p className="add-teacher-helper-note" style={{ margin: '8px 0 18px', color: '#687a72', fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>
