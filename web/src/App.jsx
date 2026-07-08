@@ -1809,7 +1809,10 @@ async function reactivateStudent(id) {
   if (!confirmed) return;
 
   await safeRun(async () => {
-    await api(`/students/${id}/reactivate`, { method: 'POST' });
+    await api(`/students/${id}/reactivate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: 'Reactivated by administrator' }),
+    });
     notify('Student reactivated.');
     await loadAdminDashboard();
     await loadTeacherDashboard().catch(() => null);
@@ -1897,7 +1900,10 @@ async function reactivateTeacher(id) {
   if (!confirmed) return;
 
   await safeRun(async () => {
-    await api(`/teachers/${id}/reactivate`, { method: 'POST' });
+    await api(`/teachers/${id}/reactivate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: 'Reactivated by administrator' }),
+    });
     notify('Teacher reactivated.');
     await loadAdminDashboard();
   });

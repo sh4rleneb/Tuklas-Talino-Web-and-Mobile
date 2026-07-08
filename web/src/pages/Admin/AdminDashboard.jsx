@@ -8,12 +8,10 @@ export default function AdminDashboard({
   logout,
   addStudent,
   addTeacher,
-  archiveStudent,
   reactivateStudent,
   resetStudentPassword,
   resetStudent,
   resetTeacherPassword,
-  archiveTeacher,
   reactivateTeacher,
   updateAccountStatus,
   updateStudentEnrollment,
@@ -384,7 +382,7 @@ const filteredLogs = logs.filter(log => {
     return `Grade ${assignment.gradeLevel} • ${assignment.section}`;
   }
 
-  const accountStatusOptions = ['active', 'inactive', 'archived'];
+  const accountStatusOptions = ['active', 'archived'];
 
   function accountUserIdForEntity(entity = {}) {
     return (
@@ -1052,6 +1050,17 @@ function teacherNameForAssignment(assignment) {
                     const userId = accountUserIdForEntity(s);
                     const isSavingStatus = userId && String(savingAccountStatusId) === String(userId);
                     const currentStatus = statusForEntity(s);
+                    const enrollmentSectionOptions = [...new Set([
+                      ...teacherAssignments
+                        .filter(option => !enrollmentDraft.gradeLevel || Number(option.gradeLevel) === Number(enrollmentDraft.gradeLevel))
+                        .map(option => option.section),
+                      ...classOptions
+                        .filter(option => !enrollmentDraft.gradeLevel || Number(option.gradeLevel) === Number(enrollmentDraft.gradeLevel))
+                        .map(option => option.section),
+                      ...students
+                        .filter(student => !enrollmentDraft.gradeLevel || Number(student.gradeLevel || student.grade) === Number(enrollmentDraft.gradeLevel))
+                        .map(student => student.section || student.sectionName || student.classSection),
+                    ].map(normalizeSpaces).filter(Boolean))];
 
                     return (
                       <div className="admin-clean-table-row" key={s.id}>
@@ -1073,13 +1082,20 @@ function teacherNameForAssignment(assignment) {
                               ))}
                             </select>
 
-                            <input
+                            <select
                               className="input-field"
                               value={enrollmentDraft.section || ''}
                               onChange={event => updateEnrollmentDraft(s.id, { section: event.target.value })}
-                              placeholder="Section"
                               style={{ minWidth: 120 }}
-                            />
+                            >
+                              <option value="">Select Section</option>
+                              {enrollmentSectionOptions.map(section => (
+                                <option key={`student-${s.id}-section-${section}`} value={section}>{section}</option>
+                              ))}
+                              {!enrollmentSectionOptions.length && (
+                                <option value="" disabled>No sections found</option>
+                              )}
+                            </select>
 
                             <button
                               className="btn btn-outline btn-sm"
@@ -1112,7 +1128,6 @@ function teacherNameForAssignment(assignment) {
                         <span className="admin-clean-actions">
                           <button className="btn btn-outline btn-sm" onClick={() => openVault('Student', s)}>Login Credentials</button>
                           <button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset Progress</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => archiveStudent(s.id)}>Archive</button>
                         </span>
                       </div>
                     );
@@ -1170,7 +1185,6 @@ function teacherNameForAssignment(assignment) {
                             ))}
                           </select>
                           <button className="btn btn-outline btn-sm" onClick={() => openVault('Teacher', t)}>Login Credentials</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => archiveTeacher(t.id)}>Archive</button>
                         </div>
                       </div>
                     );
