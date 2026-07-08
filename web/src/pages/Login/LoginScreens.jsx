@@ -87,8 +87,8 @@ function handleTeacherIdentifierChange(event) {
               onChange={handleTeacherIdentifierChange}
               onKeyDown={submitTeacherLogin}
             />
-            {teacherCheck.checking && <span className="input-check">…</span>}
-            {teacherCheck.exists && <span className="input-check">✓</span>}
+            
+            
           </div>
 
           
@@ -194,8 +194,8 @@ function handleAdminIdentifierChange(event) {
               onChange={handleAdminIdentifierChange}
               onKeyDown={submitAdminLogin}
             />
-            {adminCheck.checking && <span className="input-check">…</span>}
-            {adminCheck.exists && <span className="input-check">✓</span>}
+            
+            
           </div>
 
           
