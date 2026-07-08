@@ -16,12 +16,7 @@ export async function getAdminAccounts() {
   return api('/admin/accounts');
 }
 
-export async function updateAccountStatus(userId, status) {
-  return api(`/admin/accounts/${userId}/status`, {
-    method: 'PATCH',
-    body: { status },
-  });
-}
+export async function updateAccountStatus(userId, status, body = {}) { const payload = typeof body === 'string' ? { reason: body } : (body || {}); return api(`/admin/accounts/${userId}/status`, { method: 'PATCH', body: { status, ...payload }, }); }
 
 export async function getActiveStudents() {
   return api('/students?status=active');
@@ -65,9 +60,7 @@ export async function removeTeacherAssignment(assignmentId) {
   return api(`/admin/teacher-assignments/${assignmentId}`, { method: 'DELETE' });
 }
 
-export async function resetStudentPassword(studentId) {
-  return api(`/students/${studentId}/reset-password`, { method: 'POST' });
-}
+export async function resetStudentPassword(studentId, body = {}) { return api(`/students/${studentId}/reset-password`, { method: 'POST', body }); }
 
 export async function resetStudentProgress(studentId, body = {}) {
   return api(`/students/${studentId}/reset-progress`, {
@@ -90,9 +83,7 @@ export async function reactivateStudent(studentId, body = {}) {
   });
 }
 
-export async function resetTeacherPassword(teacherId) {
-  return api(`/teachers/${teacherId}/reset-password`, { method: 'POST' });
-}
+export async function resetTeacherPassword(teacherId, body = {}) { return api(`/teachers/${teacherId}/reset-password`, { method: 'POST', body }); }
 
 export async function archiveTeacher(teacherId, body = {}) {
   return api(`/teachers/${teacherId}/archive`, {

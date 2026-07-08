@@ -48,6 +48,7 @@ import {
   resetStudentProgress,
   resetTeacherPassword,
   updateStudentEnrollment,
+  updateAccountStatus,
 } from '../../api/admin';
 import { logout, verifyPassword } from '../../api/auth';
 const NAV_ITEMS = [
@@ -501,6 +502,101 @@ async function executeVerifiedAction() {
     if (metadata.lessonId) details.push(`Lesson ID: ${metadata.lessonId}`);
 
     return details.join(' • ');
+  }
+
+  
+  function accountUserIdForEntity(entity = {}) {
+    return (
+      entity?.userId ||
+      entity?.User?.id ||
+      entity?.user?.id ||
+      entity?.Account?.id ||
+      entity?.account?.id ||
+      entity?.accountUserId ||
+      null
+    );
+  }
+
+  function statusForEntity(entity = {}) {
+    return String(
+      entity?.User?.status ||
+      entity?.user?.status ||
+      entity?.status ||
+      'active'
+    ).toLowerCase();
+  }
+
+  function handleAccountStatusChange(entity, nextStatus, label) {
+    const userId = accountUserIdForEntity(entity);
+
+    if (!userId) {
+      Alert.alert(
+        'Missing Account Link',
+        'No linked user account was found for this record.'
+      );
+      return;
+    }
+
+    requestProtectedAdminAction({
+      keyword: nextStatus === 'archived' ? 'ARCHIVE' : 'ACTIVE',
+      reasonPlaceholder:
+        nextStatus === 'archived'
+          ? `e.g.\n${label} should be moved to Archives`
+          : `e.g.\n${label} should be restored as active`,
+      action: (reason) =>
+        run(
+          `account-status-${userId}-${nextStatus}`,
+          () => updateAccountStatus(userId, nextStatus, { reason }),
+          nextStatus === 'archived'
+            ? 'Account moved to Archives.'
+            : 'Account status updated.'
+        ),
+    });
+  }
+
+  function renderStatusControl(entity, label) {
+    const currentStatus = statusForEntity(entity);
+
+    return (
+      <View style={{ marginTop: 10 }}>
+        <Text style={{ fontSize: 12, fontWeight: '800', color: '#374151', marginBottom: 6 }}>
+          Account Status
+        </Text>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          {['active', 'archived'].map((statusOption) => {
+            const selected = currentStatus === statusOption;
+
+            return (
+              <TouchableOpacity
+                key={statusOption}
+                disabled={selected || Boolean(busy)}
+                onPress={() => handleAccountStatusChange(entity, statusOption, label)}
+                style={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: selected ? '#111827' : '#d1d5db',
+                  backgroundColor: selected ? '#111827' : '#ffffff',
+                  opacity: selected || busy ? 0.85 : 1,
+                  marginRight: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ color: selected ? '#ffffff' : '#111827', fontWeight: '800' }}>
+                  {statusOption === 'active' ? 'Active' : 'Archived'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={{ marginTop: 2, fontSize: 11, color: '#6b7280' }}>
+          Only Active and Archived are allowed.
+        </Text>
+      </View>
+    );
   }
 
   function renderOverview() {
@@ -1039,6 +1135,7 @@ async function executeVerifiedAction() {
                 });
                 setVaultVisible(true);
               }}>Login Credentials</Button>
+            {renderStatusControl(student, student.name || 'student account')}
             </View>
             <View style={styles.choiceRow}>
               {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
@@ -1129,6 +1226,7 @@ async function executeVerifiedAction() {
                   });
                   setVaultVisible(true);
                 }}>Login Credentials</Button>
+            {renderStatusControl(teacher, teacher.name || 'teacher account')}
               </View>
             </View>
           );
