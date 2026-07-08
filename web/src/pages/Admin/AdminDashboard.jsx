@@ -167,45 +167,57 @@ export default function AdminDashboard({
 
   function auditActionLabel(action = '') {
     const labels = {
-      'account.status': 'Updated account status',
       'auth.login': 'Logged in',
       'auth.logout': 'Logged out',
       'auth.change_password': 'Changed password',
+      'auth.verify_password': 'Verified password',
+
+      'account.status': 'Updated account status',
+
       'student.create': 'Created student account',
       'student.update': 'Updated student account',
       'student.archive': 'Archived student account',
       'student.reactivate': 'Reactivated student account',
       'student.reset_password': 'Reset student password',
       'student.reset_progress': 'Reset student progress',
-      'student.promote': 'Promoted student',
+      'student.enrollment.update': 'Updated student class',
+
       'teacher.create': 'Created teacher account',
       'teacher.update': 'Updated teacher account',
       'teacher.archive': 'Archived teacher account',
       'teacher.reactivate': 'Reactivated teacher account',
       'teacher.reset_password': 'Reset teacher password',
+      'teacher.assignment.create': 'Assigned teacher class',
+      'teacher.assignment.update': 'Updated teacher assignment',
+      'teacher.assignment.remove': 'Removed teacher assignment',
+
       'lesson.create': 'Created lesson',
       'lesson.update': 'Updated lesson',
       'lesson.archive': 'Archived lesson',
       'lesson.complete': 'Completed lesson',
+
       'quiz.result': 'Submitted quiz result',
+
       'group.create': 'Created group',
       'group.update': 'Updated group',
       'group.archive': 'Archived group',
       'group.add_member': 'Added group member',
-      'group.remove_member': 'Removed group member',
       'group.set_leader': 'Set group leader',
+
       'group_task.create': 'Created group task',
       'group_task.archive': 'Archived group task',
-      'group_task.approve_group_completion': 'Approved group task',
-      'group_task.return_group_completion': 'Returned group task',
+      'group_task.approve_group_completion': 'Approved group task completion',
+      'group_task.return_group_completion': 'Returned group task completion',
+
       'speech_attempt.review': 'Reviewed speech attempt',
-      'system.seed': 'Loaded seed data',
+
+      'system.seed': 'Loaded initial system data',
     };
 
     if (labels[action]) return labels[action];
 
-    return String(action || 'System action')
-      .replace(/[._-]+/g, ' ')
+    return String(action || 'activity')
+      .replace(/[_\.]/g, ' ')
       .replace(/\b\w/g, char => char.toUpperCase());
   }
 

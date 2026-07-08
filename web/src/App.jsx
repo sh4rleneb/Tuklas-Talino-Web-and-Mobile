@@ -1657,7 +1657,7 @@ async function loadAdminDashboard() {
     api('/teachers?status=archived'),
     api('/admin/enrollments'),
     api('/admin/accounts'),
-    api('/admin/audit-logs?limit=50')
+    api('/admin/audit-logs?limit=500')
   ]);
 
   setAdminData({
