@@ -20,7 +20,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 
+const requestBodyLimit = process.env.REQUEST_BODY_LIMIT || '2mb';
+const apiRateLimitWindowMs = Number.parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || String(15 * 60 * 1000), 10);
+const apiRateLimitMax = Number.parseInt(process.env.API_RATE_LIMIT_MAX || '100', 10);
+
 const app = express();
+
+app.disable('x-powered-by');
 
 app.set('trust proxy', 1);
 
@@ -42,9 +48,24 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json({ limit: '2mb' }));
+const apiLimiter = rateLimit({
+  windowMs: apiRateLimitWindowMs,
+  limit: apiRateLimitMax,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  statusCode: 429,
+  skip: (req) => req.method === 'OPTIONS',
+  message: {
+    error: 'Too Many Requests',
+    message: 'Too many requests. Please try again later.'
+  }
+});
+
+app.use('/api', apiLimiter);
+
+app.use(express.json({ limit: requestBodyLimit }));
+app.use(express.urlencoded({ extended: true, limit: requestBodyLimit, parameterLimit: 100 }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 500 }));
 app.use('/uploads', express.static(uploadsDir));
 
 const server = http.createServer(app);
@@ -65,7 +86,15 @@ app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
 
 app.use((err, req, res, next) => {
   console.error(err);
-  const status = err.statusCode || 500;
+
+  if (err.type === 'entity.too.large' || err.type === 'parameters.too.many' || err.status === 413 || err.statusCode === 413) {
+    return res.status(413).json({
+      error: 'Payload Too Large',
+      message: `Request body is too large. Maximum allowed size is ${requestBodyLimit}.`
+    });
+  }
+
+  const status = err.statusCode || err.status || 500;
 
   res.status(status).json({
     message: err.message || 'Internal server error.',
