@@ -786,19 +786,19 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 13,
   },
-
   lessonCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 12,
-    marginBottom: 18,
-    borderWidth: 1.5,
-    overflow: 'hidden',
+    borderRadius: 26,
+    padding: 18,
+    marginBottom: 16,
+    minHeight: 190,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
     shadowColor: '#14532D',
-    shadowOpacity: 0.09,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
 
   lessonCardDone: {
@@ -848,20 +848,20 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
-
   lessonTitle: {
     color: '#0F172A',
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: '900',
-    marginTop: 3,
+    flexShrink: 1,
   },
-
   lessonMeta: {
-    color: '#64748B',
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: '800',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    rowGap: 8,
+    columnGap: 8,
+    marginTop: 12,
   },
 
   statusPill: {

@@ -68,6 +68,18 @@ export default function ProfileScreen({
     setLogoutVisible(true);
   }
 
+
+  function handleChangePassword() {
+    const gradeLevel = Number(dashboard?.student?.gradeLevel || 0);
+    const homeRoute = gradeLevel <= 2 ? 'StudentTabs' : 'StudentSeniorTabs';
+    const rootNavigation =
+      navigation.getParent?.()?.getParent?.() ||
+      navigation.getParent?.() ||
+      navigation;
+
+    rootNavigation.navigate('ChangePassword', { homeRoute });
+  }
+
 async function handleLogout() {
     setLogoutVisible(false);
     await setToken(null);
@@ -461,6 +473,16 @@ async function handleLogout() {
       <Text style={styles.sectionSubtitle}>
         Kung tapos ka na, pindutin ang Mag-logout sa ibaba.
       </Text>
+
+
+      <TouchableOpacity
+        style={styles.changePasswordButton}
+        onPress={handleChangePassword}
+      >
+        <Text style={styles.changePasswordButtonText}>
+          Palitan ang PIN/Password
+        </Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.logoutButton}
@@ -1006,6 +1028,26 @@ const styles = StyleSheet.create({
   accountCard: {
     paddingTop: 20,
     paddingBottom: 20,
+  },
+
+  changePasswordButton: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#16A34A',
+    borderWidth: 2,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    marginBottom: 12,
+  },
+
+  changePasswordButtonText: {
+    color: '#166534',
+    fontSize: 16,
+    fontFamily: 'Nunito_900Black',
+    textAlign: 'center',
   },
 
   logoutButton: {

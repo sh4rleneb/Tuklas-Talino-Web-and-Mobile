@@ -234,7 +234,7 @@ function SelectMenu({ label, value, options = [], onSelect, disabled = false, pl
               })}
             </ScrollView>
             <TouchableOpacity style={styles.selectClose} onPress={() => setVisible(false)}>
-              <Text style={styles.selectCloseText}>Close</Text>
+              <Text style={styles.selectCloseText}>Isara</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -270,9 +270,9 @@ function splitStructuredLessonPassage(passage = '') {
   };
 
   const patterns = [
-    ['layunin', /Layunin:\s*([\s\S]*?)(?=\n\s*Alamin:|\n\s*Lesson:|$)/i],
-    ['alamin', /Alamin:\s*([\s\S]*?)(?=\n\s*Lesson:|$)/i],
-    ['aralin', /Lesson:\s*([\s\S]*)$/i]
+    ['layunin', /Layunin:\s*([\s\S]*?)(?=\n\s*Alamin:|\n\s*(?:Aralin|Lesson):|$)/i],
+    ['alamin', /Alamin:\s*([\s\S]*?)(?=\n\s*(?:Aralin|Lesson):|$)/i],
+    ['aralin', /(?:Aralin|Lesson):\s*([\s\S]*)$/i]
   ];
 
   patterns.forEach(([key, pattern]) => {
@@ -293,10 +293,116 @@ function buildStructuredLessonPassage(draft = {}) {
   const parts = [
     cleanTeacherLessonText(draft.layunin) ? `Layunin:\n${cleanTeacherLessonText(draft.layunin)}` : '',
     cleanTeacherLessonText(draft.alamin) ? `Alamin:\n${cleanTeacherLessonText(draft.alamin)}` : '',
-    cleanTeacherLessonText(draft.aralin) ? `Lesson:\n${cleanTeacherLessonText(draft.aralin)}` : ''
+    cleanTeacherLessonText(draft.aralin) ? `Aralin:\n${cleanTeacherLessonText(draft.aralin)}` : ''
   ].filter(Boolean);
 
   return parts.join('\n\n') || cleanTeacherLessonText(draft.passage);
+}
+
+
+function createDefaultTeacherDeadlineDate() {
+  const next = new Date();
+
+  next.setMinutes(next.getMinutes() + 60);
+  next.setSeconds(0, 0);
+
+  const remainder = next.getMinutes() % 5;
+  if (remainder) {
+    next.setMinutes(next.getMinutes() + (5 - remainder));
+  }
+
+  return next;
+}
+
+function createDefaultTeacherDeadlineValue() {
+  return createDefaultTeacherDeadlineDate().toISOString();
+}
+
+function normalizeTeacherDeadlineInput(value = '') {
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) return '';
+
+  return parsed.toISOString();
+}
+
+function getActivityDeadlineDate(value = '') {
+  const parsed = new Date(value);
+
+  if (!value || Number.isNaN(parsed.getTime())) {
+    return createDefaultTeacherDeadlineDate();
+  }
+
+  return parsed;
+}
+
+function mergeTeacherDeadlineDateTime(currentValue = '', selectedDate = new Date(), mode = 'date') {
+  const base = getActivityDeadlineDate(currentValue);
+  const selected = new Date(selectedDate);
+
+  if (Number.isNaN(selected.getTime())) {
+    return base.toISOString();
+  }
+
+  const next = new Date(base);
+
+  if (mode === 'time') {
+    next.setHours(selected.getHours(), selected.getMinutes(), 0, 0);
+  } else {
+    next.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+  }
+
+  return next.toISOString();
+}
+
+function formatTeacherDeadlineForDisplay(value = '') {
+  const parsed = new Date(value);
+
+  if (!value || Number.isNaN(parsed.getTime())) {
+    return 'Select activity date and time';
+  }
+
+  return parsed.toLocaleString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getTeacherDeadlineValidationMessage(rawDeadline = '', hasDeadline = false) {
+  if (!hasDeadline) return '';
+
+  const normalizedDeadline = normalizeTeacherDeadlineInput(rawDeadline);
+
+  if (!normalizedDeadline) {
+    return 'Select activity date and time bago idagdag ang gawain.';
+  }
+
+  const parsedDeadline = new Date(normalizedDeadline);
+
+  if (Number.isNaN(parsedDeadline.getTime())) {
+    return 'Hindi valid ang deadline. Pumili muli ng date at oras.';
+  }
+
+  const now = new Date();
+
+  if (parsedDeadline.getTime() <= now.getTime()) {
+    return 'Hindi maaaring nasa nakaraan ang deadline. Pumili ng mas huling date at oras.';
+  }
+
+  return '';
+}
+
+function normalizeTeacherMaxAttempts(value = 2) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 2;
+  return Math.max(1, Math.min(5, Math.round(parsed)));
+}
+
+function getTeacherAttemptOptions() {
+  return ['1', '2', '3', '4', '5'];
 }
 
 function getTeacherActivityValidationMessage(activity = {}) {
@@ -403,7 +509,7 @@ function getTeacherLessonBuilderValidationMessage(draft = {}, activities = [], a
   const gradeLevel = Number(draft.gradeLevel ?? draft.grade ?? 0);
 
   if (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 6) {
-    return 'Select a valid Grade 1 to Grade 6 level.';
+    return 'Pumili ng valid na Grade 1 hanggang Grade 6.';
   }
 
   const assignedGrades = Array.isArray(assignedGradeLevels)
@@ -543,6 +649,95 @@ function getTeacherLessonSpeechFallback(draft = {}, editingLesson = {}) {
   );
 }
 
+
+function getPickedLessonMaterialAsset(result = {}) {
+  if (!result || result.canceled || result.cancelled) return null;
+  if (Array.isArray(result.assets) && result.assets.length) return result.assets[0];
+  if (result.uri) return result;
+  return null;
+}
+
+function getLessonMaterialMimeType(asset = {}) {
+  const rawName = String(asset.name || asset.fileName || asset.uri || '').toLowerCase();
+
+  return asset.mimeType ||
+    asset.type ||
+    (rawName.endsWith('.pdf')
+      ? 'application/pdf'
+      : rawName.endsWith('.pptx')
+      ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      : rawName.endsWith('.ppt')
+      ? 'application/vnd.ms-powerpoint'
+      : '');
+}
+
+function getLessonMaterialDisplayName(asset = {}) {
+  return asset.name || asset.fileName || String(asset.uri || '').split('/').pop() || 'lesson-material';
+}
+
+function isSupportedLessonMaterial(asset = {}) {
+  const name = getLessonMaterialDisplayName(asset).toLowerCase();
+  const type = getLessonMaterialMimeType(asset).toLowerCase();
+
+  return (
+    name.endsWith('.pdf') ||
+    name.endsWith('.ppt') ||
+    name.endsWith('.pptx') ||
+    type.includes('pdf') ||
+    type.includes('powerpoint') ||
+    type.includes('presentation')
+  );
+}
+
+function normalizeUploadedLessonMaterial(response = {}, asset = {}) {
+  const material =
+    response.material ||
+    response.lessonMaterial ||
+    response.file ||
+    response.upload ||
+    response.data ||
+    response;
+
+  const fileName =
+    material.fileName ||
+    material.name ||
+    material.originalName ||
+    material.originalname ||
+    getLessonMaterialDisplayName(asset);
+
+  const fileType =
+    material.fileType ||
+    material.mimeType ||
+    material.mimetype ||
+    getLessonMaterialMimeType(asset) ||
+    'application/octet-stream';
+
+  return {
+    ...material,
+    fileName,
+    name: material.name || fileName,
+    fileType,
+    mimeType: material.mimeType || fileType,
+    size: material.size || asset.size || 0,
+    uri: material.uri || material.url || material.fileUrl || asset.uri,
+  };
+}
+
+function lessonMaterialUploadErrorMessage(error = {}) {
+  const message = String(
+    error?.response?.data?.message ||
+    error?.data?.message ||
+    error?.message ||
+    ''
+  ).trim();
+
+  if (!message || message === 'Request failed') {
+    return 'Hindi ma-upload ang lesson material. Pakisigurong PDF, PPT, o PPTX ang file at subukan muli.';
+  }
+
+  return message;
+}
+
 function formatActivityDeadlineValue(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -550,22 +745,6 @@ function formatActivityDeadlineValue(date) {
 
   return `${year}-${month}-${day}`;
 }
-
-function getActivityDeadlineDate(value) {
-  const parts = String(value || '').split('-').map((part) => Number(part));
-
-  if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
-    const [year, month, day] = parts;
-    const parsed = new Date(year, month - 1, day);
-
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
-
-  return new Date();
-}
-
 
 function getTeacherActiveGroupRows(groupData = {}) {
   const rows = Array.isArray(groupData)
@@ -696,6 +875,30 @@ function removeGroupFromPendingChecksState(pending = {}, deletedGroup = {}) {
   return buildPendingGroupChecksPayload(pending, rows);
 }
 
+
+function isPasswordChangeRequiredError(error = {}) {
+  const message = String(
+    error?.response?.data?.message ||
+    error?.data?.message ||
+    error?.message ||
+    ''
+  ).toLowerCase();
+
+  return (
+    message.includes('password change required') ||
+    message.includes('must change password') ||
+    message.includes('change your password')
+  );
+}
+
+function routeTeacherToPasswordChange(navigation) {
+  if (!navigation?.replace) return;
+
+  navigation.replace('ChangePassword', {
+    homeRoute: 'TeacherHome',
+  });
+}
+
 export default function TeacherHome({ navigation }) {
   const insets = useSafeAreaInsets();
   const keyboardVerticalOffset = Platform.OS === 'ios' ? Math.max(insets.top - 6, 0) : 0;
@@ -725,12 +928,14 @@ export default function TeacherHome({ navigation }) {
   const [editingLesson, setEditingLesson] = useState(null);
   const [draft, setDraft] = useState(emptyLessonDraft);
   const [activityDeadlinePickerVisible, setActivityDeadlinePickerVisible] = useState(false);
+  const [activityDeadlinePickerMode, setActivityDeadlinePickerMode] = useState('date');
   const [newActivity, setNewActivity] = useState({
     type: 'mcq',
       gawainType: 'writing_task',
     title: '',
     deadline: '',
     hasDeadline: false,
+    maxAttempts: '2',
     editingActivityIndex: null,
     instructions: '',
     content: '',
@@ -784,11 +989,25 @@ export default function TeacherHome({ navigation }) {
       setReviewQueue(reviews || { summary: {}, writing: [], speech: [] });
       setStudentReport(students || []);
     } catch (err) {
-      setError(err.message || 'Unable to load teacher workspace.');
+      const message =
+        err?.response?.data?.message ||
+        err?.data?.message ||
+        err?.message ||
+        'Hindi ma-load ang teacher workspace.';
+
+      if (isPasswordChangeRequiredError(err)) {
+        const notice = 'Kailangan munang palitan ang temporary PIN/password bago buksan ang teacher dashboard.';
+        setError(notice);
+        setWorkspaceNotice({ type: 'warning', text: notice });
+        routeTeacherToPasswordChange(navigation);
+        return;
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [navigation]);
 
 
   const refreshPendingGroupChecksRealtime = useCallback(async () => {
@@ -802,9 +1021,14 @@ export default function TeacherHome({ navigation }) {
       setGroups(activeGroups);
       setPendingChecks(filterPendingGroupChecksForActiveGroups(pending, activeGroups));
     } catch (err) {
+      if (isPasswordChangeRequiredError(err)) {
+        routeTeacherToPasswordChange(navigation);
+        return;
+      }
+
       console.warn('[TeacherHome] Pending group checks refresh failed:', err?.message || err);
     }
-  }, []);
+  }, [navigation]);
 
   useFocusEffect(useCallback(() => {
     load();
@@ -973,7 +1197,7 @@ export default function TeacherHome({ navigation }) {
       await load();
       return data;
     } catch (err) {
-      setWorkspaceNotice({ type: 'error', text: err.message || 'Unable to save. Please try again.' });
+      setWorkspaceNotice({ type: 'error', text: err.message || 'Hindi naisave. Pakisubukan muli.' });
       return null;
     } finally {
       setBusy('');
@@ -995,8 +1219,8 @@ export default function TeacherHome({ navigation }) {
       await action();
     } catch (err) {
       Alert.alert(
-        'Report Export Failed',
-        err?.message || 'Unable to prepare the monitoring report.'
+        'Hindi Na-export ang Report',
+        err?.message || 'Hindi maihanda ang monitoring report.'
       );
     } finally {
       setReportBusy('');
@@ -1009,23 +1233,49 @@ async function handleLogout() {
   }
 
   async function pickMaterial() {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: [
-        'application/pdf',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      ],
-      copyToCacheDirectory: true,
-    });
-    if (result.canceled) return;
+    if (busy === 'material') return;
 
-    setBusy('material');
     try {
-      const data = await uploadLessonMaterial(result.assets[0]);
-      setDraft((current) => ({ ...current, material: data.material }));
-      Alert.alert('Lesson Material', 'File uploaded successfully.');
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        ],
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
+
+      const asset = getPickedLessonMaterialAsset(result);
+
+      if (!asset) return;
+
+      if (!asset.uri) {
+        Alert.alert('Materyal ng Aralin', 'Hindi mabasa ang napiling file. Pumili muli ng PDF, PPT, o PPTX.');
+        return;
+      }
+
+      if (!isSupportedLessonMaterial(asset)) {
+        Alert.alert('Materyal ng Aralin', 'PDF, PPT, o PPTX lang ang maaaring i-upload.');
+        return;
+      }
+
+      setBusy('material');
+
+      const uploaded = await uploadLessonMaterial(asset);
+      const material = normalizeUploadedLessonMaterial(uploaded, asset);
+
+      setDraft((current) => ({
+        ...current,
+        material,
+      }));
+
+      setWorkspaceNotice({
+        type: 'success',
+        text: `Lesson material uploaded: ${material.fileName || getLessonMaterialDisplayName(asset)}`,
+      });
     } catch (err) {
-      Alert.alert('Lesson Material', err.message || 'Unable to upload file.');
+      Alert.alert('Materyal ng Aralin', lessonMaterialUploadErrorMessage(err));
     } finally {
       setBusy('');
     }
@@ -1076,6 +1326,7 @@ async function handleLogout() {
       instructions: type === 'speech' ? '' : activity.instructions || current.instructions || '',
       deadline: deadlineState.deadline,
       hasDeadline: deadlineState.hasDeadline,
+      maxAttempts: String(activity.maxAttempts ?? activity.max_attempts ?? activity.attemptLimit ?? activity.attemptsAllowed ?? current.maxAttempts ?? '2'),
     };
 
     if (type === 'mcq') {
@@ -1185,12 +1436,24 @@ async function handleLogout() {
     }
 
     const title = newActivity.title.trim() || {
-      infographic: 'Lesson Note',
-      writing: 'Writing Activity',
-      speech: 'Speech Practice',
+      infographic: 'Tala ng Aralin',
+      writing: 'Gawaing Pagsulat',
+      speech: 'Pagsasanay sa Pagbigkas',
       mcq: 'Maramihang Pagpipiliang Pagsusulit',
     }[type];
     let activity;
+    const deadlineValidationMessage = getTeacherDeadlineValidationMessage(newActivity.deadline, newActivity.hasDeadline);
+    if (deadlineValidationMessage) {
+      setWorkspaceNotice({ type: 'warning', text: deadlineValidationMessage });
+      return;
+    }
+
+    const activityDeadlineValue = newActivity.hasDeadline
+      ? normalizeTeacherDeadlineInput(newActivity.deadline)
+      : null;
+
+    const activityMaxAttempts = normalizeTeacherMaxAttempts(newActivity.maxAttempts);
+
 
     if (type === 'mcq') {
       const choiceCount = Math.min(
@@ -1206,12 +1469,12 @@ async function handleLogout() {
         .filter((option) => option.text);
 
       if (!newActivity.question.trim() || quizOptions.length < 2) {
-        setWorkspaceNotice({ type: 'warning', text: 'Add a question and at least two answer choices.' });
+        setWorkspaceNotice({ type: 'warning', text: 'Maglagay ng tanong at kahit dalawang pagpipilian.' });
         return;
       }
 
       if (!quizOptions.some((option) => option.choice === newActivity.correctOption)) {
-        setWorkspaceNotice({ type: 'warning', text: 'Select a correct answer from the filled choices.' });
+        setWorkspaceNotice({ type: 'warning', text: 'Piliin ang tamang sagot mula sa mga nilagay na pagpipilian.' });
         return;
       }
 
@@ -1219,8 +1482,7 @@ async function handleLogout() {
         type,
         title,
         instructions: newActivity.instructions,
-        deadline: newActivity.hasDeadline ? (newActivity.deadline || null) : null,
-        dueAt: newActivity.hasDeadline ? (newActivity.deadline || null) : null,
+        deadline: activityDeadlineValue, dueAt: activityDeadlineValue, maxAttempts: activityMaxAttempts,
         questions: [{
           question: newActivity.question,
           options: quizOptions.map((option) => ({
@@ -1231,22 +1493,22 @@ async function handleLogout() {
       };
     } else if (type === 'writing') {
       if (!newActivity.content.trim()) {
-        setWorkspaceNotice({ type: 'warning', text: 'Add a writing prompt first.' });
+        setWorkspaceNotice({ type: 'warning', text: 'Maglagay muna ng gawain sa pagsulat.' });
         return;
       }
-      activity = { type, title, instructions: newActivity.instructions, prompt: newActivity.content, gawainType: newActivity.gawainType || 'writing_task', deadline: newActivity.hasDeadline ? (newActivity.deadline || null) : null, dueAt: newActivity.hasDeadline ? (newActivity.deadline || null) : null };
+      activity = { type, title, instructions: newActivity.instructions, prompt: newActivity.content, gawainType: newActivity.gawainType || 'writing_task', deadline: activityDeadlineValue, dueAt: activityDeadlineValue, maxAttempts: activityMaxAttempts };
     } else if (type === 'speech') {
       if (!newActivity.content.trim()) {
-        setWorkspaceNotice({ type: 'warning', text: 'Add the exact words students should say in Speech Target Only.' });
+        setWorkspaceNotice({ type: 'warning', text: 'Ilagay ang eksaktong salitang bibigkasin ng mag-aaral.' });
         return;
       }
-      activity = { type, title, instructions: '', targetText: newActivity.content, content: newActivity.content, deadline: newActivity.hasDeadline ? (newActivity.deadline || null) : null, dueAt: newActivity.hasDeadline ? (newActivity.deadline || null) : null };
+      activity = { type, title, instructions: '', targetText: newActivity.content, content: newActivity.content, contentSafetyContext: 'speech_target', allowTeacherSpeechTarget: true, deadline: activityDeadlineValue, dueAt: activityDeadlineValue, maxAttempts: activityMaxAttempts };
     } else {
       if (!newActivity.content.trim()) {
-        setWorkspaceNotice({ type: 'warning', text: 'Add lesson-note content first.' });
+        setWorkspaceNotice({ type: 'warning', text: 'Maglagay muna ng nilalaman ng tala ng aralin.' });
         return;
       }
-      activity = { type: 'infographic', title, instructions: newActivity.instructions, content: newActivity.content, deadline: newActivity.hasDeadline ? (newActivity.deadline || null) : null, dueAt: newActivity.hasDeadline ? (newActivity.deadline || null) : null };
+      activity = { type: 'infographic', title, instructions: newActivity.instructions, content: newActivity.content, deadline: activityDeadlineValue, dueAt: activityDeadlineValue, maxAttempts: activityMaxAttempts };
     }
 
     setDraft((current) => {
@@ -1304,6 +1566,7 @@ async function handleLogout() {
       title: '',
       deadline: '',
       hasDeadline: false,
+    maxAttempts: '2',
       editingActivityIndex: null,
       instructions: '',
       content: '',
@@ -1344,6 +1607,8 @@ async function handleLogout() {
               targetText: target,
               content: target,
               instructions: '',
+              contentSafetyContext: 'speech_target',
+              allowTeacherSpeechTarget: true,
             };
           })
         : legacySpeechTarget
@@ -1351,7 +1616,7 @@ async function handleLogout() {
             ...editableActivities,
             {
               type: 'speech',
-              title: 'Speech Practice',
+              title: 'Pagsasanay sa Pagbigkas',
               instructions: '',
               targetText: legacySpeechTarget,
               content: legacySpeechTarget,
@@ -1371,7 +1636,7 @@ async function handleLogout() {
       speechTarget: legacySpeechTarget || lesson.speechTarget || '',
       material: materialActivity
         ? {
-            fileName: materialActivity.fileName || materialActivity.name || 'Lesson Material',
+            fileName: materialActivity.fileName || materialActivity.name || 'Materyal ng Aralin',
             fileType: materialActivity.fileType || materialActivity.mimeType || '',
             size: materialActivity.size || 0,
             url: materialActivity.url || materialActivity.fileUrl || materialActivity.materialUrl || '',
@@ -1390,7 +1655,7 @@ async function handleLogout() {
   function getLessonMaterialLabel(lesson = {}) {
     const material = getLessonActivities(lesson).find((activity) => activity?.type === 'material');
 
-    if (!material) return 'No material';
+    if (!material) return 'Walang materyal';
 
     return material.fileName || material.name || material.title || 'Attached material';
   }
@@ -1457,11 +1722,11 @@ async function handleLogout() {
 
 
   function formatTeacherLessonDate(value) {
-    if (!value) return 'No date';
+    if (!value) return 'Walang petsa';
 
     const date = new Date(value);
 
-    if (Number.isNaN(date.getTime())) return 'No date';
+    if (Number.isNaN(date.getTime())) return 'Walang petsa';
 
     return date.toLocaleDateString();
   }
@@ -1554,6 +1819,8 @@ async function handleLogout() {
           targetText: target,
           content: target,
           instructions: '',
+              contentSafetyContext: 'speech_target',
+              allowTeacherSpeechTarget: true,
         };
       }),
     };
@@ -1588,13 +1855,15 @@ async function handleLogout() {
         targetText: target,
         content: target,
         instructions: '',
+              contentSafetyContext: 'speech_target',
+              allowTeacherSpeechTarget: true,
       };
     });
 
     const activities = [
       ...(draft.material ? [{
         type: 'material',
-        title: 'Lesson Material',
+        title: 'Materyal ng Aralin',
         instructions: draft.instructions,
         ...draft.material,
       }] : []),
@@ -1755,7 +2024,7 @@ async function handleLogout() {
       'Return for Revision',
       'Send this group task back for revision?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Kanselahin', style: 'cancel' },
         {
           text: 'Revise',
           style: 'destructive',
@@ -1870,7 +2139,7 @@ async function handleLogout() {
               </View>
             )}
             <SmallButton disabled={busy === 'material'} onPress={pickMaterial}>{busy === 'material' ? 'Uploading...' : 'Upload PPT/PDF Material'}</SmallButton>
-            <Field label="Teacher Notes" value={draft.instructions} onChangeText={(value) => setDraft((current) => ({ ...current, instructions: value }))} multiline placeholder="Notes and instructions for learners" />
+            <Field label="Tala ng Guro" value={draft.instructions} onChangeText={(value) => setDraft((current) => ({ ...current, instructions: value }))} multiline placeholder="Mga tala at tagubilin para sa mag-aaral" />
             <SmallButton onPress={() => setBuilderStep(1)}>Next: Lesson Details →</SmallButton>
           </SectionCard>
         )}
@@ -1920,7 +2189,7 @@ async function handleLogout() {
                   value={draft.layunin}
                   onChangeText={(value) => setDraft((current) => ({ ...current, layunin: value }))}
                   multiline
-                  placeholder={`What will students learn?\n\nExample: Students identify words that start with the letter M.`}
+                  placeholder={`Ano ang matututunan ng mga mag-aaral?\n\nHalimbawa: Tutukuyin ng mga mag-aaral ang mga salitang nagsisimula sa titik M.`}
                 />
 
                 <Field
@@ -1956,12 +2225,26 @@ async function handleLogout() {
               />
             <Field label="Activity Title" value={newActivity.title} onChangeText={(value) => setNewActivity((current) => ({ ...current, title: value }))} />
 
+            <Text style={styles.fieldLabel}>Attempts Allowed</Text>
+            <View style={styles.choiceRow}>
+              {getTeacherAttemptOptions().map((attemptOption) => (
+                <SmallButton
+                  key={`activity-attempt-${attemptOption}`}
+                  tone={Number(newActivity.maxAttempts || 2) === Number(attemptOption) ? 'green' : 'slate'}
+                  onPress={() => setNewActivity((current) => ({ ...current, maxAttempts: attemptOption }))}
+                >
+                  {attemptOption} {Number(attemptOption) === 1 ? 'attempt' : 'attempts'}
+                </SmallButton>
+              ))}
+            </View>
+
             <Text style={styles.fieldLabel}>Deadline Option</Text>
             <View style={styles.choiceRow}>
               <SmallButton
                 tone={!newActivity.hasDeadline ? 'green' : 'slate'}
                 onPress={() => {
                   setActivityDeadlinePickerVisible(false);
+                  setActivityDeadlinePickerMode('date');
                   setNewActivity((current) => ({
                     ...current,
                     hasDeadline: false,
@@ -1977,6 +2260,7 @@ async function handleLogout() {
                   setNewActivity((current) => ({
                     ...current,
                     hasDeadline: true,
+                    deadline: current.deadline || createDefaultTeacherDeadlineValue(),
                   }))
                 }
               >
@@ -1989,7 +2273,7 @@ async function handleLogout() {
                 <Text style={styles.fieldLabel}>Deadline</Text>
                 <TouchableOpacity
                   activeOpacity={0.85}
-                  onPress={() => setActivityDeadlinePickerVisible(true)}
+                  onPress={() => { setActivityDeadlinePickerMode('date'); setActivityDeadlinePickerVisible(true); }}
                   style={{
                     borderWidth: 1,
                     borderColor: '#CBD5E1',
@@ -2006,26 +2290,58 @@ async function handleLogout() {
                       fontWeight: '800',
                     }}
                   >
-                    {newActivity.deadline ? `Deadline: ${newActivity.deadline}` : 'Select activity deadline'}
+                    {newActivity.deadline ? formatTeacherDeadlineForDisplay(newActivity.deadline) : 'Select activity date and time'}
                   </Text>
                 </TouchableOpacity>
+
+                <View style={styles.choiceRow}>
+                  <SmallButton
+                    tone={activityDeadlinePickerMode === 'date' ? 'green' : 'slate'}
+                    onPress={() => {
+                      setActivityDeadlinePickerMode('date');
+                      setActivityDeadlinePickerVisible(true);
+                    }}
+                  >
+                    Change Date
+                  </SmallButton>
+
+                  <SmallButton
+                    tone={activityDeadlinePickerMode === 'time' ? 'green' : 'slate'}
+                    onPress={() => {
+                      setActivityDeadlinePickerMode('time');
+                      setActivityDeadlinePickerVisible(true);
+                    }}
+                  >
+                    Change Time
+                  </SmallButton>
+                </View>
+
+                <Text style={styles.muted}>
+                  Deadline must be later than the current date and time.
+                </Text>
 
                 {activityDeadlinePickerVisible ? (
                   <DateTimePicker
                     value={getActivityDeadlineDate(newActivity.deadline)}
-                    mode="date"
-                    display={Platform.OS === 'android' ? 'calendar' : 'default'}
-                    minimumDate={new Date()}
+                    mode={activityDeadlinePickerMode}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    minimumDate={activityDeadlinePickerMode === 'date' ? new Date() : undefined}
                     onChange={(event, selectedDate) => {
-                      setActivityDeadlinePickerVisible(false);
-
-                      if (event?.type === 'set' && selectedDate) {
-                        setNewActivity((current) => ({
-                          ...current,
-                          hasDeadline: true,
-                          deadline: formatActivityDeadlineValue(selectedDate),
-                        }));
+                      if (Platform.OS !== 'ios') {
+                        setActivityDeadlinePickerVisible(false);
                       }
+
+                      if (!selectedDate) return;
+
+                      setNewActivity((current) => ({
+                        ...current,
+                        hasDeadline: true,
+                        deadline: mergeTeacherDeadlineDateTime(
+                          current.deadline,
+                          selectedDate,
+                          activityDeadlinePickerMode
+                        ),
+                      }));
                     }}
                   />
                 ) : null}
@@ -2196,7 +2512,7 @@ async function handleLogout() {
                         Go to Lesson Details
                       </SmallButton>
                       <SmallButton onPress={() => setBuilderStep(2)}>
-                        Add Activities
+                        Add Task
                       </SmallButton>
                     </View>
                   </>
@@ -2327,7 +2643,7 @@ async function handleLogout() {
                       <Text style={styles.rowTitle}>📘 {lesson.title || 'Untitled Lesson'}</Text>
                       <Text style={styles.muted}>Grade {lesson.gradeLevel} • {lesson.subject}</Text>
                   <Text style={styles.muted}>
-                    Activities: {getTeacherLessonActivityTypeSummary(lesson)}
+                    Mga Prompt: {getTeacherLessonActivityTypeSummary(lesson)}
                   </Text>
                     </View>
                     <Text style={[styles.lessonStatusChip, isPublished ? styles.lessonStatusPublished : styles.lessonStatusDraft]}>
@@ -2399,7 +2715,7 @@ async function handleLogout() {
     const studentGrade = getStudentGradeLevelValue(student);
 
     if (!studentGrade) {
-      return 'Student grade level is missing. Please check the student record first.';
+      return 'Nawawala ang grade level ng mag-aaral. Pakisuri muna ang student record.';
     }
 
     if (groupGrade && studentGrade !== groupGrade) {
@@ -2414,6 +2730,10 @@ async function handleLogout() {
       ...current,
       [groupId]: !current[groupId],
     }));
+  }
+
+  function getStudentGroupMemberId(student = {}) {
+    return student.id ?? student.studentId ?? student.student_id ?? student.profileId ?? student.profile_id;
   }
 
   function getGroupMembers(group = {}) {
@@ -2473,7 +2793,7 @@ async function handleLogout() {
       'Remove Member',
       `Remove "${studentName}" from "${groupName}"?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Kanselahin', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
@@ -2496,9 +2816,9 @@ async function handleLogout() {
 
     Alert.alert(
       'Remove Group',
-      `Remove "${groupName}"? Students assigned to this group will no longer see it.`,
+      `Remove "${groupName}"? Hindi na ito makikita ng mga mag-aaral na naka-assign sa grupong ito.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Kanselahin', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
@@ -2579,19 +2899,19 @@ async function handleLogout() {
             const groupGradeLevel = Number(groupForm.gradeLevel);
 
             if (![1, 2, 3, 4, 5, 6].includes(groupGradeLevel)) {
-              Alert.alert('Group Creation', 'Select a valid Grade 1 to Grade 6 level.');
+              Alert.alert('Paggawa ng Grupo', 'Pumili ng valid na Grade 1 hanggang Grade 6.');
               return;
             }
 
             const groupSection = normalizeSectionName(groupForm.section || groupForm.description);
 
             if (!groupSection) {
-              Alert.alert('Group Creation', 'Select a section for this group.');
+              Alert.alert('Paggawa ng Grupo', 'Pumili ng section para sa grupong ito.');
               return;
             }
 
             if (!canUseGradeSection(groupGradeLevel, groupSection)) {
-              Alert.alert('Group Creation', 'You can only create groups for your assigned grade level or section.');
+              Alert.alert('Paggawa ng Grupo', 'You can only create groups for your assigned grade level or section.');
               return;
             }
 
@@ -2657,7 +2977,7 @@ async function handleLogout() {
                 fontWeight: '800',
               }}
             >
-              {taskForm.deadline ? `Deadline: ${taskForm.deadline}` : 'Select deadline'}
+              {taskForm.deadline ? `Deadline: ${taskForm.deadline}` : 'Pumili ng deadline'}
             </Text>
           </TouchableOpacity>
 
@@ -2731,6 +3051,23 @@ async function handleLogout() {
             const taskCount = tasks.length;
             const isOpen = Boolean(openGroupTools[group.id]);
             const groupGrade = getGroupGradeLevelValue(group);
+            const existingMemberIds = new Set(
+              members
+                .map((member) => {
+                  const memberStudent = getMemberStudent(member);
+                  return String(getStudentGroupMemberId(memberStudent) ?? member.studentId ?? member.student_id ?? '');
+                })
+                .filter(Boolean)
+            );
+            const addableStudents = usableStudents.filter((student) => {
+              const studentId = getStudentGroupMemberId(student);
+              const studentGrade = getStudentGradeLevelValue(student);
+
+              if (!studentId || existingMemberIds.has(String(studentId))) return false;
+              if (!groupGrade) return false;
+
+              return studentGrade === groupGrade;
+            });
 
             return (
               <View key={group.id} style={[styles.lessonListCard, Number(selectedGroup?.id) === Number(group.id) && styles.selectedRow]}>
@@ -2833,36 +3170,39 @@ async function handleLogout() {
                     </Text>
 
                     <View style={styles.choiceRow}>
-                      {usableStudents
-                        .filter((student) => {
-                          const studentGrade = getStudentGradeLevelValue(student);
-                          return !groupGrade || studentGrade === groupGrade;
-                        })
-                        .map((student) => (
+                      {addableStudents.map((student) => {
+                        const studentId = getStudentGroupMemberId(student);
+
+                        return (
                           <SmallButton
-                            key={student.id}
+                            key={studentId || student.studentCode || student.student_code || student.name}
                             tone="slate"
                             disabled={Boolean(busy)}
                             onPress={() => {
+                              if (!studentId) {
+                                Alert.alert('Group Members', 'Missing student details.');
+                                return;
+                              }
+
                               const gradeValidationMessage = getGroupMemberGradeValidationMessage(group, student);
                               if (gradeValidationMessage) {
                                 Alert.alert('Group Members', gradeValidationMessage);
                                 return;
                               }
 
-                              run(`member-${student.id}`, () => addGroupMember(group.id, student.id), 'Learner added.');
+                              run(`member-${group.id}-${studentId}`, () => addGroupMember(group.id, studentId), 'Learner added.');
                             }}
                           >
                             {student.name} • Grade {student.gradeLevel || student.grade || '-'}
                           </SmallButton>
-                        ))}
+                        );
+                      })}
                     </View>
 
-                    {!usableStudents.some((student) => {
-                      const studentGrade = getStudentGradeLevelValue(student);
-                      return !groupGrade || studentGrade === groupGrade;
-                    }) ? (
-                      <Text style={styles.muted}>No learners match this group grade level.</Text>
+                    {!groupGrade ? (
+                      <Text style={styles.muted}>Set a group grade level before adding learners.</Text>
+                    ) : !addableStudents.length ? (
+                      <Text style={styles.muted}>No available learners match this group grade level, or all matching learners are already members.</Text>
                     ) : null}
                   </View>
                 ) : null}
@@ -3082,13 +3422,13 @@ async function handleLogout() {
 
   function formatReviewDate(value) {
     if (!value) {
-      return 'No date';
+      return 'Walang petsa';
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-      return 'No date';
+      return 'Walang petsa';
     }
 
     return date.toLocaleDateString();
@@ -4363,6 +4703,8 @@ async function handleLogout() {
               style={[
                 styles.workspaceNoticeCard,
                 workspaceNotice.type === 'success' && styles.workspaceNoticeSuccess,
+              workspaceNotice.type === 'warning' && styles.workspaceNoticeWarning,
+              workspaceNotice.type === 'error' && styles.workspaceNoticeError,
               ]}
             >
               <Text style={styles.workspaceNoticeText}>{workspaceNotice.text}</Text>
@@ -4495,22 +4837,36 @@ const styles = StyleSheet.create({
   workspaceNoticeCard: {
     marginHorizontal: 16,
     marginTop: 12,
-    marginBottom: 8,
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: '#e8f8ec',
+    marginBottom: 10,
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#b9efc8',
+    borderColor: '#86EFAC',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   workspaceNoticeSuccess: {
-    backgroundColor: '#e8f8ec',
-    borderColor: '#b9efc8',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#22C55E',
+  },
+  workspaceNoticeWarning: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  workspaceNoticeError: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
   },
   workspaceNoticeText: {
-    color: '#1f6f3f',
-    fontSize: 13,
-    fontWeight: '700',
+    color: '#0F172A',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '900',
   },
 
   workspaceLogoutModalBackdrop: {
@@ -5361,5 +5717,29 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-
+  primaryAction: {
+    backgroundColor: '#0B7A3B',
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    marginTop: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    minHeight: 52,
+    shadowColor: '#0B3D22',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  primaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  disabledAction: {
+    opacity: 0.55,
+  },
 });

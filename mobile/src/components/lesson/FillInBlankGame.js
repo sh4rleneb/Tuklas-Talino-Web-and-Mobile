@@ -1,14 +1,55 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
+function normalizeGameChoiceText(value) {
+  if (!value) return '';
+
+  if (typeof value === 'object') {
+    value = value.text ?? value.word ?? value.label ?? value.value ?? value.answer ?? value.correctAnswer ?? '';
+  }
+
+  return String(value || '')
+    .replace(/[_{}\[\]<>]/g, ' ')
+    .replace(/[^\p{L}\p{N}'’ -]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeGameChoices(values = [], correctAnswer = '') {
+  const seen = new Set();
+  const normalized = [];
+
+  const addChoice = (value) => {
+    const word = normalizeGameChoiceText(value);
+    const key = word.toLowerCase();
+
+    if (!word || word.length > 40 || seen.has(key)) return;
+    if (!/[\p{L}\p{N}]/u.test(word)) return;
+
+    seen.add(key);
+    normalized.push(word);
+  };
+
+  if (Array.isArray(values)) values.forEach(addChoice);
+  else addChoice(values);
+
+  addChoice(correctAnswer);
+
+  return normalized;
+}
+
+
 export default function FillInBlankGame({
   rubric = {},
   submitting = false,
   onSubmit,
 }) {
-  const choices = rubric.choices || rubric.wordBank || [];
-  const template = rubric.template || '';
-  const correctAnswer = String(rubric.correctAnswer || '');
+  const correctAnswer = normalizeGameChoiceText(rubric.correctAnswer || rubric.answer || rubric.correct || '');
+  const choices = useMemo(
+    () => normalizeGameChoices(rubric.choices || rubric.wordBank || [], correctAnswer),
+    [rubric, correctAnswer]
+  );
+  const template = String(rubric.template || '');
 
   const [selected, setSelected] = useState('');
   const [correct, setCorrect] = useState(false);

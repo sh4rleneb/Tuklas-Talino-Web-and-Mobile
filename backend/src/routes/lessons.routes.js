@@ -406,8 +406,11 @@ router.get('/mine', requireRole('admin', 'teacher'), async (req, res, next) => {
   }
 });
 
-router.post('/materials/upload', requireRole('admin', 'teacher'), lessonMaterialUpload.single('material'), async (req, res, next) => {
+router.post('/materials/upload', requireRole('admin', 'teacher'), lessonMaterialUpload.fields([{ name: 'material', maxCount: 1 }, { name: 'file', maxCount: 1 }, { name: 'lessonMaterial', maxCount: 1 }]), async (req, res, next) => {
   try {
+    const uploadedLessonMaterial = firstUploadedLessonMaterial(req);
+    req.file = uploadedLessonMaterial;
+
     if (!req.file) {
       return res.status(400).json({ message: 'Please upload a PPT, PPTX, or PDF file.' });
     }
@@ -1625,9 +1628,72 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
   }
 });
 
+
+function collectSpeechSafetyTargets(task = {}, activity = {}) {
+  const values = [];
+
+  function collect(value) {
+    if (value === null || value === undefined) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(collect);
+      return;
+    }
+
+    if (typeof value === 'object') {
+      [
+        value.targetText,
+        value.speechTarget,
+        value.target,
+        value.word,
+        value.text,
+        value.phrase,
+        value.prompt,
+        value.value,
+        value.label,
+      ].forEach(collect);
+      return;
+    }
+
+    const text = String(value || '').trim();
+    if (text) values.push(text);
+  }
+
+  [
+    task.targetText,
+    task.speechTarget,
+    task.target,
+    task.word,
+    task.text,
+    task.phrase,
+    task.prompt,
+    activity.targetText,
+    activity.speechTarget,
+    activity.target,
+    activity.word,
+    activity.text,
+    activity.phrase,
+    activity.prompt,
+    activity.dataJson,
+    activity.data,
+    activity.rubricJson,
+  ].forEach(collect);
+
+  return [...new Set(values)];
+}
+
+function firstUploadedLessonMaterial(req = {}) {
+  return (
+    req.file ||
+    req.files?.material?.[0] ||
+    req.files?.file?.[0] ||
+    req.files?.lessonMaterial?.[0] ||
+    null
+  );
+}
+
 router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
   try {
-    assertSafeText(req.body.transcript || '', 'speech transcript');
     const task = await SpeechTask.findByPk(req.body.taskId);
     const activity = task ? await LessonActivity.findByPk(task.activityId) : null;
 
@@ -1636,6 +1702,10 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
         message: 'Speech task was not found in this lesson.'
       });
     }
+
+    assertSafeText(req.body.transcript || '', 'speech transcript', {
+      allowedTerms: collectSpeechSafetyTargets(task, activity),
+    });
 
     const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
     let attempt = await SpeechAttempt.findOne({

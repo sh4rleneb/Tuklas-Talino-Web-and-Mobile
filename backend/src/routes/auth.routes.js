@@ -31,6 +31,90 @@ function isValidLoginIdentifier(value) {
   return /^[A-Za-z0-9._@-]+$/.test(String(value || ''));
 }
 
+const PASSWORD_POLICY_MESSAGE = 'Password must be at least 8 characters and include uppercase, lowercase, and special character.';
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCK_WINDOW_MS = 60 * 60 * 1000;
+
+function validatePasswordPolicy(value = '') {
+  const password = String(value || '');
+
+  if (password.length < 8) return PASSWORD_POLICY_MESSAGE;
+  if (!/[A-Z]/.test(password)) return PASSWORD_POLICY_MESSAGE;
+  if (!/[a-z]/.test(password)) return PASSWORD_POLICY_MESSAGE;
+  if (!/[^A-Za-z0-9]/.test(password)) return PASSWORD_POLICY_MESSAGE;
+
+  return '';
+}
+
+function activeLoginLockMessage(user, now = new Date()) {
+  const lockedUntil = user?.lockedUntil ? new Date(user.lockedUntil) : null;
+
+  if (!lockedUntil || Number.isNaN(lockedUntil.getTime())) return '';
+
+  if (lockedUntil.getTime() <= now.getTime()) return '';
+
+  const minutes = Math.max(1, Math.ceil((lockedUntil.getTime() - now.getTime()) / 60000));
+  return `Too many failed login attempts. This account is locked for ${minutes} more minute${minutes === 1 ? '' : 's'}. Please try again later.`;
+}
+
+function nextFailedLoginState(user, now = new Date()) {
+  const startedAt = user?.failedLoginWindowStartedAt
+    ? new Date(user.failedLoginWindowStartedAt)
+    : null;
+
+  const hasFreshWindow =
+    startedAt &&
+    !Number.isNaN(startedAt.getTime()) &&
+    now.getTime() - startedAt.getTime() < LOGIN_LOCK_WINDOW_MS;
+
+  const failedLoginAttempts = hasFreshWindow
+    ? Number(user.failedLoginAttempts || 0) + 1
+    : 1;
+
+  const failedLoginWindowStartedAt = hasFreshWindow ? startedAt : now;
+  const shouldLock = failedLoginAttempts >= MAX_FAILED_LOGIN_ATTEMPTS;
+  const lockedUntil = shouldLock
+    ? new Date(now.getTime() + LOGIN_LOCK_WINDOW_MS)
+    : null;
+
+  return {
+    failedLoginAttempts,
+    failedLoginWindowStartedAt,
+    lockedUntil,
+    attemptsRemaining: Math.max(0, MAX_FAILED_LOGIN_ATTEMPTS - failedLoginAttempts),
+    shouldLock
+  };
+}
+
+async function recordFailedLogin(user, now = new Date()) {
+  const state = nextFailedLoginState(user, now);
+
+  user.failedLoginAttempts = state.failedLoginAttempts;
+  user.failedLoginWindowStartedAt = state.failedLoginWindowStartedAt;
+  user.lockedUntil = state.lockedUntil;
+
+  await user.save();
+
+  if (state.shouldLock) {
+    return {
+      status: 423,
+      message: 'Too many failed login attempts. This account is locked for 1 hour. Please try again later.'
+    };
+  }
+
+  return {
+    status: 401,
+    message: `Password is incorrect. ${state.attemptsRemaining} attempt${state.attemptsRemaining === 1 ? '' : 's'} remaining before lockout.`
+  };
+}
+
+async function resetFailedLoginState(user) {
+  user.failedLoginAttempts = 0;
+  user.failedLoginWindowStartedAt = null;
+  user.lockedUntil = null;
+}
+
+
 
 
 function publicUser(user) {
@@ -265,9 +349,15 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
+    const lockMessage = activeLoginLockMessage(user);
+    if (lockMessage) {
+      return res.status(423).json({ message: lockMessage });
+    }
+
     const valid = await bcrypt.compare(body.password, user.passwordHash);
     if (!valid) {
-      return res.status(401).json({ message: 'Password is incorrect.' });
+      const failedLogin = await recordFailedLogin(user);
+      return res.status(failedLogin.status).json({ message: failedLogin.message });
     }
 
     const loginVerification = verifyLoginAccount(user);
@@ -281,6 +371,7 @@ router.post('/login', async (req, res, next) => {
       await user.Student.save();
     }
 
+    await resetFailedLoginState(user);
     user.lastLoginAt = new Date();
     await user.save();
 
@@ -341,9 +432,11 @@ router.post('/change-password', authenticate, async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < 8) {
+    const passwordPolicyError = validatePasswordPolicy(newPassword);
+
+    if (passwordPolicyError) {
       return res.status(422).json({
-        message: 'New password must be at least 8 characters.'
+        message: passwordPolicyError
       });
     }
 

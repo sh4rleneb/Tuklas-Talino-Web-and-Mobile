@@ -37,7 +37,7 @@ export default function LeaderboardScreen({ navigation }) {
           podiumScale.setValue(0);
 
           const [board, dashboard] = await Promise.all([
-            getLeaderboard(),
+            getLeaderboard({ gradeLevel: student?.gradeLevel || student?.grade_level || '' }),
             api('/dashboard'),
           ]);
 
@@ -78,8 +78,23 @@ export default function LeaderboardScreen({ navigation }) {
     }, [entrance, podiumScale])
   );
 
-  const top3 = useMemo(() => leaderboard.slice(0, 3), [leaderboard]);
-  const rest = useMemo(() => leaderboard.slice(3), [leaderboard]);
+  const gradeFilteredLeaderboard = useMemo(() => {
+    const currentGrade = Number(student?.gradeLevel || student?.grade_level || 0);
+    const sourceRows = Array.isArray(leaderboard) ? leaderboard : [];
+
+    const rows = currentGrade
+      ? sourceRows.filter((player) => Number(player.gradeLevel || player.grade_level || player.grade || 0) === currentGrade)
+      : sourceRows;
+
+    return rows.map((player, index) => ({
+      ...player,
+      originalRank: player.originalRank || player.rank,
+      rank: index + 1,
+    }));
+  }, [leaderboard, student?.gradeLevel, student?.grade_level]);
+
+  const top3 = useMemo(() => gradeFilteredLeaderboard.slice(0, 3), [gradeFilteredLeaderboard]);
+  const rest = useMemo(() => gradeFilteredLeaderboard.slice(3), [gradeFilteredLeaderboard]);
 
   const entranceStyle = {
     opacity: entrance,
@@ -296,7 +311,7 @@ export default function LeaderboardScreen({ navigation }) {
       );
     }
 
-    if (!leaderboard.length) {
+    if (!gradeFilteredLeaderboard.length) {
       return (
         <Card style={styles.messageCard}>
           <Text style={styles.emptyTitle}>Wala pang talaan ng ranggo</Text>

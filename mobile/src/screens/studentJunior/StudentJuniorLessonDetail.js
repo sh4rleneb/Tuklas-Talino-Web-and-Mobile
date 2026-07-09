@@ -203,6 +203,43 @@ function localizeStudentVisibleMessage(value = '') {
   return message;
 }
 
+
+function getStudentActivityNoticeTone(notice = {}) {
+  const type = String(notice?.type || '').toLowerCase();
+
+  if (type === 'success') return 'success';
+  if (type === 'error') return 'error';
+  if (type === 'warning') return 'warning';
+
+  return 'info';
+}
+
+function getStudentActivityNoticeIcon(notice = {}) {
+  const tone = getStudentActivityNoticeTone(notice);
+
+  if (tone === 'success') return '✅';
+  if (tone === 'error') return '⚠️';
+  if (tone === 'warning') return '💡';
+
+  return '🔔';
+}
+
+function getStudentActivityNoticeTitle(notice = {}) {
+  if (notice?.title) return notice.title;
+
+  const tone = getStudentActivityNoticeTone(notice);
+
+  if (tone === 'success') return 'Ang husay!';
+  if (tone === 'error') return 'Hindi naisave';
+  if (tone === 'warning') return 'Paalala';
+
+  return 'Abiso';
+}
+
+function getStudentActivityNoticeMessage(notice = {}) {
+  return localizeStudentVisibleMessage(notice?.message || notice?.text || '');
+}
+
 function optionalProgressRequest(request, fallback) {
   return request.catch((err) => {
     if (err.status === 404 || err.message === 'Route not found.') {
@@ -913,7 +950,7 @@ const stepScrollRef = useRef(null);
         title: 'Laro sa Pagbigkas',
         mission: 'Bigkasin nang malinaw ang mga salita, irekord ang iyong boses, at isave ito upang makakuha ng bituin.',
         steps: ['Makinig', 'Magsalita', 'Kunin ang Bituin'],
-        button: '⭐ Isave ang Pagbigkas',
+        button: '⭐ I-save ang Pagbigkas',
       };
     }
 
@@ -1117,7 +1154,7 @@ const stepScrollRef = useRef(null);
       setPlaying(true);
       setSpeechStatus('Pinapatugtog ang iyong rekording...');
     } catch (err) {
-      Alert.alert('Pagpapatugtog', err.message || 'Hindi maipatugtog ang iyong rekording.');
+      setSpeechStatus(err.message || 'Hindi maipatugtog ang iyong rekording.');
     }
   }
 
@@ -1236,7 +1273,7 @@ const stepScrollRef = useRef(null);
             ),
       });
 
-      const visibleQuestions = (currentActivity?.questions || []).slice(0, 1);
+      const visibleQuestions = (currentActivity?.questions || []);
 
       if (
         data.correct &&
@@ -1299,14 +1336,11 @@ const stepScrollRef = useRef(null);
   async function submitSpeech() {
     const task = currentActivity?.speechTask;
     if (!task?.id) {
-      Alert.alert('Pagbigkas', localizeStudentVisibleMessage('Wala pang gawaing pagbigkas para sa aktibidad na ito.'));
+      setSpeechStatus(localizeStudentVisibleMessage('Wala pang gawaing pagbigkas para sa aktibidad na ito.'));
       return;
     }
     if (!recordingUri) {
-      Alert.alert(
-        'Laro sa Pagbigkas',
-        'Irekord muna ang iyong boses.'
-      );
+      setSpeechStatus('Irekord muna ang iyong boses bago isumite.');
       return;
     }
 
@@ -1326,15 +1360,17 @@ const stepScrollRef = useRef(null);
             uploadedAudio?.audioUrl || null,
         },
       });
-      Alert.alert('Pagbigkas', localizeStudentVisibleMessage(data.message || 'Naisave na ang iyong pagbigkas.'));
       setSpeechStatus(
-        littleLearnerGame
-          ? '⭐ Tapos na ang pagbigkas! Matagumpay na naisave ang iyong rekording.'
-          : '🎤 Speech attempt submitted and saved.'
+        localizeStudentVisibleMessage(
+          data.message ||
+          (littleLearnerGame
+            ? '⭐ Tapos na ang pagbigkas! Matagumpay na naisave ang iyong rekording.'
+            : '🎤 Naisave ang pagsubok sa pagbigkas.')
+        )
       );
       await saveNextStep('speech');
     } catch (err) {
-      Alert.alert('Pagbigkas', localizeStudentVisibleMessage(err.message || 'Hindi maisave ang iyong pagbigkas.'));
+      setSpeechStatus(localizeStudentVisibleMessage(err.message || 'Hindi maisave ang iyong pagbigkas.'));
     } finally {
       setSubmitting(false);
     }
@@ -1479,8 +1515,8 @@ const stepScrollRef = useRef(null);
     const isSeniorLearner = gradeLevel >= 4;
 
     const englishStory = isSeniorLearner
-      ? `During group work, Mia noticed that Leo was quiet. Their class was talking about ${topic.english}, and Leo said he did not know how to start. Mia opened the book, pointed to the first sentence, and asked him to read it with her. They underlined the important idea and wrote a short explanation together. When the teacher asked them to share, Leo was ready to answer.`
-      : `Mia and Leo were reading together in class. Leo looked worried because the lesson about ${topic.english} felt hard. Mia said, “Let us read one sentence at a time.” They read slowly, found the important idea, and talked about it. Soon, Leo smiled because he understood the lesson better.`;
+      ? `Sa pangkatang gawain, napansin ni Mia na tahimik si Leo. Their class was talking about ${topic.english}, and Leo said he did not know how to start. Mia opened the book, pointed to the first sentence, and asked him to read it with her. They underlined the important idea and wrote a short explanation together. When the teacher asked them to share, Leo was ready to answer.`
+      : `Magkasamang nagbabasa sina Mia at Leo sa klase. Leo looked worried because the lesson about ${topic.english} felt hard. Mia said, “Let us read one sentence at a time.” They read slowly, found the important idea, and talked about it. Soon, Leo smiled because he understood the lesson better.`;
 
     const tagalogStory = isSeniorLearner
       ? `Sa pangkatang gawain, napansin ni Mia na tahimik si Leo. Pinag-uusapan ng klase ang ${topic.tagalog}, at sinabi ni Leo na hindi niya alam kung paano magsisimula. Binuksan ni Mia ang libro, itinuro ang unang pangungusap, at niyaya siyang basahin ito kasama niya. Sinalungguhitan nila ang mahalagang ideya at nagsulat ng maikling paliwanag. Nang ipabahagi ng guro ang sagot, handa na si Leo.`
@@ -1492,7 +1528,7 @@ const stepScrollRef = useRef(null);
       title: customWritingTask ? 'Iyong Gawain' : 'Basahin ang maikling kuwento',
       story: englishStory,
       storyTranslation: tagalogStory,
-      task: customWritingTask || 'Write 2 short sentences about what Mia and Leo did in the story.',
+      task: customWritingTask || 'Sumulat ng 2 maikling pangungusap tungkol sa ginawa nina Mia at Leo sa kuwento.',
       taskTranslation: customWritingTask ? '' : 'Sumulat ng 2 maikling pangungusap tungkol sa ginawa nina Mia at Leo sa kuwento.',
       hasCustomWritingTask: Boolean(customWritingTask),
     };
@@ -2050,7 +2086,7 @@ const stepScrollRef = useRef(null);
 
     if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
  {
-            const questions = buildMissionQuestionPool(currentActivity, lesson).slice(0, 1);
+            const questions = buildMissionQuestionPool(currentActivity, lesson);
       const allAnswered = questions.length > 0 && questions.every((question) => mcqAnswers[question.id]);
       return (
         <View style={styles.card}>
@@ -2239,55 +2275,35 @@ const stepScrollRef = useRef(null);
             </TouchableOpacity>
           </View>
           ) : null}
-
-{activityNotice ? (
-            littleLearnerGame ? (
-              <View
-                style={[
-                  styles.feedbackCard,
-                  activityNotice.type === 'success'
-                    ? styles.feedbackSuccess
-                    : styles.feedbackWarning,
-                  {
-                    alignItems:'center',
-                    paddingVertical:14,
-                  },
-                ]}
-              >
-                <Text style={{ fontSize:32 }}>
-                  {activityNotice.type === 'success' ? '⭐😊' : '❌😅'}
-                </Text>
-
-                <Text
-                  style={{
-                    fontSize:16,
-                    fontWeight:'900',
-                    marginTop:4,
-                  }}
-                >
-                  {activityNotice.type === 'success'
-                    ? 'Ang husay mo!'
-                    : 'Subukan muli!'}
+          {activityNotice ? (
+            <View
+              style={[
+                styles.feedbackCard,
+                getStudentActivityNoticeTone(activityNotice) === 'success' && styles.feedbackSuccess,
+                getStudentActivityNoticeTone(activityNotice) === 'warning' && styles.feedbackWarning,
+                getStudentActivityNoticeTone(activityNotice) === 'error' && styles.feedbackError,
+              ]}
+            >
+              <View style={styles.feedbackIconBubble}>
+                <Text style={styles.feedbackIcon}>
+                  {getStudentActivityNoticeIcon(activityNotice)}
                 </Text>
               </View>
-            ) : (
-              <View
-                style={[
-                  styles.feedbackCard,
-                  activityNotice.type === 'success' && styles.feedbackSuccess,
-                  activityNotice.type === 'warning' && styles.feedbackWarning,
-                  activityNotice.type === 'error' && styles.feedbackError,
-                ]}
-              >
+
+              <View style={styles.feedbackCopy}>
                 <Text style={styles.feedbackTitle}>
-                  {activityNotice.title}
+                  {getStudentActivityNoticeTitle(activityNotice)}
                 </Text>
-                <Text style={styles.feedbackMessage}>
-                  {localizeStudentVisibleMessage(activityNotice.message)}
-                </Text>
+
+                {getStudentActivityNoticeMessage(activityNotice) ? (
+                  <Text style={styles.feedbackMessage}>
+                    {getStudentActivityNoticeMessage(activityNotice)}
+                  </Text>
+                ) : null}
               </View>
-            )
+            </View>
           ) : null}
+
           {!questions.length && <Text style={styles.body}>Wala pang mga tanong na inilathala para sa gawaing ito.</Text>}
           <TouchableOpacity
             style={[styles.primaryButton, !allAnswered && styles.disabledButton]}
@@ -2796,8 +2812,37 @@ const stepScrollRef = useRef(null);
     }
 
     const fileUrl = currentActivity.dataJson?.fileUrl;
-    const vocabulary = currentActivity.dataJson?.words || [];
-    const pairs = currentActivity.dataJson?.pairs || [];
+    const rawVocabulary = Array.isArray(currentActivity.dataJson?.words)
+      ? currentActivity.dataJson.words
+      : [];
+
+    const vocabulary = rawVocabulary
+      .map((item) => {
+        if (typeof item === 'string') {
+          return { word: item.trim(), meaning: '' };
+        }
+
+        const source = item || {};
+        const word = String(source.word ?? source.text ?? source.label ?? source.value ?? '')
+          .replace(/[_{}\[\]<>]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        const meaning = String(source.meaning ?? source.definition ?? source.hint ?? source.description ?? '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        return { ...source, word, meaning };
+      })
+      .filter((item) => (
+        item.word &&
+        item.word.length <= 40 &&
+        /[\p{L}\p{N}]/u.test(item.word)
+      ));
+
+    const pairs = Array.isArray(currentActivity.dataJson?.pairs)
+      ? currentActivity.dataJson.pairs.filter(Boolean)
+      : [];
 
     return (
       <View style={styles.card}>
@@ -3118,16 +3163,16 @@ const stepScrollRef = useRef(null);
                 : currentActivity?.type === 'mcq'
                 ? '🎮 Oras ng Pagsusulit'
                 : currentActivity?.type === 'writing'
-                ? '🧩 Fill in the Blank'
+                ? '🧩 Punan ang Patlang'
                 : currentActivity?.type === 'speech'
                 ? '🎤 Pagsasanay sa Pagbigkas'
                 : currentActivity?.type === 'vocabulary'
-                ? ' Words'
+                ? '🔤 Mga Salita'
                 : currentActivity?.type === 'matching'
                 ? '🧩 Laro sa Pagtutugma'
                 : currentActivity?.type === 'infographic'
                 ? '📖 Basahin Muna'
-                : ' Mission') + ' ⭐'}
+                : '🎯 Misyon') + ' ⭐'}
             </Text>
 
             <Text
@@ -3537,7 +3582,7 @@ const stepScrollRef = useRef(null);
                       </Text>
 
                       <Text style={styles.finishCardSubtitle}>
-                        Return to your dashboard
+                        Bumalik sa iyong dashboard
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -3961,13 +4006,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   feedbackCard: {
-    borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    marginTop: 10,
-    alignSelf: 'center',
-    minWidth: '75%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    borderRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 12,
+    minWidth: '100%',
     borderWidth: 2,
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
+  },
+  feedbackIconBubble: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  feedbackIcon: {
+    fontSize: 22,
+  },
+  feedbackCopy: {
+    flex: 1,
   },
   feedbackSuccess: {
     backgroundColor: '#DCFCE7',
@@ -3984,13 +4052,15 @@ const styles = StyleSheet.create({
   feedbackTitle: {
     color: '#0F172A',
     fontSize: 16,
+    lineHeight: 21,
     fontWeight: '900',
   },
   feedbackMessage: {
-    color: '#475569',
-    marginTop: 4,
+    color: '#334155',
+    fontSize: 14,
     lineHeight: 20,
-    fontWeight: '700',
+    fontWeight: '800',
+    marginTop: 3,
   },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   choiceChip: { backgroundColor: '#FEF3C7', borderRadius: 99, paddingHorizontal: 14, paddingVertical: 9 },
@@ -4143,7 +4213,11 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     gap: 12,
   },
-  speechPassageWrap: { marginTop: 16 },
+  speechPassageWrap: { marginTop: 20,
+    marginBottom: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
   statusMessage: { color: '#0369A1', fontWeight: '800', marginTop: 10 },
   contentRow: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, marginTop: 10 },
   stepRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },

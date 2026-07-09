@@ -41,7 +41,20 @@ export const User = sequelize.define('User', {
   lastLoginAt: {
     type: DataTypes.DATE,
     allowNull: true
-  }
+  },
+    failedLoginAttempts: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
+    failedLoginWindowStartedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    lockedUntil: {
+      type: DataTypes.DATE,
+      allowNull: true
+    }
 }, {
   tableName: 'users'
 });

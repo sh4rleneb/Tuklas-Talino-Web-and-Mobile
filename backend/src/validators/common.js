@@ -93,7 +93,7 @@ const lessonActivitySchema = z.discriminatedUnion('type', [
 export const loginSchema = z.object({
   role: z.enum(['student', 'teacher', 'admin']).optional(),
   identifier: z.string().min(2),
-  password: z.string().min(3)
+  password: z.string().min(1)
 });
 
 export const studentSchema = z.object({

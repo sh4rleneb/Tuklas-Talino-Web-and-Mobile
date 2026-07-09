@@ -56,8 +56,47 @@ export async function createGroup(body) {
   return api('/groups', { method: 'POST', body });
 }
 
-export async function addGroupTask(groupId, body) {
-  return api(`/groups/${groupId}/tasks`, { method: 'POST', body });
+
+function normalizeTeacherApiDate(value = '') {
+  return String(value || '').trim();
+}
+
+function validateGroupTaskCalendarDate(body = {}) {
+  const rawDate = normalizeTeacherApiDate(
+    body.dueDate ?? body.deadline ?? body.dueAt ?? body.scheduledAt ?? ''
+  );
+
+  if (!rawDate) {
+    throw new Error('Pumili ng date at oras bago gumawa ng group task.');
+  }
+
+  const parsedDate = new Date(rawDate);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new Error('Hindi valid ang deadline ng group task. Pumili muli ng date at oras.');
+  }
+
+  const now = new Date();
+
+  if (parsedDate.getTime() <= now.getTime()) {
+    throw new Error('Hindi maaaring nasa nakaraan ang deadline ng group task.');
+  }
+
+  return parsedDate.toISOString();
+}
+
+export async function addGroupTask(groupId, body = {}) {
+  const payload = { ...(body || {}) };
+  const validCalendarDate = validateGroupTaskCalendarDate(payload);
+
+  if ('dueDate' in payload || !('deadline' in payload) && !('dueAt' in payload)) {
+    payload.dueDate = validCalendarDate;
+  }
+
+  if ('deadline' in payload) payload.deadline = validCalendarDate;
+  if ('dueAt' in payload) payload.dueAt = validCalendarDate;
+
+  return api(`/groups/${groupId}/tasks`, { method: 'POST', body: payload });
 }
 
 export async function addGroupMember(groupId, studentId) {
@@ -112,14 +151,74 @@ export async function archiveLesson(lessonId) {
   return api(`/lessons/${lessonId}`, { method: 'DELETE' });
 }
 
-export async function uploadLessonMaterial(asset) {
-  const body = new FormData();
-  body.append('material', {
-    uri: asset.uri,
-    name: asset.name,
-    type: asset.mimeType || 'application/octet-stream',
+function lessonMaterialUploadErrorText(error = {}) {
+  return String(
+    error?.response?.data?.message ||
+    error?.data?.message ||
+    error?.message ||
+    ''
+  ).trim();
+}
+
+async function uploadLessonMaterialWithField(fileFieldName, fileAsset = {}, uploadFile = {}) {
+  const formData = new FormData();
+
+  formData.append(fileFieldName, uploadFile);
+
+  if (fileAsset.size) formData.append('size', String(fileAsset.size));
+  formData.append('fileName', uploadFile.name);
+  formData.append('fileType', uploadFile.type);
+
+  return api('/lessons/materials/upload', {
+    method: 'POST',
+    body: formData,
   });
-  return api('/lessons/materials/upload', { method: 'POST', body });
+}
+
+export async function uploadLessonMaterial(asset = {}) {
+  const fileAsset = Array.isArray(asset?.assets) ? asset.assets[0] : asset;
+
+  if (!fileAsset || !fileAsset.uri) {
+    throw new Error('No lesson material file was selected.');
+  }
+
+  const rawName = fileAsset.name || fileAsset.fileName || fileAsset.uri.split('/').pop() || 'lesson-material.pdf';
+  const lowerName = String(rawName).toLowerCase();
+
+  const inferredType =
+    fileAsset.mimeType ||
+    fileAsset.type ||
+    (lowerName.endsWith('.pdf')
+      ? 'application/pdf'
+      : lowerName.endsWith('.pptx')
+      ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      : lowerName.endsWith('.ppt')
+      ? 'application/vnd.ms-powerpoint'
+      : 'application/octet-stream');
+
+  const uploadFile = {
+    uri: fileAsset.uri,
+    name: rawName,
+    type: inferredType,
+  };
+
+  const fieldCandidates = ['file', 'material', 'lessonMaterial'];
+  let lastError = null;
+
+  for (const fieldName of fieldCandidates) {
+    try {
+      return await uploadLessonMaterialWithField(fieldName, fileAsset, uploadFile);
+    } catch (error) {
+      lastError = error;
+      const message = lessonMaterialUploadErrorText(error).toLowerCase();
+
+      if (!message.includes('unexpected field')) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error('Unable to upload lesson material.');
 }
 
 export async function uploadSpeechRecording(uri) {

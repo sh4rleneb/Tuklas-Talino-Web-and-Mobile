@@ -1,66 +1,94 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-function buildWordPowerUps(activity = {}) {
-  const words = new Set();
+const COMMON_POWER_UP_WORDS = new Set([
+  'ang', 'mga', 'and', 'the', 'for', 'with', 'that', 'this', 'from', 'your', 'you',
+  'ng', 'sa', 'si', 'ni', 'na', 'ay', 'at', 'ito', 'iyon', 'muna', 'bago',
+  'piliin', 'tamang', 'sagot', 'subukan', 'gawain', 'lesson', 'activity',
+  'question', 'answer', 'choice', 'instructions', 'content', 'prompt',
+]);
 
-  const rubric = activity.writingTask?.rubricJson || {};
+function cleanPowerUpWord(value) {
+  if (!value) return '';
+
+  if (typeof value === 'object') {
+    value = value.word ?? value.text ?? value.label ?? value.value ?? value.answer ?? value.correctAnswer ?? '';
+  }
+
+  const word = String(value || '')
+    .replace(/[_{}\[\]<>]/g, ' ')
+    .replace(/[^\p{L}\p{N}'’ -]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!word || word.length > 40) return '';
+  if (!/[\p{L}\p{N}]/u.test(word)) return '';
+
+  const lower = word.toLowerCase();
+  if (COMMON_POWER_UP_WORDS.has(lower)) return '';
+
+  return word;
+}
+
+function addPowerUpWord(words, value) {
+  const word = cleanPowerUpWord(value);
+  if (!word) return;
+
+  const key = word.toLowerCase();
+  if (!words.some((existing) => existing.toLowerCase() === key)) {
+    words.push(word);
+  }
+}
+
+function collectPowerUpValues(words, value) {
+  if (!value) return;
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectPowerUpValues(words, item));
+    return;
+  }
+
+  addPowerUpWord(words, value);
+}
+
+function collectFallbackWords(words, value) {
+  if (!value || typeof value !== 'string') return;
+
+  value
+    .split(/\s+/)
+    .forEach((word) => addPowerUpWord(words, word));
+}
+
+function buildWordPowerUps(activity = {}) {
+  const words = [];
+  const rubric = activity.writingTask?.rubricJson || activity.rubricJson || activity.dataJson || {};
 
   [
     rubric.correctAnswer,
-    ...(rubric.correctAnswers || []),
-    ...(rubric.acceptedAnswers || []),
-    ...(rubric.correctWords || []),
-    ...(rubric.wordBank || []),
-    ...(rubric.choices || []),
-  ].forEach((value) => {
-    if (!value) return;
+    rubric.answer,
+    rubric.correct,
+    rubric.targetWord,
+    rubric.word,
+    rubric.blankWord,
+    rubric.correctAnswers,
+    rubric.acceptedAnswers,
+    rubric.correctWords,
+    rubric.wordBank,
+    rubric.choices,
+    activity.wordBank,
+    activity.words,
+  ].forEach((value) => collectPowerUpValues(words, value));
 
-    if (typeof value === "string") {
-      words.add(value.trim());
-      return;
-    }
+  if (words.length) return words.slice(0, 12);
 
-    if (typeof value === "object") {
-      words.add(
-        String(
-          value.text ??
-          value.word ??
-          value.label ??
-          ""
-        ).trim()
-      );
-    }
-  });
+  [
+    activity.writingTask?.prompt,
+    activity.prompt,
+    activity.question,
+    activity.title,
+  ].forEach((value) => collectFallbackWords(words, value));
 
-  const collect = (value) => {
-    if (!value) return;
-
-    if (Array.isArray(value)) {
-      value.forEach(collect);
-      return;
-    }
-
-    if (typeof value === 'string') {
-      value
-        .split(/\s+/)
-        .map((word) => word.replace(/[^\p{L}\p{N}-]/gu, '').trim())
-        .filter((word) => word.length >= 3)
-        .forEach((word) => words.add(word));
-    }
-  };
-
-  if (words.size) {
-    return [...words];
-  }
-
-  collect(activity.instructions);
-  collect(activity.content);
-  collect(activity.passage);
-  collect(activity.story);
-  collect(activity.writingTask?.prompt);
-
-  return [...words].slice(0, 12);
+  return words.slice(0, 12);
 }
 
 export default function PowerUpTray({

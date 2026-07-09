@@ -13,6 +13,21 @@ import {
 } from 'react-native';
 import { changePassword, logout } from '../../api/auth';
 
+const PASSWORD_POLICY_MESSAGE =
+  'Password must be at least 8 characters and include uppercase, lowercase, and special character.';
+
+function getPasswordPolicyError(value = '') {
+  const password = String(value || '');
+
+  if (password.length < 8) return PASSWORD_POLICY_MESSAGE;
+  if (!/[A-Z]/.test(password)) return PASSWORD_POLICY_MESSAGE;
+  if (!/[a-z]/.test(password)) return PASSWORD_POLICY_MESSAGE;
+  if (!/[^A-Za-z0-9]/.test(password)) return PASSWORD_POLICY_MESSAGE;
+
+  return '';
+}
+
+
 export default function ChangePassword({ navigation, route }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -26,8 +41,10 @@ export default function ChangePassword({ navigation, route }) {
       return;
     }
 
-    if (newPassword.length < 8) {
-      Alert.alert('Password Too Short', 'Your new password must have at least 8 characters.');
+    const passwordPolicyError = getPasswordPolicyError(newPassword);
+
+    if (passwordPolicyError) {
+      Alert.alert('Password Requirements', passwordPolicyError);
       return;
     }
 
@@ -69,7 +86,7 @@ export default function ChangePassword({ navigation, route }) {
           <Text style={styles.icon}>🔐</Text>
           <Text style={styles.title}>Change Your Password</Text>
           <Text style={styles.subtitle}>
-            Your temporary password worked. Create a private password before opening your dashboard.
+            Your temporary sign-in code worked. Create a private password before opening your dashboard.
           </Text>
 
           <Text style={styles.label}>Current password</Text>
@@ -89,6 +106,9 @@ export default function ChangePassword({ navigation, route }) {
             secureTextEntry
             autoCapitalize="none"
           />
+            <Text style={styles.helperText}>
+              Minimum 8 characters with uppercase, lowercase, and special character.
+            </Text>
 
           <Text style={styles.label}>Confirm new password</Text>
           <TextInput
@@ -150,6 +170,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 20,
     marginTop: 8,
+  },
+  helperText: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 6,
   },
   label: {
     color: '#334155',

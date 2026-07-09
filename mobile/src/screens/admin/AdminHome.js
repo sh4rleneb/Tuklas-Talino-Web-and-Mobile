@@ -174,6 +174,22 @@ const [auditSearch, setAuditSearch] = useState('');
 
   const gradeOptions = ['1', '2', '3', '4', '5', '6'];
 
+  function studentRecordId(student = {}) {
+    return student.id ?? student.studentId ?? student.student_id ?? student.profileId ?? student.profile_id;
+  }
+
+  function teacherRecordId(teacher = {}) {
+    return teacher.id ?? teacher.teacherId ?? teacher.teacher_id ?? teacher.profileId ?? teacher.profile_id;
+  }
+
+  function studentGradeValue(student = {}) {
+    return Number(student.gradeLevel ?? student.grade_level ?? student.grade ?? 0);
+  }
+
+  function studentSectionValue(student = {}) {
+    return normalizeSpaces(student.section || student.sectionName || student.classSection || '');
+  }
+
   const studentSectionOptions = [
     ...new Set(
       classOptions
@@ -195,15 +211,15 @@ const [auditSearch, setAuditSearch] = useState('');
   const studentManagementSectionOptions = [
     ...new Set(
       students
-        .filter((student) => studentGradeFilter === 'all' || Number(student.gradeLevel || student.grade) === Number(studentGradeFilter))
+        .filter((student) => studentGradeFilter === 'all' || studentGradeValue(student) === Number(studentGradeFilter))
         .map((student) => normalizeSpaces(student.section || student.sectionName || student.classSection || ''))
         .filter(Boolean)
     ),
   ].sort((first, second) => first.localeCompare(second));
 
   const filteredStudents = students.filter((student) => {
-    const matchesGrade = studentGradeFilter === 'all' || Number(student.gradeLevel || student.grade) === Number(studentGradeFilter);
-    const matchesSection = studentSectionFilter === 'all' || normalizeSpaces(student.section || student.sectionName || student.classSection || '') === studentSectionFilter;
+    const matchesGrade = studentGradeFilter === 'all' || studentGradeValue(student) === Number(studentGradeFilter);
+    const matchesSection = studentSectionFilter === 'all' || studentSectionValue(student) === studentSectionFilter;
 
     return matchesGrade && matchesSection;
   });
@@ -233,7 +249,7 @@ const [auditSearch, setAuditSearch] = useState('');
       setLogs(logData.logs || []);
       setReportSummary(summary);
     } catch (err) {
-      setError(err.message || 'Unable to load admin workspace.');
+      setError(err.message || 'Hindi ma-load ang admin workspace.');
     } finally {
       setLoading(false);
     }
@@ -251,7 +267,7 @@ const [auditSearch, setAuditSearch] = useState('');
       await load();
       return data;
     } catch (err) {
-      Alert.alert('Unable to save', err.message || 'Please try again.');
+      Alert.alert('Hindi naisave', err.message || 'Pakisubukan muli.');
       return null;
     } finally {
       setBusy('');
@@ -353,8 +369,8 @@ async function executeVerifiedAction() {
       }
     } catch (err) {
       Alert.alert(
-        'Verification Failed',
-        err?.message || 'Incorrect password.'
+        'Hindi Na-verify',
+        err?.message || 'Maling password.'
       );
     }
   }
@@ -382,16 +398,16 @@ async function executeVerifiedAction() {
       'auth.verify_password': 'Verified password',
       'student.create': 'Created student account',
       'student.update': 'Updated student account',
-      'student.archive': 'Archived student account',
-      'student.reactivate': 'Reactivated student account',
+      'student.archive': 'Archive students',
+      'student.reactivate': 'Reactivate students',
       'student.reset_password': 'Reset student password',
       'student.reset_progress': 'Reset student progress',
       'student.enrollment.update': 'Updated student class',
       'student.promote': 'Promoted student',
       'teacher.create': 'Created teacher account',
       'teacher.update': 'Updated teacher account',
-      'teacher.archive': 'Archived teacher account',
-      'teacher.reactivate': 'Reactivated teacher account',
+      'teacher.archive': 'Archive teachers',
+      'teacher.reactivate': 'Reactivate teachers',
       'teacher.reset_password': 'Reset teacher password',
       'teacher.assignment.create': 'Assigned teacher class',
       'teacher.assignment.update': 'Updated teacher assignment',
@@ -532,7 +548,7 @@ async function executeVerifiedAction() {
     if (!userId) {
       Alert.alert(
         'Missing Account Link',
-        'No linked user account was found for this record.'
+        'Walang nakakabit na user account para sa record na ito.'
       );
       return;
     }
@@ -541,14 +557,14 @@ async function executeVerifiedAction() {
       keyword: nextStatus === 'archived' ? 'ARCHIVE' : 'ACTIVE',
       reasonPlaceholder:
         nextStatus === 'archived'
-          ? `e.g.\n${label} should be moved to Archives`
+          ? `e.g.\n${label} should be moved to Archive`
           : `e.g.\n${label} should be restored as active`,
       action: (reason) =>
         run(
           `account-status-${userId}-${nextStatus}`,
           () => updateAccountStatus(userId, nextStatus, { reason }),
           nextStatus === 'archived'
-            ? 'Account moved to Archives.'
+            ? 'Account moved to Archive.'
             : 'Account status updated.'
         ),
     });
@@ -610,8 +626,8 @@ async function executeVerifiedAction() {
             ['🎓', stats.students || 0, 'Students'],
             ['👩‍🏫', stats.teachers || 0, 'Teachers'],
             ['📌', assignments.length, 'Assignments'],
-            ['✅', students.length, 'Active Students'],
-            ['✅', teachers.length, 'Active Teachers'],
+            ['✅', students.length, 'Active na Mag-aaral'],
+            ['✅', teachers.length, 'Active na Guro'],
             ['🗃️', archived, 'Archived Accounts'],
           ].map(([icon, value, label]) => (
             <Card key={label} style={styles.statCard}>
@@ -710,7 +726,7 @@ async function executeVerifiedAction() {
                     key={`student-grade-${grade}`}
                     tone={Number(studentForm.gradeLevel) === Number(grade) ? 'green' : 'slate'}
                     disabled={Boolean(busy)}
-                    onPress={() => setStudentForm((current) => ({ ...current, gradeLevel: grade }))}
+                    onPress={() => setStudentForm((current) => ({ ...current, gradeLevel: grade, section: '', sectionMode: 'existing', newSection: '' }))}
                   >
                     G{grade}
                   </Button>
@@ -872,7 +888,7 @@ async function executeVerifiedAction() {
             </Text>
 
             <Field
-              label="Teacher Full Name"
+              label="Buong Pangalan ng Teacher"
               value={teacherForm.name}
               placeholder="e.g. Maria Santos"
               onChangeText={(name) =>
@@ -922,7 +938,7 @@ async function executeVerifiedAction() {
                 teacherPayload.email = teacherEmail;
               }
 
-              const saved = await run('create-teacher', () => createTeacherAccount(teacherPayload), 'Teacher account created.');
+              const saved = await run('create-teacher', () => createTeacherAccount(teacherPayload), 'Nagawa ang teacher account.');
 
               if (saved) {
                   setTeachers((current) => [
@@ -946,7 +962,7 @@ async function executeVerifiedAction() {
                 ].slice(0, 10));
 
                 Alert.alert(
-                  'Teacher Account Created',
+                  'Nagawa ang Teacher Account',
                   `Username\n\n${saved.username}\n\nTemporary PIN\n\n${saved.temporaryPin}\n\nTeacher must change this PIN on first login.`
                 );
 
@@ -963,7 +979,7 @@ async function executeVerifiedAction() {
     return (
       <>
         <Card>
-          <Text style={styles.cardTitle}>Assign Teacher</Text>
+          <Text style={styles.cardTitle}>I-assign ang Teacher</Text>
           <Text style={styles.fieldLabel}>Teacher</Text>
           <View style={styles.choiceRow}>{teachers.map((teacher) => <Button key={teacher.id} tone={Number(assignmentForm.teacherId) === Number(teacher.id) ? 'green' : 'slate'} onPress={() => setAssignmentForm((current) => ({ ...current, teacherId: teacher.id }))}>{teacher.name}</Button>)}</View>
             <Text style={styles.fieldLabel}>Grade</Text>
@@ -1016,7 +1032,7 @@ async function executeVerifiedAction() {
                     gradeLevel: Number(assignmentForm.gradeLevel),
                     section: normalizeSpaces(assignmentForm.section),
                   }),
-                'Assignment saved.'
+                'Naisave ang assignment.'
               )
             }
           >
@@ -1042,7 +1058,7 @@ async function executeVerifiedAction() {
   function renderStudents() {
     return (
       <Card>
-        <Text style={styles.cardTitle}>Student Management</Text>
+        <Text style={styles.cardTitle}>Pamamahala ng Student</Text>
           <Text style={styles.helperText}>Filter learners by year level and section.</Text>
 
           <Text style={styles.fieldLabel}>Year Level</Text>
@@ -1107,7 +1123,7 @@ async function executeVerifiedAction() {
                 reasonPlaceholder: 'e.g. Student forgot their password',
                 action: (reason) => run(
                   `student-pin-${student.id}`,
-                  () => resetStudentPassword(student.id, {
+                  () => resetStudentPassword(studentRecordId(student), {
                     reason
                   }),
                   (data) => `Temporary PIN: ${data.temporaryPin}`
@@ -1118,7 +1134,7 @@ async function executeVerifiedAction() {
                 reasonPlaceholder: 'e.g. Student needs to restart their lesson progress',
                 action: (reason) => run(
                       `student-progress-${student.id}`,
-                      () => resetStudentProgress(student.id, {
+                      () => resetStudentProgress(studentRecordId(student), {
                         reason
                       }),
                       'Progress reset.'
@@ -1143,12 +1159,12 @@ async function executeVerifiedAction() {
                     reasonPlaceholder: 'e.g. Student is moving to the selected grade level',
                     action: (reason) => run(
                       `grade-${student.id}`,
-                      () => updateStudentEnrollment(student.id, {
+                      () => updateStudentEnrollment(studentRecordId(student), {
                         gradeLevel: Number(grade),
-                        section: student.section,
+                        section: studentSectionValue(student),
                         promotionReason: reason
                       }),
-                      'Enrollment updated.'
+                      'Na-update ang klase ng student.'
                     )
                   })}>G{grade}</Button>)}
             </View>
@@ -1172,12 +1188,12 @@ async function executeVerifiedAction() {
                     reasonPlaceholder: 'e.g. Student moved to a different section',
                     action: (reason) => run(
                       `section-${student.id}-${sectionOption}`,
-                      () => updateStudentEnrollment(student.id, {
-                        gradeLevel: Number(student.gradeLevel),
+                      () => updateStudentEnrollment(studentRecordId(student), {
+                        gradeLevel: studentGradeValue(student),
                         section: sectionOption,
                         promotionReason: reason,
                       }),
-                      'Enrollment updated.'
+                      'Na-update ang klase ng student.'
                     ),
                   })}
                 >
@@ -1209,7 +1225,7 @@ async function executeVerifiedAction() {
                   reasonPlaceholder: 'e.g. Teacher forgot their password',
                   action: (reason) => run(
                     `teacher-pin-${teacher.id}`,
-                    () => resetTeacherPassword(teacher.id, {
+                    () => resetTeacherPassword(teacherRecordId(teacher), {
                       reason
                     }),
                     (data) => `Temporary PIN: ${data.temporaryPin}`
@@ -1235,10 +1251,10 @@ async function executeVerifiedAction() {
     );
   }
 
-  function renderArchives() {
+  function renderArchive() {
     return (
       <Card>
-        <Text style={styles.cardTitle}>Archives</Text>
+        <Text style={styles.cardTitle}>Archive</Text>
         {archivedStudents.map((student) => (
           <View key={`student-${student.id}`} style={styles.actionRow}>
             <View style={styles.flex}><Text style={styles.rowTitle}>{student.name}</Text><Text style={styles.muted}>Student • {student.studentCode}</Text></View>
@@ -1246,10 +1262,10 @@ async function executeVerifiedAction() {
               keyword: 'REACTIVATE',
               action: (reason) => run(
                 `student-reactivate-${student.id}`,
-                () => reactivateStudent(student.id, {
+                () => reactivateStudent(studentRecordId(student), {
                   reason
                 }),
-                'Student reactivated.'
+                'Student reactivated and restored to active accounts.'
               )
             })}>Reactivate</Button>
           </View>
@@ -1261,10 +1277,10 @@ async function executeVerifiedAction() {
               keyword: 'REACTIVATE',
               action: (reason) => run(
                 `teacher-reactivate-${teacher.id}`,
-                () => reactivateTeacher(teacher.id, {
+                () => reactivateTeacher(teacherRecordId(teacher), {
                   reason
                 }),
-                'Teacher reactivated.'
+                'Teacher reactivated and restored to active accounts.'
               )
             })}>Reactivate</Button>
           </View>
@@ -1466,10 +1482,10 @@ function renderLogs() {
 
         <View style={styles.auditStatsGrid}>
           {[
-            [logs.length, 'Total Logs'],
+            [logs.length, 'Kabuuang Logs'],
             [todayLogs, 'Today'],
             [weekLogs, 'Last 7 Days'],
-            [monthLogs, 'This Month'],
+            [monthLogs, 'Ngayong Buwan'],
           ].map(([value, label]) => (
             <View key={label} style={styles.auditStatCard}>
               <Text style={styles.auditStatValue}>{value}</Text>
@@ -1806,8 +1822,8 @@ function renderLogs() {
       await task();
     } catch (err) {
       Alert.alert(
-        'Export failed',
-        err?.response?.data?.message || err?.message || 'Unable to complete the export.'
+        'Hindi na-export',
+        err?.response?.data?.message || err?.message || 'Hindi makumpleto ang export.'
       );
     } finally {
       setBusy('');
@@ -1917,6 +1933,8 @@ function renderLogs() {
             style={[
               styles.workspaceNoticeCard,
               workspaceNotice.type === 'success' && styles.workspaceNoticeSuccess,
+              workspaceNotice.type === 'warning' && styles.workspaceNoticeWarning,
+              workspaceNotice.type === 'error' && styles.workspaceNoticeError,
             ]}
           >
             <Text style={styles.workspaceNoticeText}>{workspaceNotice.text}</Text>
@@ -1981,7 +1999,7 @@ Role: ${credential.type}
 Username: ${credential.username}
 Temporary PIN: ${credential.pin}
 
-You will be required to change this PIN after first login.`
+Kailangan mong palitan ang PIN pagkatapos ng unang login.`
                       });
                     });
                   }}
@@ -2006,7 +2024,7 @@ You will be required to change this PIN after first login.`
         {section === 'assignments' && renderAssignments()}
         {section === 'students' && renderStudents()}
         {section === 'teachers' && renderTeachers()}
-        {section === 'archives' && renderArchives()}
+        {section === 'archives' && renderArchive()}
         {section === 'logs' && renderLogs()}
         {section === 'reports' && renderReports()}
 
@@ -2073,7 +2091,7 @@ You will be required to change this PIN after first login.`
                     marginBottom: 14
                   }}
                 >
-                  User must change password on next login.
+                  Kailangang palitan ng user ang password sa susunod na login.
                 </Text>
               </>
             ) : null}
@@ -2095,7 +2113,7 @@ You will be required to change this PIN after first login.`
                     } catch (err) {
                       Alert.alert(
                         'Unable to Reset PIN',
-                        err?.message || 'Please try again.'
+                        err?.message || 'Pakisubukan muli.'
                       );
                     }
                   });
@@ -2291,22 +2309,36 @@ const styles = StyleSheet.create({
   workspaceNoticeCard: {
     marginHorizontal: 16,
     marginTop: 12,
-    marginBottom: 8,
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: '#e8f8ec',
+    marginBottom: 10,
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#b9efc8',
+    borderColor: '#86EFAC',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   workspaceNoticeSuccess: {
-    backgroundColor: '#e8f8ec',
-    borderColor: '#b9efc8',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#22C55E',
+  },
+  workspaceNoticeWarning: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  workspaceNoticeError: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
   },
   workspaceNoticeText: {
-    color: '#1f6f3f',
-    fontSize: 13,
-    fontWeight: '700',
+    color: '#0F172A',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '900',
   },
 
   workspaceLogoutModalBackdrop: {

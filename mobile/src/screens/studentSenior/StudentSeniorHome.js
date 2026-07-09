@@ -1064,37 +1064,27 @@ heroCard: {
     borderColor: '#BBF7D0',
 
   },
-
   lessonGrid: {
-
-    flexDirection: 'column',
-    gap: 12,
-    marginTop: 4,
-
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 18,
+    rowGap: 14,
+    paddingBottom: 110,
   },
-
   lessonCard: {
-    backgroundColor: '#F7FEF9',
-    borderRadius: 26,
-    padding: 18,
-
-    marginBottom: 0,
-
+    backgroundColor: '#FFFFFF',
+    width: '48%',
+    borderRadius: 24,
+    padding: 16,
+    minHeight: 190,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
-    minHeight: 178,
-
+    borderColor: '#DCFCE7',
     shadowColor: '#14532D',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
-
     elevation: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-
-
   },
 
   lessonEmoji: {
@@ -1115,48 +1105,21 @@ heroCard: {
 
 
   },
-
   lessonTag: {
-    alignSelf: 'center',
-    color: '#15803D',
-
-    fontFamily: 'Fredoka_600SemiBold',
-    marginTop: 12,
-    fontSize: 10,
-
-    textTransform: 'uppercase',
-
-    letterSpacing: 0.5,
+    alignSelf: 'flex-start',
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-
     borderRadius: 999,
-
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    textAlign: 'center',
-    lineHeight: 14,
-    maxWidth: '92%',
-
-
-
-  },
-
-  lessonTitle: {
-    fontSize: 18,
-
-    fontWeight: '900',
-
-    color: '#0F172A',
-    lineHeight: 24,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     marginTop: 10,
-    alignSelf: 'center',
-    textAlign: 'center',
-    width: '100%',
-
-
-
+  },
+  lessonTitle: {
+    color: '#0F172A',
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '900',
+    marginTop: 10,
+    flexShrink: 1,
   },
 
   startBtn: {

@@ -93,10 +93,24 @@ from '../screens/admin/AdminHome';
 const Stack =
   createNativeStackNavigator();
 
+function getHomeRouteForUser(user = {}) {
+  if (user.role === 'student') {
+    const gradeLevel = Number(user.student?.gradeLevel || 0);
+    return gradeLevel <= 2 ? 'StudentTabs' : 'StudentSeniorTabs';
+  }
+
+  if (user.role === 'teacher') return 'TeacherHome';
+  if (user.role === 'admin') return 'AdminHome';
+
+  return 'Landing';
+}
+
+
 export default function RootNavigator() {
 
   const [booting, setBooting] = useState(true);
   const [initialRoute, setInitialRoute] = useState('Landing');
+  const [initialRouteParams, setInitialRouteParams] = useState(undefined);
 
   useEffect(() => {
     async function boot() {
@@ -113,21 +127,16 @@ export default function RootNavigator() {
         if (!user) {
           return;
         }
+        const homeRoute = getHomeRouteForUser(user);
 
-        if (user.role === 'student') {
-          const gradeLevel =
-            Number(user.student?.gradeLevel || 0);
-
-          setInitialRoute(
-            gradeLevel <= 2
-              ? 'StudentTabs'
-              : 'StudentSeniorTabs'
-          );
-        } else if (user.role === 'teacher') {
-          setInitialRoute('TeacherHome');
-        } else if (user.role === 'admin') {
-          setInitialRoute('AdminHome');
+        if (user?.mustChangePassword) {
+          setInitialRouteParams({ homeRoute });
+          setInitialRoute('ChangePassword');
+          return;
         }
+
+        setInitialRouteParams(undefined);
+        setInitialRoute(homeRoute);
       } catch (err) {
         console.log('Boot restore failed:', err?.message);
       } finally {
@@ -186,6 +195,7 @@ export default function RootNavigator() {
         <Stack.Screen
           name="ChangePassword"
           component={ChangePassword}
+          initialParams={initialRoute === 'ChangePassword' ? initialRouteParams : undefined}
         />
 
         {/* STUDENT */}

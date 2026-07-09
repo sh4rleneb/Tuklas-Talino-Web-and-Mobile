@@ -184,6 +184,50 @@ function compactText(value = '') {
   return normalizeText(value).replace(/[^a-z0-9]+/g, '');
 }
 
+
+function normalizeAllowedSafetyTerms(options = {}) {
+  const values = Array.isArray(options.allowedTerms)
+    ? options.allowedTerms
+    : [];
+
+  return values
+    .map((term) => ({
+      raw: String(term || ''),
+      normalized: normalizeText(term),
+      compact: compactText(term),
+    }))
+    .filter((term) => term.normalized || term.compact);
+}
+
+function isAllowedSafetyMatch(blockedTerm = '', allowedTerms = []) {
+  const normalizedTerm = normalizeText(blockedTerm);
+  const compactTerm = compactText(blockedTerm);
+
+  return allowedTerms.some((allowed) => {
+    if (!allowed.normalized && !allowed.compact) return false;
+
+    const normalizedMatch =
+      normalizedTerm &&
+      allowed.normalized &&
+      (
+        allowed.normalized === normalizedTerm ||
+        allowed.normalized.includes(normalizedTerm) ||
+        normalizedTerm.includes(allowed.normalized)
+      );
+
+    const compactMatch =
+      compactTerm &&
+      allowed.compact &&
+      (
+        allowed.compact === compactTerm ||
+        allowed.compact.includes(compactTerm) ||
+        compactTerm.includes(allowed.compact)
+      );
+
+    return normalizedMatch || compactMatch;
+  });
+}
+
 function makeSafeError(label = 'content') {
   const err = new Error(SAFE_TEXT_ERROR_MESSAGE);
   err.status = 400;
@@ -217,14 +261,18 @@ export function findBlockedTerms(value = '') {
   return [...new Set(matches)];
 }
 
-export function isSafeText(value = '') {
-  return findBlockedTerms(value).length === 0;
+export function isSafeText(value = '', options = {}) {
+  const allowedTerms = normalizeAllowedSafetyTerms(options);
+  const blockedTerms = findBlockedTerms(value)
+    .filter((term) => !isAllowedSafetyMatch(term, allowedTerms));
+
+  return blockedTerms.length === 0;
 }
 
-export function assertSafeText(value = '', label = 'content') {
+export function assertSafeText(value = '', label = 'content', options = {}) {
   if (value === null || value === undefined || value === '') return;
 
-  if (!isSafeText(value)) {
+  if (!isSafeText(value, options)) {
     throw makeSafeError(label);
   }
 }
