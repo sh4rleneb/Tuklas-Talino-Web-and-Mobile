@@ -119,7 +119,6 @@ function handleTeacherIdentifierChange(event) {
             🔐 Login
           </button>
 
-          <div className="secure-login-strip">🛡️ Secure & Protected Login</div>
         </section>
       </div>
 
@@ -224,8 +223,6 @@ function handleAdminIdentifierChange(event) {
             🔐 Login
           </button>
 
-          <div className="secure-login-strip admin-secure-strip">🛡️ Secure Login</div>
-          <p className="secure-note">🔒 Only authorized administrators can access this system.</p>
         </section>
       </div>
     </div>
