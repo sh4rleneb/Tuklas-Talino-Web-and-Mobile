@@ -24,7 +24,12 @@ const CATEGORIES = [
 function categoryKey(subject = '') {
   const value = String(subject || '').trim().toLowerCase();
 
-  if (value === 'oral comm' || value === 'oral communication' || value === 'pagsasalita') {
+  if (
+    value === 'oral comm' ||
+    value === 'oral communication' ||
+    value === 'pagsasalita' ||
+    value === 'komunikasyong pagsasalita'
+  ) {
     return 'Oral Communication';
   }
 
@@ -222,7 +227,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     try {
       setDashboard(await api('/dashboard'));
     } catch (err) {
-      setError(err.message || 'Hindi ma-load ang aklatan ng mga aralin.');
+      setError('Hindi makuha ang aklatan ng mga aralin. Pakisubukan muli.');
     } finally {
       setLoading(false);
     }
@@ -279,7 +284,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
       return;
     }
 
-    navigation.navigate('Lessons', {
+    navigation.navigate('Mga Aralin', {
       screen: 'LessonDashboardScreen',
       params,
     });
@@ -290,7 +295,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <ActivityIndicator color="#16A34A" size="large" />
-          <Text style={styles.loadingText}>Ina-load ang iyong mga aralin...</Text>
+          <Text style={styles.loadingText}>Inihahanda ang iyong mga aralin...</Text>
         </View>
       </SafeAreaView>
     );
@@ -324,7 +329,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
             <View style={styles.gradeBadge}>
               <Text style={styles.gradeBadgeIcon}>{playful ? '🧭' : '📘'}</Text>
-              <Text style={styles.gradeBadgeText}>G{student.gradeLevel || '—'}</Text>
+              <Text style={styles.gradeBadgeText}>Baitang {student.gradeLevel || '—'}</Text>
             </View>
           </View>
 
@@ -336,7 +341,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
             <View style={styles.heroStatCard}>
               <Text style={styles.heroStatValue}>{overallPercent}%</Text>
-              <Text style={styles.heroStatLabel}>Progress</Text>
+              <Text style={styles.heroStatLabel}>Pag-unlad</Text>
             </View>
 
             <View style={styles.heroStatCard}>
@@ -398,8 +403,8 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
         {error ? (
           <View style={styles.messageCard}>
-            <Text style={styles.errorTitle}>Hindi ma-load ang aralin</Text>
-            <Text style={styles.error}>{error}</Text>
+            <Text style={styles.errorTitle}>Hindi makuha ang mga aralin</Text>
+            <Text style={styles.error}>Hindi makuha ang mga aralin. Pakisubukan muli.</Text>
 
             <TouchableOpacity style={styles.retryButton} onPress={load}>
               <Text style={styles.retryText}>Subukan Muli</Text>

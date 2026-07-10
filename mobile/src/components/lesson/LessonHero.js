@@ -15,7 +15,7 @@ export default function LessonHero({
       </Text>
 
       <Text style={styles.title}>
-        {playful ? '🎮 Mapa ng Hamon' : '📚 Aklatan ng mga Lesson'}
+        {playful ? '🎮 Mapa ng Hamon' : '📚 Aklatan ng mga Aralin'}
       </Text>
 
       <Text style={styles.subtitle}>

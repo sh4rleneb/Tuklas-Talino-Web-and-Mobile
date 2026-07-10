@@ -39,11 +39,11 @@ function formatXpLogDate(log) {
     log?.timestamp ||
     log?.date;
 
-  if (!rawDate) return 'Hindi available ang petsa';
+  if (!rawDate) return 'Hindi matukoy ang petsa';
 
   const parsedDate = new Date(rawDate);
 
-  if (Number.isNaN(parsedDate.getTime())) return 'Hindi available ang petsa';
+  if (Number.isNaN(parsedDate.getTime())) return 'Hindi matukoy ang petsa';
 
   return parsedDate.toLocaleString([], {
     month: 'short',
@@ -88,7 +88,7 @@ async function handleLogout() {
 
   async function choose(avatar) {
     await api(`/students/${dashboard.student.id}/avatar`, { method: 'PATCH', body: { avatar } });
-    Alert.alert('Avatar', 'Na-update na ang iyong avatar!');
+    Alert.alert('Larawan', 'Napalitan na ang iyong larawan!');
     load();
   }
 
@@ -132,7 +132,7 @@ async function handleLogout() {
                 color: '#16213E',
               }}
             >
-              ⏳ Naglo-load...
+              ⏳ Inihahanda...
             </Text>
           </View>
         </View>
@@ -207,7 +207,7 @@ async function handleLogout() {
       </View>
 
       <Text style={styles.profileSubtitle}>
-        Piliin ang avatar mo at tingnan
+        Piliin ang iyong larawan at tingnan
         ang buod ng iyong pag-aaral.
       </Text>
 
@@ -234,11 +234,11 @@ async function handleLogout() {
     <View style={styles.sectionCard}>
 
       <Text style={styles.sectionTitle}>
-        🐰 Avatar
+        🐰 Larawan
       </Text>
 
       <Text style={styles.sectionSubtitle}>
-        Piliin ang avatar na gusto mong gamitin.
+        Piliin ang larawang gusto mong gamitin.
       </Text>
 
       <View style={styles.avatars}>
@@ -270,7 +270,7 @@ async function handleLogout() {
       </Text>
 
       <Text style={styles.sectionSubtitle}>
-        Pangunahing impormasyon tungkol sa iyong profile at pag-unlad.
+        Pangunahing impormasyon tungkol sa iyo at sa iyong pag-unlad.
       </Text>
 
       <View style={styles.summaryGrid}>
@@ -362,7 +362,7 @@ async function handleLogout() {
           </Text>
 
           <Text style={styles.summaryLabel}>
-            Pinakamahabang Sunod-sunod
+            Pinakamahabang Sunod-sunod na Araw
           </Text>
         </View>
 
@@ -393,7 +393,7 @@ async function handleLogout() {
           </Text>
 
           <Text style={styles.leaderboardNavText}>
-            Tingnan ang ranggo mo sa klase, XP, at sunod-sunod na araw ng pagkatuto.
+            Tingnan ang iyong ranggo sa klase, XP, at sunod-sunod na araw ng pagkatuto.
           </Text>
         </View>
 
@@ -407,7 +407,7 @@ async function handleLogout() {
       </Text>
 
       <Text style={styles.sectionSubtitle}>
-        Tingnan kung saan nanggaling ang iyong XP.
+        Tingnan kung saan nagmula ang iyong XP.
       </Text>
 
         {(dashboard?.xpLogs || []).length ? (
@@ -467,11 +467,11 @@ async function handleLogout() {
     <View style={[styles.sectionCard, styles.accountCard]}>
 
       <Text style={styles.sectionTitle}>
-        🚪 Iyong Account
+        🚪 Iyong Talaan
       </Text>
 
       <Text style={styles.sectionSubtitle}>
-        Kung tapos ka na, pindutin ang Mag-logout sa ibaba.
+        Kapag tapos ka na, pindutin ang Lumabas sa ibaba.
       </Text>
 
 
@@ -480,7 +480,7 @@ async function handleLogout() {
         onPress={handleChangePassword}
       >
         <Text style={styles.changePasswordButtonText}>
-          Palitan ang PIN/Password
+          Palitan ang PIN o Lihim na Salita
         </Text>
       </TouchableOpacity>
 
@@ -489,7 +489,7 @@ async function handleLogout() {
         onPress={confirmLogout}
       >
         <Text style={styles.logoutButtonText}>
-          Mag-logout
+          Lumabas
         </Text>
       </TouchableOpacity>
 
@@ -508,24 +508,24 @@ async function handleLogout() {
             <Text style={styles.logoutModalIconText}>🚪</Text>
           </View>
 
-          <Text style={styles.logoutModalTitle}>Mag-logout?</Text>
+          <Text style={styles.logoutModalTitle}>Lumabas sa iyong talaan?</Text>
           <Text style={styles.logoutModalBody}>
-            Naka-save ang iyong progreso. Maaari kang bumalik anumang oras upang ipagpatuloy ang iyong pag-aaral.
+            Naitala ang iyong pag-unlad. Maaari kang bumalik anumang oras upang ipagpatuloy ang pag-aaral.
           </Text>
 
           <View style={styles.logoutModalActions}>
             <TouchableOpacity
-              style={styles.logoutKanselahinButton}
+              style={styles.logoutCancelButton}
               onPress={() => setLogoutVisible(false)}
             >
-              <Text style={styles.logoutKanselahinText}>Kanselahin</Text>
+              <Text style={styles.logoutCancelText}>Kanselahin</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.logoutConfirmButton}
               onPress={handleLogout}
             >
-              <Text style={styles.logoutConfirmText}>Mag-logout</Text>
+              <Text style={styles.logoutConfirmText}>Lumabas</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1126,7 +1126,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  logoutKanselahinButton: {
+  logoutCancelButton: {
     flex: 1,
     backgroundColor: '#F1F5F9',
     borderRadius: 18,
@@ -1144,7 +1144,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
 
-  logoutKanselahinText: {
+  logoutCancelText: {
     color: '#334155',
     fontSize: 16,
     fontWeight: '900',

@@ -86,7 +86,7 @@ export default function StudentSeniorHome({
         try {
           setDashboard(await api('/dashboard'));
         } catch (err) {
-          setError(err.message || 'Hindi ma-load ang iyong dashboard.');
+          setError('Hindi makuha ang iyong pangunahing pahina. Pakisubukan muli.');
         } finally {
           setLoading(false);
         }
@@ -106,7 +106,7 @@ export default function StudentSeniorHome({
         <View style={styles.loadState}>
           {loading ? <ActivityIndicator size="large" color="#22C55E" /> : null}
           <Text style={error ? styles.loadError : styles.loadText}>
-            {error || 'Ina-load ang iyong dashboard...'}
+            {error || 'Inihahanda ang iyong pangunahing pahina...'}
           </Text>
           {error ? (
             <TouchableOpacity style={styles.retryButton} onPress={load}>
@@ -157,7 +157,7 @@ export default function StudentSeniorHome({
     const featuredLessons =
       lessons.slice(0, 4);
 
-    
+
 
 function categoryKey(subject = '') {
   const value = String(subject).trim().toLowerCase();
@@ -189,7 +189,7 @@ function categoryMeta(subject) {
     Panitikan: {
       label: 'Panitikan',
     },
-    'Oral Communication': {
+    'Komunikasyong Pagsasalita': {
       label: 'Komunikasyong Pagsasalita',
     },
     Pagsulat: {
@@ -255,7 +255,7 @@ const lessonColors = [
             <TouchableOpacity
               style={styles.profileChip}
               onPress={() =>
-                navigation.navigate('Profile')
+                navigation.navigate('Ako')
               }
               activeOpacity={0.8}
             >
@@ -341,7 +341,7 @@ const lessonColors = [
                   {100 - (xp % 100)} XP na lang bago umangat sa susunod na antas.
                 </Text>
 
-              
+
 </View>
 
             <View style={styles.achievementRow}>
@@ -441,7 +441,7 @@ const lessonColors = [
                 <TouchableOpacity
                   onPress={() =>
                     navigation.navigate(
-                      'Lessons'
+                      'Mga Aralin'
                     )
                   }
                 >
@@ -469,7 +469,7 @@ const lessonColors = [
                       },
                     ]}
                       onPress={() =>
-                        navigation.navigate('Lessons', {
+                        navigation.navigate('Mga Aralin', {
                           screen: 'StudentJuniorLessonDetail',
                           params: {
                             lessonId: lesson.id,

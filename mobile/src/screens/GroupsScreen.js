@@ -26,7 +26,7 @@ const HIDDEN_GROUP_STATUSES = new Set([
 ]);
 
 const FILTERS = [
-  { key: 'all', label: 'All' },
+  { key: 'all', label: 'Lahat' },
   { key: 'todo', label: 'Gagawin' },
   { key: 'pending', label: 'Nakabinbin' },
   { key: 'done', label: 'Tapos' },
@@ -145,7 +145,7 @@ export default function GroupsScreen({ navigation }) {
       setGroups(getVisibleGroups(dashboard.groups));
       setStudent(dashboard.student || null);
     } catch (err) {
-      setError(err.message || 'Hindi ma-load ang mga gawain ng grupo.');
+      setError('Hindi makuha ang mga gawain ng grupo. Pakisubukan muli.');
     } finally {
       if (!quiet) setLoading(false);
       setRefreshing(false);
@@ -500,11 +500,11 @@ export default function GroupsScreen({ navigation }) {
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.secondary} />
-            <Text style={styles.muted}>Naglo-load ng mga gawain ng grupo...</Text>
+            <Text style={styles.muted}>Kinukuha ang mga gawain ng grupo...</Text>
           </View>
         ) : error ? (
           <Card style={styles.errorCard}>
-            <Text style={styles.error}>{error}</Text>
+            <Text style={styles.error}>Hindi makuha ang mga gawain ng grupo. Pakisubukan muli.</Text>
             <PrimaryButton variant="secondary" onPress={() => load()}>
               <Text style={styles.primaryButtonText}>Subukan Muli</Text>
             </PrimaryButton>
@@ -592,7 +592,7 @@ export default function GroupsScreen({ navigation }) {
 
             {hasFilters ? (
               <TouchableOpacity style={styles.clearButton} onPress={clearFilters} activeOpacity={0.85}>
-                <Text style={styles.clearButtonText}>I-reset ang paghahanap at mga filter</Text>
+                <Text style={styles.clearButtonText}>Burahin ang paghahanap at mga salaan</Text>
               </TouchableOpacity>
             ) : null}
           </Card>

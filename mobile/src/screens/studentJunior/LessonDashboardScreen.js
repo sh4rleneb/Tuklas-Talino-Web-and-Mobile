@@ -30,7 +30,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
       })
       .catch((err) => {
         if (!active) return;
-        setError(err.message || 'Unable to load lesson.');
+        setError('Hindi makuha ang aralin. Pakisubukan muli.');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -44,7 +44,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#22C55E" />
-          <Text style={styles.loadingText}>Nilo-load ang aralin...</Text>
+          <Text style={styles.loadingText}>Inihahanda ang aralin...</Text>
         </View>
       </SafeAreaView>
     );
@@ -54,7 +54,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.errorText}>{error || 'Hindi nakita ang aralin.'}</Text>
+          <Text style={styles.errorText}>Hindi makuha ang aralin. Pakisubukan muli.</Text>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Text style={styles.backBtnText}>← Bumalik</Text>
           </TouchableOpacity>
@@ -119,7 +119,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
 
         {!layunin && !!lesson.description && (
           <View style={styles.card}>
-            <Text style={styles.cardHeading}>📖 Tungkol sa Lesson</Text>
+            <Text style={styles.cardHeading}>📖 Tungkol sa Aralin</Text>
             <Text style={styles.cardBody}>{lesson.description}</Text>
           </View>
         )}
@@ -129,7 +129,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
           onPress={() => navigation.navigate('StudentJuniorLessonDetail', { lessonId, homeRoute })}
         >
           <Text style={styles.buttonText}>
-            {isCompleted ? '🔁 Balikan ang Lesson' : progressPercent > 0 ? '▶ Ipagpatuloy ang Aralin' : '▶ Simulan ang Aralin'}
+            {isCompleted ? '🔁 Balikan ang Aralin' : progressPercent > 0 ? '▶ Ipagpatuloy ang Aralin' : '▶ Simulan ang Aralin'}
           </Text>
         </TouchableOpacity>
 

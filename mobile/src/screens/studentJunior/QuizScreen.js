@@ -223,6 +223,24 @@ function getQuizAttemptLimit(quiz = {}) {
     : DEFAULT_MAX_QUIZ_ATTEMPTS;
 }
 
+function localizeQuizType(value) {
+  const key = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  const labels = {
+    quiz: 'Pagsusulit',
+    assessment: 'Pagtataya',
+    practice: 'Pagsasanay',
+    multiple_choice: 'Maramihang Pagpili',
+    multiple_choice_quiz: 'Maramihang Pagpili',
+    objective_quiz: 'Pagsusulit na May Pagpipilian',
+  };
+
+  return labels[key] || 'Pagsusulit';
+}
+
 function optionLetter(index) {
   return String.fromCharCode(65 + index);
 }
@@ -362,7 +380,7 @@ export default function QuizScreen({ navigation }) {
     try {
       setDashboard(await api('/dashboard'));
     } catch (err) {
-      setError(err.message || 'Hindi ma-load ang mga pagsusulit.');
+      setError('Hindi makuha ang mga pagsusulit. Pakisubukan muli.');
     } finally {
       setLoading(false);
     }
@@ -536,7 +554,7 @@ const closeQuizPreview = useCallback(() => {
 
       await load();
     } catch (err) {
-      Alert.alert('Pagsusulit', err.message || 'Hindi maipasa ang pagsusulit.');
+      Alert.alert('Pagsusulit', 'Hindi maipasa ang pagsusulit. Pakisubukan muli.');
     } finally {
       setSubmitting(false);
     }
@@ -616,7 +634,7 @@ const closeQuizPreview = useCallback(() => {
                   <Text style={styles.previewStatValue}>
                     {activeQuizAttempts.reduce((value, attempt) => Math.max(value, attempt.percent || 0), 0)}%
                   </Text>
-                  <Text style={styles.previewStatLabel}>Best</Text>
+                  <Text style={styles.previewStatLabel}>Pinakamataas</Text>
                 </View>
               </View>
 
@@ -624,7 +642,7 @@ const closeQuizPreview = useCallback(() => {
                 <Text style={styles.previewRuleTitle}>Bago magsimula</Text>
                 <Text style={styles.previewRule}>• Basahin nang mabuti ang bawat tanong.</Text>
                 <Text style={styles.previewRule}>• Pumili ng isang sagot bago magpatuloy.</Text>
-                <Text style={styles.previewRule}>• Maaari kang bumalik sa nakaraang tanong habang hindi pa naipapasa.</Text>
+                <Text style={styles.previewRule}>• Maaari kang bumalik sa naunang tanong bago isumite ang pagsusulit.</Text>
               </View>
 
               <TouchableOpacity
@@ -832,8 +850,8 @@ const closeQuizPreview = useCallback(() => {
           </View>
 
           <View style={styles.summaryChip}>
-            <Text style={styles.summaryValue}>Variable</Text>
-            <Text style={styles.summaryLabel}>Attempt Limit</Text>
+            <Text style={styles.summaryValue}>Iba-iba</Text>
+            <Text style={styles.summaryLabel}>Hangganan ng Pagsubok</Text>
           </View>
         </View>
 
@@ -841,7 +859,7 @@ const closeQuizPreview = useCallback(() => {
           <View style={styles.emptyCard}>
             <Text style={styles.emptyEmoji}>⚠️</Text>
             <Text style={styles.emptyTitle}>May problema</Text>
-            <Text style={styles.emptyText}>{error}</Text>
+            <Text style={styles.emptyText}>Hindi makuha ang mga pagsusulit. Pakisubukan muli.</Text>
           </View>
         ) : quizzes.length ? (
           <View style={styles.quizList}>
@@ -864,7 +882,7 @@ const closeQuizPreview = useCallback(() => {
                     <View style={styles.quizCardText}>
                       <Text style={styles.quizTitle}>{specificQuizCardTitle(quiz)}</Text>
                       <Text style={styles.muted}>{quiz.subject} • Baitang {quiz.gradeLevel}</Text>
-                    <Text style={styles.muted}>{quiz.type}</Text>
+                    <Text style={styles.muted}>{localizeQuizType(quiz.type)}</Text>
                     </View>
                   </View>
 

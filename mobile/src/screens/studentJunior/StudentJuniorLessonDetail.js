@@ -190,7 +190,7 @@ function localizeStudentVisibleMessage(value = '') {
   if (!original) return '';
 
   let message = original
-    .replace(/Speech attempt saved\.?/gi, 'Naisave ang pagsubok sa pagbigkas.')
+    .replace(/Speech attempt saved\.?/gi, 'Matagumpay na naitala ang pagsubok sa pagbigkas.')
     .replace(/XP already awarded for this activity\.?/gi, 'Naibigay na ang XP para sa gawaing ito.')
     .replace(/Already awarded XP for this activity\.?/gi, 'Naibigay na ang XP para sa gawaing ito.');
 
@@ -230,7 +230,7 @@ function getStudentActivityNoticeTitle(notice = {}) {
   const tone = getStudentActivityNoticeTone(notice);
 
   if (tone === 'success') return 'Ang husay!';
-  if (tone === 'error') return 'Hindi naisave';
+  if (tone === 'error') return 'Hindi naitala';
   if (tone === 'warning') return 'Paalala';
 
   return 'Abiso';
@@ -581,7 +581,7 @@ const stepScrollRef = useRef(null);
 
   useEffect(() => {
     if (!lessonId) {
-      setError('Walang Lesson ID.');
+      setError('Walang pagkakakilanlan ng aralin.');
       setLoading(false);
       return undefined;
     }
@@ -656,7 +656,7 @@ const stepScrollRef = useRef(null);
         setStep(restoredStep);
       })
       .catch((err) => {
-        if (active) setError(err.message || 'Hindi ma-load ang aralin.');
+        if (active) setError('Hindi makuha ang aralin. Pakisubukan muli.');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -1023,8 +1023,8 @@ const stepScrollRef = useRef(null);
     );
 
     if (existingCount >= MAX_MISSION_ATTEMPTS) {
-      setMissionAttemptNotice('Nagamit mo na ang 2 pagsubok sa mission na ito.');
-      setMcqToast('Nagamit mo na ang 2 pagsubok sa mission na ito.');
+      setMissionAttemptNotice('Nagamit mo na ang 2 pagsubok sa misyong ito.');
+      setMcqToast('Nagamit mo na ang 2 pagsubok sa misyong ito.');
       return false;
     }
 
@@ -1049,7 +1049,7 @@ const stepScrollRef = useRef(null);
       return {
         icon: '✍️',
         title: 'Laro sa Pagbuo ng Sagot',
-        mission: 'Buuin ang tamang sagot gamit ang mga power-up at punuin ang kahon ng sagot upang makuha ang iyong bituin.',
+        mission: 'Buuin ang tamang sagot gamit ang mga pantulong at punuin ang kahon ng sagot upang makuha ang iyong bituin.',
         steps: ['Pumili', 'Buuin', 'Kunin ang Bituin'],
         button: '🏁 Kunin ang Bituin',
       };
@@ -1209,7 +1209,7 @@ const stepScrollRef = useRef(null);
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
-        setSpeechStatus('Kailangan ang pahintulot sa mikropono upang makapagrekord ng iyong pagbigkas.');
+        setSpeechStatus('Kailangan ang pahintulot sa mikropono upang maitala ang iyong pagbigkas.');
         return;
       }
 
@@ -1226,9 +1226,9 @@ const stepScrollRef = useRef(null);
       );
       recordingRef.current = result.recording;
       setRecording(true);
-      setSpeechStatus('Kasalukuyang nagre-record...');
+      setSpeechStatus('Kasalukuyang itinatala ang iyong boses...');
     } catch (err) {
-      setSpeechStatus('Hindi masimulan ang pagrekord. Pakisubukan muli.');
+      setSpeechStatus('Hindi masimulan ang pagtatala ng boses. Pakisubukan muli.');
     }
   }
 
@@ -1243,9 +1243,9 @@ const stepScrollRef = useRef(null);
       recordingRef.current = null;
       setRecording(false);
       setRecordingUri(uri);
-      setSpeechStatus(uri ? 'Handa nang patugtugin ang rekording.' : 'Huminto na ang pagrekord.');
+      setSpeechStatus(uri ? 'Handa nang patugtugin ang naitalang boses.' : 'Natapos na ang pagtatala ng boses.');
     } catch (err) {
-      setSpeechStatus('Hindi maihinto ang pagrekord. Pakisubukan muli.');
+      setSpeechStatus('Hindi maihinto ang pagtatala ng boses. Pakisubukan muli.');
     }
   }
 
@@ -1263,9 +1263,9 @@ const stepScrollRef = useRef(null);
       );
       soundRef.current = result.sound;
       setPlaying(true);
-      setSpeechStatus('Pinapatugtog ang iyong rekording...');
+      setSpeechStatus('Pinatutugtog ang iyong naitalang boses...');
     } catch (err) {
-      setSpeechStatus(err.message || 'Hindi maipatugtog ang iyong rekording.');
+      setSpeechStatus('Hindi maipatugtog ang iyong naitalang boses. Pakisubukan muli.');
     }
   }
 
@@ -1309,7 +1309,7 @@ const stepScrollRef = useRef(null);
       await stopSpeech();
       await saveNextStep(activityType);
     } catch (err) {
-      Alert.alert('Lesson', err.message || 'Hindi maisave ang progreso ng aralin.');
+      Alert.alert('Aralin', 'Hindi maitala ang pag-unlad sa aralin. Pakisubukan muli.');
     } finally {
       setSubmitting(false);
     }
@@ -1398,8 +1398,8 @@ const stepScrollRef = useRef(null);
     } catch (err) {
       setActivityNotice({
         type: 'error',
-        title: 'Hindi naisave ang sagot',
-        message: err.message || 'Subukan nating muli.',
+        title: 'Hindi naitala ang sagot',
+        message: 'Pakisubukan muli.',
       });
     } finally {
       setSubmitting(false);
@@ -1438,7 +1438,7 @@ const stepScrollRef = useRef(null);
 
       await saveNextStep('writing');
     } catch (err) {
-      Alert.alert('Pagsulat', err.message || 'Hindi maisave ang iyong sagot.');
+      Alert.alert('Pagsulat', 'Hindi maitala ang iyong sagot. Pakisubukan muli.');
     } finally {
       setSubmitting(false);
     }
@@ -1451,7 +1451,7 @@ const stepScrollRef = useRef(null);
       return;
     }
     if (!recordingUri) {
-      setSpeechStatus('Irekord muna ang iyong boses bago isumite.');
+      setSpeechStatus('Itala muna ang iyong boses bago isumite.');
       return;
     }
 
@@ -1472,16 +1472,13 @@ const stepScrollRef = useRef(null);
         },
       });
       setSpeechStatus(
-        localizeStudentVisibleMessage(
-          data.message ||
-          (littleLearnerGame
-            ? '⭐ Tapos na ang pagbigkas! Matagumpay na naisave ang iyong rekording.'
-            : '🎤 Naisave ang pagsubok sa pagbigkas.')
-        )
+        littleLearnerGame
+          ? '⭐ Tapos na ang pagbigkas! Matagumpay na naitala ang iyong boses.'
+          : '🎤 Matagumpay na naitala ang pagsubok sa pagbigkas.'
       );
       await saveNextStep('speech');
     } catch (err) {
-      setSpeechStatus(localizeStudentVisibleMessage(err.message || 'Hindi maisave ang iyong pagbigkas.'));
+      setSpeechStatus('Hindi maitala ang iyong pagbigkas. Pakisubukan muli.');
     } finally {
       setSubmitting(false);
     }
@@ -1564,7 +1561,7 @@ const stepScrollRef = useRef(null);
         ? { ...current, xp: Number(current.xp || 0) + Number(data.xpAwarded || 0) }
         : current);
     } catch (err) {
-      Alert.alert('Lesson', err.message || 'Hindi makumpleto ang aralin.');
+      Alert.alert('Aralin', 'Hindi makumpleto ang aralin. Pakisubukan muli.');
     } finally {
       setSubmitting(false);
     }
@@ -1705,7 +1702,7 @@ const stepScrollRef = useRef(null);
     const topic = cleanVisualReadText(
       lessonData?.title ||
       lessonData?.subject ||
-      'Lesson'
+      'Aralin'
     );
 
     return [
@@ -1879,7 +1876,7 @@ const stepScrollRef = useRef(null);
                 marginBottom:18,
               }}
             >
-              🎵 Audio ng Layunin
+              🎵 Tunog ng Layunin
             </Text>
 
             <TouchableOpacity
@@ -2606,7 +2603,7 @@ const stepScrollRef = useRef(null);
               multiline
               value={writingAnswer}
               onChangeText={setWritingAnswer}
-              placeholder={littleLearnerGame ? 'Pindutin ang mga power-up o isulat ang iyong sagot dito...' : 'Isulat ang iyong sagot dito...'}
+              placeholder={littleLearnerGame ? 'Pindutin ang mga pantulong o isulat ang iyong sagot dito...' : 'Isulat ang iyong sagot dito...'}
             />
           </View>
           <TouchableOpacity
@@ -2618,10 +2615,10 @@ const stepScrollRef = useRef(null);
           >
             <Text style={styles.primaryText}>
               {submitting
-                ? 'Sine-save...'
+                ? 'Itinatala...'
                 : littleLearnerGame
                   ? game.button
-                  : 'Save and Magpatuloy'}
+                  : 'Itala at Magpatuloy'}
             </Text>
           </TouchableOpacity>
             </>
@@ -2681,7 +2678,7 @@ const stepScrollRef = useRef(null);
             </>
           ) : (
             <>
-              <Text style={styles.title}>🏁 Tapusin ang Lesson</Text>
+              <Text style={styles.title}>🏁 Tapusin ang Aralin</Text>
 
               <Text style={styles.body}>
                 Magaling! Natapos mo ang lahat ng hamon sa araling ito.
@@ -2697,7 +2694,7 @@ const stepScrollRef = useRef(null);
             <Text style={styles.primaryText}>
               {littleLearnerGame
                 ? '🌟 Kunin ang Iyong Gantimpala!'
-                : '⭐ Tapusin ang Lesson'}
+                : '⭐ Tapusin ang Aralin'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -2854,8 +2851,8 @@ const stepScrollRef = useRef(null);
               icon={recording ? '⏹' : '🎤'}
               label={
                 littleLearnerGame
-                  ? (recording ? 'Itigil' : 'Irekord')
-                  : (recording ? 'Ihinto ang Pagrekord' : 'Simulan ang Pagrekord')
+                  ? (recording ? 'Itigil' : 'Itala ang Boses')
+                  : (recording ? 'Ihinto ang Pagtatala ng Boses' : 'Simulan ang Pagtatala ng Boses')
               }
               danger={recording}
               onPress={recording ? stopRecording : startRecording}
@@ -2876,7 +2873,7 @@ const stepScrollRef = useRef(null);
 
             <AudioPlayerButton
               icon="⏹"
-              label={littleLearnerGame ? "Ihinto" : "Ihinto ang Audio"}
+              label={littleLearnerGame ? "Ihinto" : "Ihinto ang Tunog"}
               danger
               onPress={async () => {
                 await stopSpeech();
@@ -2891,7 +2888,7 @@ const stepScrollRef = useRef(null);
                 }
 
                 setPlaying(false);
-                setSpeechStatus('Nahinto ang audio.');
+                setSpeechStatus('Nahinto ang pagpapatugtog.');
               }}
             />
           </View>
@@ -2914,7 +2911,7 @@ const stepScrollRef = useRef(null);
           />
           )}
           <TouchableOpacity style={styles.primaryButton} onPress={submitSpeech} disabled={submitting}>
-            <Text style={styles.primaryText}>{submitting ? 'Sine-save...' : littleLearnerGame ? game.button : 'Isumite ang Pagbigkas'}</Text>
+            <Text style={styles.primaryText}>{submitting ? 'Itinatala...' : littleLearnerGame ? game.button : 'Isumite ang Pagbigkas'}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -3022,7 +3019,7 @@ const stepScrollRef = useRef(null);
 
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{currentActivity.title || 'Gawain sa Lesson'}</Text>
+        <Text style={styles.cardTitle}>{currentActivity.title || 'Gawain sa Aralin'}</Text>
         <Text style={styles.body}>{currentActivity.instructions || currentActivity.dataJson?.content || 'Basahin muna ang gawaing ito bago magpatuloy.'}</Text>
         <ActivityGuideCard
             activity={currentActivity}
@@ -3623,7 +3620,7 @@ const stepScrollRef = useRef(null);
                         marginTop:2,
                       }}
                     >
-                      Mga Bagong Badge
+                      Mga Bagong Gantimpala
                     </Text>
                   </View>
                 </View>
@@ -3640,7 +3637,7 @@ const stepScrollRef = useRef(null);
                         color:'#92400E',
                       }}
                     >
-                      Bagong Badge
+                      Bagong Gantimpala
                     </Text>
 
                     <Text
@@ -3682,7 +3679,7 @@ const stepScrollRef = useRef(null);
                   <TouchableOpacity
                     style={styles.finishHeroButton}
                     onPress={() =>
-                      navigation.navigate('Lessons', {
+                      navigation.navigate('Mga Aralin', {
                         screen: 'StudentJuniorLessonDetail',
                         params: { lessonId: nextLesson.id, homeRoute },
                       })
@@ -3704,7 +3701,7 @@ const stepScrollRef = useRef(null);
                   <TouchableOpacity
                     style={styles.finishCardButton}
                     onPress={() =>
-                      navigation.navigate('Lessons', {
+                      navigation.navigate('Mga Aralin', {
                         screen: lessonsListScreen,
                       })
                     }
@@ -3725,7 +3722,7 @@ const stepScrollRef = useRef(null);
                     style={styles.finishCardButton}
                     onPress={() =>
                       navigation.navigate(homeRoute, {
-                        screen: 'Home',
+                        screen: 'Tahanan',
                       })
                     }
                   >
@@ -3736,7 +3733,7 @@ const stepScrollRef = useRef(null);
                       </Text>
 
                       <Text style={styles.finishCardSubtitle}>
-                        Bumalik sa iyong dashboard
+                        Bumalik sa pangunahing pahina
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -3777,7 +3774,7 @@ const stepScrollRef = useRef(null);
                 fontSize:12,
               }}
             >
-              Bagong Badge!
+              Bagong Gantimpala!
             </Text>
 
             <Text

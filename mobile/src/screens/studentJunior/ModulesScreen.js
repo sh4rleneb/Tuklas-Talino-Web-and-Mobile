@@ -69,7 +69,7 @@ function extractTuklasGradeNumber(...values) {
   return '';
 }
 
-function cleanTuklasQuizLessonTitle(value, fallback = 'Lessons') {
+function cleanTuklasQuizLessonTitle(value, fallback = 'Mga Aralin') {
   return String(value ?? fallback)
     .trim()
     .replace(/^\s*(?:quizzes?|pagsusulit)\s+sa\s+/i, '')
@@ -79,7 +79,7 @@ function cleanTuklasQuizLessonTitle(value, fallback = 'Lessons') {
     .trim() || fallback;
 }
 
-function formatTuklasQuizPreviewTitle({ lessonTitle, quizTitle, gradeLevel, studentGradeLevel, fallback = 'Lessons' } = {}) {
+function formatTuklasQuizPreviewTitle({ lessonTitle, quizTitle, gradeLevel, studentGradeLevel, fallback = 'Mga Aralin' } = {}) {
   const lesson = cleanTuklasQuizLessonTitle(lessonTitle || quizTitle, fallback);
   return `Pagsusulit sa ${lesson}`;
 }
@@ -95,7 +95,7 @@ export default function ModulesScreen({ navigation }) {
       const data = await api('/dashboard');
       setModules(data.lessons || []);
     } catch (error) {
-      Alert.alert('May Error', error.message);
+      Alert.alert('May Suliranin', 'Hindi makuha ang mga aralin. Pakisubukan muli.');
     } finally {
       setLoading(false);
     }
@@ -141,7 +141,7 @@ export default function ModulesScreen({ navigation }) {
         style={[styles.chip, active && styles.activeChip]}
         onPress={() => setSelectedSubject(item)}
       >
-        <Text style={[styles.chipText, active && styles.activeChipText]}>{item}</Text>
+        <Text style={[styles.chipText, active && styles.activeChipText]}>{item === 'All' ? 'Lahat' : item}</Text>
       </TouchableOpacity>
     );
   }
@@ -158,7 +158,7 @@ export default function ModulesScreen({ navigation }) {
         ]}
         activeOpacity={0.9}
         onPress={() =>
-          navigation.navigate('Lessons', {
+          navigation.navigate('Mga Aralin', {
             screen: 'StudentJuniorLessonDetail',
             params: {
               lessonId: lesson.id,
@@ -224,7 +224,7 @@ export default function ModulesScreen({ navigation }) {
       {loading ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="large" color="#22C55E" />
-          <Text style={styles.loadingText}>Ina-load ang mga aralin...</Text>
+          <Text style={styles.loadingText}>Inihahanda ang mga aralin...</Text>
         </View>
       ) : (
         <FlatList
@@ -235,7 +235,7 @@ export default function ModulesScreen({ navigation }) {
           contentContainerStyle={styles.container}
           ListHeaderComponent={
             <View style={styles.listHeader}>
-              <Text style={styles.subtitle}>📚 Aklatan ng mga Lesson</Text>
+              <Text style={styles.subtitle}>📚 Aklatan ng mga Aralin</Text>
               <FlatList
                 data={subjects}
                 horizontal

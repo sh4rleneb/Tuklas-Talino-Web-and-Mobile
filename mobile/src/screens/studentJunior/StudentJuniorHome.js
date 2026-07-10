@@ -165,7 +165,7 @@ export default function StudentJuniorHome({ navigation }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.loaderWrapper}>
           <ActivityIndicator size="large" color="#16A34A" />
-          <Text style={styles.loaderText}>Ina-load ang iyong dashboard...</Text>
+          <Text style={styles.loaderText}>Inihahanda ang iyong pangunahing pahina...</Text>
         </View>
       </SafeAreaView>
     );
@@ -282,7 +282,7 @@ export default function StudentJuniorHome({ navigation }) {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>🏅 {uniqueBadges.length}</Text>
-              <Text style={styles.statLabel}>Badges</Text>
+              <Text style={styles.statLabel}>Mga Gantimpala</Text>
             </View>
           </View>
         </View>
@@ -292,7 +292,7 @@ export default function StudentJuniorHome({ navigation }) {
             <Text style={styles.sectionTitle}>
               Mga Aralin Mo
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Lessons')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Mga Aralin')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
             </TouchableOpacity>
           </View>
@@ -300,7 +300,7 @@ export default function StudentJuniorHome({ navigation }) {
           {nextLesson ? (
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate('Lessons', {
+                  navigation.navigate('Mga Aralin', {
                     screen: 'StudentJuniorLessonDetail',
                     params: {
                       lessonId: nextLesson.id,
@@ -356,7 +356,7 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Mga Gantimpala</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Badges')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Mga Gantimpala')}>
               <Text style={styles.sectionLink}>Tingnan Lahat →</Text>
             </TouchableOpacity>
           </View>
@@ -385,7 +385,7 @@ export default function StudentJuniorHome({ navigation }) {
             <Text style={styles.sectionTitle}>
               Gawain ng Grupo
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Groups')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Mga Pangkat')}>
               <Text style={styles.sectionLink}>Buksan →</Text>
             </TouchableOpacity>
           </View>

@@ -104,14 +104,14 @@ export default function StudentSeniorTabNavigator() {
         ),
       })}
     >
-      <Tab.Screen name="Home" component={StudentSeniorHome} />
-      <Tab.Screen name="Lessons" component={StudentSeniorLessonsStack} />
-      <Tab.Screen name="Quizzes" component={StudentQuizStack} />
-      <Tab.Screen name="Missions" component={StudentMissionStack} />
-      <Tab.Screen name="Groups" component={StudentGroupsStack} />
-      <Tab.Screen name="Badges" component={StudentBadgesStack} />
-      <Tab.Screen name="Leaderboard" component={StudentLeaderboardStack} />
-      <Tab.Screen name="Profile" component={StudentProfileStack} />
+      <Tab.Screen name="Tahanan" component={StudentSeniorHome} />
+      <Tab.Screen name="Mga Aralin" component={StudentSeniorLessonsStack} />
+      <Tab.Screen name="Mga Pagsusulit" component={StudentQuizStack} />
+      <Tab.Screen name="Mga Misyon" component={StudentMissionStack} />
+      <Tab.Screen name="Mga Pangkat" component={StudentGroupsStack} />
+      <Tab.Screen name="Mga Gantimpala" component={StudentBadgesStack} />
+      <Tab.Screen name="Talaan ng Ranggo" component={StudentLeaderboardStack} />
+      <Tab.Screen name="Ako" component={StudentProfileStack} />
     </Tab.Navigator>
   );
 }
