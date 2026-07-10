@@ -1316,6 +1316,8 @@ async function handleLogout() {
   }
 
   function hydrateActivityBuilderFromExisting(activity = {}, index = null, current = {}) {
+    activity = activity && typeof activity === 'object' ? activity : {};
+    current = current && typeof current === 'object' ? current : {};
     const type = normalizeActivityBuilderType(activity);
     const deadlineState = getActivityBuilderDeadlineState(activity);
     const editingIndex = Number.isInteger(index) ? index : null;
