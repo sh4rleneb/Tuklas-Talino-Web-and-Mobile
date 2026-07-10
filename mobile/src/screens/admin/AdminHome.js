@@ -505,7 +505,7 @@ async function executeVerifiedAction() {
     if (log.action === 'student.promote') {
       details.push(`${metadata.studentName || 'Student'}${metadata.studentCode ? ` (${metadata.studentCode})` : ''}`);
       if (metadata.oldGrade || metadata.newGrade) {
-        details.push(`Baitang ${metadata.oldGrade || '—'} → Baitang ${metadata.newGrade || '—'}`);
+        details.push(`Grade ${metadata.oldGrade || '—'} → Grade ${metadata.newGrade || '—'}`);
       }
       if (metadata.section) details.push(`Section ${metadata.section}`);
     }
@@ -548,7 +548,7 @@ async function executeVerifiedAction() {
     if (!userId) {
       Alert.alert(
         'Missing Account Link',
-        'Walang nakakabit na user account para sa record na ito.'
+        'No user account is linked to this record.'
       );
       return;
     }
@@ -626,8 +626,8 @@ async function executeVerifiedAction() {
             ['🎓', stats.students || 0, 'Students'],
             ['👩‍🏫', stats.teachers || 0, 'Teachers'],
             ['📌', assignments.length, 'Assignments'],
-            ['✅', students.length, 'Active na Mag-aaral'],
-            ['✅', teachers.length, 'Active na Guro'],
+            ['✅', students.length, 'Active Students'],
+            ['✅', teachers.length, 'Active Teachers'],
             ['🗃️', archived, 'Archived Accounts'],
           ].map(([icon, value, label]) => (
             <Card key={label} style={styles.statCard}>
@@ -734,7 +734,7 @@ async function executeVerifiedAction() {
               </View>
             {studentValidation.gradeLevel && (
               <Text style={styles.errorText}>
-                Baitang must be from 1 to 6.
+                Grade level must be from 1 to 6.
               </Text>
             )}
             <Text style={styles.fieldLabel}>Section</Text>
@@ -888,7 +888,7 @@ async function executeVerifiedAction() {
             </Text>
 
             <Field
-              label="Buong Pangalan ng Teacher"
+              label="Teacher Full Name"
               value={teacherForm.name}
               placeholder="e.g. Maria Santos"
               onChangeText={(name) =>
@@ -1045,7 +1045,7 @@ async function executeVerifiedAction() {
             <View key={assignment.id} style={styles.actionRow}>
               <View style={styles.flex}>
                 <Text style={styles.rowTitle}>{assignment.Teacher?.name || 'Teacher'}</Text>
-                <Text style={styles.muted}>Baitang {assignment.gradeLevel} • {assignment.section}</Text>
+                <Text style={styles.muted}>Grade {assignment.gradeLevel} • {assignment.section}</Text>
               </View>
               <Button tone="red" disabled={Boolean(busy)} onPress={() => run(`remove-assignment-${assignment.id}`, () => removeTeacherAssignment(assignment.id), 'Assignment removed.')}>Remove</Button>
             </View>
@@ -1116,7 +1116,7 @@ async function executeVerifiedAction() {
         {filteredStudents.map((student) => (
           <View key={student.id} style={styles.recordCard}>
             <Text style={styles.rowTitle}>{student.avatar || '🧒'} {student.name}</Text>
-            <Text style={styles.muted}>{student.studentCode} • Baitang {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
+            <Text style={styles.muted}>{student.studentCode} • Grade {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
             <View style={styles.choiceRow}>
               <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
                 keyword: 'STUDENTPIN',
@@ -2286,7 +2286,7 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
                 style={styles.workspaceLogoutCancel}
                 onPress={() => setLogoutVisible(false)}
               >
-                <Text style={styles.workspaceLogoutCancelText}>Kanselahin</Text>
+                <Text style={styles.workspaceLogoutCancelText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity

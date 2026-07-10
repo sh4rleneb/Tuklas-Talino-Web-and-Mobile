@@ -383,13 +383,13 @@ function getTeacherDeadlineValidationMessage(rawDeadline = '', hasDeadline = fal
   const parsedDeadline = new Date(normalizedDeadline);
 
   if (Number.isNaN(parsedDeadline.getTime())) {
-    return 'Hindi valid ang deadline. Pumili muli ng date at oras.';
+    return 'The deadline is invalid. Select a valid date and time.';
   }
 
   const now = new Date();
 
   if (parsedDeadline.getTime() <= now.getTime()) {
-    return 'Hindi maaaring nasa nakaraan ang deadline. Pumili ng mas huling date at oras.';
+    return 'The deadline cannot be in the past. Select a later date and time.';
   }
 
   return '';
@@ -509,7 +509,7 @@ function getTeacherLessonBuilderValidationMessage(draft = {}, activities = [], a
   const gradeLevel = Number(draft.gradeLevel ?? draft.grade ?? 0);
 
   if (!Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 6) {
-    return 'Pumili ng valid na Grade 1 hanggang Grade 6.';
+    return 'Select a valid grade level from Grade 1 to Grade 6.';
   }
 
   const assignedGrades = Array.isArray(assignedGradeLevels)
@@ -1251,12 +1251,12 @@ async function handleLogout() {
       if (!asset) return;
 
       if (!asset.uri) {
-        Alert.alert('Materyal ng Aralin', 'Hindi mabasa ang napiling file. Pumili muli ng PDF, PPT, o PPTX.');
+        Alert.alert('Lesson Material', 'The selected file could not be read. Select another PDF, PPT, or PPTX file.');
         return;
       }
 
       if (!isSupportedLessonMaterial(asset)) {
-        Alert.alert('Materyal ng Aralin', 'PDF, PPT, o PPTX lang ang maaaring i-upload.');
+        Alert.alert('Lesson Material', 'Only PDF, PPT, and PPTX files can be uploaded.');
         return;
       }
 
@@ -1275,7 +1275,7 @@ async function handleLogout() {
         text: `Lesson material uploaded: ${material.fileName || getLessonMaterialDisplayName(asset)}`,
       });
     } catch (err) {
-      Alert.alert('Materyal ng Aralin', lessonMaterialUploadErrorMessage(err));
+      Alert.alert('Lesson Material', lessonMaterialUploadErrorMessage(err));
     } finally {
       setBusy('');
     }
@@ -1436,10 +1436,10 @@ async function handleLogout() {
     }
 
     const title = newActivity.title.trim() || {
-      infographic: 'Tala ng Aralin',
-      writing: 'Gawaing Pagsulat',
+      infographic: 'Lesson Infographic',
+      writing: 'Writing Activity',
       speech: 'Pagsasanay sa Pagbigkas',
-      mcq: 'Maramihang Pagpipiliang Pagsusulit',
+      mcq: 'Multiple-Choice Quiz',
     }[type];
     let activity;
     const deadlineValidationMessage = getTeacherDeadlineValidationMessage(newActivity.deadline, newActivity.hasDeadline);
@@ -1474,7 +1474,7 @@ async function handleLogout() {
       }
 
       if (!quizOptions.some((option) => option.choice === newActivity.correctOption)) {
-        setWorkspaceNotice({ type: 'warning', text: 'Piliin ang tamang sagot mula sa mga nilagay na pagpipilian.' });
+        setWorkspaceNotice({ type: 'warning', text: 'Select the correct answer from the provided choices.' });
         return;
       }
 
@@ -1636,7 +1636,7 @@ async function handleLogout() {
       speechTarget: legacySpeechTarget || lesson.speechTarget || '',
       material: materialActivity
         ? {
-            fileName: materialActivity.fileName || materialActivity.name || 'Materyal ng Aralin',
+            fileName: materialActivity.fileName || materialActivity.name || 'Lesson Material',
             fileType: materialActivity.fileType || materialActivity.mimeType || '',
             size: materialActivity.size || 0,
             url: materialActivity.url || materialActivity.fileUrl || materialActivity.materialUrl || '',
@@ -1655,7 +1655,7 @@ async function handleLogout() {
   function getLessonMaterialLabel(lesson = {}) {
     const material = getLessonActivities(lesson).find((activity) => activity?.type === 'material');
 
-    if (!material) return 'Walang materyal';
+    if (!material) return 'No material';
 
     return material.fileName || material.name || material.title || 'Attached material';
   }
@@ -1722,11 +1722,11 @@ async function handleLogout() {
 
 
   function formatTeacherLessonDate(value) {
-    if (!value) return 'Walang petsa';
+    if (!value) return 'No date';
 
     const date = new Date(value);
 
-    if (Number.isNaN(date.getTime())) return 'Walang petsa';
+    if (Number.isNaN(date.getTime())) return 'No date';
 
     return date.toLocaleDateString();
   }
@@ -1863,7 +1863,7 @@ async function handleLogout() {
     const activities = [
       ...(draft.material ? [{
         type: 'material',
-        title: 'Materyal ng Aralin',
+        title: 'Lesson Material',
         instructions: draft.instructions,
         ...draft.material,
       }] : []),
@@ -2024,7 +2024,7 @@ async function handleLogout() {
       'Return for Revision',
       'Send this group task back for revision?',
       [
-        { text: 'Kanselahin', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Revise',
           style: 'destructive',
@@ -2139,7 +2139,7 @@ async function handleLogout() {
               </View>
             )}
             <SmallButton disabled={busy === 'material'} onPress={pickMaterial}>{busy === 'material' ? 'Uploading...' : 'Upload PPT/PDF Material'}</SmallButton>
-            <Field label="Tala ng Guro" value={draft.instructions} onChangeText={(value) => setDraft((current) => ({ ...current, instructions: value }))} multiline placeholder="Mga tala at tagubilin para sa mag-aaral" />
+            <Field label="Teacher Notes" value={draft.instructions} onChangeText={(value) => setDraft((current) => ({ ...current, instructions: value }))} multiline placeholder="Notes and instructions for the student" />
             <SmallButton onPress={() => setBuilderStep(1)}>Next: Lesson Details →</SmallButton>
           </SectionCard>
         )}
@@ -2185,7 +2185,7 @@ async function handleLogout() {
                 </Text>
 
                 <Field
-                  label="1  Layunin — Goal ng lesson"
+                  label="1  Layunin — Lesson objective"
                   value={draft.layunin}
                   onChangeText={(value) => setDraft((current) => ({ ...current, layunin: value }))}
                   multiline
@@ -2793,7 +2793,7 @@ async function handleLogout() {
       'Remove Member',
       `Remove "${studentName}" from "${groupName}"?`,
       [
-        { text: 'Kanselahin', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
@@ -2818,7 +2818,7 @@ async function handleLogout() {
       'Remove Group',
       `Remove "${groupName}"? Hindi na ito makikita ng mga mag-aaral na naka-assign sa grupong ito.`,
       [
-        { text: 'Kanselahin', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
@@ -2899,19 +2899,19 @@ async function handleLogout() {
             const groupGradeLevel = Number(groupForm.gradeLevel);
 
             if (![1, 2, 3, 4, 5, 6].includes(groupGradeLevel)) {
-              Alert.alert('Paggawa ng Grupo', 'Pumili ng valid na Grade 1 hanggang Grade 6.');
+              Alert.alert('Create Group', 'Select a valid grade level from Grade 1 to Grade 6.');
               return;
             }
 
             const groupSection = normalizeSectionName(groupForm.section || groupForm.description);
 
             if (!groupSection) {
-              Alert.alert('Paggawa ng Grupo', 'Pumili ng section para sa grupong ito.');
+              Alert.alert('Create Group', 'Select a section for this group.');
               return;
             }
 
             if (!canUseGradeSection(groupGradeLevel, groupSection)) {
-              Alert.alert('Paggawa ng Grupo', 'You can only create groups for your assigned grade level or section.');
+              Alert.alert('Create Group', 'You can only create groups for your assigned grade level or section.');
               return;
             }
 
@@ -2977,7 +2977,7 @@ async function handleLogout() {
                 fontWeight: '800',
               }}
             >
-              {taskForm.deadline ? `Deadline: ${taskForm.deadline}` : 'Pumili ng deadline'}
+              {taskForm.deadline ? `Deadline: ${taskForm.deadline}` : 'Select a deadline'}
             </Text>
           </TouchableOpacity>
 
@@ -3422,13 +3422,13 @@ async function handleLogout() {
 
   function formatReviewDate(value) {
     if (!value) {
-      return 'Walang petsa';
+      return 'No date';
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-      return 'Walang petsa';
+      return 'No date';
     }
 
     return date.toLocaleDateString();
@@ -4749,7 +4749,7 @@ async function handleLogout() {
                 style={styles.workspaceLogoutCancel}
                 onPress={() => setLogoutVisible(false)}
               >
-                <Text style={styles.workspaceLogoutCancelText}>Kanselahin</Text>
+                <Text style={styles.workspaceLogoutCancelText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
