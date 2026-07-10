@@ -195,13 +195,26 @@ function quizCatalog(dashboard) {
 }
 
 function getQuizAttempts(attempts = {}, quiz = {}) {
-  return attempts[quiz.quizId] || attempts[quiz.id] || attempts[quiz.legacyQuizId] || [];
+  const safeAttempts =
+    attempts && typeof attempts === 'object' ? attempts : {};
+  const safeQuiz =
+    quiz && typeof quiz === 'object' ? quiz : {};
+
+  return (
+    safeAttempts[safeQuiz.quizId] ||
+    safeAttempts[safeQuiz.id] ||
+    safeAttempts[safeQuiz.legacyQuizId] ||
+    []
+  );
 }
 
 function getQuizAttemptLimit(quiz = {}) {
+  const safeQuiz =
+    quiz && typeof quiz === 'object' ? quiz : {};
+
   const value = Number(
-    quiz.maxAttempts ??
-    quiz.max_attempts ??
+    safeQuiz.maxAttempts ??
+    safeQuiz.max_attempts ??
     DEFAULT_MAX_QUIZ_ATTEMPTS
   );
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import StudentSeniorHome from '../screens/studentSenior/StudentSeniorHome';
@@ -48,7 +49,23 @@ export default function StudentSeniorTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        tabBarLabel: STUDENT_TAB_LABELS[route.name] || route.name,
+        tabBarLabel: ({ color }) => (
+          <Text
+            numberOfLines={1}
+            allowFontScaling={false}
+            style={{
+              width: '100%',
+              color,
+              fontSize: 9,
+              fontWeight: '900',
+              letterSpacing: -0.35,
+              marginTop: -2,
+              textAlign: 'center',
+            }}
+          >
+            {STUDENT_TAB_LABELS[route.name] || route.name}
+          </Text>
+        ),
         headerShown: false,
         tabBarShowLabel: true,
         tabBarActiveTintColor: '#16A34A',
@@ -56,8 +73,8 @@ export default function StudentSeniorTabNavigator() {
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
           position: 'absolute',
-          left: 12,
-          right: 12,
+          left: 4,
+          right: 4,
           bottom: 12,
           height: 76,
           paddingTop: 8,
@@ -73,17 +90,13 @@ export default function StudentSeniorTabNavigator() {
           shadowOffset: { width: 0, height: 6 },
           elevation: 8,
         },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '900',
-          marginTop: -2,
-        },
         tabBarIconStyle: {
           marginTop: 4,
         },
         tabBarItemStyle: {
           borderRadius: 20,
-          marginHorizontal: 2,
+          marginHorizontal: 0,
+          paddingHorizontal: 0,
           paddingVertical: 4,
         },
         tabBarIcon: ({ focused, color }) => (

@@ -18,6 +18,7 @@ const CATEGORIES = [
   { key: 'Panitikan', label: 'Panitikan', icon: '📚', accent: '#A855F7', soft: '#F3E8FF' },
   { key: 'Oral Communication', label: 'Pagsasalita', icon: '🎙️', accent: '#F59E0B', soft: '#FEF3C7' },
   { key: 'Pagsulat', label: 'Pagsulat', icon: '✍️', accent: '#EC4899', soft: '#FCE7F3' },
+  { key: 'FINISHED', label: 'Tapos na', icon: '✅', accent: '#16A34A', soft: '#DCFCE7' },
 ];
 
 function categoryKey(subject = '') {
@@ -241,13 +242,21 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
     [dashboard]
   );
 
-  const filteredLessons = useMemo(
-    () =>
-      selectedCategory === 'ALL'
-        ? lessons
-        : lessons.filter((lesson) => lesson.subjectKey === selectedCategory),
-    [lessons, selectedCategory]
-  );
+  const filteredLessons = useMemo(() => {
+    const sortedLessons = [...lessons].sort(
+      (first, second) => Number(first.completed) - Number(second.completed)
+    );
+
+    if (selectedCategory === 'FINISHED') {
+      return sortedLessons.filter((lesson) => lesson.completed);
+    }
+
+    if (selectedCategory === 'ALL') return sortedLessons;
+
+    return sortedLessons.filter(
+      (lesson) => lesson.subjectKey === selectedCategory
+    );
+  }, [lessons, selectedCategory]);
 
   const completedLessons = lessons.filter((lesson) => lesson.completed).length;
   const totalLessons = lessons.length;
@@ -422,8 +431,6 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                   { borderColor: completed ? '#86EFAC' : meta.soft },
                 ]}
               >
-                <View style={[styles.cardAccent, { backgroundColor: meta.soft }]} />
-
                 <View style={styles.lessonTop}>
                   <View
                     style={[
@@ -440,40 +447,43 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                   </View>
 
                   <View style={styles.lessonTitleWrap}>
-                    <Text style={[styles.subject, { color: meta.accent }]}>
-                      {meta.label}
-                    </Text>
+                    <View style={styles.lessonHeadingRow}>
+                      <Text style={[styles.subject, { color: meta.accent }]}>
+                        {meta.label}
+                      </Text>
+
+                      <View
+                        style={[
+                          styles.statusPill,
+                          {
+                            backgroundColor: completed
+                              ? '#DCFCE7'
+                              : locked
+                                ? '#F1F5F9'
+                                : difficulty.soft,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusText,
+                            {
+                              color: completed
+                                ? '#166534'
+                                : locked
+                                  ? '#64748B'
+                                  : difficulty.color,
+                            },
+                          ]}
+                        >
+                          {completed ? 'Tapos' : action}
+                        </Text>
+                      </View>
+                    </View>
+
                     <Text style={styles.lessonTitle}>{lesson.title}</Text>
                     <Text style={styles.lessonMeta}>
                       Baitang {lesson.gradeLevel || student.gradeLevel || '—'} • +{lesson.xpReward || 0} XP
-                    </Text>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.statusPill,
-                      {
-                        backgroundColor: completed
-                          ? '#DCFCE7'
-                          : locked
-                            ? '#F1F5F9'
-                            : difficulty.soft,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        {
-                          color: completed
-                            ? '#166534'
-                            : locked
-                              ? '#64748B'
-                              : difficulty.color,
-                        },
-                      ]}
-                    >
-                      {completed ? 'Tapos' : action}
                     </Text>
                   </View>
                 </View>
@@ -552,9 +562,15 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
         {!error && !filteredLessons.length ? (
           <View style={styles.messageCard}>
-            <Text style={styles.emptyTitle}>Wala pang aralin dito</Text>
+            <Text style={styles.emptyTitle}>
+              {selectedCategory === 'FINISHED'
+                ? 'Wala pang tapos na aralin'
+                : 'Wala pang aralin dito'}
+            </Text>
             <Text style={styles.muted}>
-              Wala pang nailalathalang aralin sa kategoryang ito.
+              {selectedCategory === 'FINISHED'
+                ? 'Ang mga matatapos mong aralin ay lalabas dito.'
+                : 'Wala pang nailalathalang aralin sa kategoryang ito.'}
             </Text>
           </View>
         ) : null}
@@ -809,19 +825,11 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
 
-  cardAccent: {
-    position: 'absolute',
-    top: -34,
-    right: -30,
-    width: 118,
-    height: 118,
-    borderRadius: 999,
-    opacity: 0.85,
-  },
-
   lessonTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    position: 'relative',
+    zIndex: 1,
   },
 
   thumbnail: {
@@ -840,13 +848,25 @@ const styles = StyleSheet.create({
 
   lessonTitleWrap: {
     flex: 1,
+    minWidth: 0,
+  },
+
+  lessonHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minWidth: 0,
+    marginBottom: 4,
   },
 
   subject: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
+    marginRight: 8,
   },
   lessonTitle: {
     color: '#0F172A',
@@ -868,7 +888,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
-    marginLeft: 8,
+    flexShrink: 0,
   },
 
   statusText: {
@@ -892,6 +912,7 @@ const styles = StyleSheet.create({
 
   questTitle: {
     flex: 1,
+    minWidth: 0,
     color: '#0F172A',
     fontWeight: '900',
     fontSize: 15,
@@ -908,6 +929,7 @@ const styles = StyleSheet.create({
 
   starRow: {
     flexDirection: 'row',
+    flexShrink: 0,
   },
 
   starIcon: {

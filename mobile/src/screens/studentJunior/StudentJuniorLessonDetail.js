@@ -541,6 +541,10 @@ const confettiAnim = useRef(new Animated.Value(0)).current;
 const correctAnswerScale = useRef(new Animated.Value(1)).current;
 const activeMissionAttemptRef = useRef({});
 
+const lessonGradeLevel = Number(student?.gradeLevel || lesson?.gradeLevel || 0);
+const littleLearnerGame = lessonGradeLevel <= 2;
+const isUpperGradeLesson = lessonGradeLevel > 2;
+
 
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
@@ -618,15 +622,36 @@ const stepScrollRef = useRef(null);
 
         setCompleted(lessonCompleted);
 
+        const loadedActivities = Array.isArray(loadedLesson?.activities)
+          ? loadedLesson.activities
+          : [];
+        const loadedMaterialCount = loadedActivities.filter((activity) => {
+          const type = String(activity?.type || '').toLowerCase();
+          return type === 'material' || type === 'infographic';
+        }).length;
+        const loadedGradeLevel = Number(
+          dashboard?.student?.gradeLevel || loadedLesson?.gradeLevel || 0
+        );
+        const loadedUpperGrade = loadedGradeLevel > 2;
+        const loadedLearningCount = loadedActivities.filter((activity) => {
+          const type = String(activity?.type || '').toLowerCase();
+          if (type === 'material' || type === 'infographic') return false;
+          return loadedUpperGrade || ['mcq', 'writing', 'speech'].includes(type);
+        }).length;
+        const expectedTotalSteps =
+          loadedMaterialCount + loadedLearningCount + (loadedUpperGrade ? 3 : 4);
+        const savedStep = Number(progressData.progress?.currentStep || 1);
         const restoredStep = lessonCompleted
-          ? (loadedLesson?.activities?.length || 0) + 4
-          : (progressData.progress?.currentStep || 1);
+          ? expectedTotalSteps
+          : Math.max(1, Math.min(savedStep, expectedTotalSteps));
+        const readStepNumber = loadedUpperGrade
+          ? loadedMaterialCount + 2
+          : loadedMaterialCount + 3;
 
-        // Pre-unlock gates for steps the student already passed (mirrors web reachedPast).
-        // Step 1 = Layunin, Step 2 = Alamin, Step 3 = Lesson.
-        setLessonListened(lessonCompleted || restoredStep > 1);
-        setKnowListened(lessonCompleted || restoredStep > 2);
-        setReadListened(lessonCompleted || restoredStep > 3);
+        // Restore the same grade-band gates and step positions used by the web app.
+        setLessonListened(loadedUpperGrade || lessonCompleted || restoredStep > 1);
+        setKnowListened(loadedUpperGrade || lessonCompleted || restoredStep > 2);
+        setReadListened(lessonCompleted || restoredStep > readStepNumber);
 
         setStep(restoredStep);
       })
@@ -716,8 +741,34 @@ const stepScrollRef = useRef(null);
 
     const learningActivities = activities.filter((activity) => {
       const type = String(activity?.type || '').toLowerCase();
-      return type !== 'material' && type !== 'infographic';
+      if (type === 'material' || type === 'infographic') return false;
+      return isUpperGradeLesson || ['mcq', 'writing', 'speech'].includes(type);
     });
+
+    if (isUpperGradeLesson) {
+      return [
+        {
+          type: 'overview',
+          title: 'Buod ng Aralin',
+        },
+        ...materialActivities.map(activity => ({
+          type: 'activity',
+          activity,
+        })),
+        {
+          type: 'read',
+          title: 'Basahin ang Aralin',
+        },
+        ...learningActivities.map(activity => ({
+          type: 'activity',
+          activity,
+        })),
+        {
+          type: 'finish',
+          title: 'Tapusin ang Aralin',
+        },
+      ];
+    }
 
     return [
       {
@@ -745,7 +796,7 @@ const stepScrollRef = useRef(null);
         title: 'Tapos',
       },
     ];
-  }, [activities]);
+  }, [activities, isUpperGradeLesson]);
 
   const totalSteps = missionSteps.length;
 
@@ -812,6 +863,7 @@ const stepScrollRef = useRef(null);
     aralinText || lessonText;
 
   function missionStepIcon(stepItem) {
+    if (stepItem?.type === 'overview') return '📋';
     if (stepItem?.type === 'listen') return '👂';
     if (stepItem?.type === 'know') return '💡';
     if (stepItem?.type === 'read') return '📖';
@@ -819,7 +871,7 @@ const stepScrollRef = useRef(null);
 
     const activityType = String(stepItem?.activity?.type || '').toLowerCase();
 
-    if (activityType === 'material' || activityType === 'infographic') return '🐾';
+    if (activityType === 'material' || activityType === 'infographic') return '📎';
     if (activityType === 'mcq' || activityType === 'quiz') return '🎮';
     if (activityType === 'writing') return '🧩';
     if (activityType === 'speech') return '🎤';
@@ -842,7 +894,66 @@ const stepScrollRef = useRef(null);
     return 'Gawain';
   }
 
-  const littleLearnerGame = Number(student?.gradeLevel || lesson?.gradeLevel || 0) <= 2;
+  const displaySteps = useMemo(() => {
+    const materialActivities = activities.filter((activity) => {
+      const type = String(activity?.type || '').toLowerCase();
+      return type === 'material' || type === 'infographic';
+    });
+    const learningActivities = activities.filter((activity) => {
+      const type = String(activity?.type || '').toLowerCase();
+      if (type === 'material' || type === 'infographic') return false;
+      return isUpperGradeLesson || ['mcq', 'writing', 'speech'].includes(type);
+    });
+
+    if (isUpperGradeLesson) {
+      return [
+        { key: 'overview', icon: '📋', label: 'Buod', title: 'Buod ng Aralin' },
+        ...(materialActivities.length
+          ? [{ key: 'material', icon: '📎', label: 'Materyal', title: 'Materyal ng Aralin' }]
+          : []),
+        { key: 'read', icon: '📖', label: 'Aralin', title: 'Basahin ang Aralin' },
+        { key: 'activities', icon: '📝', label: 'Gawain', title: 'Mga Gawain sa Pagsasanay' },
+        { key: 'complete', icon: '✅', label: 'Tapusin', title: 'Tapusin ang Aralin' },
+      ];
+    }
+
+    return [
+      { key: 'listen', icon: '👂', label: 'Layunin', title: 'Layunin' },
+      { key: 'know', icon: '💡', label: 'Alamin', title: 'Alamin' },
+      ...(materialActivities.length
+        ? [{ key: 'material', icon: '📎', label: 'Materyal', title: 'Materyal' }]
+        : []),
+      { key: 'read', icon: '📖', label: 'Aralin', title: 'Aralin' },
+      ...learningActivities.map((activity, index) => ({
+        key: `activity-${activity?.id || activity?._id || index}`,
+        icon: missionStepIcon({ type: 'activity', activity }),
+        label: missionStepLabel({ type: 'activity', activity }),
+        title: missionStepLabel({ type: 'activity', activity }),
+      })),
+      { key: 'complete', icon: '⭐', label: 'Tapos', title: 'Tapos' },
+    ];
+  }, [activities, isUpperGradeLesson]);
+
+  function displayKeyForMissionStep(stepItem) {
+    if (stepItem?.type === 'overview') return 'overview';
+    if (stepItem?.type === 'listen') return 'listen';
+    if (stepItem?.type === 'know') return 'know';
+    if (stepItem?.type === 'read') return 'read';
+    if (stepItem?.type === 'finish') return 'complete';
+
+    const activityType = String(stepItem?.activity?.type || '').toLowerCase();
+    if (activityType === 'material' || activityType === 'infographic') return 'material';
+    if (isUpperGradeLesson) return 'activities';
+
+    const activityIndex = activities.findIndex((activity) => activity === stepItem?.activity);
+    return `activity-${stepItem?.activity?.id || stepItem?.activity?._id || activityIndex}`;
+  }
+
+  const activeDisplayStepIndex = Math.max(
+    0,
+    displaySteps.findIndex((item) => item.key === displayKeyForMissionStep(currentStep))
+  );
+  const activeDisplayStep = displaySteps[activeDisplayStepIndex] || displaySteps[0];
 
 
   useEffect(() => {
@@ -1641,6 +1752,71 @@ const stepScrollRef = useRef(null);
 
   function renderActivity() {
 
+    if (currentStep?.type === 'overview') {
+      return (
+        <View style={styles.card}>
+          <Text style={styles.title}>📋 Buod ng Aralin</Text>
+
+          <View
+            style={{
+              backgroundColor: '#ECFDF5',
+              borderRadius: 22,
+              borderWidth: 2,
+              borderColor: '#BBF7D0',
+              padding: 18,
+              marginTop: 14,
+            }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: '900', color: '#166534' }}>
+              🎯 Layunin
+            </Text>
+            <Text style={{ marginTop: 10, fontSize: 16, lineHeight: 24, color: '#334155' }}>
+              {layuninDisplayText}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              backgroundColor: '#EFF6FF',
+              borderRadius: 22,
+              borderWidth: 2,
+              borderColor: '#BFDBFE',
+              padding: 18,
+              marginTop: 14,
+            }}
+          >
+            <Text style={{ fontSize: 20, fontWeight: '900', color: '#1D4ED8' }}>
+              💡 Alamin
+            </Text>
+            <Text style={{ marginTop: 10, fontSize: 16, lineHeight: 24, color: '#334155' }}>
+              {alaminDisplayText}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: 10,
+              marginTop: 16,
+            }}
+          >
+            <Text style={styles.infoChip}>⚡ +{lesson?.xpReward || 0} XP</Text>
+            <Text style={styles.infoChip}>📝 {activities.length} gawain</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => advance('overview')}
+            disabled={submitting}
+          >
+            <Text style={styles.primaryText}>Magpatuloy →</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     if (currentStep?.type === 'listen') {
       return (
         <View style={styles.card}>
@@ -1897,7 +2073,7 @@ const stepScrollRef = useRef(null);
           </View>
 
           <TouchableOpacity
-            style={[styles.secondaryButton, styles.equalAlaminActionButton, { alignSelf: 'center' }]}
+            style={[styles.secondaryButton, styles.alaminListenButton]}
             onPress={() => {
               setKnowListened(true);
               speakText(knowAudioText);
@@ -3133,7 +3309,7 @@ const stepScrollRef = useRef(null);
         <Text style={styles.title}>📖 {lesson.title}</Text>
         <Text style={styles.stepText}>⚡ +{lesson.xpReward || 0} XP</Text>
 
-        {littleLearnerGame ? (
+        {(littleLearnerGame || isUpperGradeLesson) ? (
           <View
             style={{
               backgroundColor:'#FFF7ED',
@@ -3152,27 +3328,7 @@ const stepScrollRef = useRef(null);
                 color:'#15803D',
               }}
             >
-              {(currentStep?.type === 'listen'
-                ? '👂 Layunin'
-                : currentStep?.type === 'know'
-                ? '💡 Alamin'
-                : currentStep?.type === 'read'
-                ? '📖 Basahin ang Aralin'
-                : currentStep?.type === 'finish'
-                ? 'Tapos na ang Aralin'
-                : currentActivity?.type === 'mcq'
-                ? '🎮 Oras ng Pagsusulit'
-                : currentActivity?.type === 'writing'
-                ? '🧩 Punan ang Patlang'
-                : currentActivity?.type === 'speech'
-                ? '🎤 Pagsasanay sa Pagbigkas'
-                : currentActivity?.type === 'vocabulary'
-                ? '🔤 Mga Salita'
-                : currentActivity?.type === 'matching'
-                ? '🧩 Laro sa Pagtutugma'
-                : currentActivity?.type === 'infographic'
-                ? '📖 Basahin Muna'
-                : '🎯 Misyon') + ' ⭐'}
+              {(activeDisplayStep?.title || 'Aralin') + ' ⭐'}
             </Text>
 
             <Text
@@ -3182,7 +3338,7 @@ const stepScrollRef = useRef(null);
                 fontWeight:'700',
               }}
             >
-              Hakbang {Math.min(step, totalSteps)}
+              Hakbang {activeDisplayStepIndex + 1} sa {displaySteps.length}
             </Text>
 
             <View
@@ -3197,7 +3353,7 @@ const stepScrollRef = useRef(null);
               <View
                 style={{
                   height:'100%',
-                  width:`${Math.round((Math.min(step,totalSteps)/Math.max(totalSteps,1))*100)}%`,
+                  width:`${Math.round(((activeDisplayStepIndex + 1)/Math.max(displaySteps.length,1))*100)}%`,
                   backgroundColor:'#22C55E',
                 }}
               />
@@ -3220,12 +3376,12 @@ const stepScrollRef = useRef(null);
                   flexDirection:'row',
                 }}
               >
-              {missionSteps.map((stepItem,index)=> {
-                const icon = missionStepIcon(stepItem);
-                const label = missionStepLabel(stepItem);
+              {displaySteps.map((stepItem,index)=> {
+                const icon = stepItem.icon;
+                const label = stepItem.label;
                 return (
                 <View
-                  key={`${stepItem?.type || 'step'}-${stepItem?.title || stepItem?.activity?.id || stepItem?.activity?._id || stepItem?.activity?.type || label}-${index}`}
+                  key={`${stepItem.key}-${index}`}
                   style={{
                     width:68,
                     minHeight:66,
@@ -3233,14 +3389,14 @@ const stepScrollRef = useRef(null);
                     paddingVertical:8,
                     borderRadius:12,
                     backgroundColor:
-                      step === index + 1
+                      activeDisplayStepIndex === index
                         ? '#FEF3C7'
-                        : step > index + 1
+                        : activeDisplayStepIndex > index
                         ? '#DCFCE7'
                         : '#F1F5F9',
                     borderWidth:1,
                     borderColor:
-                      step === index + 1
+                      activeDisplayStepIndex === index
                         ? '#F59E0B'
                         : '#E2E8F0',
                     alignItems:'center',
@@ -3249,10 +3405,8 @@ const stepScrollRef = useRef(null);
                   <Text style={{fontSize:18}}>{icon}</Text>
                   <Text
                     numberOfLines={2}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.8}
                     style={{
-                      fontSize:10,
+                      fontSize:9,
                       fontWeight:'800',
                       marginTop:4,
                       textAlign:'center',
@@ -3776,7 +3930,7 @@ const styles = StyleSheet.create({
   },
 
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
-  page: { padding: 18, paddingBottom: 44 },
+  page: { padding: 18, paddingBottom: 160 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   back: { color: '#16A34A', fontWeight: '900' },
@@ -3935,6 +4089,16 @@ const styles = StyleSheet.create({
   },
 
   stepText: { color: '#64748B', marginTop: 7 },
+  infoChip: {
+    color: '#166534',
+    fontSize: 13,
+    fontWeight: '900',
+    backgroundColor: '#DCFCE7',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    overflow: 'hidden',
+  },
   progressTrack: { height: 12, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 10,
     alignSelf: 'center',
     minWidth: '75%', marginBottom: 20 },
@@ -4099,6 +4263,16 @@ const styles = StyleSheet.create({
     marginTop: 0,
     flexGrow: 0,
     flexShrink: 0,
+  },
+  alaminListenButton: {
+    alignSelf: 'center',
+    width: '72%',
+    maxWidth: 320,
+    minHeight: 56,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 0,
+    marginTop: 16,
   },
   equalAlaminActionText: {
     width: '100%',

@@ -930,7 +930,7 @@ export default function TeacherHome({ navigation }) {
   const [draft, setDraft] = useState(emptyLessonDraft);
   const [activityDeadlinePickerVisible, setActivityDeadlinePickerVisible] = useState(false);
   const [activityDeadlinePickerMode, setActivityDeadlinePickerMode] = useState('date');
-  const [newActivity, setNewActivity] = useState({
+  const [newActivityState, setNewActivity] = useState({
     type: 'mcq',
       gawainType: 'writing_task',
     title: '',
@@ -950,6 +950,11 @@ export default function TeacherHome({ navigation }) {
     optionE: '',
     optionF: '',
   });
+
+  const newActivity =
+    newActivityState && typeof newActivityState === 'object'
+      ? newActivityState
+      : {};
   const [groupForm, setGroupForm] = useState({ name: '', description: '', section: '', gradeLevel: '1' });
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [openGroupTools, setOpenGroupTools] = useState({});
@@ -4798,7 +4803,7 @@ async function handleLogout() {
 
       setStudentReport((current) => mergeCreatedStudentRows(current || []));
       setAllStudents((current) => mergeCreatedStudentRows(current || []));
-      Alert.alert('Student Account', `Created account for ${createdStudent.name || name}. Temporary password: ${data?.temporaryPassword || 'Not returned'}`);
+      Alert.alert('Student Account', `Created account for ${createdStudent.name || name}. Temporary PIN: ${data?.temporaryPin || 'Not returned'}`);
       setStudentForm({ name: '', gradeLevel: String(gradeLevel), section });
       Alert.alert(
         'Student Account Created',

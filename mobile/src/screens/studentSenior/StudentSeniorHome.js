@@ -255,7 +255,7 @@ const lessonColors = [
             <TouchableOpacity
               style={styles.profileChip}
               onPress={() =>
-                navigation.navigate('ProfileScreen')
+                navigation.navigate('Profile')
               }
               activeOpacity={0.8}
             >
@@ -469,13 +469,13 @@ const lessonColors = [
                       },
                     ]}
                       onPress={() =>
-                        navigation.navigate(
-                          'StudentJuniorLessonDetail',
-                          {
+                        navigation.navigate('Lessons', {
+                          screen: 'StudentJuniorLessonDetail',
+                          params: {
                             lessonId: lesson.id,
                             homeRoute: 'StudentSeniorTabs',
-                          }
-                        )
+                          },
+                        })
                       }
                   >
                     <Text style={styles.lessonEmoji}>
@@ -1065,19 +1065,22 @@ heroCard: {
 
   },
   lessonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    width: '100%',
+    alignItems: 'center',
     marginTop: 18,
-    rowGap: 14,
-    paddingBottom: 110,
+    rowGap: 16,
+    paddingBottom: 0,
   },
   lessonCard: {
     backgroundColor: '#FFFFFF',
-    width: '48%',
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    alignItems: 'center',
     borderRadius: 24,
-    padding: 16,
-    minHeight: 190,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    minHeight: 280,
     borderWidth: 1,
     borderColor: '#DCFCE7',
     shadowColor: '#14532D',
@@ -1106,27 +1109,36 @@ heroCard: {
 
   },
   lessonTag: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
+    maxWidth: '90%',
     backgroundColor: '#DCFCE7',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginTop: 12,
+    textAlign: 'center',
   },
   lessonTitle: {
+    width: '100%',
+    minHeight: 66,
     color: '#0F172A',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 18,
+    lineHeight: 25,
     fontWeight: '900',
-    marginTop: 10,
+    marginTop: 14,
     flexShrink: 1,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
 
   startBtn: {
-    marginTop: 16,
+    width: '72%',
+    minWidth: 160,
+    maxWidth: 260,
+    marginTop: 'auto',
     backgroundColor: '#16A34A',
 
-    alignSelf: 'stretch',
+    alignSelf: 'center',
 
     paddingHorizontal: 18,
     paddingVertical: 13,
