@@ -17,7 +17,7 @@ import { api } from '../../api/client';
 import Card from '../../components/Card';
 import { colors } from '../../styles/theme';
 
-const MAX_QUIZ_ATTEMPTS = 2;
+const DEFAULT_MAX_QUIZ_ATTEMPTS = 2;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -158,6 +158,22 @@ function quizCatalog(dashboard) {
       const questions = buildQuizQuestionsFromLesson(lesson);
       const lessonTitle = cleanQuizTitle(lesson.title, 'Aralin');
       const quizId = `lesson-${lesson.id || lesson.title}-quiz`;
+      const quizActivity = asArray(lesson.activities).find(
+        (activity) =>
+          String(activity?.type || '').toLowerCase() === 'mcq'
+      );
+      const configuredMaxAttempts = Number(
+        quizActivity?.maxAttempts ??
+        quizActivity?.max_attempts ??
+        quizActivity?.dataJson?.maxAttempts ??
+        quizActivity?.dataJson?.max_attempts ??
+        quizActivity?.data_json?.maxAttempts ??
+        quizActivity?.data_json?.max_attempts ??
+        DEFAULT_MAX_QUIZ_ATTEMPTS
+      );
+      const maxAttempts = Number.isInteger(configuredMaxAttempts)
+        ? Math.min(10, Math.max(1, configuredMaxAttempts))
+        : DEFAULT_MAX_QUIZ_ATTEMPTS;
 
       return {
         id: quizId,
@@ -171,6 +187,7 @@ function quizCatalog(dashboard) {
         xpReward: Math.max(5, Math.round(Number(lesson.xpReward || 20) / 2)),
         type: lesson.completed ? 'Pagsusulit Pagkatapos ng Aralin' : 'Pagsasanay na Pagsusulit',
         unlocked: true,
+        maxAttempts,
         questions,
       };
     })
@@ -179,6 +196,18 @@ function quizCatalog(dashboard) {
 
 function getQuizAttempts(attempts = {}, quiz = {}) {
   return attempts[quiz.quizId] || attempts[quiz.id] || attempts[quiz.legacyQuizId] || [];
+}
+
+function getQuizAttemptLimit(quiz = {}) {
+  const value = Number(
+    quiz.maxAttempts ??
+    quiz.max_attempts ??
+    DEFAULT_MAX_QUIZ_ATTEMPTS
+  );
+
+  return Number.isInteger(value)
+    ? Math.min(10, Math.max(1, value))
+    : DEFAULT_MAX_QUIZ_ATTEMPTS;
 }
 
 function optionLetter(index) {
@@ -343,7 +372,8 @@ export default function QuizScreen({ navigation }) {
   0
  );
   const activeQuizAttempts = activeQuiz ? getQuizAttempts(attempts, activeQuiz) : [];
-  const canRetry = activeQuizAttempts.length < MAX_QUIZ_ATTEMPTS;
+  const activeQuizMaxAttempts = getQuizAttemptLimit(activeQuiz);
+  const canRetry = activeQuizAttempts.length < activeQuizMaxAttempts;
   const question = activeQuiz?.questions?.[questionIndex];
   const selectedOptionId = question ? answers[question.id] : null;
   const progressPercent = activeQuiz?.questions?.length
@@ -398,8 +428,11 @@ const closeQuizPreview = useCallback(() => {
   async function submitQuiz() {
     if (!activeQuiz || submitting) return;
 
-    if (activeQuizAttempts.length >= MAX_QUIZ_ATTEMPTS) {
-      Alert.alert('Pagsusulit', 'Naubos na ang 2 pagsubok para sa pagsusulit na ito.');
+    if (activeQuizAttempts.length >= activeQuizMaxAttempts) {
+      Alert.alert(
+        'Pagsusulit',
+        `${activeQuizMaxAttempts} pagsubok lamang ang pinapayagan para sa pagsusulit na ito.`
+      );
       return;
     }
 
@@ -541,7 +574,7 @@ const closeQuizPreview = useCallback(() => {
             <Text style={styles.activeTitle}>{specificQuizCardTitle(activeQuiz)}</Text>
             <Text style={styles.activeSubtitle}>{activeQuiz.lessonTitle}</Text>
           <Text style={styles.attemptPill}>
-            Bilang ng Subok: {Math.min(activeQuizAttempts.length, MAX_QUIZ_ATTEMPTS)}/{MAX_QUIZ_ATTEMPTS}
+            Bilang ng Subok: {Math.min(activeQuizAttempts.length, activeQuizMaxAttempts)}/{activeQuizMaxAttempts}
           </Text>
           </View>
 
@@ -561,7 +594,7 @@ const closeQuizPreview = useCallback(() => {
 
                 <View style={styles.previewStat}>
                   <Text style={styles.previewStatValue}>
-                    {activeQuizAttempts.length}/{MAX_QUIZ_ATTEMPTS}
+                    {activeQuizAttempts.length}/{activeQuizMaxAttempts}
                   </Text>
                   <Text style={styles.previewStatLabel}>Pagsubok</Text>
                 </View>
@@ -786,8 +819,8 @@ const closeQuizPreview = useCallback(() => {
           </View>
 
           <View style={styles.summaryChip}>
-            <Text style={styles.summaryValue}>{MAX_QUIZ_ATTEMPTS}</Text>
-            <Text style={styles.summaryLabel}>Pagsubok</Text>
+            <Text style={styles.summaryValue}>Variable</Text>
+            <Text style={styles.summaryLabel}>Attempt Limit</Text>
           </View>
         </View>
 
@@ -801,7 +834,8 @@ const closeQuizPreview = useCallback(() => {
           <View style={styles.quizList}>
             {quizzes.map((quiz, index) => {
               const quizAttempts = getQuizAttempts(attempts, quiz);
-              const limitReached = quizAttempts.length >= MAX_QUIZ_ATTEMPTS;
+              const quizMaxAttempts = getQuizAttemptLimit(quiz);
+              const limitReached = quizAttempts.length >= quizMaxAttempts;
               const best = quizAttempts.reduce(
                 (value, attempt) => Math.max(value, attempt.percent || 0),
                 0
@@ -827,7 +861,7 @@ const closeQuizPreview = useCallback(() => {
                     </Text>
 
                     <Text style={styles.quizInfoPill}>
-                      Bilang ng Subok: {quizAttempts.length}/{MAX_QUIZ_ATTEMPTS}
+                      Bilang ng Subok: {quizAttempts.length}/{quizMaxAttempts}
                     </Text>
                   </View>
 
@@ -848,7 +882,9 @@ const closeQuizPreview = useCallback(() => {
                     activeOpacity={0.85}
                   >
                     <Text style={styles.primaryButtonText}>
-                      {limitReached ? 'Naubos na ang 2 Pagsubok' : 'Simulan ang Pagsusulit'}
+                      {limitReached
+                        ? `Naubos na ang ${quizMaxAttempts} Pagsubok`
+                        : 'Simulan ang Pagsusulit'}
                     </Text>
                   </TouchableOpacity>
                 </Card>

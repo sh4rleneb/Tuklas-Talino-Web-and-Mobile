@@ -25,7 +25,112 @@ import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
 import { assertSafeContentPayload, assertSafeText } from '../validators/contentSafety.js';
-const MAX_QUIZ_ATTEMPTS = 2;
+const DEFAULT_MAX_QUIZ_ATTEMPTS = 2;
+const MIN_QUIZ_ATTEMPTS = 1;
+const MAX_CONFIGURABLE_QUIZ_ATTEMPTS = 10;
+
+function normalizeQuizAttemptLimit(value, fallback = DEFAULT_MAX_QUIZ_ATTEMPTS) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(
+    MAX_CONFIGURABLE_QUIZ_ATTEMPTS,
+    Math.max(MIN_QUIZ_ATTEMPTS, parsed)
+  );
+}
+
+function activityAttemptLimit(activity) {
+  const row = activity?.toJSON ? activity.toJSON() : (activity || {});
+  const data = row.dataJson || row.data_json || {};
+
+  return normalizeQuizAttemptLimit(
+    row.maxAttempts ??
+    row.max_attempts ??
+    data.maxAttempts ??
+    data.max_attempts
+  );
+}
+
+function mergeRawActivitySettings(validatedActivities = [], rawActivities = []) {
+  return validatedActivities.map((activity, index) => {
+    const raw = rawActivities[index] || {};
+
+    return {
+      ...activity,
+      id: activity.id ?? raw.id,
+      maxAttempts:
+        activity.maxAttempts ??
+        raw.maxAttempts ??
+        raw.max_attempts,
+      deadline:
+        activity.deadline ??
+        raw.deadline ??
+        raw.dueAt ??
+        raw.due_at ??
+        null,
+      dueAt:
+        activity.dueAt ??
+        raw.dueAt ??
+        raw.deadline ??
+        raw.due_at ??
+        null,
+    };
+  });
+}
+
+async function updateActivityAttemptSettings(lessonId, activities = []) {
+  const existing = await LessonActivity.findAll({
+    where: { lessonId },
+    order: [['sortOrder', 'ASC'], ['id', 'ASC']],
+  });
+
+  for (let index = 0; index < activities.length; index += 1) {
+    const incoming = activities[index] || {};
+
+    let target = null;
+
+    if (incoming.id) {
+      target = existing.find(
+        (activity) => Number(activity.id) === Number(incoming.id)
+      );
+    }
+
+    if (!target) {
+      target = existing.find(
+        (activity) =>
+          String(activity.type) === String(incoming.type) &&
+          Number(activity.sortOrder) === index + 1
+      );
+    }
+
+    if (!target && incoming.type === 'mcq') {
+      target = existing.find(
+        (activity) => String(activity.type) === 'mcq'
+      );
+    }
+
+    if (!target) continue;
+
+    const currentData =
+      target.dataJson && typeof target.dataJson === 'object'
+        ? target.dataJson
+        : {};
+
+    target.dataJson = {
+      ...currentData,
+      maxAttempts: normalizeQuizAttemptLimit(incoming.maxAttempts),
+      ...(incoming.deadline || incoming.dueAt
+        ? { deadline: incoming.deadline || incoming.dueAt }
+        : {}),
+    };
+
+    target.changed('dataJson', true);
+    await target.save();
+  }
+}
 
 const router = Router();
 
@@ -248,10 +353,24 @@ async function lessonTotalSteps(lessonId) {
 }
 
 function buildActivityData(activity) {
+  const existingData =
+    activity.dataJson && typeof activity.dataJson === 'object'
+      ? activity.dataJson
+      : {};
+
+  const settings = {
+    ...existingData,
+    maxAttempts: normalizeQuizAttemptLimit(activity.maxAttempts),
+    ...(activity.deadline || activity.dueAt
+      ? { deadline: activity.deadline || activity.dueAt }
+      : {}),
+  };
+
   if (activity.type === 'material') {
     return {
+      ...settings,
       fileName: activity.fileName || '',
-      fileUrl: activity.fileUrl || '',
+      fileUrl: activity.fileUrl || activity.url || '',
       fileType: activity.fileType || '',
       mimeType: activity.mimeType || '',
       size: activity.size || null
@@ -259,18 +378,18 @@ function buildActivityData(activity) {
   }
 
   if (activity.type === 'matching') {
-    return { pairs: activity.pairs || [] };
+    return { ...settings, pairs: activity.pairs || [] };
   }
 
   if (activity.type === 'vocabulary') {
-    return { words: activity.words || [] };
+    return { ...settings, words: activity.words || [] };
   }
 
   if (activity.type === 'infographic') {
-    return { content: activity.content || '' };
+    return { ...settings, content: activity.content || '' };
   }
 
-  return activity.dataJson || null;
+  return settings;
 }
 
 async function createActivities(lesson, activities = []) {
@@ -723,7 +842,14 @@ router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
     const body = validate(lessonSchema, req.body);
     assertSafeContentPayload(body, 'lesson content');
-    const { activities = [], ...lessonPayload } = body;
+    const {
+      activities: validatedActivities = [],
+      ...lessonPayload
+    } = body;
+    const activities = mergeRawActivitySettings(
+      validatedActivities,
+      Array.isArray(req.body.activities) ? req.body.activities : []
+    );
 
     if (req.role === 'teacher') {
       const assignments = await TeacherAssignment.findAll({
@@ -799,9 +925,21 @@ router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => 
     }
 
     await lesson.save();
+
+    if (Array.isArray(req.body.activities)) {
+      await updateActivityAttemptSettings(
+        lesson.id,
+        req.body.activities
+      );
+    }
+
     await audit(req.user.id, 'lesson.update', 'lesson', lesson.id, req.body);
 
-    res.json({ lesson });
+    const full = await Lesson.findByPk(lesson.id, {
+      include: lessonIncludes,
+    });
+
+    res.json({ lesson: full });
   } catch (err) {
     next(err);
   }
@@ -1046,14 +1184,6 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       order: [['attemptNo', 'ASC'], ['id', 'ASC']],
     });
 
-    if (existingAttempts.length >= MAX_QUIZ_ATTEMPTS) {
-      return res.status(409).json({
-        message: `Maximum quiz attempts reached. Review your saved Try 1 and Try 2 answers instead.`,
-        maxAttempts: MAX_QUIZ_ATTEMPTS,
-        attemptsUsed: existingAttempts.length,
-        quizAttempts: existingAttempts.map(formatQuizAttempt),
-      });
-    }
 
     const review = Array.isArray(req.body.review) ? req.body.review : [];
 
@@ -1086,9 +1216,18 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
     }
 
     const lessonActivities = await LessonActivity.findAll({
-      where: { lessonId: lesson.id }
+      where: { lessonId: lesson.id },
+      order: [['sortOrder', 'ASC'], ['id', 'ASC']],
     });
-    const lessonActivityIds = lessonActivities.map((activity) => Number(activity.id));
+
+    const quizActivity = lessonActivities.find(
+      (activity) => String(activity.type) === 'mcq'
+    );
+
+    const maxAttempts = activityAttemptLimit(quizActivity);
+    const lessonActivityIds = lessonActivities.map(
+      (activity) => Number(activity.id)
+    );
 
     const expectedQuestions = lessonActivityIds.length
       ? await MCQQuestion.findAll({ where: { activityId: lessonActivityIds } })
@@ -1342,10 +1481,10 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       order: [['attemptNo', 'ASC']]
     });
 
-    if (existingQuizAttempts.length >= MAX_QUIZ_ATTEMPTS) {
+    if (existingQuizAttempts.length >= maxAttempts) {
       return res.status(409).json({
-        message: `You already used all ${MAX_QUIZ_ATTEMPTS} quiz attempts. Review your answers instead.`,
-        maxAttempts: MAX_QUIZ_ATTEMPTS,
+        message: `You already used all ${maxAttempts} quiz attempts. Review your answers instead.`,
+        maxAttempts,
         attemptsUsed: existingQuizAttempts.length,
         quizAttempts: existingQuizAttempts.map(formatQuizAttempt)
       });
@@ -1359,7 +1498,7 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       score,
       total,
       percent,
-      attemptNo: existingAttempts.length + 1,
+      attemptNo: existingQuizAttempts.length + 1,
       xpAwarded,
       xpPossible,
       masteryLabel,
@@ -1369,7 +1508,7 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
     await awardThresholdBadges(xpResult || req.student);
     const newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
 
-    const allAttempts = [...existingAttempts, attempt].map(formatQuizAttempt);
+    const allAttempts = [...existingQuizAttempts, attempt].map(formatQuizAttempt);
 
     await audit(req.user.id, 'quiz.result', 'lesson', lesson.id, {
       score,
@@ -1398,6 +1537,7 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
         savedAnswers,
       },
       quizAttempts: allAttempts,
+      maxAttempts,
       newBadges,
     });
   } catch (err) {

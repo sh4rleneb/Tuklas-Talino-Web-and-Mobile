@@ -1328,7 +1328,18 @@ async function handleLogout() {
       instructions: type === 'speech' ? '' : activity.instructions || current.instructions || '',
       deadline: deadlineState.deadline,
       hasDeadline: deadlineState.hasDeadline,
-      maxAttempts: String(activity.maxAttempts ?? activity.max_attempts ?? activity.attemptLimit ?? activity.attemptsAllowed ?? current.maxAttempts ?? '2'),
+      maxAttempts: String(
+        activity.maxAttempts ??
+        activity.max_attempts ??
+        activity.attemptLimit ??
+        activity.attemptsAllowed ??
+        activity.dataJson?.maxAttempts ??
+        activity.dataJson?.max_attempts ??
+        activity.data_json?.maxAttempts ??
+        activity.data_json?.max_attempts ??
+        current.maxAttempts ??
+        '2'
+      ),
     };
 
     if (type === 'mcq') {
