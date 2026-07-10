@@ -1534,10 +1534,54 @@ async function handleLogout() {
       if (editingActivityIndex >= 0 && editingActivityIndex < currentActivities.length) {
         const nextActivities = [...currentActivities];
 
-        nextActivities[editingActivityIndex] = {
-          ...nextActivities[editingActivityIndex],
+        const existingActivity =
+          nextActivities[editingActivityIndex] || {};
+
+        let updatedActivity = {
+          ...existingActivity,
           ...activity,
         };
+
+        if (
+          type === 'mcq' &&
+          Array.isArray(existingActivity.questions) &&
+          existingActivity.questions.length &&
+          Array.isArray(activity.questions) &&
+          activity.questions.length
+        ) {
+          const existingQuestions = existingActivity.questions;
+          const existingFirstQuestion = existingQuestions[0] || {};
+          const updatedFirstQuestion = activity.questions[0] || {};
+          const existingOptions = Array.isArray(existingFirstQuestion.options)
+            ? existingFirstQuestion.options
+            : [];
+          const updatedOptions = Array.isArray(updatedFirstQuestion.options)
+            ? updatedFirstQuestion.options
+            : [];
+
+          updatedActivity = {
+            ...updatedActivity,
+            questions: [
+              {
+                ...existingFirstQuestion,
+                ...updatedFirstQuestion,
+                id:
+                  existingFirstQuestion.id ??
+                  updatedFirstQuestion.id,
+                options: updatedOptions.map((option, optionIndex) => ({
+                  ...(existingOptions[optionIndex] || {}),
+                  ...option,
+                  id:
+                    existingOptions[optionIndex]?.id ??
+                    option.id,
+                })),
+              },
+              ...existingQuestions.slice(1),
+            ],
+          };
+        }
+
+        nextActivities[editingActivityIndex] = updatedActivity;
 
         return {
           ...current,

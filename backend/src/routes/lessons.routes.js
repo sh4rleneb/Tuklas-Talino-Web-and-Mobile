@@ -21,6 +21,7 @@ import {
   awardThresholdBadges
 } from '../services/progress.service.js';
 import { lessonSchema, validate } from '../validators/common.js';
+import { sequelize } from '../config/database.js';
 import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
@@ -392,58 +393,484 @@ function buildActivityData(activity) {
   return settings;
 }
 
-async function createActivities(lesson, activities = []) {
-  for (let i = 0; i < activities.length; i++) {
-    const activity = activities[i];
+async function createActivityTree(
+  lesson,
+  activity,
+  sortOrder,
+  transaction = null
+) {
+  const created = await LessonActivity.create({
+    lessonId: lesson.id,
+    type: activity.type,
+    title: activity.title || activity.type,
+    instructions: activity.instructions || null,
+    dataJson: buildActivityData(activity),
+    sortOrder,
+  }, { transaction });
 
-    const created = await LessonActivity.create({
-      lessonId: lesson.id,
-      type: activity.type,
-      title: activity.title || activity.type,
-      instructions: activity.instructions || null,
-      dataJson: buildActivityData(activity),
-      sortOrder: i + 1,
-    });
+  if (activity.type === 'mcq') {
+    const questions = Array.isArray(activity.questions)
+      ? activity.questions
+      : [];
 
-    if (activity.type === 'mcq') {
-      const questions = activity.questions || [];
+    for (let questionIndex = 0; questionIndex < questions.length; questionIndex += 1) {
+      const incomingQuestion = questions[questionIndex];
 
-      for (let qIndex = 0; qIndex < questions.length; qIndex++) {
-        const q = questions[qIndex];
+      const question = await MCQQuestion.create({
+        activityId: created.id,
+        question: incomingQuestion.question,
+        sortOrder: questionIndex + 1,
+      }, { transaction });
 
-        const question = await MCQQuestion.create({
-          activityId: created.id,
-          question: q.question,
-          sortOrder: qIndex + 1,
+      const options = Array.isArray(incomingQuestion.options)
+        ? incomingQuestion.options
+        : [];
+
+      for (let optionIndex = 0; optionIndex < options.length; optionIndex += 1) {
+        const incomingOption = options[optionIndex];
+
+        await MCQOption.create({
+          questionId: question.id,
+          optionText:
+            incomingOption.text ??
+            incomingOption.optionText ??
+            '',
+          isCorrect: Boolean(
+            incomingOption.isCorrect ??
+            incomingOption.correct
+          ),
+          sortOrder: optionIndex + 1,
+        }, { transaction });
+      }
+    }
+  }
+
+  if (activity.type === 'writing') {
+    await WritingTask.create({
+      activityId: created.id,
+      prompt:
+        activity.prompt ??
+        activity.writingTask?.prompt ??
+        'Sumulat ng iyong sagot.',
+      rubricJson:
+        activity.rubric ??
+        activity.rubricJson ??
+        activity.writingTask?.rubricJson ??
+        null,
+    }, { transaction });
+  }
+
+  if (activity.type === 'speech') {
+    await SpeechTask.create({
+      activityId: created.id,
+      promptJson:
+        activity.prompts ??
+        activity.promptJson ??
+        activity.speechTask?.promptJson ??
+        [],
+      targetText:
+        activity.targetText ??
+        activity.content ??
+        activity.speechTask?.targetText ??
+        lesson.speechTarget ??
+        '',
+    }, { transaction });
+  }
+
+  return created;
+}
+
+async function createActivities(
+  lesson,
+  activities = [],
+  transaction = null
+) {
+  for (let index = 0; index < activities.length; index += 1) {
+    await createActivityTree(
+      lesson,
+      activities[index],
+      index + 1,
+      transaction
+    );
+  }
+}
+
+function lessonUpdateConflict(message) {
+  const error = new Error(message);
+  error.statusCode = 409;
+  return error;
+}
+
+function numericId(value) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0
+    ? parsed
+    : null;
+}
+
+function activityQuestionRows(activity = {}) {
+  return Array.isArray(activity.questions)
+    ? activity.questions
+    : [];
+}
+
+function questionOptionRows(question = {}) {
+  return Array.isArray(question.options)
+    ? question.options
+    : [];
+}
+
+async function syncMcqQuestions(
+  activity,
+  incomingActivity,
+  transaction
+) {
+  const existingQuestions = await MCQQuestion.findAll({
+    where: { activityId: activity.id },
+    include: [{ model: MCQOption, as: 'options' }],
+    order: [
+      ['sortOrder', 'ASC'],
+      ['id', 'ASC'],
+      [{ model: MCQOption, as: 'options' }, 'sortOrder', 'ASC'],
+      [{ model: MCQOption, as: 'options' }, 'id', 'ASC'],
+    ],
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  const questionById = new Map(
+    existingQuestions.map((question) => [
+      Number(question.id),
+      question,
+    ])
+  );
+
+  const incomingQuestions = activityQuestionRows(incomingActivity);
+
+  for (
+    let questionIndex = 0;
+    questionIndex < incomingQuestions.length;
+    questionIndex += 1
+  ) {
+    const incomingQuestion = incomingQuestions[questionIndex];
+    const incomingQuestionId = numericId(incomingQuestion.id);
+
+    let question = incomingQuestionId
+      ? questionById.get(incomingQuestionId)
+      : existingQuestions[questionIndex];
+
+    if (incomingQuestionId && !question) {
+      throw lessonUpdateConflict(
+        `Quiz question ${incomingQuestionId} does not belong to this activity.`
+      );
+    }
+
+    if (!question) {
+      question = await MCQQuestion.create({
+        activityId: activity.id,
+        question:
+          incomingQuestion.question ??
+          incomingQuestion.prompt ??
+          '',
+        sortOrder: questionIndex + 1,
+      }, { transaction });
+    } else {
+      question.question =
+        incomingQuestion.question ??
+        incomingQuestion.prompt ??
+        question.question;
+
+      question.sortOrder = questionIndex + 1;
+      await question.save({ transaction });
+    }
+
+    const existingOptions = Array.isArray(question.options)
+      ? question.options
+      : await MCQOption.findAll({
+          where: { questionId: question.id },
+          order: [
+            ['sortOrder', 'ASC'],
+            ['id', 'ASC'],
+          ],
+          transaction,
+          lock: transaction.LOCK.UPDATE,
         });
 
-        for (let oIndex = 0; oIndex < (q.options || []).length; oIndex++) {
-          await MCQOption.create({
-            questionId: question.id,
-            optionText: q.options[oIndex].text,
-            isCorrect: Boolean(q.options[oIndex].isCorrect),
-            sortOrder: oIndex + 1,
-          });
-        }
+    const optionById = new Map(
+      existingOptions.map((option) => [
+        Number(option.id),
+        option,
+      ])
+    );
+
+    const incomingOptions = questionOptionRows(incomingQuestion);
+
+    for (
+      let optionIndex = 0;
+      optionIndex < incomingOptions.length;
+      optionIndex += 1
+    ) {
+      const incomingOption = incomingOptions[optionIndex];
+      const incomingOptionId = numericId(incomingOption.id);
+
+      let option = incomingOptionId
+        ? optionById.get(incomingOptionId)
+        : existingOptions[optionIndex];
+
+      if (incomingOptionId && !option) {
+        throw lessonUpdateConflict(
+          `Quiz option ${incomingOptionId} does not belong to question ${question.id}.`
+        );
       }
+
+      const optionText =
+        incomingOption.text ??
+        incomingOption.optionText ??
+        incomingOption.label ??
+        '';
+
+      const isCorrect = Boolean(
+        incomingOption.isCorrect ??
+        incomingOption.correct
+      );
+
+      if (!option) {
+        await MCQOption.create({
+          questionId: question.id,
+          optionText,
+          isCorrect,
+          sortOrder: optionIndex + 1,
+        }, { transaction });
+      } else {
+        option.optionText = optionText || option.optionText;
+        option.isCorrect = isCorrect;
+        option.sortOrder = optionIndex + 1;
+        await option.save({ transaction });
+      }
+    }
+  }
+
+  // Omitted questions and options are intentionally preserved.
+  // The mobile editor currently exposes only the first MCQ question.
+}
+
+async function syncWritingTask(
+  activity,
+  incomingActivity,
+  transaction
+) {
+  const existingTask = await WritingTask.findOne({
+    where: { activityId: activity.id },
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  const requestedTaskId = numericId(
+    incomingActivity.writingTask?.id ??
+    incomingActivity.taskId
+  );
+
+  if (
+    requestedTaskId &&
+    (!existingTask || Number(existingTask.id) !== requestedTaskId)
+  ) {
+    throw lessonUpdateConflict(
+      `Writing task ${requestedTaskId} does not belong to this activity.`
+    );
+  }
+
+  const prompt =
+    incomingActivity.prompt ??
+    incomingActivity.content ??
+    incomingActivity.writingTask?.prompt ??
+    'Sumulat ng iyong sagot.';
+
+  const rubricJson =
+    incomingActivity.rubric ??
+    incomingActivity.rubricJson ??
+    incomingActivity.writingTask?.rubricJson ??
+    existingTask?.rubricJson ??
+    null;
+
+  if (existingTask) {
+    existingTask.prompt = prompt;
+    existingTask.rubricJson = rubricJson;
+    existingTask.changed('rubricJson', true);
+    await existingTask.save({ transaction });
+    return;
+  }
+
+  await WritingTask.create({
+    activityId: activity.id,
+    prompt,
+    rubricJson,
+  }, { transaction });
+}
+
+async function syncSpeechTask(
+  lesson,
+  activity,
+  incomingActivity,
+  transaction
+) {
+  const existingTask = await SpeechTask.findOne({
+    where: { activityId: activity.id },
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  const requestedTaskId = numericId(
+    incomingActivity.speechTask?.id ??
+    incomingActivity.taskId
+  );
+
+  if (
+    requestedTaskId &&
+    (!existingTask || Number(existingTask.id) !== requestedTaskId)
+  ) {
+    throw lessonUpdateConflict(
+      `Speech task ${requestedTaskId} does not belong to this activity.`
+    );
+  }
+
+  const promptJson =
+    incomingActivity.prompts ??
+    incomingActivity.promptJson ??
+    incomingActivity.speechTask?.promptJson ??
+    existingTask?.promptJson ??
+    [];
+
+  const targetText =
+    incomingActivity.targetText ??
+    incomingActivity.content ??
+    incomingActivity.speechTask?.targetText ??
+    lesson.speechTarget ??
+    existingTask?.targetText ??
+    '';
+
+  if (existingTask) {
+    existingTask.promptJson = promptJson;
+    existingTask.targetText = targetText;
+    existingTask.changed('promptJson', true);
+    await existingTask.save({ transaction });
+    return;
+  }
+
+  await SpeechTask.create({
+    activityId: activity.id,
+    promptJson,
+    targetText,
+  }, { transaction });
+}
+
+async function syncLessonActivities(
+  lesson,
+  incomingActivities = [],
+  transaction
+) {
+  const existingActivities = await LessonActivity.findAll({
+    where: { lessonId: lesson.id },
+    order: [
+      ['sortOrder', 'ASC'],
+      ['id', 'ASC'],
+    ],
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+  const activityById = new Map(
+    existingActivities.map((activity) => [
+      Number(activity.id),
+      activity,
+    ])
+  );
+
+  for (
+    let activityIndex = 0;
+    activityIndex < incomingActivities.length;
+    activityIndex += 1
+  ) {
+    const incomingActivity = incomingActivities[activityIndex];
+    const incomingActivityId = numericId(incomingActivity.id);
+
+    let activity = incomingActivityId
+      ? activityById.get(incomingActivityId)
+      : null;
+
+    if (incomingActivityId && !activity) {
+      throw lessonUpdateConflict(
+        `Activity ${incomingActivityId} does not belong to this lesson.`
+      );
+    }
+
+    if (!activity) {
+      await createActivityTree(
+        lesson,
+        incomingActivity,
+        activityIndex + 1,
+        transaction
+      );
+      continue;
+    }
+
+    if (
+      String(activity.type) !==
+      String(incomingActivity.type)
+    ) {
+      throw lessonUpdateConflict(
+        `Activity ${activity.id} cannot be changed from ${activity.type} to ${incomingActivity.type}. Create a new activity instead.`
+      );
+    }
+
+    activity.title =
+      incomingActivity.title ??
+      activity.title;
+
+    activity.instructions =
+      incomingActivity.instructions ??
+      null;
+
+    activity.dataJson = buildActivityData({
+      ...incomingActivity,
+      dataJson:
+        activity.dataJson &&
+        typeof activity.dataJson === 'object'
+          ? activity.dataJson
+          : {},
+    });
+
+    activity.sortOrder = activityIndex + 1;
+    activity.changed('dataJson', true);
+    await activity.save({ transaction });
+
+    if (activity.type === 'mcq') {
+      await syncMcqQuestions(
+        activity,
+        incomingActivity,
+        transaction
+      );
     }
 
     if (activity.type === 'writing') {
-      await WritingTask.create({
-        activityId: created.id,
-        prompt: activity.prompt || 'Sumulat ng iyong sagot.',
-        rubricJson: activity.rubric || null,
-      });
+      await syncWritingTask(
+        activity,
+        incomingActivity,
+        transaction
+      );
     }
 
     if (activity.type === 'speech') {
-      await SpeechTask.create({
-        activityId: created.id,
-        promptJson: activity.prompts || [],
-        targetText: activity.targetText || lesson.speechTarget || '',
-      });
+      await syncSpeechTask(
+        lesson,
+        activity,
+        incomingActivity,
+        transaction
+      );
     }
   }
+
+  // Existing activities omitted from the request are intentionally
+  // retained because they may have learner progress or submissions.
 }
 
 function notifyTeacherAndLeaderboard(payload) {
@@ -888,19 +1315,29 @@ router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
 });
 
 router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+
   try {
     assertSafeContentPayload(req.body, 'lesson update');
-    const lesson = await Lesson.findByPk(req.params.id);
+
+    const lesson = await Lesson.findByPk(req.params.id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
 
     if (!lesson) {
-      return res.status(404).json({ message: 'Lesson not found.' });
+      await transaction.rollback();
+      return res.status(404).json({
+        message: 'Lesson not found.',
+      });
     }
 
     if (
       req.role === 'teacher' &&
       lesson.createdByUserId &&
-      lesson.createdByUserId !== req.user.id
+      Number(lesson.createdByUserId) !== Number(req.user.id)
     ) {
+      await transaction.rollback();
       return res.status(403).json({
         message: 'Teachers can edit only their created lessons.',
       });
@@ -924,16 +1361,25 @@ router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => 
       }
     }
 
-    await lesson.save();
+    await lesson.save({ transaction });
 
     if (Array.isArray(req.body.activities)) {
-      await updateActivityAttemptSettings(
-        lesson.id,
-        req.body.activities
+      await syncLessonActivities(
+        lesson,
+        req.body.activities,
+        transaction
       );
     }
 
-    await audit(req.user.id, 'lesson.update', 'lesson', lesson.id, req.body);
+    await transaction.commit();
+
+    await audit(
+      req.user.id,
+      'lesson.update',
+      'lesson',
+      lesson.id,
+      req.body
+    );
 
     const full = await Lesson.findByPk(lesson.id, {
       include: lessonIncludes,
@@ -941,6 +1387,10 @@ router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => 
 
     res.json({ lesson: full });
   } catch (err) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+
     next(err);
   }
 });
