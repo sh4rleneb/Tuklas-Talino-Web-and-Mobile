@@ -42,7 +42,7 @@ export default function XPHistoryScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Bumalik sa Profile</Text>
+          <Text style={styles.backText}>← Bumalik sa Aking Impormasyon</Text>
         </TouchableOpacity>
 
         <View style={styles.headerCard}>

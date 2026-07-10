@@ -30,7 +30,7 @@ function normalizeMissionCatalog(rows = []) {
       mission.title ||
       mission.name ||
       mission.label ||
-      `Mission ${index + 1}`;
+      `Misyon ${index + 1}`;
 
     const slug = String(
       mission.id ||
@@ -310,7 +310,7 @@ export default function MissionScreen({ navigation }) {
       setStudent(dashboard.student || null);
     } catch (err) {
       setMissions(buildMergedMissions([]));
-      setError(err.message || 'Unable to load missions.');
+      setError('Hindi makuha ang mga misyon. Pakisubukan muli.');
     } finally {
       setLoading(false);
     }
@@ -529,7 +529,7 @@ export default function MissionScreen({ navigation }) {
 
             <View style={styles.heroBadge}>
               <Text style={styles.heroBadgeIcon}>🚀</Text>
-              <Text style={styles.heroBadgeText}>G{gradeLevel}</Text>
+              <Text style={styles.heroBadgeText}>Baitang {gradeLevel}</Text>
             </View>
           </View>
 
@@ -560,8 +560,8 @@ export default function MissionScreen({ navigation }) {
 
         {!!error && !loading ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorTitle}>Hindi ma-load ang missions</Text>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorTitle}>Hindi makuha ang mga misyon</Text>
+            <Text style={styles.errorText}>Pakisubukan muli.</Text>
             <TouchableOpacity style={styles.retryButton} onPress={load}>
               <Text style={styles.retryButtonText}>Subukan Muli</Text>
             </TouchableOpacity>

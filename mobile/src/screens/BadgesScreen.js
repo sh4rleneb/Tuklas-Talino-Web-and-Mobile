@@ -127,7 +127,7 @@ export default function BadgesScreen({ navigation }) {
       })
       .catch((err) => {
         if (!active) return;
-        setError(err.message || 'Unable to load badges.');
+        setError('Hindi makuha ang mga gantimpala. Pakisubukan muli.');
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -182,9 +182,9 @@ export default function BadgesScreen({ navigation }) {
 
       <View style={styles.header}>
         <View style={styles.heroCard}>
-          <Text style={styles.title}>🏅 Badges</Text>
+          <Text style={styles.title}>🏅 Mga Gantimpala</Text>
           <Text style={styles.subtitle}>
-            Your learning milestones and progress.
+            Ang iyong mga tagumpay at pag-unlad sa pag-aaral.
           </Text>
 
           <View style={styles.statsRow}>
@@ -205,16 +205,16 @@ export default function BadgesScreen({ navigation }) {
           </View>
 
         </View>
-        
+
       </View>
 
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.green} />
-          <Text style={styles.muted}>Naglo-load ng mga badge...</Text>
+          <Text style={styles.muted}>Inihahanda ang mga gantimpala...</Text>
         </View>
       ) : error ? (
-        <Text style={styles.error}>{error}</Text>
+        <Text style={styles.error}>Hindi makuha ang mga gantimpala. Pakisubukan muli.</Text>
       ) : (
         <View style={styles.grid}>
           {allBadges.map(b => {
