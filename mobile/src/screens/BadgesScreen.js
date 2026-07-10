@@ -238,7 +238,7 @@ export default function BadgesScreen({ navigation }) {
       )}
 
       {!loading && !error && allBadges.length === 0 && (
-        <Text style={styles.muted}>Wala pang mga badge na available.</Text>
+        <Text style={styles.muted}>Wala pang magagamit na gantimpala.</Text>
       )}
           </ScrollView>
     </SafeAreaView>
