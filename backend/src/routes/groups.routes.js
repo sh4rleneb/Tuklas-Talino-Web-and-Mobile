@@ -54,6 +54,31 @@ function teacherOwnsGroup(req, group) {
   return req.role !== 'teacher' || Number(group?.createdByTeacherId) === Number(req.teacher?.id);
 }
 
+function validGradeLevel(value) {
+  const gradeLevel = Number(value);
+  return [1, 2, 3, 4, 5, 6].includes(gradeLevel)
+    ? gradeLevel
+    : null;
+}
+
+function normalizedGroupSection(value = '') {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function existingGroupGradeLevel(groupId) {
+  const membership = await GroupMember.findOne({
+    where: { groupId },
+    include: [Student],
+    order: [['id', 'ASC']],
+  });
+
+  return validGradeLevel(
+    membership?.Student?.gradeLevel
+  );
+}
+
 function notifyTeacherAndLeaderboard(payload) {
   emitRealtime('teachers', 'student:activity', payload);
   emitRealtime('leaderboard', 'leaderboard:update', {});
@@ -129,9 +154,31 @@ router.post('/', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
     assertSafeText(req.body.name || '', 'group name');
     assertSafeText(req.body.description || '', 'group description');
+
+    const gradeLevel = validGradeLevel(req.body.gradeLevel);
+    const section = normalizedGroupSection(
+      req.body.section || req.body.description
+    );
+
+    if (!gradeLevel) {
+      return res.status(422).json({
+        message: 'Group grade level must be from Grade 1 to Grade 6.'
+      });
+    }
+
+    if (!section) {
+      return res.status(422).json({
+        message: 'Group section is required.'
+      });
+    }
+
+    assertSafeText(section, 'group section');
+
     const group = await Group.create({
       name: req.body.name,
-      description: req.body.description || '',
+      description: req.body.description || section,
+      gradeLevel,
+      section,
       createdByTeacherId: req.teacher?.id || null,
     });
 
@@ -166,6 +213,48 @@ router.patch('/:id', requireRole('teacher', 'admin'), async (req, res, next) => 
       if (req.body[key] !== undefined) {
         group[key] = req.body[key];
       }
+    }
+
+    if (req.body.gradeLevel !== undefined) {
+      const gradeLevel = validGradeLevel(req.body.gradeLevel);
+
+      if (!gradeLevel) {
+        return res.status(422).json({
+          message: 'Group grade level must be from Grade 1 to Grade 6.'
+        });
+      }
+
+      const members = await GroupMember.findAll({
+        where: { groupId: group.id },
+        include: [Student],
+      });
+
+      const mismatchedMember = members.find(
+        (member) =>
+          Number(member?.Student?.gradeLevel) !== gradeLevel
+      );
+
+      if (mismatchedMember) {
+        return res.status(422).json({
+          message:
+            'The group grade cannot be changed while it contains students from another grade.'
+        });
+      }
+
+      group.gradeLevel = gradeLevel;
+    }
+
+    if (req.body.section !== undefined) {
+      const section = normalizedGroupSection(req.body.section);
+
+      if (!section) {
+        return res.status(422).json({
+          message: 'Group section is required.'
+        });
+      }
+
+      assertSafeText(section, 'group section');
+      group.section = section;
     }
 
     await group.save();
@@ -224,6 +313,64 @@ router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, ne
       return res.status(403).json({ message: 'You can only manage your own groups.' });
     }
 
+    const studentId = Number(req.body.studentId);
+
+    if (!Number.isInteger(studentId) || studentId <= 0) {
+      return res.status(422).json({
+        message: 'A valid student is required.'
+      });
+    }
+
+    const student = await Student.findByPk(studentId);
+
+    if (!student) {
+      return res.status(404).json({
+        message: 'Student not found.'
+      });
+    }
+
+    if (
+      student.status &&
+      student.status !== 'active'
+    ) {
+      return res.status(422).json({
+        message: 'Only active students can be added to a group.'
+      });
+    }
+
+    const studentGrade = validGradeLevel(student.gradeLevel);
+
+    if (!studentGrade) {
+      return res.status(422).json({
+        message: 'The student does not have a valid grade level.'
+      });
+    }
+
+    let groupGrade =
+      validGradeLevel(group.gradeLevel) ||
+      await existingGroupGradeLevel(group.id);
+
+    if (!groupGrade) {
+      groupGrade = studentGrade;
+      group.gradeLevel = studentGrade;
+
+      if (!normalizedGroupSection(group.section)) {
+        group.section =
+          normalizedGroupSection(student.section) ||
+          normalizedGroupSection(group.description) ||
+          null;
+      }
+
+      await group.save();
+    }
+
+    if (studentGrade !== groupGrade) {
+      return res.status(422).json({
+        message:
+          `Only Grade ${groupGrade} students can be added to this group.`
+      });
+    }
+
     const existingMemberCount = await GroupMember.count({
       where: { groupId: req.params.id },
     });
@@ -231,10 +378,13 @@ router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, ne
     const [member, created] = await GroupMember.findOrCreate({
       where: {
         groupId: req.params.id,
-        studentId: req.body.studentId,
+        studentId,
       },
       defaults: {
-        groupRole: existingMemberCount === 0 ? 'leader' : 'member',
+        groupRole:
+          existingMemberCount === 0
+            ? 'leader'
+            : 'member',
       },
     });
 
@@ -244,13 +394,16 @@ router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, ne
     }
 
     await audit(req.user.id, 'group.add_member', 'group', Number(req.params.id), {
-      studentId: req.body.studentId,
+      studentId,
+      studentGrade,
+      groupGrade,
       groupRole: member.groupRole,
     });
 
     emitRealtime('teachers', 'group:member_added', {
       groupId: Number(req.params.id),
-      studentId: req.body.studentId,
+      studentId,
+      gradeLevel: studentGrade,
       message: 'A student was added to a group',
     });
 

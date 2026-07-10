@@ -289,6 +289,15 @@ export const SpeechAttempt = sequelize.define('SpeechAttempt', {
 export const Group = sequelize.define('Group', {
   name: { type: DataTypes.STRING(160), allowNull: false },
   description: { type: DataTypes.TEXT, allowNull: true },
+  gradeLevel: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'grade_level'
+  },
+  section: {
+    type: DataTypes.STRING(80),
+    allowNull: true
+  },
   createdByTeacherId: { type: DataTypes.INTEGER, allowNull: true },
   status: { type: DataTypes.ENUM('active', 'archived'), allowNull: false, defaultValue: 'active' }
 }, { tableName: 'groups' });
