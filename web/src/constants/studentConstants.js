@@ -90,16 +90,16 @@ export const MISSION_GAMES = [
   ];
 
 export const EARLY_GROUP_ROLES = [
-  { id: 'reader', icon: '📖', label: 'Reader', helper: 'Basahin ang salita o kuwento.' },
+  { id: 'reader', icon: '📖', label: 'Tagabasa', helper: 'Basahin ang salita o kuwento.' },
   { id: 'speaker', icon: '🎤', label: 'Tagapagsalita', helper: 'Bigkasin ang sagot nang malinaw.' },
-  { id: 'helper', icon: '⭐', label: 'Helper', helper: 'Tumulong sa kaklase.' },
-  { id: 'checker', icon: '✅', label: 'Checker', helper: 'Tingnan kung tapos na ang gawain.' }
+  { id: 'helper', icon: '⭐', label: 'Katulong', helper: 'Tumulong sa kaklase.' },
+  { id: 'checker', icon: '✅', label: 'Tagasuri', helper: 'Tingnan kung tapos na ang gawain.' }
 ];
 
 export const UPPER_GROUP_ROLES = [
-  { id: 'leader', icon: '👑', label: 'Leader', helper: 'Guide the group and keep everyone on task.' },
-  { id: 'reader', icon: '📖', label: 'Reader', helper: 'Read the passage or instructions.' },
-  { id: 'writer', icon: '✍️', label: 'Writer', helper: 'Ihanda ang sagot o buod ng grupo.' },
-  { id: 'reporter', icon: '🎙️', label: 'Reporter', helper: 'Present the group output.' },
-  { id: 'checker', icon: '✅', label: 'Checker', helper: 'Review the answer before submission.' }
+  { id: 'leader', icon: '👑', label: 'Lider', helper: 'Gabayan ang grupo at siguraduhing nakatuon ang lahat sa gawain.' },
+  { id: 'reader', icon: '📖', label: 'Tagabasa', helper: 'Basahin ang talata o mga panuto.' },
+  { id: 'writer', icon: '✍️', label: 'Manunulat', helper: 'Ihanda ang sagot o buod ng grupo.' },
+  { id: 'reporter', icon: '🎙️', label: 'Tagapag-ulat', helper: 'Iulat ang output ng grupo.' },
+  { id: 'checker', icon: '✅', label: 'Tagasuri', helper: 'Suriin ang sagot bago ipasa.' }
 ];

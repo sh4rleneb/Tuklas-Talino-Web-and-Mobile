@@ -81,10 +81,10 @@ export function asArray(value) {
 
 export function masteryFromPercent(percent = 0) {
   const value = Number(percent || 0);
-  if (value >= 90) return { label: 'Advanced', icon: '🏆', tone: 'green', note: 'Excellent mastery. Keep challenging yourself.' };
-  if (value >= 75) return { label: 'Proficient', icon: '🌟', tone: 'blue', note: 'Good understanding. A short review can make it stronger.' };
-  if (value >= 50) return { label: 'Developing', icon: '🌱', tone: 'yellow', note: 'You are getting there. Review the missed questions.' };
-  return { label: 'Needs Practice', icon: '🧭', tone: 'pink', note: 'Try again after reviewing the lesson.' };
+  if (value >= 90) return { label: 'Napakahusay', icon: '🏆', tone: 'green', note: 'Napakahusay ng iyong pagkaunawa. Ipagpatuloy ang pagsasanay.' };
+  if (value >= 75) return { label: 'Mahusay', icon: '🌟', tone: 'blue', note: 'Mahusay ang iyong pagkaunawa. Balikan pa nang kaunti ang aralin.' };
+  if (value >= 50) return { label: 'Umuunlad', icon: '🌱', tone: 'yellow', note: 'Umunlad ka na. Balikan ang mga tanong na hindi nasagutan nang tama.' };
+  return { label: 'Kailangan pang Magsanay', icon: '🧭', tone: 'pink', note: 'Subukan muli pagkatapos balikan ang aralin.' };
 }
 
 export function lessonXp(lesson) {
