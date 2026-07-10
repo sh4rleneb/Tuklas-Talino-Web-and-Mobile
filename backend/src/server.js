@@ -43,7 +43,9 @@ app.use(cors({
       return callback(null, true);
     }
 
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
+    const error = new Error('Origin is not allowed by CORS.');
+    error.statusCode = 403;
+    return callback(error);
   },
   credentials: true
 }));
