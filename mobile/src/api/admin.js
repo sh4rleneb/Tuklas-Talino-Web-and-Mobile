@@ -18,6 +18,13 @@ export async function getAdminAccounts() {
 
 export async function updateAccountStatus(userId, status, body = {}) { const payload = typeof body === 'string' ? { reason: body } : (body || {}); return api(`/admin/accounts/${userId}/status`, { method: 'PATCH', body: { status, ...payload }, }); }
 
+export async function removeAccountLockdown(userId, body = {}) {
+  return api(`/admin/accounts/${userId}/unlock`, {
+    method: 'PATCH',
+    body,
+  });
+}
+
 export async function getActiveStudents() {
   return api('/students?status=active');
 }

@@ -81,19 +81,39 @@ function activeLoginLockMessage(user, now = new Date()) {
   return `Account is locked. Please try again in about ${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'}.`;
 }
 
+function hasExpiredTemporaryLoginLock(user = {}, now = new Date()) {
+  if (!user?.lockedUntil || isPermanentLoginLock(user)) return false;
+
+  const lockedUntil = new Date(user.lockedUntil);
+  return Number.isFinite(lockedUntil.getTime()) && lockedUntil <= now;
+}
+
 function nextFailedLoginState(user, now = new Date()) {
-  const failedLoginAttempts = Number(user?.failedLoginAttempts || 0) + 1;
+  const cycleWasReset = hasExpiredTemporaryLoginLock(user, now);
+
+  const previousCycleAttempts = cycleWasReset
+    ? 0
+    : Number(user?.failedLoginAttempts || 0);
+
+  const failedLoginAttempts = previousCycleAttempts + 1;
+  const totalFailedLoginAttempts =
+    Number(user?.totalFailedLoginAttempts || 0) + 1;
 
   const state = {
     failedLoginAttempts,
-    failedLoginWindowStartedAt: user?.failedLoginWindowStartedAt || now,
+    totalFailedLoginAttempts,
+    failedLoginWindowStartedAt:
+      cycleWasReset || !user?.failedLoginWindowStartedAt
+        ? now
+        : user.failedLoginWindowStartedAt,
     lockedUntil: null,
     message: '',
   };
 
-  if (failedLoginAttempts >= PERMANENT_LOGIN_LOCK_ATTEMPT) {
+  if (totalFailedLoginAttempts >= PERMANENT_LOGIN_LOCK_ATTEMPT) {
     state.lockedUntil = PERMANENT_LOGIN_LOCK_UNTIL;
-    state.message = 'Account is permanently locked after repeated failed login attempts. Please contact an administrator for assistance.';
+    state.message =
+      'Account is permanently locked after 10 failed login attempts. Please contact an administrator for assistance.';
     return state;
   }
 
@@ -102,12 +122,22 @@ function nextFailedLoginState(user, now = new Date()) {
     const lockMinutes = Math.round(lockDurationMs / (60 * 1000));
 
     state.lockedUntil = new Date(now.getTime() + lockDurationMs);
-    state.message = `Too many failed login attempts. Account is locked for ${lockMinutes} minutes.`;
+    state.message =
+      `Too many failed login attempts. Account is locked for ${lockMinutes} minutes.`;
     return state;
   }
 
-  const attemptsBeforeLock = FIRST_TEMP_LOGIN_LOCK_ATTEMPT - failedLoginAttempts;
-  state.message = `Invalid password. ${attemptsBeforeLock} attempt${attemptsBeforeLock === 1 ? '' : 's'} left before temporary lockout.`;
+  const attemptsBeforeTemporaryLock =
+    FIRST_TEMP_LOGIN_LOCK_ATTEMPT - failedLoginAttempts;
+
+  const attemptsBeforePermanentLock =
+    PERMANENT_LOGIN_LOCK_ATTEMPT - totalFailedLoginAttempts;
+
+  state.message =
+    `Invalid password. ${attemptsBeforeTemporaryLock} ` +
+    `attempt${attemptsBeforeTemporaryLock === 1 ? '' : 's'} left before temporary lockout. ` +
+    `${attemptsBeforePermanentLock} ` +
+    `attempt${attemptsBeforePermanentLock === 1 ? '' : 's'} left before permanent lockdown.`;
 
   return state;
 }
@@ -116,6 +146,7 @@ async function recordFailedLogin(user, now = new Date()) {
   const state = nextFailedLoginState(user, now);
 
   user.failedLoginAttempts = state.failedLoginAttempts;
+  user.totalFailedLoginAttempts = state.totalFailedLoginAttempts;
   user.failedLoginWindowStartedAt = state.failedLoginWindowStartedAt;
   user.lockedUntil = state.lockedUntil;
 
@@ -129,6 +160,7 @@ async function recordFailedLogin(user, now = new Date()) {
 
 async function resetFailedLoginState(user) {
   user.failedLoginAttempts = 0;
+  user.totalFailedLoginAttempts = 0;
   user.failedLoginWindowStartedAt = null;
   user.lockedUntil = null;
 }

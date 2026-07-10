@@ -49,6 +49,7 @@ import {
   resetTeacherPassword,
   updateStudentEnrollment,
   updateAccountStatus,
+  removeAccountLockdown,
 } from '../../api/admin';
 import { logout, verifyPassword } from '../../api/auth';
 const NAV_ITEMS = [
@@ -540,6 +541,198 @@ async function executeVerifiedAction() {
       entity?.status ||
       'active'
     ).toLowerCase();
+  }
+
+  function loginSecurityForEntity(entity = {}) {
+    const user =
+      entity?.User ||
+      entity?.user ||
+      entity?.Account ||
+      entity?.account ||
+      entity ||
+      {};
+
+    const suppliedSecurity =
+      user?.loginSecurity ||
+      entity?.loginSecurity ||
+      {};
+
+    const lockedUntilValue =
+      suppliedSecurity.lockedUntil ||
+      user?.lockedUntil ||
+      user?.locked_until ||
+      null;
+
+    const lockedUntil = lockedUntilValue
+      ? new Date(lockedUntilValue)
+      : null;
+
+    const validLockedUntil =
+      lockedUntil && Number.isFinite(lockedUntil.getTime());
+
+    const permanent =
+      suppliedSecurity.status === 'permanent' ||
+      (
+        validLockedUntil &&
+        lockedUntil.getFullYear() >= 9999
+      );
+
+    const temporary =
+      suppliedSecurity.status === 'temporary' ||
+      (
+        validLockedUntil &&
+        !permanent &&
+        lockedUntil > new Date()
+      );
+
+    return {
+      status: permanent
+        ? 'permanent'
+        : temporary
+          ? 'temporary'
+          : 'unlocked',
+      failedLoginAttempts: Number(
+        suppliedSecurity.failedLoginAttempts ??
+        user?.failedLoginAttempts ??
+        user?.failed_login_attempts ??
+        0
+      ),
+      totalFailedLoginAttempts: Number(
+        suppliedSecurity.totalFailedLoginAttempts ??
+        user?.totalFailedLoginAttempts ??
+        user?.total_failed_login_attempts ??
+        0
+      ),
+      lockedUntil: validLockedUntil
+        ? lockedUntil
+        : null,
+      remainingLockMinutes: Number(
+        suppliedSecurity.remainingLockMinutes ||
+        (
+          temporary && validLockedUntil
+            ? Math.max(
+                1,
+                Math.ceil(
+                  (
+                    lockedUntil.getTime() -
+                    Date.now()
+                  ) /
+                  (60 * 1000)
+                )
+              )
+            : 0
+        )
+      ),
+    };
+  }
+
+  function handleRemoveAccountLockdown(entity, label) {
+    const userId = accountUserIdForEntity(entity);
+
+    if (!userId) {
+      Alert.alert(
+        'Missing Account Link',
+        'No user account is linked to this record.'
+      );
+      return;
+    }
+
+    requestProtectedAdminAction({
+      keyword: 'UNLOCK',
+      reasonPlaceholder:
+        `e.g. ${label} verified their identity and requested account access`,
+      action: (reason) =>
+        run(
+          `account-unlock-${userId}`,
+          () => removeAccountLockdown(userId, { reason }),
+          'Account lockdown removed.'
+        ),
+    });
+  }
+
+  function renderLoginSecurityControl(entity, label) {
+    const security = loginSecurityForEntity(entity);
+    const locked =
+      security.status === 'temporary' ||
+      security.status === 'permanent';
+
+    return (
+      <View style={{
+        marginTop: 10,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: locked ? '#f59e0b' : '#d1d5db',
+        backgroundColor: locked ? '#fffbeb' : '#f9fafb',
+      }}>
+        <Text style={{
+          fontSize: 12,
+          fontWeight: '800',
+          color: '#374151',
+          marginBottom: 5,
+        }}>
+          Login Security
+        </Text>
+
+        <Text style={{
+          fontSize: 13,
+          fontWeight: '900',
+          color:
+            security.status === 'permanent'
+              ? '#b91c1c'
+              : security.status === 'temporary'
+                ? '#b45309'
+                : '#047857',
+        }}>
+          {security.status === 'permanent'
+            ? 'Permanently Locked'
+            : security.status === 'temporary'
+              ? 'Temporarily Locked'
+              : 'Unlocked'}
+        </Text>
+
+        <Text style={{
+          marginTop: 5,
+          fontSize: 11,
+          color: '#6b7280',
+        }}>
+          Current cycle failures: {security.failedLoginAttempts}
+        </Text>
+
+        <Text style={{
+          marginTop: 2,
+          fontSize: 11,
+          color: '#6b7280',
+        }}>
+          Total failed logins: {security.totalFailedLoginAttempts}/10
+        </Text>
+
+        {security.status === 'temporary' ? (
+          <Text style={{
+            marginTop: 2,
+            fontSize: 11,
+            color: '#92400e',
+          }}>
+            Cooldown: approximately {security.remainingLockMinutes} minute
+            {security.remainingLockMinutes === 1 ? '' : 's'} remaining
+          </Text>
+        ) : null}
+
+        {locked ? (
+          <View style={{ marginTop: 9 }}>
+            <Button
+              tone="green"
+              disabled={Boolean(busy)}
+              onPress={() =>
+                handleRemoveAccountLockdown(entity, label)
+              }
+            >
+              Remove Lockdown
+            </Button>
+          </View>
+        ) : null}
+      </View>
+    );
   }
 
   function handleAccountStatusChange(entity, nextStatus, label) {
@@ -1152,6 +1345,7 @@ async function executeVerifiedAction() {
                 setVaultVisible(true);
               }}>Login Credentials</Button>
             {renderStatusControl(student, student.name || 'student account')}
+            {renderLoginSecurityControl(student, student.name || 'student account')}
             </View>
             <View style={styles.choiceRow}>
               {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
@@ -1243,6 +1437,7 @@ async function executeVerifiedAction() {
                   setVaultVisible(true);
                 }}>Login Credentials</Button>
             {renderStatusControl(teacher, teacher.name || 'teacher account')}
+            {renderLoginSecurityControl(teacher, teacher.name || 'teacher account')}
               </View>
             </View>
           );

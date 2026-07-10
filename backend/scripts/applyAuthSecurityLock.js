@@ -21,6 +21,12 @@ async function main() {
     defaultValue: 0,
   });
 
+  await ensureColumn(queryInterface, 'users', usersTable, 'total_failed_login_attempts', {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  });
+
   await ensureColumn(queryInterface, 'users', usersTable, 'failed_login_window_started_at', {
     type: DataTypes.DATE,
     allowNull: true,
@@ -31,7 +37,16 @@ async function main() {
     allowNull: true,
   });
 
-  await sequelize.query('UPDATE users SET failed_login_attempts = 0 WHERE failed_login_attempts IS NULL');
+  await sequelize.query(
+    'UPDATE users SET failed_login_attempts = 0 WHERE failed_login_attempts IS NULL'
+  );
+
+  await sequelize.query(
+    `UPDATE users
+     SET total_failed_login_attempts = failed_login_attempts
+     WHERE total_failed_login_attempts = 0
+       AND failed_login_attempts > 0`
+  );
 
   console.log('[OK] Auth security lock snake_case schema is ready.');
 }

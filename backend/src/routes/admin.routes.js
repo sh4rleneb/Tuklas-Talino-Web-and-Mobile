@@ -20,6 +20,62 @@ import { audit } from '../services/audit.service.js';
 
 const router = Router();
 
+function loginSecurityForUser(user = {}, now = new Date()) {
+  const lockedUntilValue = user?.lockedUntil || null;
+  const lockedUntil = lockedUntilValue
+    ? new Date(lockedUntilValue)
+    : null;
+
+  const validLockedUntil =
+    lockedUntil && Number.isFinite(lockedUntil.getTime());
+
+  const permanent =
+    validLockedUntil && lockedUntil.getFullYear() >= 9999;
+
+  const temporary =
+    validLockedUntil && !permanent && lockedUntil > now;
+
+  const remainingLockMinutes = temporary
+    ? Math.max(
+        1,
+        Math.ceil(
+          (lockedUntil.getTime() - now.getTime()) /
+          (60 * 1000)
+        )
+      )
+    : 0;
+
+  return {
+    status: permanent
+      ? 'permanent'
+      : temporary
+        ? 'temporary'
+        : 'unlocked',
+    failedLoginAttempts:
+      Number(user?.failedLoginAttempts || 0),
+    totalFailedLoginAttempts:
+      Number(user?.totalFailedLoginAttempts || 0),
+    failedLoginWindowStartedAt:
+      user?.failedLoginWindowStartedAt || null,
+    lockedUntil: validLockedUntil
+      ? lockedUntil.toISOString()
+      : null,
+    remainingLockMinutes,
+  };
+}
+
+function adminUserPayload(user = {}) {
+  const plain =
+    typeof user?.toJSON === 'function'
+      ? user.toJSON()
+      : { ...user };
+
+  return {
+    ...plain,
+    loginSecurity: loginSecurityForUser(plain),
+  };
+}
+
 router.use(authenticate, requireRole('admin'));
 router.use(requirePasswordChanged);
 
@@ -60,7 +116,48 @@ router.get('/accounts', async (req, res, next) => {
       order: [['createdAt', 'DESC']]
     });
 
-    res.json({ users });
+    res.json({
+      users: users.map(adminUserPayload)
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch('/accounts/:id/unlock', async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'Account not found.'
+      });
+    }
+
+    const previousSecurityState = loginSecurityForUser(user);
+
+    user.failedLoginAttempts = 0;
+    user.totalFailedLoginAttempts = 0;
+    user.failedLoginWindowStartedAt = null;
+    user.lockedUntil = null;
+
+    await user.save();
+
+    await audit(
+      req.user.id,
+      'account.login_lock.removed',
+      'user',
+      user.id,
+      {
+        reason: String(req.body.reason || '').trim() || null,
+        previousSecurityState
+      }
+    );
+
+    res.json({
+      message: 'Account lockdown removed.',
+      user: adminUserPayload(user)
+    });
   } catch (err) {
     next(err);
   }
@@ -154,8 +251,24 @@ router.get('/enrollments', async (req, res, next) => {
     }
 
     res.json({
-      students,
-      teachers,
+      students: students.map((student) => {
+        const plain = student.toJSON();
+        return {
+          ...plain,
+          User: plain.User
+            ? adminUserPayload(plain.User)
+            : plain.User
+        };
+      }),
+      teachers: teachers.map((teacher) => {
+        const plain = teacher.toJSON();
+        return {
+          ...plain,
+          User: plain.User
+            ? adminUserPayload(plain.User)
+            : plain.User
+        };
+      }),
       teacherAssignments,
       classOptions: Array.from(classMap.values())
     });
