@@ -106,6 +106,13 @@ export async function addGroupMember(groupId, studentId) {
   });
 }
 
+export async function addGroupMembers(groupId, studentIds = []) {
+  return api(`/groups/${groupId}/members/bulk`, {
+    method: 'POST',
+    body: { studentIds },
+  });
+}
+
 export async function setGroupLeader(groupId, studentId) {
   return api(`/groups/${groupId}/members/${studentId}/leader`, {
     method: 'POST',

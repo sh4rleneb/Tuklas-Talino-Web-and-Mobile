@@ -306,7 +306,16 @@ export const GroupMember = sequelize.define('GroupMember', {
   groupId: { type: DataTypes.INTEGER, allowNull: false },
   studentId: { type: DataTypes.INTEGER, allowNull: false },
   groupRole: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'member' }
-}, { tableName: 'group_members' });
+}, {
+  tableName: 'group_members',
+  indexes: [
+    {
+      unique: true,
+      fields: ['group_id', 'student_id'],
+      name: 'group_members_group_student_unique'
+    }
+  ]
+});
 
 export const GroupTask = sequelize.define('GroupTask', {
   groupId: { type: DataTypes.INTEGER, allowNull: false },

@@ -301,6 +301,328 @@ router.delete('/:id', requireRole('teacher', 'admin'), async (req, res, next) =>
   }
 });
 
+router.post('/:id/members/bulk', requireRole('teacher', 'admin'), async (req, res, next) => {
+  try {
+    const group = await Group.findByPk(req.params.id);
+
+    if (!group) {
+      return res.status(404).json({
+        message: 'Group not found.'
+      });
+    }
+
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({
+        message: 'You can only manage your own groups.'
+      });
+    }
+
+    const rawStudentIds = Array.isArray(req.body.studentIds)
+      ? req.body.studentIds
+      : [];
+
+    const studentIds = [
+      ...new Set(
+        rawStudentIds
+          .map((value) => Number(value))
+          .filter(
+            (value) =>
+              Number.isInteger(value) &&
+              value > 0
+          )
+      )
+    ];
+
+    if (!studentIds.length) {
+      return res.status(422).json({
+        message: 'Select at least one valid student.'
+      });
+    }
+
+    if (studentIds.length > 200) {
+      return res.status(422).json({
+        message: 'A maximum of 200 students can be added at one time.'
+      });
+    }
+
+    const transactionResult =
+      await GroupMember.sequelize.transaction(
+        async (transaction) => {
+          const lockedGroup = await Group.findByPk(
+            group.id,
+            {
+              transaction,
+              lock: transaction.LOCK.UPDATE
+            }
+          );
+
+          if (!lockedGroup) {
+            const error = new Error('Group not found.');
+            error.statusCode = 404;
+            throw error;
+          }
+
+          const students = await Student.findAll({
+            where: {
+              id: studentIds
+            },
+            transaction,
+            lock: transaction.LOCK.UPDATE
+          });
+
+          const studentsById = new Map(
+            students.map((student) => [
+              Number(student.id),
+              student
+            ])
+          );
+
+          const missingStudentIds = studentIds.filter(
+            (studentId) =>
+              !studentsById.has(studentId)
+          );
+
+          if (missingStudentIds.length) {
+            const error = new Error(
+              `Student record not found for ID${
+                missingStudentIds.length === 1 ? '' : 's'
+              }: ${missingStudentIds.join(', ')}.`
+            );
+            error.statusCode = 404;
+            throw error;
+          }
+
+          const inactiveStudents = students.filter(
+            (student) =>
+              student.status &&
+              student.status !== 'active'
+          );
+
+          if (inactiveStudents.length) {
+            const error = new Error(
+              'Only active students can be added to a group.'
+            );
+            error.statusCode = 422;
+            throw error;
+          }
+
+          const invalidGradeStudents = students.filter(
+            (student) =>
+              !validGradeLevel(student.gradeLevel)
+          );
+
+          if (invalidGradeStudents.length) {
+            const error = new Error(
+              'Every selected student must have a valid grade level.'
+            );
+            error.statusCode = 422;
+            throw error;
+          }
+
+          const existingMembers =
+            await GroupMember.findAll({
+              where: {
+                groupId: lockedGroup.id
+              },
+              transaction,
+              lock: transaction.LOCK.UPDATE
+            });
+
+          let groupGrade =
+            validGradeLevel(lockedGroup.gradeLevel) ||
+            await existingGroupGradeLevel(
+              lockedGroup.id
+            );
+
+          if (!groupGrade) {
+            groupGrade = validGradeLevel(
+              students[0].gradeLevel
+            );
+          }
+
+          const mismatchedStudents =
+            students.filter(
+              (student) =>
+                validGradeLevel(student.gradeLevel) !==
+                groupGrade
+            );
+
+          if (mismatchedStudents.length) {
+            const names = mismatchedStudents
+              .map(
+                (student) =>
+                  student.name ||
+                  `Student ${student.id}`
+              )
+              .join(', ');
+
+            const error = new Error(
+              `Only Grade ${groupGrade} students can be added to this group. Mismatched: ${names}.`
+            );
+            error.statusCode = 422;
+            throw error;
+          }
+
+          if (!validGradeLevel(lockedGroup.gradeLevel)) {
+            lockedGroup.gradeLevel = groupGrade;
+
+            if (
+              !normalizedGroupSection(
+                lockedGroup.section
+              )
+            ) {
+              lockedGroup.section =
+                normalizedGroupSection(
+                  students[0]?.section
+                ) ||
+                normalizedGroupSection(
+                  lockedGroup.description
+                ) ||
+                null;
+            }
+
+            await lockedGroup.save({
+              transaction
+            });
+          }
+
+          const selectedExistingMemberships =
+            await GroupMember.findAll({
+              where: {
+                groupId: lockedGroup.id,
+                studentId: studentIds
+              },
+              transaction,
+              lock: transaction.LOCK.UPDATE
+            });
+
+          const existingStudentIds = new Set(
+            selectedExistingMemberships.map(
+              (member) =>
+                Number(member.studentId)
+            )
+          );
+
+          const studentIdsToAdd =
+            studentIds.filter(
+              (studentId) =>
+                !existingStudentIds.has(studentId)
+            );
+
+          const addedMembers = [];
+          const groupWasEmpty =
+            existingMembers.length === 0;
+
+          for (
+            let index = 0;
+            index < studentIdsToAdd.length;
+            index += 1
+          ) {
+            const studentId =
+              studentIdsToAdd[index];
+
+            const member =
+              await GroupMember.create(
+                {
+                  groupId: lockedGroup.id,
+                  studentId,
+                  groupRole:
+                    groupWasEmpty && index === 0
+                      ? 'leader'
+                      : 'member'
+                },
+                { transaction }
+              );
+
+            addedMembers.push(member);
+          }
+
+          return {
+            groupGrade,
+            addedMembers,
+            addedStudentIds:
+              studentIdsToAdd,
+            existingStudentIds: [
+              ...existingStudentIds
+            ]
+          };
+        }
+      );
+
+    await audit(
+      req.user.id,
+      'group.add_members_bulk',
+      'group',
+      Number(group.id),
+      {
+        requestedStudentIds: studentIds,
+        addedStudentIds:
+          transactionResult.addedStudentIds,
+        existingStudentIds:
+          transactionResult.existingStudentIds,
+        groupGrade:
+          transactionResult.groupGrade
+      }
+    );
+
+    emitRealtime(
+      'teachers',
+      'group:members_added',
+      {
+        groupId: Number(group.id),
+        studentIds:
+          transactionResult.addedStudentIds,
+        addedCount:
+          transactionResult.addedStudentIds.length,
+        gradeLevel:
+          transactionResult.groupGrade,
+        message:
+          `${transactionResult.addedStudentIds.length} student(s) were added to the group`
+      }
+    );
+
+    return res.status(201).json({
+      members:
+        transactionResult.addedMembers,
+      addedStudentIds:
+        transactionResult.addedStudentIds,
+      existingStudentIds:
+        transactionResult.existingStudentIds,
+      addedCount:
+        transactionResult.addedStudentIds.length,
+      existingCount:
+        transactionResult.existingStudentIds.length,
+      requestedCount:
+        studentIds.length,
+      groupGrade:
+        transactionResult.groupGrade,
+      message:
+        transactionResult.addedStudentIds.length
+          ? `${transactionResult.addedStudentIds.length} learner(s) added.`
+          : 'All selected learners are already members.'
+    });
+  } catch (err) {
+    if (
+      err?.name === 'SequelizeUniqueConstraintError'
+    ) {
+      return res.status(409).json({
+        message:
+          'One or more selected students are already members of this group.'
+      });
+    }
+
+    if (
+      err?.statusCode &&
+      !err.status
+    ) {
+      err.status = err.statusCode;
+    }
+
+    next(err);
+  }
+});
+
+
 router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
     const group = await Group.findByPk(req.params.id);

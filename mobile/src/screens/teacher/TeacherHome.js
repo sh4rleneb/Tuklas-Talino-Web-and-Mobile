@@ -25,6 +25,7 @@ import {
 
 import {
   addGroupMember,
+  addGroupMembers,
   removeGroupMember,
   addGroupTask,
   approveGroupTask,
@@ -952,6 +953,7 @@ export default function TeacherHome({ navigation }) {
   const [groupForm, setGroupForm] = useState({ name: '', description: '', section: '', gradeLevel: '1' });
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [openGroupTools, setOpenGroupTools] = useState({});
+  const [selectedGroupStudentIds, setSelectedGroupStudentIds] = useState({});
   const [taskForm, setTaskForm] = useState({ title: '', description: '', deadline: '', xpReward: '10' });
   const [taskDeadlinePickerVisible, setTaskDeadlinePickerVisible] = useState(false);
   const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
@@ -2732,6 +2734,131 @@ async function handleLogout() {
     }));
   }
 
+  function getSelectedGroupStudentIds(groupId) {
+    const selected =
+      selectedGroupStudentIds[groupId];
+
+    return Array.isArray(selected)
+      ? selected.map(String)
+      : [];
+  }
+
+  function toggleSelectedGroupStudent(
+    groupId,
+    studentId
+  ) {
+    const normalizedStudentId =
+      String(studentId);
+
+    setSelectedGroupStudentIds(
+      (current) => {
+        const selected = new Set(
+          Array.isArray(current[groupId])
+            ? current[groupId].map(String)
+            : []
+        );
+
+        if (
+          selected.has(normalizedStudentId)
+        ) {
+          selected.delete(
+            normalizedStudentId
+          );
+        } else {
+          selected.add(
+            normalizedStudentId
+          );
+        }
+
+        return {
+          ...current,
+          [groupId]: [...selected],
+        };
+      }
+    );
+  }
+
+  function setAllSelectedGroupStudents(
+    groupId,
+    students = []
+  ) {
+    setSelectedGroupStudentIds(
+      (current) => ({
+        ...current,
+        [groupId]: students
+          .map(getStudentGroupMemberId)
+          .filter(Boolean)
+          .map(String),
+      })
+    );
+  }
+
+  function clearSelectedGroupStudents(
+    groupId
+  ) {
+    setSelectedGroupStudentIds(
+      (current) => ({
+        ...current,
+        [groupId]: [],
+      })
+    );
+  }
+
+  async function handleBulkAddGroupMembers(
+    group,
+    eligibleStudents = []
+  ) {
+    const selectedIds =
+      getSelectedGroupStudentIds(
+        group.id
+      );
+
+    const eligibleIds = new Set(
+      eligibleStudents
+        .map(getStudentGroupMemberId)
+        .filter(Boolean)
+        .map(String)
+    );
+
+    const studentIds = selectedIds
+      .filter((studentId) =>
+        eligibleIds.has(
+          String(studentId)
+        )
+      )
+      .map(Number)
+      .filter(
+        (studentId) =>
+          Number.isInteger(studentId) &&
+          studentId > 0
+      );
+
+    if (!studentIds.length) {
+      Alert.alert(
+        'Group Members',
+        'Select at least one learner.'
+      );
+      return;
+    }
+
+    const saved = await run(
+      `members-bulk-${group.id}`,
+      () =>
+        addGroupMembers(
+          group.id,
+          studentIds
+        ),
+      `${studentIds.length} learner(s) added.`
+    );
+
+    if (saved) {
+      clearSelectedGroupStudents(
+        group.id
+      );
+      await load();
+    }
+  }
+
   function getStudentGroupMemberId(student = {}) {
     return student.id ?? student.studentId ?? student.student_id ?? student.profileId ?? student.profile_id;
   }
@@ -3068,6 +3195,30 @@ async function handleLogout() {
 
               return studentGrade === groupGrade;
             });
+            const selectedStudentIds =
+              new Set(
+                getSelectedGroupStudentIds(
+                  group.id
+                )
+              );
+            const selectedCount =
+              addableStudents.reduce(
+                (total, student) => {
+                  const studentId =
+                    getStudentGroupMemberId(
+                      student
+                    );
+
+                  return total + (
+                    selectedStudentIds.has(
+                      String(studentId)
+                    )
+                      ? 1
+                      : 0
+                  );
+                },
+                0
+              );
 
             return (
               <View key={group.id} style={[styles.lessonListCard, Number(selectedGroup?.id) === Number(group.id) && styles.selectedRow]}>
@@ -3169,35 +3320,116 @@ async function handleLogout() {
                         : 'Only learners from the same grade level can be grouped.'}
                     </Text>
 
-                    <View style={styles.choiceRow}>
-                      {addableStudents.map((student) => {
-                        const studentId = getStudentGroupMemberId(student);
-
-                        return (
+                    {addableStudents.length ? (
+                      <>
+                        <View style={styles.lessonActionRow}>
                           <SmallButton
-                            key={studentId || student.studentCode || student.student_code || student.name}
                             tone="slate"
                             disabled={Boolean(busy)}
-                            onPress={() => {
-                              if (!studentId) {
-                                Alert.alert('Group Members', 'Missing student details.');
-                                return;
-                              }
-
-                              const gradeValidationMessage = getGroupMemberGradeValidationMessage(group, student);
-                              if (gradeValidationMessage) {
-                                Alert.alert('Group Members', gradeValidationMessage);
-                                return;
-                              }
-
-                              run(`member-${group.id}-${studentId}`, () => addGroupMember(group.id, studentId), 'Learner added.');
-                            }}
+                            onPress={() =>
+                              setAllSelectedGroupStudents(
+                                group.id,
+                                addableStudents
+                              )
+                            }
                           >
-                            {student.name} • Grade {student.gradeLevel || student.grade || '-'}
+                            Select All
                           </SmallButton>
-                        );
-                      })}
-                    </View>
+
+                          <SmallButton
+                            tone="slate"
+                            disabled={
+                              Boolean(busy) ||
+                              selectedCount === 0
+                            }
+                            onPress={() =>
+                              clearSelectedGroupStudents(
+                                group.id
+                              )
+                            }
+                          >
+                            Clear
+                          </SmallButton>
+
+                          <SmallButton
+                            disabled={
+                              Boolean(busy) ||
+                              selectedCount === 0
+                            }
+                            onPress={() =>
+                              handleBulkAddGroupMembers(
+                                group,
+                                addableStudents
+                              )
+                            }
+                          >
+                            Add Selected ({selectedCount})
+                          </SmallButton>
+                        </View>
+
+                        <View style={styles.choiceRow}>
+                          {addableStudents.map((student) => {
+                            const studentId =
+                              getStudentGroupMemberId(
+                                student
+                              );
+                            const isSelected =
+                              selectedStudentIds.has(
+                                String(studentId)
+                              );
+
+                            return (
+                              <SmallButton
+                                key={
+                                  studentId ||
+                                  student.studentCode ||
+                                  student.student_code ||
+                                  student.name
+                                }
+                                tone={
+                                  isSelected
+                                    ? 'green'
+                                    : 'slate'
+                                }
+                                disabled={Boolean(busy)}
+                                onPress={() => {
+                                  if (!studentId) {
+                                    Alert.alert(
+                                      'Group Members',
+                                      'Missing student details.'
+                                    );
+                                    return;
+                                  }
+
+                                  const gradeValidationMessage =
+                                    getGroupMemberGradeValidationMessage(
+                                      group,
+                                      student
+                                    );
+
+                                  if (
+                                    gradeValidationMessage
+                                  ) {
+                                    Alert.alert(
+                                      'Group Members',
+                                      gradeValidationMessage
+                                    );
+                                    return;
+                                  }
+
+                                  toggleSelectedGroupStudent(
+                                    group.id,
+                                    studentId
+                                  );
+                                }}
+                              >
+                                {isSelected ? '☑' : '☐'} {student.name} • Grade {student.gradeLevel || student.grade || '-'}
+                              </SmallButton>
+                            );
+                          })}
+                        </View>
+                      </>
+                    ) : null}
 
                     {!groupGrade ? (
                       <Text style={styles.muted}>Set a group grade level before adding learners.</Text>
