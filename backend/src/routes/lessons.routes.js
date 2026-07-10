@@ -1477,8 +1477,11 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
 
       function normalizeWritingAnswer(value) {
         return String(value || '')
-          .toLowerCase()
-          .replace(/[.,!?;:'"“”‘’()[\]{}]/g, '')
+          .normalize('NFC')
+          .toLocaleLowerCase('fil-PH')
+          .replace(/[‘’]/g, "'")
+          .replace(/[–—]/g, '-')
+          .replace(/[.,!?;:"“”()[\]{}]/g, '')
           .replace(/\s+/g, ' ')
           .trim();
       }
@@ -1498,49 +1501,26 @@ router.post('/:id/writing', requireRole('student'), async (req, res, next) => {
         ...(Array.isArray(rubric.correctAnswers) ? rubric.correctAnswers : []),
         ...(Array.isArray(rubric.acceptedAnswers) ? rubric.acceptedAnswers : []),
         ...(Array.isArray(rubric.correctWords)
-          ? [fillTemplate(rubric.template || rubric.sentence || task?.prompt || 'Ang ____ ay ____.', rubric.correctWords)]
-          : []),
-        'Ang bata ay masaya.',
-        'Ang bata ay mabait.',
-        'Ang bata ay nagbabasa.',
-        'Ang bata ay tumutulong.',
-        'Ang guro ay masaya.',
-        'Ang guro ay mabait.',
-        'Ang guro ay nagbabasa.',
-        'Ang guro ay tumutulong.',
-        'Ang bahay ay maganda.',
-        'Ang bahay ay malinis.',
-        'Ang paaralan ay maganda.',
-        'Ang paaralan ay malinis.'
-      ].filter(Boolean);
+          ? [
+              fillTemplate(
+                rubric.template ||
+                  rubric.sentence ||
+                  task?.prompt ||
+                  'Ang ____ ay ____.',
+                rubric.correctWords
+              )
+            ]
+          : [])
+      ]
+        .map(normalizeWritingAnswer)
+        .filter(Boolean)
+        .filter((answer, index, answers) => answers.indexOf(answer) === index);
 
-      function keywordScore(expected, actual) {
-        const expectedWords = normalizeWritingAnswer(expected)
-          .split(' ')
-          .filter(Boolean);
+      const normalizedContent = normalizeWritingAnswer(content);
 
-        const actualWords = new Set(
-          normalizeWritingAnswer(actual)
-            .split(' ')
-            .filter(Boolean)
-        );
-
-        let matched = 0;
-
-        for (const word of expectedWords) {
-          if (actualWords.has(word)) {
-            matched++;
-          }
-        }
-
-        return expectedWords.length
-          ? matched / expectedWords.length
-          : 0;
-      }
-
-      const isCorrect = expectedAnswers.some(answer =>
-        keywordScore(answer, content) >= 0.8
-      );
+      const isCorrect =
+        Boolean(normalizedContent) &&
+        expectedAnswers.includes(normalizedContent);
 
       if (!isCorrect) {
         return res.json({

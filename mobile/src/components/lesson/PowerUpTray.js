@@ -24,18 +24,22 @@ function cleanPowerUpWord(value) {
   if (!word || word.length > 40) return '';
   if (!/[\p{L}\p{N}]/u.test(word)) return '';
 
-  const lower = word.toLowerCase();
-  if (COMMON_POWER_UP_WORDS.has(lower)) return '';
-
   return word;
 }
 
-function addPowerUpWord(words, value) {
+function addPowerUpWord(words, value, { allowCommon = false } = {}) {
   const word = cleanPowerUpWord(value);
   if (!word) return;
 
-  const key = word.toLowerCase();
-  if (!words.some((existing) => existing.toLowerCase() === key)) {
+  const key = word.toLocaleLowerCase('fil-PH');
+
+  // Teacher-provided rubric words must be preserved, including valid
+  // Filipino function words such as "ang", "ng", "sa", and "at".
+  if (!allowCommon && COMMON_POWER_UP_WORDS.has(key)) return;
+
+  if (!words.some(
+    (existing) => existing.toLocaleLowerCase('fil-PH') === key
+  )) {
     words.push(word);
   }
 }
@@ -48,7 +52,7 @@ function collectPowerUpValues(words, value) {
     return;
   }
 
-  addPowerUpWord(words, value);
+  addPowerUpWord(words, value, { allowCommon: true });
 }
 
 function collectFallbackWords(words, value) {

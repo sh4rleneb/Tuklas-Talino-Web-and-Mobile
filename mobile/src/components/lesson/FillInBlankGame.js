@@ -9,8 +9,11 @@ function normalizeGameChoiceText(value) {
   }
 
   return String(value || '')
+    .normalize('NFC')
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—]/g, '-')
     .replace(/[_{}\[\]<>]/g, ' ')
-    .replace(/[^\p{L}\p{N}'’ -]/gu, '')
+    .replace(/[^\p{L}\p{N}' -]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -21,10 +24,10 @@ function normalizeGameChoices(values = [], correctAnswer = '') {
 
   const addChoice = (value) => {
     const word = normalizeGameChoiceText(value);
-    const key = word.toLowerCase();
+    const key = word.toLocaleLowerCase('fil-PH');
 
     if (!word || word.length > 40 || seen.has(key)) return;
-    if (!/[\p{L}\p{N}]/u.test(word)) return;
+    if (!/\p{L}/u.test(word)) return;
 
     seen.add(key);
     normalized.push(word);
@@ -61,11 +64,17 @@ export default function FillInBlankGame({
   }, [template, selected]);
 
   function checkAnswer(value) {
-    const ok =
-      String(value).trim().toLowerCase() ===
-      correctAnswer.trim().toLowerCase();
+    const submittedAnswer = normalizeGameChoiceText(value)
+      .toLocaleLowerCase('fil-PH');
 
-    setCorrect(ok);
+    const expectedAnswer = normalizeGameChoiceText(correctAnswer)
+      .toLocaleLowerCase('fil-PH');
+
+    setCorrect(
+      Boolean(submittedAnswer) &&
+      Boolean(expectedAnswer) &&
+      submittedAnswer === expectedAnswer
+    );
   }
 
   function handleSelect(choice) {
