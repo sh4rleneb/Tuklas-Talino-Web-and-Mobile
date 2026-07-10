@@ -377,7 +377,7 @@ function getTeacherDeadlineValidationMessage(rawDeadline = '', hasDeadline = fal
   const normalizedDeadline = normalizeTeacherDeadlineInput(rawDeadline);
 
   if (!normalizedDeadline) {
-    return 'Select activity date and time bago idagdag ang gawain.';
+    return 'Select the activity date and time before adding the activity.';
   }
 
   const parsedDeadline = new Date(normalizedDeadline);
@@ -732,7 +732,7 @@ function lessonMaterialUploadErrorMessage(error = {}) {
   ).trim();
 
   if (!message || message === 'Request failed') {
-    return 'Hindi ma-upload ang lesson material. Pakisigurong PDF, PPT, o PPTX ang file at subukan muli.';
+    return 'The lesson material could not be uploaded. Make sure the file is a PDF, PPT, or PPTX, then try again.';
   }
 
   return message;
@@ -1493,7 +1493,7 @@ async function handleLogout() {
       };
     } else if (type === 'writing') {
       if (!newActivity.content.trim()) {
-        setWorkspaceNotice({ type: 'warning', text: 'Maglagay muna ng gawain sa pagsulat.' });
+        setWorkspaceNotice({ type: 'warning', text: 'Add a writing activity first.' });
         return;
       }
       activity = { type, title, instructions: newActivity.instructions, prompt: newActivity.content, gawainType: newActivity.gawainType || 'writing_task', deadline: activityDeadlineValue, dueAt: activityDeadlineValue, maxAttempts: activityMaxAttempts };
@@ -1505,7 +1505,7 @@ async function handleLogout() {
       activity = { type, title, instructions: '', targetText: newActivity.content, content: newActivity.content, contentSafetyContext: 'speech_target', allowTeacherSpeechTarget: true, deadline: activityDeadlineValue, dueAt: activityDeadlineValue, maxAttempts: activityMaxAttempts };
     } else {
       if (!newActivity.content.trim()) {
-        setWorkspaceNotice({ type: 'warning', text: 'Maglagay muna ng nilalaman ng tala ng aralin.' });
+        setWorkspaceNotice({ type: 'warning', text: 'Add lesson infographic content first.' });
         return;
       }
       activity = { type: 'infographic', title, instructions: newActivity.instructions, content: newActivity.content, deadline: activityDeadlineValue, dueAt: activityDeadlineValue, maxAttempts: activityMaxAttempts };
