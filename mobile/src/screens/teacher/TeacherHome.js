@@ -301,10 +301,37 @@ function buildStructuredLessonPassage(draft = {}) {
 }
 
 
-function createDefaultTeacherDeadlineDate() {
-  const next = new Date();
+function getMinimumTeacherDeadlineDate(now = new Date()) {
+  const minimum = new Date(now);
 
-  next.setMinutes(next.getMinutes() + 60);
+  minimum.setTime(
+    minimum.getTime() + (60 * 60 * 1000)
+  );
+
+  return minimum;
+}
+
+function isSameTeacherCalendarDate(left, right) {
+  const first = new Date(left);
+  const second = new Date(right);
+
+  if (
+    Number.isNaN(first.getTime()) ||
+    Number.isNaN(second.getTime())
+  ) {
+    return false;
+  }
+
+  return (
+    first.getFullYear() === second.getFullYear() &&
+    first.getMonth() === second.getMonth() &&
+    first.getDate() === second.getDate()
+  );
+}
+
+function createDefaultTeacherDeadlineDate() {
+  const next = getMinimumTeacherDeadlineDate();
+
   next.setSeconds(0, 0);
 
   const remainder = next.getMinutes() % 5;
@@ -372,25 +399,34 @@ function formatTeacherDeadlineForDisplay(value = '') {
   });
 }
 
-function getTeacherDeadlineValidationMessage(rawDeadline = '', hasDeadline = false) {
+function getTeacherDeadlineValidationMessage(
+  rawDeadline = '',
+  hasDeadline = false
+) {
   if (!hasDeadline) return '';
 
-  const normalizedDeadline = normalizeTeacherDeadlineInput(rawDeadline);
+  const normalizedDeadline =
+    normalizeTeacherDeadlineInput(rawDeadline);
 
   if (!normalizedDeadline) {
-    return 'Select the activity date and time before adding the activity.';
+    return 'Pumili ng petsa at oras ng deadline bago idagdag ang gawain.';
   }
 
-  const parsedDeadline = new Date(normalizedDeadline);
+  const parsedDeadline =
+    new Date(normalizedDeadline);
 
   if (Number.isNaN(parsedDeadline.getTime())) {
-    return 'The deadline is invalid. Select a valid date and time.';
+    return 'Hindi wasto ang deadline. Pumili muli ng petsa at oras.';
   }
 
-  const now = new Date();
+  const minimumDeadline =
+    getMinimumTeacherDeadlineDate();
 
-  if (parsedDeadline.getTime() <= now.getTime()) {
-    return 'The deadline cannot be in the past. Select a later date and time.';
+  if (
+    parsedDeadline.getTime() <
+    minimumDeadline.getTime()
+  ) {
+    return 'Ang deadline ay dapat hindi bababa sa isang oras mula ngayon.';
   }
 
   return '';
@@ -1805,6 +1841,62 @@ async function handleLogout() {
     });
   }
 
+  function hasCurrentLessonPreviewContent() {
+    const previewActivities = Array.isArray(draft.activities)
+      ? draft.activities
+      : [];
+
+    const previewPassage =
+      buildStructuredLessonPassage(draft);
+
+    return Boolean(
+      String(draft.title || '').trim() ||
+      String(draft.instructions || '').trim() ||
+      String(draft.speechTarget || '').trim() ||
+      draft.material ||
+      previewPassage ||
+      previewActivities.length
+    );
+  }
+
+  async function previewLessonDraft(lesson) {
+    if (!lesson) return;
+
+    await editLessonDraft(lesson);
+    setBuilderStep(3);
+    setWorkspaceNotice({
+      type: 'success',
+      text: `Previewing: ${lesson.title || 'Untitled Lesson'}`,
+    });
+  }
+
+  function handleBuilderStepPress(index) {
+    if (index !== 3) {
+      setBuilderStep(index);
+      return;
+    }
+
+    if (hasCurrentLessonPreviewContent()) {
+      setBuilderStep(3);
+      return;
+    }
+
+    if (lessons.length) {
+      setBuilderStep(4);
+      setWorkspaceNotice({
+        type: 'warning',
+        text: 'Choose a lesson below, then tap Preview.',
+      });
+      return;
+    }
+
+    setBuilderStep(1);
+    setWorkspaceNotice({
+      type: 'warning',
+      text: 'Add lesson details before opening the preview.',
+    });
+  }
+
   function resetLessonBuilder() {
     setEditingLesson(null);
     setDraft(emptyLessonDraft());
@@ -1972,14 +2064,28 @@ async function handleLogout() {
 
   function renderTabs() {
     return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.navRow}>
+      <View style={styles.navRow}>
         {NAV_ITEMS.map(([key, icon, label]) => (
-          <TouchableOpacity key={key} style={[styles.navChip, section === key && styles.navChipActive]} onPress={() => setSection(key)}>
+          <TouchableOpacity
+            key={key}
+            style={[
+              styles.navChip,
+              section === key && styles.navChipActive,
+            ]}
+            onPress={() => setSection(key)}
+          >
             <Text>{icon}</Text>
-            <Text style={[styles.navLabel, section === key && styles.navLabelActive]}>{label}</Text>
+            <Text
+              style={[
+                styles.navLabel,
+                section === key && styles.navLabelActive,
+              ]}
+            >
+              {label}
+            </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
     );
   }
 
@@ -2184,13 +2290,28 @@ async function handleLogout() {
   function renderBuilder() {
     return (
       <>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.builderTabs}>
+        <View style={styles.builderTabs}>
           {BUILDER_STEPS.map((label, index) => (
-            <TouchableOpacity key={label} style={[styles.stepChip, builderStep === index && styles.stepChipActive]} onPress={() => setBuilderStep(index)}>
-              <Text style={builderStep === index ? styles.stepTextActive : styles.stepText}>{label}</Text>
+            <TouchableOpacity
+              key={label}
+              style={[
+                styles.stepChip,
+                builderStep === index && styles.stepChipActive,
+              ]}
+              onPress={() => handleBuilderStepPress(index)}
+            >
+              <Text
+                style={
+                  builderStep === index
+                    ? styles.stepTextActive
+                    : styles.stepText
+                }
+              >
+                {label}
+              </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {builderStep === 0 && (
           <SectionCard>
@@ -2261,7 +2382,7 @@ async function handleLogout() {
                   value={draft.alamin}
                   onChangeText={(value) => setDraft((current) => ({ ...current, alamin: value }))}
                   multiline
-                  placeholder={`What should students know first about the topic?\n\nExample: The letter M has the /m/ sound. Some words start with M.`}
+                  placeholder={`Ano ang dapat unang malaman ng mga mag-aaral tungkol sa paksa?\n\nHalimbawa: Ang titik M ay may tunog na /m/. May mga salitang nagsisimula sa M.`}
                 />
 
                 <Field
@@ -2269,7 +2390,7 @@ async function handleLogout() {
                   value={draft.aralin}
                   onChangeText={(value) => setDraft((current) => ({ ...current, aralin: value }))}
                   multiline
-                  placeholder={"What will students read or study?\n\nExample: Some words start with M, such as mata, mesa, and maya."}
+                  placeholder={"Ano ang babasahin o pag-aaralan ng mga mag-aaral?\n\nHalimbawa: May mga salitang nagsisimula sa M, tulad ng mata, mesa, at maya."}
                 />
 
                 <SmallButton onPress={() => setBuilderStep(2)}>Next: Activities →</SmallButton>
@@ -2381,7 +2502,7 @@ async function handleLogout() {
                 </View>
 
                 <Text style={styles.muted}>
-                  Deadline must be later than the current date and time.
+                  Deadline must be at least 1 hour from the current date and time.
                 </Text>
 
                 {activityDeadlinePickerVisible ? (
@@ -2389,7 +2510,18 @@ async function handleLogout() {
                     value={getActivityDeadlineDate(newActivity.deadline)}
                     mode={activityDeadlinePickerMode}
                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    minimumDate={activityDeadlinePickerMode === 'date' ? new Date() : undefined}
+                    minimumDate={
+                      activityDeadlinePickerMode === 'date'
+                        ? getMinimumTeacherDeadlineDate()
+                        : isSameTeacherCalendarDate(
+                            getActivityDeadlineDate(
+                              newActivity.deadline
+                            ),
+                            new Date()
+                          )
+                          ? getMinimumTeacherDeadlineDate()
+                          : undefined
+                    }
                     onChange={(event, selectedDate) => {
                       if (Platform.OS !== 'ios') {
                         setActivityDeadlinePickerVisible(false);
@@ -2397,14 +2529,47 @@ async function handleLogout() {
 
                       if (!selectedDate) return;
 
+                      const mergedDeadline =
+                        mergeTeacherDeadlineDateTime(
+                          newActivity.deadline,
+                          selectedDate,
+                          activityDeadlinePickerMode
+                        );
+
+                      const selectedDeadline =
+                        new Date(mergedDeadline);
+
+                      const minimumDeadline =
+                        getMinimumTeacherDeadlineDate();
+
+                      if (
+                        Number.isNaN(
+                          selectedDeadline.getTime()
+                        ) ||
+                        selectedDeadline.getTime() <
+                          minimumDeadline.getTime()
+                      ) {
+                        setWorkspaceNotice({
+                          type: 'warning',
+                          text: 'Hindi maaaring pumili ng oras na mas mababa sa isang oras mula ngayon.',
+                        });
+
+                        if (
+                          Platform.OS !== 'ios' &&
+                          activityDeadlinePickerMode === 'time'
+                        ) {
+                          setTimeout(() => {
+                            setActivityDeadlinePickerVisible(true);
+                          }, 250);
+                        }
+
+                        return;
+                      }
+
                       setNewActivity((current) => ({
                         ...current,
                         hasDeadline: true,
-                        deadline: mergeTeacherDeadlineDateTime(
-                          current.deadline,
-                          selectedDate,
-                          activityDeadlinePickerMode
-                        ),
+                        deadline: mergedDeadline,
                       }));
                     }}
                   />
@@ -2575,8 +2740,8 @@ async function handleLogout() {
                       <SmallButton tone="slate" onPress={() => setBuilderStep(1)}>
                         Go to Lesson Details
                       </SmallButton>
-                      <SmallButton onPress={() => setBuilderStep(2)}>
-                        Add Task
+                      <SmallButton onPress={() => setBuilderStep(4)}>
+                        Choose from My Lessons
                       </SmallButton>
                     </View>
                   </>
@@ -2735,7 +2900,20 @@ async function handleLogout() {
                   </View>
 
                   <View style={styles.lessonActionRow}>
-                    <SmallButton tone="slate" disabled={Boolean(busy)} onPress={() => editLessonDraft(lesson)}>Edit</SmallButton>
+                    <SmallButton
+                      tone="slate"
+                      disabled={Boolean(busy)}
+                      onPress={() => previewLessonDraft(lesson)}
+                    >
+                      Preview
+                    </SmallButton>
+                    <SmallButton
+                      tone="slate"
+                      disabled={Boolean(busy)}
+                      onPress={() => editLessonDraft(lesson)}
+                    >
+                      Edit
+                    </SmallButton>
                     {lesson.status === 'draft' ? <SmallButton disabled={Boolean(busy)} onPress={() => run(`publish-${lesson.id}`, () => updateLesson(lesson.id, { status: 'published' }), 'Lesson published.')}>Publish</SmallButton> : null}
                     {lesson.status !== 'archived' ? <SmallButton tone="red" disabled={Boolean(busy)} onPress={() => run(`archive-${lesson.id}`, () => archiveLesson(lesson.id), 'Lesson removed.')}>Remove Lesson</SmallButton> : null}
                   </View>
@@ -4967,7 +5145,7 @@ async function handleLogout() {
               <Text style={styles.title}>Teacher Workspace</Text>
               <Text style={styles.subtitle}>Manage lessons, groups, assessments, and reports.</Text>
             </View>
-            <SmallButton tone="slate" onPress={confirmLogout}>Mag-logout</SmallButton>
+            <SmallButton tone="slate" onPress={confirmLogout}>Logout</SmallButton>
           </View>
 
           <View style={styles.workspaceHero}>
@@ -5033,9 +5211,9 @@ async function handleLogout() {
               <Text style={styles.workspaceLogoutIconText}>🚪</Text>
             </View>
 
-            <Text style={styles.workspaceLogoutTitle}>Mag-logout?</Text>
+            <Text style={styles.workspaceLogoutTitle}>Log out?</Text>
             <Text style={styles.workspaceLogoutBody}>
-              Naka-save ang workspace. Maaari kang bumalik anumang oras.
+              Your workspace is saved. You can return at any time.
             </Text>
 
             <View style={styles.workspaceLogoutActions}>
@@ -5050,7 +5228,7 @@ async function handleLogout() {
                 style={styles.workspaceLogoutConfirm}
                 onPress={handleLogout}
               >
-                <Text style={styles.workspaceLogoutConfirmText}>Mag-logout</Text>
+                <Text style={styles.workspaceLogoutConfirmText}>Logout</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -5530,9 +5708,32 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   title: { color: '#0F172A', fontSize: 29, fontWeight: '900' },
   subtitle: { color: '#64748B', marginTop: 5, lineHeight: 20 },
-  navRow: { gap: 8, paddingVertical: 8, paddingBottom: 16 },
-  navChip: { flexDirection: 'row', gap: 5, borderRadius: 99, backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 9, alignItems: 'center' },
-  navChipActive: { backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#22C55E' },
+  navRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingBottom: 16,
+  },
+  navChip: {
+    flexDirection: 'row',
+    flexShrink: 0,
+    gap: 5,
+    minHeight: 40,
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navChipActive: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#22C55E',
+  },
   navLabel: { color: '#64748B', fontWeight: '800' },
   navLabelActive: { color: '#166534' },
   card: { backgroundColor: '#FFF', borderRadius: 22, padding: 16, marginBottom: 14, shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
@@ -5591,8 +5792,25 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.5 },
   smallButtonText: { color: '#FFF', fontWeight: '900', fontSize: 12 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 4 },
-  builderTabs: { gap: 6, paddingBottom: 12, paddingHorizontal: 4, alignItems: 'center' },
-  stepChip: { backgroundColor: '#FFF', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 8, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+  builderTabs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    paddingBottom: 12,
+  },
+  stepChip: {
+    flexShrink: 0,
+    backgroundColor: '#FFF',
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
   stepChipActive: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
   stepText: { color: '#64748B', fontWeight: '800', fontSize: 12, lineHeight: 16, textAlign: 'center', includeFontPadding: false },
   stepTextActive: { color: '#166534', fontWeight: '900', fontSize: 12, lineHeight: 16, textAlign: 'center', includeFontPadding: false },
