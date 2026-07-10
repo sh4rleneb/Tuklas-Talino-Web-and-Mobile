@@ -37,6 +37,8 @@ const allowedOrigins = (process.env.APP_URL || 'http://localhost:5173')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
 app.use(cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -89,7 +91,6 @@ app.use('/api/auth/change-password', authFailureLimiter);
 
 app.use(express.json({ limit: requestBodyLimit }));
 app.use(express.urlencoded({ extended: true, limit: requestBodyLimit, parameterLimit: 100 }));
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/uploads', express.static(uploadsDir));
 
 const server = http.createServer(app);
@@ -109,16 +110,26 @@ app.use('/api', apiRoutes);
 app.use((req, res) => res.status(404).json({ message: 'Route not found.' }));
 
 app.use((err, req, res, next) => {
-  console.error(err);
+  const isPayloadTooLarge =
+    err.type === 'entity.too.large' ||
+    err.type === 'parameters.too.many' ||
+    err.status === 413 ||
+    err.statusCode === 413;
 
-  if (err.type === 'entity.too.large' || err.type === 'parameters.too.many' || err.status === 413 || err.statusCode === 413) {
+  const status = isPayloadTooLarge
+    ? 413
+    : (err.statusCode || err.status || 500);
+
+  if (status >= 500 || process.env.NODE_ENV !== 'production') {
+    console.error(err);
+  }
+
+  if (isPayloadTooLarge) {
     return res.status(413).json({
       error: 'Payload Too Large',
       message: `Request body is too large. Maximum allowed size is ${requestBodyLimit}.`
     });
   }
-
-  const status = err.statusCode || err.status || 500;
 
   res.status(status).json({
     message: err.message || 'Internal server error.',
