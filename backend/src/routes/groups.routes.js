@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
@@ -31,19 +32,58 @@ const groupTaskUploadDir = path.join(__dirname, '../../uploads/group-tasks');
 
 fs.mkdirSync(groupTaskUploadDir, { recursive: true });
 
+const groupTaskUploadAllowedMimesByExtension = new Map([
+  ['.pdf', new Set(['application/pdf'])],
+  ['.png', new Set(['image/png'])],
+  ['.jpg', new Set(['image/jpeg'])],
+  ['.jpeg', new Set(['image/jpeg'])],
+  ['.txt', new Set(['text/plain'])],
+  ['.doc', new Set(['application/msword'])],
+  [
+    '.docx',
+    new Set([
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ])
+  ]
+]);
+
+function rejectGroupTaskUpload(cb) {
+  const error = new Error(
+    'Only PDF, PNG, JPEG, TXT, DOC, or DOCX group outputs are allowed.'
+  );
+
+  error.statusCode = 415;
+  cb(error);
+}
+
 const groupTaskUpload = multer({
   storage: multer.diskStorage({
     destination: groupTaskUploadDir,
-    filename: (req, file, cb) => {
-      const safeName = file.originalname
-        .replace(/[^a-zA-Z0-9._-]/g, '-')
-        .replace(/-+/g, '-')
-        .slice(-120);
-      cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${safeName}`);
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+
+      cb(null, `${crypto.randomUUID()}${ext}`);
     },
   }),
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const mimeType = String(file.mimetype || '').toLowerCase();
+    const allowedMimes = groupTaskUploadAllowedMimesByExtension.get(ext);
+
+    if (!allowedMimes || !allowedMimes.has(mimeType)) {
+      rejectGroupTaskUpload(cb);
+      return;
+    }
+
+    cb(null, true);
+  },
   limits: {
     fileSize: 10 * 1024 * 1024,
+    files: 1,
+    fields: 10,
+    parts: 11,
+    fieldNameSize: 100,
+    fieldSize: 256 * 1024,
   },
 });
 
