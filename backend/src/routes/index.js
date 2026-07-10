@@ -82,8 +82,27 @@ router.get('/missions', authenticate, requirePasswordChanged, requireRole('stude
 
 router.get('/leaderboard', authenticate, requirePasswordChanged, requireRole('student'), async (req, res, next) => {
   try {
+    const studentGradeLevel = Number(req.student?.gradeLevel || 0);
+    const studentSection = String(req.student?.section || '').trim();
+
+    if (!Number.isInteger(studentGradeLevel) || studentGradeLevel < 1 || studentGradeLevel > 6) {
+      return res.status(400).json({
+        message: 'Student grade level is required for leaderboard.'
+      });
+    }
+
+    if (!studentSection) {
+      return res.status(400).json({
+        message: 'Student section is required for leaderboard.'
+      });
+    }
+
     const students = await Student.findAll({
-      where: { status: 'active' },
+      where: {
+        status: 'active',
+        gradeLevel: studentGradeLevel,
+        section: studentSection,
+      },
       attributes: [
         'id',
         'name',
@@ -91,12 +110,19 @@ router.get('/leaderboard', authenticate, requirePasswordChanged, requireRole('st
         'xp',
         'currentStreak',
         'gradeLevel',
+        'section',
       ],
-      order: [['xp', 'DESC']],
+      order: [
+        ['xp', 'DESC'],
+        ['name', 'ASC'],
+      ],
       limit: 20,
     });
 
     res.json({
+      gradeLevel: studentGradeLevel,
+      section: studentSection,
+      scope: 'grade-section',
       leaderboard: students.map((student, index) => ({
         rank: index + 1,
         ...student.toJSON(),

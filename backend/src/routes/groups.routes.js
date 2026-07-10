@@ -663,6 +663,29 @@ router.post('/:id/members/bulk', requireRole('teacher', 'admin'), async (req, re
 });
 
 
+async function existingGroupSection(groupId) {
+  const membership = await GroupMember.findOne({
+    where: { groupId },
+    include: [Student],
+    order: [['createdAt', 'ASC']],
+  });
+
+  return normalizedGroupSection(
+    membership?.Student?.section ||
+    membership?.student?.section ||
+    ''
+  );
+}
+
+function sameSection(first = '', second = '') {
+  return normalizedGroupSection(first).toLowerCase() === normalizedGroupSection(second).toLowerCase();
+}
+
+function groupGradeSectionMessage(gradeLevel, section) {
+  const sectionText = normalizedGroupSection(section);
+  return `Only Grade ${gradeLevel}${sectionText ? ` - Section ${sectionText}` : ''} students can be added to this group.`;
+}
+
 router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
     const group = await Group.findByPk(req.params.id);
@@ -708,28 +731,53 @@ router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, ne
       });
     }
 
+    const studentSection = normalizedGroupSection(student.section);
+
+    if (!studentSection) {
+      return res.status(422).json({
+        message: 'The student does not have a valid section.'
+      });
+    }
+
     let groupGrade =
       validGradeLevel(group.gradeLevel) ||
       await existingGroupGradeLevel(group.id);
 
+    let groupSection =
+      normalizedGroupSection(group.section) ||
+      await existingGroupSection(group.id) ||
+      normalizedGroupSection(group.description);
+
     if (!groupGrade) {
       groupGrade = studentGrade;
       group.gradeLevel = studentGrade;
+    }
 
-      if (!normalizedGroupSection(group.section)) {
-        group.section =
-          normalizedGroupSection(student.section) ||
-          normalizedGroupSection(group.description) ||
-          null;
-      }
+    if (!groupSection) {
+      groupSection = studentSection;
+    }
 
+    if (!normalizedGroupSection(group.section)) {
+      group.section = groupSection || null;
+    }
+
+    if (!validGradeLevel(group.gradeLevel)) {
+      group.gradeLevel = groupGrade;
+    }
+
+    if (group.changed()) {
       await group.save();
     }
 
     if (studentGrade !== groupGrade) {
       return res.status(422).json({
-        message:
-          `Only Grade ${groupGrade} students can be added to this group.`
+        message: groupGradeSectionMessage(groupGrade, groupSection)
+      });
+    }
+
+    if (!sameSection(studentSection, groupSection)) {
+      return res.status(422).json({
+        message: groupGradeSectionMessage(groupGrade, groupSection)
       });
     }
 
@@ -758,7 +806,9 @@ router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, ne
     await audit(req.user.id, 'group.add_member', 'group', Number(req.params.id), {
       studentId,
       studentGrade,
+      studentSection,
       groupGrade,
+      groupSection,
       groupRole: member.groupRole,
     });
 
@@ -766,6 +816,7 @@ router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, ne
       groupId: Number(req.params.id),
       studentId,
       gradeLevel: studentGrade,
+      section: studentSection,
       message: 'A student was added to a group',
     });
 
@@ -879,16 +930,66 @@ router.delete(
   }
 );
 
+function makeGroupTaskDeadlineError(message) {
+  const err = new Error(message);
+  err.status = 400;
+  err.code = 'GROUP_TASK_DEADLINE_INVALID';
+  return err;
+}
+
+function todayDateStringInManila() {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function normalizeGroupTaskDueAt(body = {}) {
+  const rawValue = String(
+    body.dueAt ??
+    body.deadline ??
+    body.dueDate ??
+    ''
+  ).trim();
+
+  if (!rawValue) {
+    throw makeGroupTaskDeadlineError('Pumili muna ng deadline sa calendar bago gumawa ng group task.');
+  }
+
+  const dateOnlyMatch = rawValue.match(/^\d{4}-\d{2}-\d{2}$/);
+
+  if (dateOnlyMatch) {
+    const today = todayDateStringInManila();
+
+    if (rawValue < today) {
+      throw makeGroupTaskDeadlineError('Hindi maaaring nasa nakaraan ang deadline ng group task. Pumili ng petsa ngayon o sa susunod na araw.');
+    }
+
+    return rawValue;
+  }
+
+  const parsedDate = new Date(rawValue);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw makeGroupTaskDeadlineError('Hindi valid ang deadline ng group task. Pumili muli ng tamang petsa.');
+  }
+
+  if (parsedDate.getTime() < Date.now()) {
+    throw makeGroupTaskDeadlineError('Hindi maaaring nasa nakaraan ang deadline ng group task. Pumili ng petsa ngayon o sa susunod na araw.');
+  }
+
+  return rawValue;
+}
+
 router.post('/:id/tasks', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
     assertSafeText(req.body.title || '', 'group task title');
     assertSafeText(req.body.description || '', 'group task description');
+    const dueAt = normalizeGroupTaskDueAt(req.body);
+
     const task = await GroupTask.create({
       groupId: req.params.id,
       title: req.body.title,
       description: req.body.description || '',
       xpReward: req.body.xpReward || 10,
-      dueAt: req.body.dueAt || null,
+      dueAt,
     });
 
     await audit(req.user.id, 'group_task.create', 'group_task', task.id);

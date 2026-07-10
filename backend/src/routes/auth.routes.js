@@ -391,12 +391,12 @@ router.post('/login', async (req, res, next) => {
     });
 
     if (!user || user.status !== 'active') {
-      return res.status(404).json({ message: 'Username was not found for this login type.' });
+      return res.status(404).json({ message: 'Invalid username or password.' });
     }
 
     if (body.role && user.Role?.name !== body.role) {
       return res.status(403).json({
-        message: `This account is not a ${body.role} account.`
+        message: 'Invalid username or password.'
       });
     }
 

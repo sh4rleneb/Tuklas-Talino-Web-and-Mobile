@@ -135,6 +135,38 @@ const DEFAULT_BLOCKED_TERMS = [
 
 const SAFE_TEXT_ERROR_MESSAGE = 'May salitang hindi angkop para sa learning space. Pakipalitan muna bago magpatuloy.';
 
+const EDUCATIONAL_LESSON_ALLOWED_TERMS = [
+  'basura',
+  'basurahan',
+  'kanal',
+  'estero',
+  'dumi',
+  'marumi',
+  'kalinisan',
+  'kapaligiran',
+  'polusyon',
+  'recycle',
+  'pagre-recycle',
+  'recycling',
+  'waste',
+  'garbage',
+  'trash',
+  'sewage',
+  'pollution',
+  'cleanliness',
+  'sanitation',
+  'environment'
+];
+
+export function getEducationalLessonAllowedTerms(extraTerms = []) {
+  return [
+    ...EDUCATIONAL_LESSON_ALLOWED_TERMS,
+    ...(Array.isArray(extraTerms) ? extraTerms : [])
+  ]
+    .map((term) => String(term || '').trim())
+    .filter(Boolean);
+}
+
 const SKIPPED_KEYS = new Set([
   'password',
   'currentPassword',
@@ -185,6 +217,21 @@ function compactText(value = '') {
 }
 
 
+function escapeRegExp(value = '') {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function containsWholeNormalizedTerm(text = '', term = '') {
+  const normalizedText = normalizeText(text);
+  const normalizedTerm = normalizeText(term);
+
+  if (!normalizedText || !normalizedTerm) return false;
+  if (normalizedText === normalizedTerm) return true;
+
+  const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(normalizedTerm).replace(/\\ /g, '\\s+')}([^a-z0-9]|$)`);
+  return pattern.test(normalizedText);
+}
+
 function normalizeAllowedSafetyTerms(options = {}) {
   const values = Array.isArray(options.allowedTerms)
     ? options.allowedTerms
@@ -206,27 +253,25 @@ function isAllowedSafetyMatch(blockedTerm = '', allowedTerms = []) {
   return allowedTerms.some((allowed) => {
     if (!allowed.normalized && !allowed.compact) return false;
 
-    const normalizedMatch =
+    const exactNormalizedMatch =
       normalizedTerm &&
       allowed.normalized &&
-      (
-        allowed.normalized === normalizedTerm ||
-        allowed.normalized.includes(normalizedTerm) ||
-        normalizedTerm.includes(allowed.normalized)
-      );
+      allowed.normalized === normalizedTerm;
 
-    const compactMatch =
+    const exactCompactMatch =
       compactTerm &&
       allowed.compact &&
-      (
-        allowed.compact === compactTerm ||
-        allowed.compact.includes(compactTerm) ||
-        compactTerm.includes(allowed.compact)
-      );
+      allowed.compact === compactTerm;
 
-    return normalizedMatch || compactMatch;
+    const blockedTermAppearsInsideAllowedEducationalText =
+      normalizedTerm &&
+      allowed.normalized &&
+      containsWholeNormalizedTerm(allowed.normalized, normalizedTerm);
+
+    return exactNormalizedMatch || exactCompactMatch || blockedTermAppearsInsideAllowedEducationalText;
   });
 }
+
 
 function makeSafeError(label = 'content') {
   const err = new Error(SAFE_TEXT_ERROR_MESSAGE);
@@ -277,14 +322,14 @@ export function assertSafeText(value = '', label = 'content', options = {}) {
   }
 }
 
-export function assertSafeContentPayload(payload, label = 'content') {
+export function assertSafeContentPayload(payload, label = 'content', options = {}) {
   const seen = new Set();
 
   function scan(value, path = label) {
     if (value === null || value === undefined) return;
 
     if (typeof value === 'string') {
-      assertSafeText(value, path);
+      assertSafeText(value, path, options);
       return;
     }
 

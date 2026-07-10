@@ -25,7 +25,7 @@ import { sequelize } from '../config/database.js';
 import { audit } from '../services/audit.service.js';
 import { emitRealtime } from '../realtime.js';
 
-import { assertSafeContentPayload, assertSafeText } from '../validators/contentSafety.js';
+import { assertSafeContentPayload, assertSafeText, getEducationalLessonAllowedTerms } from '../validators/contentSafety.js';
 const DEFAULT_MAX_QUIZ_ATTEMPTS = 2;
 const MIN_QUIZ_ATTEMPTS = 1;
 const MAX_CONFIGURABLE_QUIZ_ATTEMPTS = 10;
@@ -1268,7 +1268,7 @@ router.patch('/:id/progress', requireRole('student'), async (req, res, next) => 
 router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
     const body = validate(lessonSchema, req.body);
-    assertSafeContentPayload(body, 'lesson content');
+    assertSafeContentPayload(body, 'lesson content', { allowedTerms: getEducationalLessonAllowedTerms() });
     const {
       activities: validatedActivities = [],
       ...lessonPayload
@@ -1318,7 +1318,7 @@ router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => 
   const transaction = await sequelize.transaction();
 
   try {
-    assertSafeContentPayload(req.body, 'lesson update');
+    assertSafeContentPayload(req.body, 'lesson update', { allowedTerms: getEducationalLessonAllowedTerms() });
 
     const lesson = await Lesson.findByPk(req.params.id, {
       transaction,
@@ -2274,7 +2274,7 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
     }
 
     assertSafeText(req.body.transcript || '', 'speech transcript', {
-      allowedTerms: collectSpeechSafetyTargets(task, activity),
+      allowedTerms: getEducationalLessonAllowedTerms(collectSpeechSafetyTargets(task, activity)),
     });
 
     const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
