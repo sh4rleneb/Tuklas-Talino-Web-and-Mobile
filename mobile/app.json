@@ -9,7 +9,7 @@
       "**/*"
     ],
     "extra": {
-      "apiUrl": "http://47.131.121.7:4000/api",
+      "apiUrl": "https://tuklastalino.com/api",
       "eas": {
         "projectId": "93a4e1d3-a8a3-4b2d-a66d-ed1c618dba56"
       }

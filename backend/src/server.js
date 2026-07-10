@@ -103,12 +103,13 @@ app.use((err, req, res, next) => {
 });
 
 const port = Number(process.env.PORT || 4000);
+const bindHost = process.env.BIND_HOST || '127.0.0.1';
 
 connectDatabase()
   .then(async() => {
     await syncModels();
-    server.listen(port, () =>
-      console.log(`Tuklas Talino API running on http://localhost:${port}`)
+    server.listen(port, bindHost, () =>
+      console.log(`Tuklas Talino API running on http://${bindHost}:${port}`)
     );
   })
   .catch((err) => {
