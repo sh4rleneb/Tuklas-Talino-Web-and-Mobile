@@ -61,7 +61,29 @@ const apiLimiter = rateLimit({
   }
 });
 
+const authFailureLimitMax = Math.max(
+  1,
+  Number(process.env.AUTH_RATE_LIMIT_MAX || 30)
+);
+
+const authFailureLimiter = rateLimit({
+  windowMs: apiRateLimitWindowMs,
+  max: authFailureLimitMax,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS',
+  skipSuccessfulRequests: true,
+  message: {
+    error: 'Too Many Authentication Attempts',
+    message:
+      'Too many unsuccessful authentication attempts. Please try again later.'
+  }
+});
+
 app.use('/api', apiLimiter);
+app.use('/api/auth/login', authFailureLimiter);
+app.use('/api/auth/verify-password', authFailureLimiter);
+app.use('/api/auth/change-password', authFailureLimiter);
 
 app.use(express.json({ limit: requestBodyLimit }));
 app.use(express.urlencoded({ extended: true, limit: requestBodyLimit, parameterLimit: 100 }));
