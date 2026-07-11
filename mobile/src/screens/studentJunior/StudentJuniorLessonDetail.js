@@ -540,6 +540,8 @@ const continueButtonAnim = useRef(new Animated.Value(0)).current;
 const confettiAnim = useRef(new Animated.Value(0)).current;
 const correctAnswerScale = useRef(new Animated.Value(1)).current;
 const activeMissionAttemptRef = useRef({});
+const answerQuestionLockRef = useRef(false);
+const advanceLockRef = useRef(false);
 
 const lessonGradeLevel = Number(student?.gradeLevel || lesson?.gradeLevel || 0);
 const littleLearnerGame = lessonGradeLevel <= 2;
@@ -1347,7 +1349,7 @@ const stepScrollRef = useRef(null);
   }
 
 
-  async function saveNextStep(activityType) {
+  function saveNextStep(activityType) {
     let nextStep = Math.min(step + 1, totalSteps);
 
     if (
@@ -1356,21 +1358,52 @@ const stepScrollRef = useRef(null);
     ) {
       nextStep = totalSteps;
     }
-    await optionalProgressRequest(
-      api(`/lessons/${lessonId}/progress`, {
-        method: 'PATCH',
-        body: { currentStep: nextStep, lastActivityType: activityType },
-      }),
-      { progress: null }
-    );
+
+    // Move the learner immediately. Remote synchronization must
+    // never prevent navigation to the next lesson step.
     setStep(nextStep);
+
+    void Promise.resolve()
+      .then(() =>
+        optionalProgressRequest(
+          api(`/lessons/${lessonId}/progress`, {
+            method: 'PATCH',
+            body: {
+              currentStep: nextStep,
+              lastActivityType: activityType,
+            },
+          }),
+          { progress: null }
+        )
+      )
+      .catch((err) => {
+        console.warn(
+          '[LessonProgress] Background progress synchronization failed.',
+          err
+        );
+      });
   }
 
   async function advance(activityType) {
-    if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq') {
-      const quizGateKey = String(currentActivity?.id || currentActivity?.activityId || currentActivity?.title || step);
+    if (advanceLockRef.current) return;
 
-      if (!mcqPassed[quizGateKey]) {
+    if (
+      currentStep?.type === 'activity' &&
+      currentActivity?.type === 'mcq'
+    ) {
+      const quizQuestions = buildMissionQuestionPool(
+        currentActivity,
+        lesson
+      );
+
+      const quizCompleted =
+        quizQuestions.length > 0 &&
+        quizQuestions.every(
+          (question) =>
+            mcqAnswers[question.id]?.correct === true
+        );
+
+      if (!quizCompleted) {
         setActivityNotice({
           type: 'warning',
           text: 'Sagutan muna nang tama ang pagsusulit bago magpatuloy sa susunod na hakbang.',
@@ -1379,16 +1412,27 @@ const stepScrollRef = useRef(null);
       }
     }
 
-
-    if (submitting) return;
+    advanceLockRef.current = true;
     setSubmitting(true);
+
     try {
-      await stopSpeech();
-      await saveNextStep(activityType);
-    } catch (err) {
-      Alert.alert('Aralin', 'Hindi maitala ang pag-unlad sa aralin. Pakisubukan muli.');
+      // Audio cleanup also runs without blocking lesson navigation.
+      void Promise.resolve()
+        .then(() => stopSpeech())
+        .catch((err) => {
+          console.warn(
+            '[LessonAudio] Failed to stop audio during advancement.',
+            err
+          );
+        });
+
+      saveNextStep(activityType);
     } finally {
-      setSubmitting(false);
+      // Keep the lock until React processes the step update.
+      setTimeout(() => {
+        advanceLockRef.current = false;
+        setSubmitting(false);
+      }, 0);
     }
   }
 
@@ -1396,7 +1440,15 @@ const stepScrollRef = useRef(null);
     const canStartMissionAttempt = ensureMissionAttemptStarted(currentActivity);
     if (!canStartMissionAttempt) return;
 
-    if (submitting) return;
+    if (
+      answerQuestionLockRef.current ||
+      submitting ||
+      mcqAnswers[question.id]?.correct === true
+    ) {
+      return;
+    }
+
+    answerQuestionLockRef.current = true;
     setSubmitting(true);
     try {
       const data = await api(`/lessons/${lessonId}/mcq`, {
@@ -1413,19 +1465,40 @@ const stepScrollRef = useRef(null);
 
 
 
-      if (data?.correct) {
-        setMcqPassed((prev) => ({
-          ...prev,
-          [String(currentActivity?.id || currentActivity?.activityId || currentActivity?.title || step)]: true,
-        }));
-      }
-      setMcqAnswers((answers) => ({
-        ...answers,
+      const visibleQuestions = buildMissionQuestionPool(
+        currentActivity,
+        lesson
+      );
+
+      const nextAnswers = {
+        ...mcqAnswers,
         [question.id]: {
           selectedOptionId: option.id,
           correct: Boolean(data.correct),
         },
-      }));
+      };
+
+      setMcqAnswers(nextAnswers);
+
+      const quizPassed =
+        visibleQuestions.length > 0 &&
+        visibleQuestions.every(
+          (visibleQuestion) =>
+            nextAnswers[visibleQuestion.id]?.correct === true
+        );
+
+      if (quizPassed) {
+        setMcqPassed((prev) => ({
+          ...prev,
+          [String(
+            currentActivity?.id ||
+            currentActivity?.activityId ||
+            currentActivity?.title ||
+            step
+          )]: true,
+        }));
+      }
+
       if (data.correct) {
         correctAnswerScale.setValue(1);
 
@@ -1451,7 +1524,7 @@ const stepScrollRef = useRef(null);
         message: data.correct
           ? (
               littleLearnerGame
-                ? '🌟 Ang husay!'
+                ? ''
                 : 'Tamang sagot!'
             )
           : (
@@ -1461,7 +1534,6 @@ const stepScrollRef = useRef(null);
             ),
       });
 
-      const visibleQuestions = (currentActivity?.questions || []);
 
       if (
         data.correct &&
@@ -1479,6 +1551,7 @@ const stepScrollRef = useRef(null);
         message: 'Pakisubukan muli.',
       });
     } finally {
+      answerQuestionLockRef.current = false;
       setSubmitting(false);
     }
   }
@@ -2337,7 +2410,12 @@ const stepScrollRef = useRef(null);
     if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
  {
             const questions = buildMissionQuestionPool(currentActivity, lesson);
-      const allAnswered = questions.length > 0 && questions.every((question) => mcqAnswers[question.id]);
+      const allAnswered =
+        questions.length > 0 &&
+        questions.every(
+          (question) =>
+            mcqAnswers[question.id]?.correct === true
+        );
       return (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🧠 {currentActivity.title}</Text>
@@ -2438,7 +2516,10 @@ const stepScrollRef = useRef(null);
                       selected && (answer.correct ? styles.optionCorrect : styles.optionIncorrect),
                     ]}
                     onPress={() => answerQuestion(question, option)}
-                    disabled={submitting}
+                    disabled={
+                        submitting ||
+                        answer?.correct === true
+                      }
                   >
                     <View style={styles.optionContent}>
                       <View style={styles.optionLetterBadge}>
