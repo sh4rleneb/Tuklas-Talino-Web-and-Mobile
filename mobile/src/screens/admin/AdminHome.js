@@ -159,6 +159,14 @@ const [auditSearch, setAuditSearch] = useState('');
   const [assignmentForm, setAssignmentForm] = useState({ teacherId: '', gradeLevel: '1', section: '' });
   const [studentGradeFilter, setStudentGradeFilter] = useState('all');
   const [studentSectionFilter, setStudentSectionFilter] = useState('all');
+  const [
+    studentGradeFilterMenuOpen,
+    setStudentGradeFilterMenuOpen,
+  ] = useState(false);
+  const [
+    studentSectionFilterMenuOpen,
+    setStudentSectionFilterMenuOpen,
+  ] = useState(false);
 
   const studentFormSection = studentForm.sectionMode === 'new' ? normalizeSpaces(studentForm.newSection) : normalizeSpaces(studentForm.section);
   const studentValidation = studentErrors({ ...studentForm, section: studentFormSection });
@@ -1254,52 +1262,145 @@ async function executeVerifiedAction() {
           <Text style={styles.helperText}>Filter learners by year level and section.</Text>
 
           <Text style={styles.fieldLabel}>Year Level</Text>
-          <View style={styles.choiceRow}>
-            <Button
-              tone={studentGradeFilter === 'all' ? 'green' : 'slate'}
-              disabled={Boolean(busy)}
-              onPress={() => {
-                setStudentGradeFilter('all');
-                setStudentSectionFilter('all');
-              }}
-            >
-              All
-            </Button>
-            {gradeOptions.map((grade) => (
-              <Button
-                key={`student-filter-grade-${grade}`}
-                tone={Number(studentGradeFilter) === Number(grade) ? 'green' : 'slate'}
-                disabled={Boolean(busy)}
-                onPress={() => {
-                  setStudentGradeFilter(grade);
-                  setStudentSectionFilter('all');
-                }}
-              >
-                G{grade}
-              </Button>
-            ))}
-          </View>
+
+          <TouchableOpacity
+            style={styles.auditDateDropdownButton}
+            disabled={Boolean(busy)}
+            activeOpacity={0.85}
+            onPress={() => {
+              setStudentGradeFilterMenuOpen(
+                (current) => !current
+              );
+              setStudentSectionFilterMenuOpen(false);
+            }}
+          >
+            <Text style={styles.auditDateDropdownText}>
+              {studentGradeFilter === 'all'
+                ? 'All Year Levels'
+                : `Grade ${studentGradeFilter}`}
+            </Text>
+
+            <Text style={styles.auditDateDropdownChevron}>
+              {studentGradeFilterMenuOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+          {studentGradeFilterMenuOpen ? (
+            <View style={styles.auditDateDropdownPanel}>
+              {[
+                {
+                  value: 'all',
+                  label: 'All Year Levels',
+                },
+                ...gradeOptions.map((grade) => ({
+                  value: String(grade),
+                  label: `Grade ${grade}`,
+                })),
+              ].map((option) => {
+                const selected =
+                  String(studentGradeFilter) ===
+                  String(option.value);
+
+                return (
+                  <TouchableOpacity
+                    key={`student-grade-filter-${option.value}`}
+                    style={[
+                      styles.auditDateDropdownOption,
+                      selected &&
+                        styles.auditDateDropdownOptionActive,
+                    ]}
+                    activeOpacity={0.82}
+                    onPress={() => {
+                      setStudentGradeFilter(option.value);
+                      setStudentSectionFilter('all');
+                      setStudentGradeFilterMenuOpen(false);
+                      setStudentSectionFilterMenuOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.auditDateDropdownOptionText,
+                        selected &&
+                          styles.auditDateDropdownOptionTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
 
           <Text style={styles.fieldLabel}>Section</Text>
-          <View style={styles.choiceRow}>
-            <Button
-              tone={studentSectionFilter === 'all' ? 'green' : 'slate'}
-              disabled={Boolean(busy)}
-              onPress={() => setStudentSectionFilter('all')}
-            >
-              All
-            </Button>
-            {studentManagementSectionOptions.map((sectionOption) => (
-              <Button
-                key={`student-filter-section-${sectionOption}`}
-                tone={studentSectionFilter === sectionOption ? 'green' : 'slate'}
-                disabled={Boolean(busy)}
-                onPress={() => setStudentSectionFilter(sectionOption)}
-              >
-                {sectionOption}
-              </Button>
-            ))}
-          </View>
+
+          <TouchableOpacity
+            style={styles.auditDateDropdownButton}
+            disabled={Boolean(busy)}
+            activeOpacity={0.85}
+            onPress={() => {
+              setStudentSectionFilterMenuOpen(
+                (current) => !current
+              );
+              setStudentGradeFilterMenuOpen(false);
+            }}
+          >
+            <Text style={styles.auditDateDropdownText}>
+              {studentSectionFilter === 'all'
+                ? 'All Sections'
+                : studentSectionFilter}
+            </Text>
+
+            <Text style={styles.auditDateDropdownChevron}>
+              {studentSectionFilterMenuOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+          {studentSectionFilterMenuOpen ? (
+            <View style={styles.auditDateDropdownPanel}>
+              {[
+                {
+                  value: 'all',
+                  label: 'All Sections',
+                },
+                ...studentManagementSectionOptions.map(
+                  (sectionOption) => ({
+                    value: sectionOption,
+                    label: sectionOption,
+                  })
+                ),
+              ].map((option) => {
+                const selected =
+                  studentSectionFilter === option.value;
+
+                return (
+                  <TouchableOpacity
+                    key={`student-section-filter-${option.value}`}
+                    style={[
+                      styles.auditDateDropdownOption,
+                      selected &&
+                        styles.auditDateDropdownOptionActive,
+                    ]}
+                    activeOpacity={0.82}
+                    onPress={() => {
+                      setStudentSectionFilter(option.value);
+                      setStudentSectionFilterMenuOpen(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.auditDateDropdownOptionText,
+                        selected &&
+                          styles.auditDateDropdownOptionTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
 
           <Text style={styles.muted}>
             Showing {filteredStudents.length} of {students.length} active student{students.length === 1 ? '' : 's'}.
