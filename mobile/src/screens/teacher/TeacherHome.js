@@ -3587,60 +3587,300 @@ async function handleLogout() {
                   )}
                 </View>
 
-                <View style={styles.lessonActionRow}>
-                  <SmallButton tone="slate" onPress={() => toggleGroupTools(group.id)}>
-                    {isOpen ? 'Hide Add Member' : 'Add Member'}
-                  </SmallButton>
-                  <SmallButton tone="red" disabled={Boolean(busy)} onPress={() => confirmDeleteGroup(group)}>
-                    Remove Group
-                  </SmallButton>
-                </View>
+                  <View style={styles.groupManagementActions}>
+                    <TouchableOpacity
+                      style={[
+                        styles.groupAddMemberToggle,
+                        isOpen && styles.groupAddMemberToggleActive,
+                        Boolean(busy) && styles.disabledButton,
+                      ]}
+                      disabled={Boolean(busy)}
+                      activeOpacity={0.86}
+                      accessibilityRole="button"
+                      accessibilityState={{
+                        expanded: isOpen,
+                        disabled: Boolean(busy),
+                      }}
+                      onPress={() => toggleGroupTools(group.id)}
+                    >
+                      <View style={styles.groupActionIcon}>
+                        <Text style={styles.groupActionIconText}>
+                          {isOpen ? '✕' : '👤'}
+                        </Text>
+                      </View>
 
-                {isOpen ? (
-                  <View style={styles.softRow}>
-                    <Text style={styles.fieldLabel}>Add Member</Text>
-                    <Text style={styles.muted}>
-                      {groupGrade
-                        ? `Only Grade ${groupGrade} learners can be added to this group.`
-                        : 'Only learners from the same grade level can be grouped.'}
-                    </Text>
+                      <View style={styles.flex}>
+                        <Text style={styles.groupAddMemberToggleTitle}>
+                          {isOpen
+                            ? 'Close Member Picker'
+                            : 'Add Members'}
+                        </Text>
 
-                    {addableStudents.length ? (
-                      <>
-                        <View style={styles.lessonActionRow}>
-                          <SmallButton
-                            tone="slate"
-                            disabled={Boolean(busy)}
-                            onPress={() =>
-                              setAllSelectedGroupStudents(
-                                group.id,
-                                addableStudents
-                              )
-                            }
-                          >
-                            Select All
-                          </SmallButton>
+                        <Text style={styles.groupAddMemberToggleSubtitle}>
+                          {isOpen
+                            ? 'Hide the learner selection panel'
+                            : 'Choose eligible learners for this group'}
+                        </Text>
+                      </View>
 
-                          <SmallButton
-                            tone="slate"
+                      <Text style={styles.groupActionChevron}>
+                        {isOpen ? '▲' : '▼'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.groupRemoveButton,
+                        Boolean(busy) && styles.disabledButton,
+                      ]}
+                      disabled={Boolean(busy)}
+                      activeOpacity={0.86}
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove group"
+                      onPress={() => confirmDeleteGroup(group)}
+                    >
+                      <Text style={styles.groupRemoveButtonText}>
+                        🗑 Remove Group
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {isOpen ? (
+                    <View style={styles.groupMemberPanel}>
+                      <View style={styles.groupMemberPanelHeader}>
+                        <View style={styles.flex}>
+                          <Text style={styles.groupMemberPanelTitle}>
+                            Add Members
+                          </Text>
+
+                          <Text style={styles.groupMemberPanelDescription}>
+                            {groupGrade
+                              ? `Only Grade ${groupGrade} learners can be added to this group.`
+                              : 'Set the group grade level before adding learners.'}
+                          </Text>
+                        </View>
+
+                        {addableStudents.length ? (
+                          <View style={styles.groupMemberCountBadge}>
+                            <Text style={styles.groupMemberCountText}>
+                              {selectedCount}/{addableStudents.length}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+
+                      {addableStudents.length ? (
+                        <>
+                          <View style={styles.groupSelectionToolbar}>
+                            <TouchableOpacity
+                              style={[
+                                styles.groupSelectionSecondaryButton,
+                                (
+                                  Boolean(busy) ||
+                                  selectedCount === addableStudents.length
+                                ) &&
+                                  styles.groupSelectionSecondaryButtonDisabled,
+                              ]}
+                              disabled={
+                                Boolean(busy) ||
+                                selectedCount === addableStudents.length
+                              }
+                              activeOpacity={0.82}
+                              accessibilityRole="button"
+                              onPress={() =>
+                                setAllSelectedGroupStudents(
+                                  group.id,
+                                  addableStudents
+                                )
+                              }
+                            >
+                              <Text
+                                style={
+                                  styles.groupSelectionSecondaryButtonText
+                                }
+                              >
+                                Select All
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={[
+                                styles.groupSelectionSecondaryButton,
+                                (
+                                  Boolean(busy) ||
+                                  selectedCount === 0
+                                ) &&
+                                  styles.groupSelectionSecondaryButtonDisabled,
+                              ]}
+                              disabled={
+                                Boolean(busy) ||
+                                selectedCount === 0
+                              }
+                              activeOpacity={0.82}
+                              accessibilityRole="button"
+                              onPress={() =>
+                                clearSelectedGroupStudents(group.id)
+                              }
+                            >
+                              <Text
+                                style={
+                                  styles.groupSelectionSecondaryButtonText
+                                }
+                              >
+                                Clear
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+
+                          <Text style={styles.groupSelectionSummary}>
+                            {selectedCount === 0
+                              ? 'No learners selected.'
+                              : `${selectedCount} of ${addableStudents.length} learners selected.`}
+                          </Text>
+
+                          <View style={styles.groupStudentList}>
+                            {addableStudents.map((student) => {
+                              const studentId =
+                                getStudentGroupMemberId(student);
+
+                              const isSelected =
+                                selectedStudentIds.has(
+                                  String(studentId)
+                                );
+
+                              const studentGrade =
+                                student.gradeLevel ||
+                                student.grade ||
+                                '-';
+
+                              const studentCode =
+                                student.studentCode ||
+                                student.student_code ||
+                                '';
+
+                              return (
+                                <TouchableOpacity
+                                  key={
+                                    studentId ||
+                                    studentCode ||
+                                    student.name
+                                  }
+                                  style={[
+                                    styles.groupStudentRow,
+                                    isSelected &&
+                                      styles.groupStudentRowSelected,
+                                    Boolean(busy) &&
+                                      styles.disabledButton,
+                                  ]}
+                                  disabled={Boolean(busy)}
+                                  activeOpacity={0.82}
+                                  accessibilityRole="checkbox"
+                                  accessibilityState={{
+                                    checked: isSelected,
+                                    disabled: Boolean(busy),
+                                  }}
+                                  accessibilityLabel={`${student.name || 'Learner'}, Grade ${studentGrade}`}
+                                  onPress={() => {
+                                    if (!studentId) {
+                                      Alert.alert(
+                                        'Group Members',
+                                        'Missing student details.'
+                                      );
+                                      return;
+                                    }
+
+                                    const gradeValidationMessage =
+                                      getGroupMemberGradeValidationMessage(
+                                        group,
+                                        student
+                                      );
+
+                                    if (gradeValidationMessage) {
+                                      Alert.alert(
+                                        'Group Members',
+                                        gradeValidationMessage
+                                      );
+                                      return;
+                                    }
+
+                                    toggleSelectedGroupStudent(
+                                      group.id,
+                                      studentId
+                                    );
+                                  }}
+                                >
+                                  <View
+                                    style={[
+                                      styles.groupStudentCheckbox,
+                                      isSelected &&
+                                        styles.groupStudentCheckboxSelected,
+                                    ]}
+                                  >
+                                    <Text
+                                      style={
+                                        styles.groupStudentCheckboxMark
+                                      }
+                                    >
+                                      {isSelected ? '✓' : ''}
+                                    </Text>
+                                  </View>
+
+                                  <View style={styles.groupStudentIdentity}>
+                                    <Text
+                                      style={[
+                                        styles.groupStudentName,
+                                        isSelected &&
+                                          styles.groupStudentNameSelected,
+                                      ]}
+                                      numberOfLines={1}
+                                    >
+                                      {student.name || 'Learner'}
+                                    </Text>
+
+                                    {studentCode ? (
+                                      <Text
+                                        style={styles.groupStudentMeta}
+                                        numberOfLines={1}
+                                      >
+                                        {studentCode}
+                                      </Text>
+                                    ) : null}
+                                  </View>
+
+                                  <View
+                                    style={styles.groupStudentGradeBadge}
+                                  >
+                                    <Text
+                                      style={styles.groupStudentGradeText}
+                                    >
+                                      Grade {studentGrade}
+                                    </Text>
+                                  </View>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.groupAddSelectedButton,
+                              (
+                                Boolean(busy) ||
+                                selectedCount === 0
+                              ) &&
+                                styles.groupAddSelectedButtonDisabled,
+                            ]}
                             disabled={
                               Boolean(busy) ||
                               selectedCount === 0
                             }
-                            onPress={() =>
-                              clearSelectedGroupStudents(
-                                group.id
-                              )
-                            }
-                          >
-                            Clear
-                          </SmallButton>
-
-                          <SmallButton
-                            disabled={
-                              Boolean(busy) ||
-                              selectedCount === 0
-                            }
+                            activeOpacity={0.86}
+                            accessibilityRole="button"
+                            accessibilityState={{
+                              disabled:
+                                Boolean(busy) ||
+                                selectedCount === 0,
+                            }}
                             onPress={() =>
                               handleBulkAddGroupMembers(
                                 group,
@@ -3648,81 +3888,50 @@ async function handleLogout() {
                               )
                             }
                           >
-                            Add Selected ({selectedCount})
-                          </SmallButton>
+                            <Text
+                              style={styles.groupAddSelectedButtonText}
+                            >
+                              {busy === `members-bulk-${group.id}`
+                                ? 'Adding Learners...'
+                                : selectedCount > 0
+                                  ? `Add ${selectedCount} Selected Learner${selectedCount === 1 ? '' : 's'}`
+                                  : 'Select Learners to Add'}
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : null}
+
+                      {!groupGrade ? (
+                        <View style={styles.groupMemberEmptyState}>
+                          <Text style={styles.groupMemberEmptyIcon}>
+                            🎓
+                          </Text>
+
+                          <Text style={styles.groupMemberEmptyTitle}>
+                            Grade level required
+                          </Text>
+
+                          <Text style={styles.groupMemberEmptyText}>
+                            Set this group's grade level before adding learners.
+                          </Text>
                         </View>
+                      ) : !addableStudents.length ? (
+                        <View style={styles.groupMemberEmptyState}>
+                          <Text style={styles.groupMemberEmptyIcon}>
+                            ✓
+                          </Text>
 
-                        <View style={styles.choiceRow}>
-                          {addableStudents.map((student) => {
-                            const studentId =
-                              getStudentGroupMemberId(
-                                student
-                              );
-                            const isSelected =
-                              selectedStudentIds.has(
-                                String(studentId)
-                              );
+                          <Text style={styles.groupMemberEmptyTitle}>
+                            No eligible learners available
+                          </Text>
 
-                            return (
-                              <SmallButton
-                                key={
-                                  studentId ||
-                                  student.studentCode ||
-                                  student.student_code ||
-                                  student.name
-                                }
-                                tone={
-                                  isSelected
-                                    ? 'green'
-                                    : 'slate'
-                                }
-                                disabled={Boolean(busy)}
-                                onPress={() => {
-                                  if (!studentId) {
-                                    Alert.alert(
-                                      'Group Members',
-                                      'Missing student details.'
-                                    );
-                                    return;
-                                  }
-
-                                  const gradeValidationMessage =
-                                    getGroupMemberGradeValidationMessage(
-                                      group,
-                                      student
-                                    );
-
-                                  if (
-                                    gradeValidationMessage
-                                  ) {
-                                    Alert.alert(
-                                      'Group Members',
-                                      gradeValidationMessage
-                                    );
-                                    return;
-                                  }
-
-                                  toggleSelectedGroupStudent(
-                                    group.id,
-                                    studentId
-                                  );
-                                }}
-                              >
-                                {isSelected ? '☑' : '☐'} {student.name} • Grade {student.gradeLevel || student.grade || '-'}
-                              </SmallButton>
-                            );
-                          })}
+                          <Text style={styles.groupMemberEmptyText}>
+                            All matching Grade {groupGrade} learners may already be group members.
+                          </Text>
                         </View>
-                      </>
-                    ) : null}
-
-                    {!groupGrade ? (
-                      <Text style={styles.muted}>Set a group grade level before adding learners.</Text>
-                    ) : !addableStudents.length ? (
-                      <Text style={styles.muted}>No available learners match this group grade level, or all matching learners are already members.</Text>
-                    ) : null}
-                  </View>
-                ) : null}
+                      ) : null}
+                    </View>
+                  ) : null}
               </View>
             );
           }) : (
@@ -5822,6 +6031,273 @@ const styles = StyleSheet.create({
   lessonMetaPill: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, padding: 9, minWidth: '47%', flex: 1 },
   lessonMetaLabel: { color: '#64748B', fontSize: 11, fontWeight: '800' },
   lessonMetaValue: { color: '#0F172A', fontWeight: '900', marginTop: 3 },
+  groupManagementActions: {
+    marginTop: 14,
+    gap: 10,
+  },
+  groupAddMemberToggle: {
+    minHeight: 66,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  groupAddMemberToggleActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#22C55E',
+  },
+  groupActionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupActionIconText: {
+    fontSize: 18,
+  },
+  groupAddMemberToggleTitle: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  groupAddMemberToggleSubtitle: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  groupActionChevron: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  groupRemoveButton: {
+    minHeight: 46,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  groupRemoveButtonText: {
+    color: '#B91C1C',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  groupMemberPanel: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 20,
+    padding: 14,
+    marginTop: 12,
+    shadowColor: '#14532D',
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 2,
+  },
+  groupMemberPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  groupMemberPanelTitle: {
+    color: '#0F172A',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  groupMemberPanelDescription: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 4,
+  },
+  groupMemberCountBadge: {
+    minWidth: 48,
+    minHeight: 34,
+    borderRadius: 999,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  groupMemberCountText: {
+    color: '#166534',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  groupSelectionToolbar: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  groupSelectionSecondaryButton: {
+    minHeight: 42,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+  },
+  groupSelectionSecondaryButtonDisabled: {
+    opacity: 0.45,
+  },
+  groupSelectionSecondaryButtonText: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  groupSelectionSummary: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  groupStudentList: {
+    gap: 8,
+    marginTop: 8,
+  },
+  groupStudentRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  groupStudentRowSelected: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#22C55E',
+    borderWidth: 2,
+  },
+  groupStudentCheckbox: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#94A3B8',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupStudentCheckboxSelected: {
+    backgroundColor: '#16A34A',
+    borderColor: '#16A34A',
+  },
+  groupStudentCheckboxMark: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  groupStudentIdentity: {
+    flex: 1,
+    minWidth: 0,
+  },
+  groupStudentName: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  groupStudentNameSelected: {
+    color: '#166534',
+  },
+  groupStudentMeta: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  groupStudentGradeBadge: {
+    backgroundColor: '#E2E8F0',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  groupStudentGradeText: {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  groupAddSelectedButton: {
+    minHeight: 52,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#16A34A',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    marginTop: 16,
+    shadowColor: '#14532D',
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 3,
+  },
+  groupAddSelectedButtonDisabled: {
+    backgroundColor: '#94A3B8',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  groupAddSelectedButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  groupMemberEmptyState: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 18,
+    marginTop: 14,
+  },
+  groupMemberEmptyIcon: {
+    fontSize: 26,
+    marginBottom: 8,
+  },
+  groupMemberEmptyTitle: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  groupMemberEmptyText: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 5,
+  },
   lessonActionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   rowTitle: { color: '#0F172A', fontWeight: '800' },
   statusText: { color: '#166534', fontWeight: '800', marginTop: 5 },
