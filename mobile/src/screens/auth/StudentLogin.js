@@ -171,6 +171,23 @@ function handleStudentIdChange(value) {
         {/* CARD */}
 
         <View style={styles.card}>
+
+          <View style={styles.headerIconBox}>
+            <Text style={styles.headerEmoji}>
+              🎒
+            </Text>
+          </View>
+
+          <Text style={styles.heading}>
+            Maligayang Pagdating, Mag-aaral!
+          </Text>
+
+          <Text style={styles.sub}>
+            Pumasok upang ipagpatuloy ang iyong mga aralin,
+            sagutan ang mga gawain, at subaybayan ang iyong
+            pag-unlad.
+          </Text>
+
           {/* MAG-AARAL ID */}
           <Text style={styles.label}>
             🪪 Mag-aaral ID
@@ -306,25 +323,49 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  heading: {
-    fontSize: 22,
-    fontFamily: 'Fredoka_700Bold',
-    color: '#0F172A',
+  headerIconBox: {
+    width: 75,
+    height: 75,
 
-    flexShrink: 1,
+    borderRadius: 100,
+
+    backgroundColor: '#DCFCE7',
+
+    justifyContent: 'center',
+    alignItems: 'center',
+
+    alignSelf: 'center',
+
+    marginBottom: 20,
+  },
+
+  headerEmoji: {
+    fontSize: 34,
+  },
+
+  heading: {
+    fontSize: 34,
+
+    textAlign: 'center',
+
+    fontFamily: 'Fredoka_700Bold',
+
+    color: '#16A34A',
   },
 
   sub: {
-    marginTop: 4,
+    fontSize: 15,
 
-    fontSize: 14,
     color: '#64748B',
 
+    marginTop: 10,
+    marginBottom: 30,
+
+    lineHeight: 26,
+
+    textAlign: 'center',
+
     fontFamily: 'Nunito_700Bold',
-
-    lineHeight: 22,
-
-    flexShrink: 1,
   },
 
   divider: {

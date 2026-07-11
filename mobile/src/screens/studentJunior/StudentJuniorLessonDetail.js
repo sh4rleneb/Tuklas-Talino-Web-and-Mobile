@@ -4265,13 +4265,25 @@ const styles = StyleSheet.create({
 
   stepText: { color: '#64748B', marginTop: 7 },
   infoChip: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 44,
+
     color: '#166534',
     fontSize: 13,
+    lineHeight: 20,
     fontWeight: '900',
+
     backgroundColor: '#DCFCE7',
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+
     overflow: 'hidden',
   },
   progressTrack: { height: 12, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 10,
