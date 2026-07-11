@@ -16,7 +16,7 @@ function formatXpLogDate(log) {
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) return 'Walang Petsa';
 
-  return date.toLocaleString('en-PH', {
+  return date.toLocaleString('fil-PH', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -33,6 +33,53 @@ function getXpIcon(log) {
   if (log.sourceType === 'speech') return '🎤';
   if (log.sourceType === 'mission') return '🚀';
   return '⭐';
+}
+
+function formatXpLogNote(log = {}) {
+  const value = String(log.note || '').trim();
+  const normalized = value.toLowerCase();
+
+  const translations = {
+    'correct fill-in-the-blank writing task':
+      'Tamang sagot sa gawaing pagpuno sa patlang',
+    'correct mcq answer':
+      'Tamang sagot sa tanong na may pagpipilian',
+    'correct answer':
+      'Tamang sagot',
+    'lesson completed':
+      'Natapos ang aralin',
+    'completed lesson':
+      'Natapos ang aralin',
+    'quiz completed':
+      'Natapos ang pagsusulit',
+    'completed quiz':
+      'Natapos ang pagsusulit',
+    'perfect quiz':
+      'Perpektong iskor sa pagsusulit',
+    'writing task submitted':
+      'Naisumite ang gawaing pagsulat',
+    'speech attempt submitted':
+      'Naisumite ang pagsubok sa pagbigkas',
+    'mission completed':
+      'Natapos ang misyon',
+    'group task completed':
+      'Natapos ang gawaing pangkat',
+  };
+
+  if (translations[normalized]) {
+    return translations[normalized];
+  }
+
+  const fallbacks = {
+    lesson: 'Nakuhang XP sa aralin',
+    quiz: 'Nakuhang XP sa pagsusulit',
+    mcq: 'Nakuhang XP sa tamang sagot',
+    writing: 'Nakuhang XP sa gawaing pagsulat',
+    speech: 'Nakuhang XP sa pagbigkas',
+    mission: 'Nakuhang XP sa misyon',
+  };
+
+  return fallbacks[log.sourceType] || 'Nakuhang XP';
 }
 
 export default function XPHistoryScreen({ navigation, route }) {
@@ -61,7 +108,7 @@ export default function XPHistoryScreen({ navigation, route }) {
 
               <View style={styles.xpLogContent}>
                 <Text style={styles.xpLogPoints}>+{log.points} XP</Text>
-                <Text style={styles.xpLogNote}>{log.note || 'Nakuhang XP'}</Text>
+                <Text style={styles.xpLogNote}>{formatXpLogNote(log)}</Text>
                 <Text style={styles.xpDate}>🕒 {formatXpLogDate(log)}</Text>
               </View>
             </View>

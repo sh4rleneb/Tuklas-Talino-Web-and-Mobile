@@ -38,41 +38,9 @@ from './StudentTabNavigator';
 import StudentSeniorTabNavigator
 from './StudentSeniorTabNavigator';
 
-import StudentJuniorHome
-from '../screens/studentJunior/StudentJuniorHome';
-
-import StudentJuniorLessons
-from '../screens/studentJunior/StudentJuniorLessons';
-
-import StudentJuniorLessonDetail
-from '../screens/studentJunior/StudentJuniorLessonDetail';
-
-import ModulesScreen
-from '../screens/studentJunior/ModulesScreen';
-
-import QuizScreen
-from '../screens/studentJunior/QuizScreen';
-
-import GroupsScreen
-from '../screens/GroupsScreen';
-
-import BadgesScreen
-from '../screens/BadgesScreen';
-
-import ProfileScreen
-from '../screens/ProfileScreen';
 import XPHistoryScreen
 from '../screens/XPHistoryScreen';
 
-import MissionScreen
-from '../screens/MissionScreen';
-
-
-import StudentSeniorHome
-from '../screens/studentSenior/StudentSeniorHome';
-
-import StudentSeniorLessons
-from '../screens/studentSenior/StudentSeniorLessons';
 
 
 /*
@@ -211,51 +179,13 @@ export default function RootNavigator() {
             component={StudentSeniorTabNavigator}
           />
 
-        <Stack.Screen
-          name="StudentJuniorHome"
-          component={StudentJuniorHome}
-        />
 
-        <Stack.Screen
-          name="StudentJuniorLessons"
-          component={
-            StudentJuniorLessons
-          }
-        />
 
-        <Stack.Screen
-          name="StudentJuniorLessonDetail"
-          component={StudentJuniorLessonDetail}
-        />
 
-        <Stack.Screen
-          name="ModulesScreen"
-          component={ModulesScreen}
-        />
 
-        <Stack.Screen
-          name="QuizScreen"
-          component={QuizScreen}
-        />
 
-        <Stack.Screen
-          name="GroupsScreen"
-          component={GroupsScreen}
-        />
 
-        <Stack.Screen
-          name="BadgesScreen"
-          component={BadgesScreen}
-        />
 
-        <Stack.Screen
-          name="MissionScreen"
-          component={MissionScreen}
-        />
-<Stack.Screen
-          name="ProfileScreen"
-          component={ProfileScreen}
-        />
 
         <Stack.Screen
           name="XPHistory"
@@ -273,17 +203,7 @@ export default function RootNavigator() {
           component={AdminHome}
         />
 
-        <Stack.Screen
-          name="StudentSeniorHome"
-          component={StudentSeniorHome}
-        />
 
-        <Stack.Screen
-          name="StudentSeniorLessons"
-          component={
-            StudentSeniorLessons
-          }
-        />
 
       </Stack.Navigator>
     </NavigationContainer>

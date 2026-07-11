@@ -11,6 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../api/client';
 
+import {
+  cleanStudentLessonTitle,
+  studentLessonDateValue,
+} from '../utils/studentLessonDisplay';
+
 const CATEGORIES = [
   { key: 'ALL', label: 'Lahat', icon: '✨', accent: '#22C55E', soft: '#ECFDF5' },
   { key: 'Pagbasa', label: 'Pagbasa', icon: '📖', accent: '#22C55E', soft: '#DCFCE7' },
@@ -249,7 +254,20 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
   const filteredLessons = useMemo(() => {
     const sortedLessons = [...lessons].sort(
-      (first, second) => Number(first.completed) - Number(second.completed)
+      (first, second) => {
+        const completionOrder =
+          Number(first.completed) -
+          Number(second.completed);
+
+        if (completionOrder) {
+          return completionOrder;
+        }
+
+        return (
+          studentLessonDateValue(second) -
+          studentLessonDateValue(first)
+        );
+      }
     );
 
     if (selectedCategory === 'FINISHED') {
@@ -486,7 +504,13 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                       </View>
                     </View>
 
-                    <Text style={styles.lessonTitle}>{lesson.title}</Text>
+                    <Text style={styles.lessonTitle}>
+                      {cleanStudentLessonTitle(
+                        lesson.title ||
+                        lesson.name ||
+                        lesson.lessonTitle
+                      )}
+                    </Text>
                     <Text style={styles.lessonMeta}>
                       Baitang {lesson.gradeLevel || student.gradeLevel || '—'} • +{lesson.xpReward || 0} XP
                     </Text>

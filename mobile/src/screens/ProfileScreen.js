@@ -480,7 +480,7 @@ async function handleLogout() {
         onPress={handleChangePassword}
       >
         <Text style={styles.changePasswordButtonText}>
-          Palitan ang PIN o Lihim na Salita
+          Palitan ang PIN o Password
         </Text>
       </TouchableOpacity>
 

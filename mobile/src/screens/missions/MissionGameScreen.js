@@ -482,7 +482,11 @@ export default function MissionGameScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
 
         <MissionHeader
           icon="🎮"
@@ -643,7 +647,11 @@ export default function MissionGameScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
-  content: { padding: 20 },
+    content: {
+    flexGrow: 1,
+    padding: 20,
+    paddingBottom: 170,
+  },
   title: { fontSize: 24, fontWeight: '900', marginBottom: 16 },
   soundCard: {
     backgroundColor: '#FFFFFF',

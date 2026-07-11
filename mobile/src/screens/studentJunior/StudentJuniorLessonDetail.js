@@ -1269,6 +1269,13 @@ const stepScrollRef = useRef(null);
     });
 
     requestAnimationFrame(() => {
+      const studentTabs = navigation.getParent();
+
+      if (studentTabs?.navigate) {
+        studentTabs.navigate('Tahanan');
+        return;
+      }
+
       navigation.navigate(homeRoute, {
         screen: 'Tahanan',
       });
@@ -3684,10 +3691,13 @@ const stepScrollRef = useRef(null);
                     </Text>
                     <Text
                       style={{
-                        fontSize:11,
-                        fontWeight:'700',
-                        color:'#475569',
-                        marginTop:2,
+                        width: '100%',
+                        fontSize: 11,
+                        fontWeight: '700',
+                        color: '#475569',
+                        lineHeight: 15,
+                        marginTop: 2,
+                        textAlign: 'center',
                       }}
                     >
                       Mga Bagong Gantimpala
@@ -4633,11 +4643,14 @@ const styles = StyleSheet.create({
   },
 
   finishCardArrow: {
-    alignSelf: 'flex-end',
+    width: '100%',
+    alignSelf: 'center',
     color: '#475569',
     fontSize: 27,
     fontWeight: '800',
     lineHeight: 28,
+    textAlign: 'center',
+    marginTop: 6,
   },
 
 });

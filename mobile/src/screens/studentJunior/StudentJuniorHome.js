@@ -6,6 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import logo from '../../../assets/icons/tuklas-logo.png';
 
+import {
+  cleanStudentLessonTitle,
+  formatStudentSubjectDisplay,
+  sortStudentLessonsForDashboard,
+} from '../../utils/studentLessonDisplay';
+
 const HOME_BADGE_IMAGES = {
   'batang-mambabasa': require('../../../assets/badges/batang-mambabasa.png'),
   'bituin-ng-kasipagan': require('../../../assets/badges/bituin-ng-kasipagan.png'),
@@ -123,7 +129,10 @@ export default function StudentJuniorHome({ navigation }) {
   );
 
   const student = dashboard?.student || {};
-  const lessons = dashboard?.lessons || [];
+  const lessons =
+    sortStudentLessonsForDashboard(
+      dashboard?.lessons || []
+    );
   const groups = getVisibleGroups(dashboard?.groups || []);
   const badges = dashboard?.badges || [];
   const completedLesson = lessons.filter((lesson) => lesson?.completed).length;
@@ -316,11 +325,11 @@ export default function StudentJuniorHome({ navigation }) {
 
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardTag}>
-                        {nextLesson.subject || 'Aralin'}
+                        {formatStudentSubjectDisplay(nextLesson.subject || 'Filipino')}
                       </Text>
 
                       <Text style={styles.cardTitle}>
-                        {nextLesson.title}
+                        {cleanStudentLessonTitle(nextLesson.title || nextLesson.name || nextLesson.lessonTitle)}
                       </Text>
 
                       <Text style={styles.cardMeta}>
@@ -383,23 +392,23 @@ export default function StudentJuniorHome({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Gawain ng Grupo
+              Mga Gawain ng Pangkat
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Mga Pangkat')}>
-              <Text style={styles.sectionLink}>Buksan →</Text>
+              <Text style={styles.sectionLink}>Buksan ang Pangkat →</Text>
             </TouchableOpacity>
           </View>
 
           {activeGroupTask ? (
             <Card style={styles.taskCard}>
               <Text style={styles.taskTitle}>{activeGroupTask.title}</Text>
-              <Text style={styles.taskMeta}>{activeGroupTask.description || 'May nakahandang gawain para sa inyong grupo.'}</Text>
+              <Text style={styles.taskMeta}>{activeGroupTask.description || 'May nakahandang gawain para sa inyong pangkat.'}</Text>
               <Text style={styles.taskXp}>+{activeGroupTask.xpReward || 0} XP</Text>
             </Card>
           ) : (
             <View style={styles.emptyStateSmall}>
               <Text style={styles.emptyEmoji}>🎉</Text>
-              <Text style={styles.emptyTitle}>Wala pang gawaing panggrupo</Text>
+              <Text style={styles.emptyTitle}>Wala pang gawaing pangkat</Text>
               <Text style={styles.emptyText}>Mahusay! Bumalik mamaya para sa bagong gawain.</Text>
             </View>
           )}

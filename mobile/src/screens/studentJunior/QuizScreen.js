@@ -231,6 +231,28 @@ function quizCatalog(dashboard) {
     .filter((quiz) => quiz.questions.length);
 }
 
+function formatQuizAttemptUsage(
+  attemptsUsed,
+  maxAttempts
+) {
+  const safeAttempts = Math.max(
+    0,
+    Number(attemptsUsed || 0)
+  );
+
+  const safeLimit =
+    normalizeQuizAttemptLimit(maxAttempts);
+
+  const displayedAttempts =
+    safeLimit === 0
+      ? safeAttempts
+      : Math.min(safeAttempts, safeLimit);
+
+  return `${displayedAttempts}/${formatQuizAttemptLimit(
+    safeLimit
+  )}`;
+}
+
 function getQuizAttempts(attempts = {}, quiz = {}) {
   const safeAttempts =
     attempts && typeof attempts === 'object' ? attempts : {};
@@ -398,6 +420,150 @@ function formatTuklasQuizPreviewTitle({ lessonTitle, fallback = 'Aralin' } = {})
   return cleanTuklasQuizLessonTitle(lessonTitle, fallback);
 }
 
+function quizAttemptScoreText(
+  attempt = {},
+  fallbackTotal = 0
+) {
+  const score = Number(attempt?.score ?? 0);
+  const total = Number(
+    attempt?.total ?? fallbackTotal ?? 0
+  );
+
+  const percent =
+    attempt?.percent !== undefined &&
+    attempt?.percent !== null
+      ? Number(attempt.percent)
+      : total
+        ? Math.round((score / total) * 100)
+        : 0;
+
+  return total
+    ? `${score}/${total} • ${percent}%`
+    : `${percent}%`;
+}
+
+function quizMasteryFromPercent(percent = 0) {
+  const value = Math.max(
+    0,
+    Math.min(100, Number(percent || 0))
+  );
+
+  if (value >= 90) {
+    return {
+      label: 'Napakahusay',
+      icon: '🏆',
+      note:
+        'Napakahusay ng iyong pagkaunawa. ' +
+        'Ipagpatuloy ang pagsasanay.',
+    };
+  }
+
+  if (value >= 75) {
+    return {
+      label: 'Mahusay',
+      icon: '🌟',
+      note:
+        'Mahusay ang iyong pagkaunawa sa aralin.',
+    };
+  }
+
+  if (value >= 50) {
+    return {
+      label: 'Umuunlad',
+      icon: '🌱',
+      note:
+        'Magandang pagsubok. Balikan ang mga ' +
+        'maling sagot.',
+    };
+  }
+
+  return {
+    label: 'Kailangan pang Magsanay',
+    icon: '💪',
+    note:
+      'Subukan muli pagkatapos balikan ang aralin.',
+  };
+}
+
+function normalizeMobileQuizMastery(result = {}) {
+  const fallback = quizMasteryFromPercent(
+    result?.percent
+  );
+
+  const source =
+    result?.mastery &&
+    typeof result.mastery === 'object'
+      ? result.mastery
+      : {};
+
+  const rawLabel = String(
+    source.label ||
+    result?.masteryLabel ||
+    ''
+  ).trim();
+
+  const rawNote = String(
+    source.note ||
+    result?.masteryNote ||
+    ''
+  ).trim();
+
+  const labelMap = {
+    Advanced: 'Napakahusay',
+    Proficient: 'Mahusay',
+    Developing: 'Umuunlad',
+    'Needs Practice': 'Kailangan pang Magsanay',
+    Napakahusay: 'Napakahusay',
+    Mahusay: 'Mahusay',
+    Umuunlad: 'Umuunlad',
+    'Kailangan pang Magsanay':
+      'Kailangan pang Magsanay',
+  };
+
+  const noteMap = {
+    'Excellent mastery. Keep challenging yourself.':
+      'Napakahusay ng iyong pagkaunawa. ' +
+      'Ipagpatuloy ang pagsasanay.',
+
+    'Excellent mastery. You showed strong understanding sa the lesson.':
+      'Napakahusay ng iyong pagkaunawa sa aralin.',
+
+    'Great work. You understood most sa the lesson.':
+      'Mahusay ang iyong pagkaunawa sa aralin.',
+
+    'You are getting there. Review the missed questions.':
+      'Umunlad ka na. Balikan ang mga tanong na ' +
+      'hindi nasagutan nang tama.',
+
+    'Napakahusay ng iyong pagkaunawa. Ipagpatuloy ang pagsasanay.':
+      'Napakahusay ng iyong pagkaunawa. ' +
+      'Ipagpatuloy ang pagsasanay.',
+
+    'Napakahusay ng iyong pagkaunawa sa aralin.':
+      'Napakahusay ng iyong pagkaunawa sa aralin.',
+
+    'Mahusay ang iyong pagkaunawa sa aralin.':
+      'Mahusay ang iyong pagkaunawa sa aralin.',
+
+    'Mahusay ang iyong pagkaunawa. Balikan pa nang kaunti ang aralin.':
+      'Mahusay ang iyong pagkaunawa. ' +
+      'Balikan pa nang kaunti ang aralin.',
+
+    'Umunlad ka na. Balikan ang mga tanong na hindi nasagutan nang tama.':
+      'Umunlad ka na. Balikan ang mga tanong na ' +
+      'hindi nasagutan nang tama.',
+
+    'Subukan muli pagkatapos balikan ang aralin.':
+      'Subukan muli pagkatapos balikan ang aralin.',
+  };
+
+  return {
+    ...fallback,
+    label: labelMap[rawLabel] || fallback.label,
+    note: noteMap[rawNote] || fallback.note,
+  };
+}
+
 export default function QuizScreen({ navigation }) {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -408,6 +574,10 @@ export default function QuizScreen({ navigation }) {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
+  const [
+    selectedAttemptIndex,
+    setSelectedAttemptIndex,
+  ] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
@@ -433,19 +603,70 @@ export default function QuizScreen({ navigation }) {
   const student = dashboard?.student;
   const attempts = dashboard?.quizAttempts || {};
 
- const previewQuizAttempts = previewQuiz ? (attempts[previewQuiz.quizId] || []) : [];
+  const previewQuizAttempts = previewQuiz
+    ? getQuizAttempts(attempts, previewQuiz)
+    : [];
 
  const previewBest = previewQuizAttempts.reduce(
   (value, attempt) => Math.max(value, attempt.percent || 0),
   0
  );
-  const activeQuizAttempts = activeQuiz ? getQuizAttempts(attempts, activeQuiz) : [];
-  const activeQuizMaxAttempts = getQuizAttemptLimit(activeQuiz);
-  const canRetry = !isQuizAttemptLimitReached(
+  const activeQuizAttempts = activeQuiz
+    ? getQuizAttempts(attempts, activeQuiz)
+    : [];
+
+  const activeQuizMaxAttempts =
+    getQuizAttemptLimit(activeQuiz);
+
+  const resultAttemptHistory =
+    result &&
+    Array.isArray(result.attemptHistory) &&
+    result.attemptHistory.length
+      ? result.attemptHistory
+      : result
+        ? [result]
+        : [];
+
+  const attemptsUsedForResult = Math.max(
     activeQuizAttempts.length,
+    resultAttemptHistory.length
+  );
+
+  const canRetry = !isQuizAttemptLimitReached(
+    attemptsUsedForResult,
     activeQuizMaxAttempts
   );
-  const question = activeQuiz?.questions?.[questionIndex];
+
+  const activeResultAttemptIndex = Math.min(
+    Math.max(0, selectedAttemptIndex),
+    Math.max(0, resultAttemptHistory.length - 1)
+  );
+
+  const activeResultAttempt =
+    resultAttemptHistory[activeResultAttemptIndex] ||
+    result;
+
+  const activeReviewItems =
+    activeResultAttempt?.review ||
+    activeResultAttempt?.details ||
+    [];
+
+  const bestResultAttempt =
+    resultAttemptHistory.reduce(
+      (best, attempt) =>
+        Number(attempt?.percent ?? 0) >
+        Number(best?.percent ?? -1)
+          ? attempt
+          : best,
+      resultAttemptHistory[0] || result || null
+    );
+
+  const resultMastery = result
+    ? normalizeMobileQuizMastery(result)
+    : null;
+
+  const question =
+    activeQuiz?.questions?.[questionIndex];
   const selectedOptionId = question ? answers[question.id] : null;
   const progressPercent = activeQuiz?.questions?.length
     ? Math.round(((questionIndex + 1) / activeQuiz.questions.length) * 100)
@@ -462,6 +683,57 @@ export default function QuizScreen({ navigation }) {
 const closeQuizPreview = useCallback(() => {
   setPreviewQuiz(null);
  }, []);
+
+  function openQuizAttemptHistory(quiz) {
+    const quizAttempts =
+      getQuizAttempts(attempts, quiz);
+
+    const latestAttempt =
+      quizAttempts[quizAttempts.length - 1];
+
+    if (!latestAttempt) {
+      openQuizPreview(quiz);
+      return;
+    }
+
+    setPreviewQuiz(null);
+    setActiveQuiz(quiz);
+    setQuestionIndex(-1);
+    setAnswers({});
+    setSelectedAttemptIndex(
+      Math.max(0, quizAttempts.length - 1)
+    );
+
+    setResult({
+      ...latestAttempt,
+      quizId:
+        latestAttempt.quizId ||
+        quiz.quizId ||
+        quiz.id,
+      quizTitle:
+        latestAttempt.quizTitle ||
+        quiz.title,
+      lessonTitle:
+        latestAttempt.lessonTitle ||
+        quiz.lessonTitle,
+      masteryLabel:
+        latestAttempt.masteryLabel ||
+        (
+          Number(latestAttempt.percent || 0) >= 75
+            ? 'Mahusay'
+            : 'Subukan muli'
+        ),
+      xpAwarded: Number(
+        latestAttempt.xpAwarded || 0
+      ),
+      maxAttempts: getQuizAttemptLimit(quiz),
+      attemptHistory: quizAttempts,
+      review:
+        latestAttempt.review ||
+        latestAttempt.details ||
+        [],
+    });
+  }
 
  function startQuiz(quiz) {
     setPreviewQuiz(null);
@@ -570,30 +842,85 @@ const closeQuizPreview = useCallback(() => {
         },
       });
 
-      const quizResult = data.quizResult || null;
-      const savedAttempts = data.quizAttempts || [];
+      const quizResult =
+        data.quizResult || null;
+
+      const savedAttempts =
+        Array.isArray(data.quizAttempts)
+          ? data.quizAttempts
+          : [];
+
       const reviewItems = savedAttempts.length
-        ? (savedAttempts[savedAttempts.length - 1].review || [])
+        ? (
+            savedAttempts[
+              savedAttempts.length - 1
+            ].review ||
+            savedAttempts[
+              savedAttempts.length - 1
+            ].details ||
+            []
+          )
         : review;
 
-      setResult(
-        quizResult
-          ? {
-              ...quizResult,
-              review: reviewItems,
-            }
-          : {
-              quizId: activeQuiz.quizId,
-              quizTitle: activeQuiz.title,
-              lessonTitle: activeQuiz.lessonTitle,
-              score,
-              total,
-              percent,
-              xpAwarded: Math.round((Number(activeQuiz.xpReward || 10) * percent) / 100),
-              masteryLabel: percent >= 75 ? 'Mahusay' : 'Subukan muli',
-              review,
-            }
+      const fallbackResult = {
+        quizId: activeQuiz.quizId,
+        quizTitle: activeQuiz.title,
+        lessonTitle: activeQuiz.lessonTitle,
+        score,
+        total,
+        percent,
+        xpAwarded: Math.round(
+          (
+            Number(activeQuiz.xpReward || 10) *
+            percent
+          ) / 100
+        ),
+        masteryLabel:
+          percent >= 75
+            ? 'Mahusay'
+            : 'Subukan muli',
+        review,
+      };
+
+      const currentResult = quizResult
+        ? {
+            ...quizResult,
+            masteryLabel:
+              quizResult.masteryLabel ||
+              (
+                percent >= 75
+                  ? 'Mahusay'
+                  : 'Subukan muli'
+              ),
+            review: reviewItems,
+          }
+        : fallbackResult;
+
+      const attemptHistory = savedAttempts.length
+        ? savedAttempts.map(
+            (attempt, attemptIndex) =>
+              attemptIndex ===
+              savedAttempts.length - 1
+                ? {
+                    ...attempt,
+                    review:
+                      attempt.review ||
+                      attempt.details ||
+                      reviewItems,
+                  }
+                : attempt
+          )
+        : [currentResult];
+
+      setSelectedAttemptIndex(
+        Math.max(0, attemptHistory.length - 1)
       );
+
+      setResult({
+        ...currentResult,
+        maxAttempts: activeQuizMaxAttempts,
+        attemptHistory,
+      });
 
       await load();
     } catch (err) {
@@ -648,7 +975,11 @@ const closeQuizPreview = useCallback(() => {
             <Text style={styles.activeTitle}>{specificQuizCardTitle(activeQuiz)}</Text>
             <Text style={styles.activeSubtitle}>{activeQuiz.lessonTitle}</Text>
           <Text style={styles.attemptPill}>
-            Bilang ng Subok: {Math.min(activeQuizAttempts.length, activeQuizMaxAttempts)}/{activeQuizMaxAttempts}
+            Bilang ng Subok:{' '}
+            {formatQuizAttemptUsage(
+              activeQuizAttempts.length,
+              activeQuizMaxAttempts
+            )}
           </Text>
           </View>
 
@@ -668,7 +999,10 @@ const closeQuizPreview = useCallback(() => {
 
                 <View style={styles.previewStat}>
                   <Text style={styles.previewStatValue}>
-                    {activeQuizAttempts.length}/{formatQuizAttemptLimit(activeQuizMaxAttempts)}
+                    {formatQuizAttemptUsage(
+                      activeQuizAttempts.length,
+                      activeQuizMaxAttempts
+                    )}
                   </Text>
                   <Text style={styles.previewStatLabel}>Pagsubok</Text>
                 </View>
@@ -706,8 +1040,14 @@ const closeQuizPreview = useCallback(() => {
             </Card>
           ) : result ? (
             <View style={styles.resultCard}>
-              <Text style={styles.resultEmoji}>🎉</Text>
-              <Text style={styles.resultTitle}>Magaling!</Text>
+              <Text style={styles.resultEmoji}>
+                {resultMastery?.icon || '🏆'}
+              </Text>
+
+              <Text style={styles.resultTitle}>
+                {resultMastery?.label ||
+                  'Resulta ng Pagsusulit'}
+              </Text>
 
               <View style={styles.resultScoreCircle}>
                 <Text style={styles.resultScore}>{result.percent}%</Text>
@@ -718,32 +1058,203 @@ const closeQuizPreview = useCallback(() => {
               </Text>
 
               <Text style={styles.masteryText}>
-                {result.masteryLabel}
+                {resultMastery?.note ||
+                  'Naitala ang iyong resulta.'}
               </Text>
 
               <Text style={styles.xpAward}>
-                ⭐ +{result.xpAwarded || 0} XP ang nakuha
+                {Number(result.xpAwarded || 0) > 0
+                  ? `⭐ +${Number(
+                      result.xpAwarded
+                    )} XP ang nakuha`
+                  : '⭐ Walang dagdag na XP'}
               </Text>
 
-              {(result.review || []).length > 0 && (
+              {bestResultAttempt && (
+                <Text style={styles.bestAttemptText}>
+                  🏆 Pinakamataas:{' '}
+                  {quizAttemptScoreText(
+                    bestResultAttempt,
+                    result.total
+                  )}
+                </Text>
+              )}
+
+              {canRetry ? (
+                <View style={styles.reviewNotice}>
+                  <Text style={styles.reviewNoticeTitle}>
+                    Naitala ang iskor!
+                  </Text>
+
+                  <Text style={styles.reviewNoticeText}>
+                    Subukan muna muli. Ipapakita ang
+                    detalyadong puna kapag nagamit na ang
+                    lahat ng pinapayagang pagsubok.
+                  </Text>
+                </View>
+              ) : activeReviewItems.length > 0 ? (
                 <View style={styles.reviewWrap}>
                   <Text style={styles.reviewTitle}>
                     📝 Balikan ang Iyong mga Sagot
                   </Text>
 
-                  {(result.review || []).map((item, index) => (
+                  {resultAttemptHistory.length > 1 && (
                     <View
-                      key={item.questionId || index}
-                      style={[
-                        styles.reviewItem,
-                        item.isCorrect ? styles.reviewCorrect : styles.reviewWrong,
-                      ]}
+                      style={styles.attemptHistoryRow}
                     >
-                      <Text style={styles.reviewItemText}>
-                        {index + 1}. {item.isCorrect || item.correct ? '✅ Tama' : '❌ Mali'}
-                      </Text>
+                      {resultAttemptHistory.map(
+                        (attempt, attemptIndex) => {
+                          const selected =
+                            activeResultAttemptIndex ===
+                            attemptIndex;
+
+                          return (
+                            <TouchableOpacity
+                              key={
+                                attempt.id ||
+                                attempt.attemptNo ||
+                                attemptIndex
+                              }
+                              style={[
+                                styles.attemptHistoryButton,
+                                selected &&
+                                  styles.attemptHistoryButtonActive,
+                              ]}
+                              onPress={() =>
+                                setSelectedAttemptIndex(
+                                  attemptIndex
+                                )
+                              }
+                              activeOpacity={0.85}
+                            >
+                              <Text
+                                style={[
+                                  styles.attemptHistoryButtonText,
+                                  selected &&
+                                    styles.attemptHistoryButtonTextActive,
+                                ]}
+                              >
+                                Subok{' '}
+                                {attempt.attemptNo ||
+                                  attemptIndex + 1}
+                              </Text>
+
+                              <Text
+                                style={[
+                                  styles.attemptHistoryScore,
+                                  selected &&
+                                    styles.attemptHistoryButtonTextActive,
+                                ]}
+                              >
+                                Iskor{' '}
+                                {quizAttemptScoreText(
+                                  attempt,
+                                  result.total
+                                )}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        }
+                      )}
                     </View>
-                  ))}
+                  )}
+
+                  <Text style={styles.activeAttemptTitle}>
+                    Subok{' '}
+                    {activeResultAttempt?.attemptNo ||
+                      activeResultAttemptIndex + 1}
+                    /
+                    {formatQuizAttemptLimit(
+                      activeQuizMaxAttempts
+                    )}
+                    {' • '}Iskor{' '}
+                    {quizAttemptScoreText(
+                      activeResultAttempt,
+                      result.total
+                    )}
+                  </Text>
+
+                  {activeReviewItems.map(
+                    (item, index) => {
+                      const correct = Boolean(
+                        item.isCorrect ||
+                        item.correct
+                      );
+
+                      return (
+                        <View
+                          key={`${activeResultAttempt?.id ||
+                            activeResultAttemptIndex}-${
+                            item.questionId ||
+                            index
+                          }`}
+                          style={[
+                            styles.reviewItem,
+                            correct
+                              ? styles.reviewCorrect
+                              : styles.reviewWrong,
+                          ]}
+                        >
+                          <Text
+                            style={styles.reviewItemText}
+                          >
+                            Tanong {index + 1}:{' '}
+                            {correct
+                              ? '✅ Tama'
+                              : '❌ Balikan Ito'}
+                          </Text>
+
+                          {item.prompt ? (
+                            <Text
+                              style={styles.reviewPrompt}
+                            >
+                              {item.prompt}
+                            </Text>
+                          ) : null}
+
+                          <Text
+                            style={styles.reviewDetail}
+                          >
+                            Sagot mo:{' '}
+                            <Text
+                              style={
+                                styles.reviewDetailStrong
+                              }
+                            >
+                              {item.selectedText ||
+                                'Walang sagot'}
+                            </Text>
+                          </Text>
+
+                          {!correct && (
+                            <Text
+                              style={styles.reviewDetail}
+                            >
+                              Tamang sagot:{' '}
+                              <Text
+                                style={
+                                  styles.reviewDetailStrong
+                                }
+                              >
+                                {item.correctText || '—'}
+                              </Text>
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    }
+                  )}
+                </View>
+              ) : (
+                <View style={styles.reviewNotice}>
+                  <Text style={styles.reviewNoticeTitle}>
+                    Walang detalyeng maipakita
+                  </Text>
+
+                  <Text style={styles.reviewNoticeText}>
+                    Naitala ang iyong iskor, ngunit walang
+                    nakalakip na detalye ng mga sagot.
+                  </Text>
                 </View>
               )}
 
@@ -758,6 +1269,7 @@ const closeQuizPreview = useCallback(() => {
                       )
                     );
                     setResult(null);
+                    setSelectedAttemptIndex(0);
                     setAnswers({});
                     setQuestionIndex(0);
                   }}
@@ -938,7 +1450,11 @@ const closeQuizPreview = useCallback(() => {
                     </Text>
 
                     <Text style={styles.quizInfoPill}>
-                      Bilang ng Subok: {quizAttempts.length}/{quizMaxAttempts}
+                      Bilang ng Subok:{' '}
+                      {formatQuizAttemptUsage(
+                        quizAttempts.length,
+                        quizMaxAttempts
+                      )}
                     </Text>
                   </View>
 
@@ -953,14 +1469,20 @@ const closeQuizPreview = useCallback(() => {
                   )}
 
                   <TouchableOpacity
-                    style={[styles.primaryButton, styles.quizStartButton, limitReached && styles.buttonDisabled]}
-                    onPress={() => openQuizPreview(quiz)}
-                    disabled={limitReached}
+                    style={[
+                      styles.primaryButton,
+                      styles.quizStartButton,
+                    ]}
+                    onPress={() =>
+                      limitReached
+                        ? openQuizAttemptHistory(quiz)
+                        : openQuizPreview(quiz)
+                    }
                     activeOpacity={0.85}
                   >
                     <Text style={styles.primaryButtonText}>
                       {limitReached
-                        ? `Naubos na ang ${quizMaxAttempts} Pagsubok`
+                        ? 'Balikan ang mga Sagot'
                         : 'Simulan ang Pagsusulit'}
                     </Text>
                   </TouchableOpacity>
@@ -1641,6 +2163,112 @@ const styles = StyleSheet.create({
     padding: 13,
     marginBottom: 8,
     borderWidth: 1,
+  },
+
+  bestAttemptText: {
+    color: '#166534',
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+
+  reviewNotice: {
+    width: '100%',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 20,
+    padding: 18,
+    marginTop: 22,
+  },
+
+  reviewNoticeTitle: {
+    color: '#166534',
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+
+  reviewNoticeText: {
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 21,
+    textAlign: 'center',
+    marginTop: 6,
+  },
+
+  attemptHistoryRow: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 14,
+  },
+
+  attemptHistoryButton: {
+    minWidth: 118,
+    flexGrow: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+
+  attemptHistoryButtonActive: {
+    backgroundColor: '#166534',
+    borderColor: '#166534',
+  },
+
+  attemptHistoryButtonText: {
+    color: '#334155',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  attemptHistoryButtonTextActive: {
+    color: '#FFFFFF',
+  },
+
+  attemptHistoryScore: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+
+  activeAttemptTitle: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+    lineHeight: 23,
+    marginBottom: 12,
+  },
+
+  reviewPrompt: {
+    color: '#334155',
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 20,
+    marginTop: 8,
+  },
+
+  reviewDetail: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginTop: 7,
+  },
+
+  reviewDetailStrong: {
+    color: '#0F172A',
+    fontWeight: '900',
   },
 
   reviewCorrect: {

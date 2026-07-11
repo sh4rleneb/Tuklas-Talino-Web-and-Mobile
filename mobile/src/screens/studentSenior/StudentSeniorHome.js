@@ -22,6 +22,12 @@ import {
 import { SafeAreaView }
 from 'react-native-safe-area-context';
 
+import {
+  cleanStudentLessonTitle,
+  formatStudentSubjectDisplay,
+  sortStudentLessonsForDashboard,
+} from '../../utils/studentLessonDisplay';
+
 const HOME_BADGE_IMAGES = {
   'batang-mambabasa': require('../../../assets/badges/batang-mambabasa.png'),
   'bituin-ng-kasipagan': require('../../../assets/badges/bituin-ng-kasipagan.png'),
@@ -61,6 +67,101 @@ function getHomeBadgeImageSource(badge = {}) {
   }
 
   return HOME_BADGE_IMAGES['unang-hakbang'];
+}
+
+
+
+function isVisibleGroupRecord(item = {}) {
+  const status = String(item.status || '').toLowerCase();
+
+  return !(
+    status === 'archived' ||
+    status === 'deleted' ||
+    item.archivedAt ||
+    item.archived_at ||
+    item.removedAt ||
+    item.removed_at ||
+    item.isDeleted ||
+    item.deleted ||
+    item.isArchived ||
+    item.archived
+  );
+}
+
+function getVisibleGroups(rawGroups = []) {
+  return (Array.isArray(rawGroups) ? rawGroups : [])
+    .filter(isVisibleGroupRecord)
+    .map((group) => ({
+      ...group,
+      tasks: (Array.isArray(group.tasks) ? group.tasks : [])
+        .filter(isVisibleGroupRecord),
+    }));
+}
+
+function isGroupTaskFinished(task = {}) {
+  const status = String(
+    task.status ||
+    task.completionStatus ||
+    task.completion_status ||
+    ''
+  ).toLowerCase();
+
+  return Boolean(
+    task.completed ||
+    task.approved ||
+    status === 'completed' ||
+    status === 'approved'
+  );
+}
+
+function groupTaskStatusText(task = {}) {
+  const status = String(
+    task.status ||
+    task.completionStatus ||
+    task.completion_status ||
+    ''
+  ).toLowerCase();
+
+  if (isGroupTaskFinished(task)) {
+    return 'Natapos';
+  }
+
+  if (status === 'returned') {
+    return 'Ibinalik';
+  }
+
+  if (
+    status === 'submitted' ||
+    status === 'pending' ||
+    status === 'pending_review'
+  ) {
+    return 'Naghihintay ng pagsusuri';
+  }
+
+  return 'Hindi pa naipapasa';
+}
+
+function formatGroupTaskDueDate(task = {}) {
+  const value =
+    task.dueAt ||
+    task.due_at ||
+    task.deadline ||
+    task.dueDate ||
+    task.due_date;
+
+  if (!value) return 'Walang takdang petsa';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Walang takdang petsa';
+  }
+
+  return date.toLocaleDateString('fil-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 
@@ -125,7 +226,7 @@ export default function StudentSeniorHome({
       student?.avatar || '🧒';
 
     const name =
-      student?.name || 'Student';
+      student?.name || 'Mag-aaral';
 
     const grade =
       student?.gradeLevel || 1;
@@ -143,13 +244,33 @@ export default function StudentSeniorHome({
       );
 
     const lessons =
-      dashboard.lessons || [];
+      sortStudentLessonsForDashboard(
+        dashboard.lessons || []
+      );
 
     const badges =
       dashboard.badges || [];
 
-    const allBadges =
-      dashboard.allBadges || [];
+    const badgePreview =
+      [...badges].slice(-2).reverse();
+
+    const groups =
+      getVisibleGroups(dashboard.groups || []);
+
+    const groupTasks =
+      groups.flatMap((group) =>
+        (group.tasks || []).map((task) => ({
+          ...task,
+          groupName: group.name || 'Pangkat',
+        }))
+      );
+
+    const activeGroupTask =
+      groupTasks.find(
+        (task) => !isGroupTaskFinished(task)
+      ) ||
+      groupTasks[0] ||
+      null;
 
     const earnedBadgeIds =
       new Set(badges.map((badge) => badge.id));
@@ -483,11 +604,17 @@ const lessonColors = [
                     </Text>
 
                     <Text style={styles.lessonTag}>
-                      {categoryMeta(lesson.subject).label}
+                      {formatStudentSubjectDisplay(
+                        lesson.subject || 'Filipino'
+                      )}
                     </Text>
 
                     <Text style={styles.lessonTitle}>
-                      {lesson.title}
+                      {cleanStudentLessonTitle(
+                        lesson.title ||
+                        lesson.name ||
+                        lesson.lessonTitle
+                      )}
                     </Text>
 
                     <View style={styles.startBtn}>
@@ -508,23 +635,149 @@ const lessonColors = [
 
             </View>
 
+
+            {/* GROUP TASK */}
+
+            <View style={styles.section}>
+
+              <View style={styles.sectionHeader}>
+
+                <Text style={styles.sectionTitle}>
+                  👥 Mga Gawain ng Pangkat
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    const tabs = navigation.getParent?.();
+                    (tabs || navigation).navigate(
+                      'Mga Pangkat'
+                    );
+                  }}
+                >
+                  <Text style={styles.allLessons}>
+                    Buksan ang Pangkat →
+                  </Text>
+                </TouchableOpacity>
+
+              </View>
+
+              {activeGroupTask ? (
+                <TouchableOpacity
+                  activeOpacity={0.86}
+                  style={styles.groupTaskCard}
+                  onPress={() => {
+                    const tabs = navigation.getParent?.();
+                    (tabs || navigation).navigate(
+                      'Mga Pangkat'
+                    );
+                  }}
+                >
+                  <View style={styles.groupTaskIcon}>
+                    <Text style={styles.groupTaskIconText}>
+                      👥
+                    </Text>
+                  </View>
+
+                  <View style={styles.groupTaskBody}>
+
+                    <Text style={styles.groupTaskTitle}>
+                      {activeGroupTask.title ||
+                        'Gawaing Pangkat'}
+                    </Text>
+
+                    <Text style={styles.groupTaskGroup}>
+                      {activeGroupTask.groupName ||
+                        'Pangkat'}
+                    </Text>
+
+                    <View style={styles.groupTaskMetaRow}>
+
+                      <Text style={styles.groupTaskMeta}>
+                        📅 {formatGroupTaskDueDate(
+                          activeGroupTask
+                        )}
+                      </Text>
+
+                      <Text style={styles.groupTaskMeta}>
+                        ⭐ +{activeGroupTask.xpReward || 0} XP
+                      </Text>
+
+                    </View>
+
+                    <Text style={styles.groupTaskStatus}>
+                      {groupTaskStatusText(activeGroupTask)}
+                    </Text>
+
+                    <View
+                      style={styles.groupTaskContinueButton}
+                    >
+                      <Text
+                        style={
+                          styles.groupTaskContinueText
+                        }
+                      >
+                        Magpatuloy
+                      </Text>
+                    </View>
+
+                  </View>
+
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.groupTaskEmpty}>
+
+                  <Text style={styles.groupTaskEmptyEmoji}>
+                    🎉
+                  </Text>
+
+                  <Text style={styles.groupTaskEmptyTitle}>
+                    Wala pang gawaing pangkat
+                  </Text>
+
+                  <Text style={styles.groupTaskEmptyText}>
+                    Mahusay! Bumalik mamaya para sa
+                    bagong gawain.
+                  </Text>
+
+                </View>
+              )}
+
+            </View>
+
             {/* BADGES */}
 
             <View style={styles.section}>
 
-              <Text style={styles.sectionTitle}>
-                🏅 Mga Gantimpala
-              </Text>
+              <View style={styles.sectionHeader}>
+
+                <Text style={styles.sectionTitle}>
+                  🏅 Mga Gantimpala
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    const tabs = navigation.getParent?.();
+                    (tabs || navigation).navigate(
+                      'Mga Gantimpala'
+                    );
+                  }}
+                >
+                  <Text style={styles.allLessons}>
+                    Tingnan Lahat →
+                  </Text>
+                </TouchableOpacity>
+
+              </View>
 
               <View style={styles.badgeRow}>
 
-                {allBadges.slice(0, 4).map((badge) => {
+                {badgePreview.map((badge) => {
                   const unlocked =
                     earnedBadgeIds.has(badge.id);
 
                   return (
                     <View
-                      key={badge.id}
+                      key={badge.id || badge.name}
                       style={
                         unlocked
                           ? styles.badgeUnlocked
@@ -555,9 +808,9 @@ const lessonColors = [
 
               </View>
 
-              {!allBadges.length && (
+              {!badgePreview.length && (
                 <Text style={styles.emptyText}>
-                  Lalabas ang progreso ng iyong mga gantimpala kapag nagsimula ka nang mag-aral.
+                  Tapusin ang aralin o pagsusulit para makuha ang unang gantimpala!
                 </Text>
               )}
 
@@ -1000,6 +1253,119 @@ heroCard: {
     lineHeight: 16,
     textAlign: 'center',
 
+  },
+
+
+  groupTaskCard: {
+    flexDirection: 'row',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 24,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+
+  groupTaskIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+
+  groupTaskIconText: {
+    fontSize: 27,
+  },
+
+  groupTaskBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  groupTaskTitle: {
+    color: '#0F172A',
+    fontSize: 19,
+    lineHeight: 24,
+    fontFamily: 'Fredoka_700Bold',
+  },
+
+  groupTaskGroup: {
+    color: '#166534',
+    fontSize: 13,
+    marginTop: 4,
+    fontFamily: 'Nunito_800ExtraBold',
+  },
+
+  groupTaskMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+
+  groupTaskMeta: {
+    color: '#475569',
+    fontSize: 12,
+    lineHeight: 17,
+    fontFamily: 'Nunito_700Bold',
+  },
+
+  groupTaskStatus: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    color: '#166534',
+    backgroundColor: '#DCFCE7',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    fontSize: 11,
+    overflow: 'hidden',
+    fontFamily: 'Nunito_800ExtraBold',
+  },
+
+  groupTaskContinueButton: {
+    alignSelf: 'flex-start',
+    marginTop: 13,
+    backgroundColor: '#16A34A',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+
+  groupTaskContinueText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Fredoka_700Bold',
+  },
+
+  groupTaskEmpty: {
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 22,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+
+  groupTaskEmptyEmoji: {
+    fontSize: 34,
+  },
+
+  groupTaskEmptyTitle: {
+    color: '#0F172A',
+    marginTop: 8,
+    fontSize: 17,
+    fontFamily: 'Fredoka_700Bold',
+  },
+
+  groupTaskEmptyText: {
+    color: '#64748B',
+    marginTop: 5,
+    textAlign: 'center',
+    lineHeight: 20,
+    fontFamily: 'Nunito_700Bold',
   },
 
   section: {

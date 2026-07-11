@@ -14,25 +14,25 @@ import StudentLeaderboardStack from './StudentLeaderboardStack';
 const Tab = createBottomTabNavigator();
 
 const STUDENT_TAB_LABELS = {
-  Home: 'Tahanan',
-  Lessons: 'Aralin',
-  Quizzes: 'Pagsusulit',
-  Missions: 'Misyon',
-  Groups: 'Pangkat',
-  Leaderboard: 'Ranggo',
-  Badges: 'Gantimpala',
-  Profile: 'Ako',
+  Tahanan: 'Tahanan',
+  'Mga Aralin': 'Aralin',
+  'Mga Pagsusulit': 'Pagsusulit',
+  'Mga Misyon': 'Misyon',
+  'Mga Pangkat': 'Pangkat',
+  'Mga Gantimpala': 'Gantimpala',
+  'Talaan ng Ranggo': 'Ranggo',
+  Ako: 'Ako',
 };
 
 const STUDENT_TAB_ICONS = {
-  Home: 'home',
-  Lessons: 'book',
-  Quizzes: 'help-circle',
-  Missions: 'trophy',
-  Groups: 'people',
-  Leaderboard: 'podium',
-  Badges: 'ribbon',
-  Profile: 'person',
+  Tahanan: 'home',
+  'Mga Aralin': 'book',
+  'Mga Pagsusulit': 'help-circle',
+  'Mga Misyon': 'game-controller',
+  'Mga Pangkat': 'people',
+  'Mga Gantimpala': 'ribbon',
+  'Talaan ng Ranggo': 'podium',
+  Ako: 'person',
 };
 
 function StudentTabIcon({ routeName, focused, color }) {

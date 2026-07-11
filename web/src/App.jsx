@@ -719,7 +719,10 @@ useEffect(() => {
           ...latestAttempt,
           attemptHistory: attempts,
           maxAttempts: getUnlimitedAwareQuizMaxAttempts(quiz),
-          maxAttemptsReached: attempts.length >= getUnlimitedAwareQuizMaxAttempts(quiz),
+          maxAttemptsReached:
+          getUnlimitedAwareQuizMaxAttempts(quiz) > 0 &&
+          attempts.length >=
+            getUnlimitedAwareQuizMaxAttempts(quiz),
         }
       : null;
   }
@@ -976,43 +979,9 @@ if (role === 'admin') {
   }, 'Hindi napalitan ang password.');
 }
 
-  async function showUnreadStudentNotifications() {
-    try {
-      const data = await api('/students/notifications');
-      const notifications = asArray(data?.notifications);
-
-      if (!notifications.length) return;
-
-      const first = notifications[0];
-      const extraCount = Math.max(0, notifications.length - 1);
-
-      const notificationBadges = uniqueBadgesForDisplay(
-        notifications.flatMap(item => asArray(item?.metadata?.newBadges))
-      );
-
-      if (notificationBadges.length) {
-        showBadgeUnlockPopup(notificationBadges);
-      }
-
-      notify(extraCount
-        ? `${first.message} +${extraCount} more update${extraCount === 1 ? '' : 's'}`
-        : first.message
-      );
-
-      await Promise.all(
-        notifications.map(item =>
-          api(`/students/notifications/${item.id}/read`, { method: 'POST' })
-        )
-      );
-    } catch (err) {
-      console.warn('Could not load student notifications:', err);
-    }
-  }
-
   async function loadStudentDashboard() {
     const data = await api('/students/dashboard');
     setStudentDash(data);
-    await showUnreadStudentNotifications();
     setQuizAttempts(data.quizAttempts || {});
     if (data.student?.avatar) setSelectedAvatar(data.student.avatar);
   }
@@ -1079,7 +1048,10 @@ if (role === 'admin') {
       ...latestAttempt,
       attemptHistory: attempts,
       maxAttempts: getUnlimitedAwareQuizMaxAttempts(quiz),
-      maxAttemptsReached: attempts.length >= getUnlimitedAwareQuizMaxAttempts(quiz),
+      maxAttemptsReached:
+          getUnlimitedAwareQuizMaxAttempts(quiz) > 0 &&
+          attempts.length >=
+            getUnlimitedAwareQuizMaxAttempts(quiz),
     });
     go('screen-stu-quiz-result');
     saveStudentNavigationState({
