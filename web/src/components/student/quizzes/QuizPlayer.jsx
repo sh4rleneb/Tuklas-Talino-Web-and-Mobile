@@ -10,6 +10,27 @@ import {
   QuizAnswerButton,
 } from "./QuizUI";
 
+function normalizeQuizMaxAttempts(value, fallback = 2) {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (
+    normalized === 'unlimited' ||
+    normalized === '0'
+  ) {
+    return 0;
+  }
+
+  const parsed = Number(normalized);
+
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(10, Math.max(1, parsed));
+}
+
 export default function QuizPlayer({
   data,
   quiz,
@@ -20,6 +41,7 @@ export default function QuizPlayer({
   EarlyStudentChrome,
   Grade46StudentChrome,
   logout,
+  resetKey = 0,
 }) {
   const [started, setStarted] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -39,14 +61,28 @@ export default function QuizPlayer({
   const selectedId = current ? answers[current.id] : null;
   const hasSelectedAnswer = Boolean(selectedId);
   const currentAttempts = asArray(quizAttempts?.[quiz?.id]);
-  const attemptsUsed = Math.min(currentAttempts.length, 2);
-  const maxAttempts = 2;
+  const maxAttempts = normalizeQuizMaxAttempts(
+    quiz?.maxAttempts ??
+      quiz?.max_attempts ??
+      quiz?.dataJson?.maxAttempts ??
+      quiz?.data_json?.maxAttempts
+  );
+  const attemptsUsed = maxAttempts === 0
+    ? currentAttempts.length
+    : Math.min(currentAttempts.length, maxAttempts);
 
   useEffect(() => {
     setStarted(false);
     setCurrentIndex(0);
     setAnswers({});
-  }, [quiz?.id]);
+  }, [quiz?.id, resetKey]);
+
+  function startFreshAttempt() {
+    setCurrentIndex(0);
+    setAnswers({});
+    setStarted(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function selectAnswer(questionId, optionId) {
     setAnswers((prev) => ({
@@ -59,7 +95,7 @@ export default function QuizPlayer({
     if (!started) return true;
 
     return window.confirm(
-      "Paalala: May sinasagutan ka pang Filipino quiz.\n\nTapusin muna ang quiz para ma-save ang iyong score at review feedback.\n\nPindutin ang Cancel para manatili at tapusin, o OK kung aalis ka muna."
+      "Paalala: May sinasagutan ka pang pagsusulit sa Filipino.\n\nTapusin muna ang pagsusulit upang maitala ang iyong iskor at puna sa sagot.\n\nManatili sa pahinang ito upang tapusin ang pagsusulit, o magpatuloy kung aalis ka muna."
     );
   }
 
@@ -102,8 +138,8 @@ export default function QuizPlayer({
           className="quiz-game-copy"
           style={{ position: "relative", zIndex: 1 }}
         >
-          <h2>No questions yet</h2>
-          <p>This quiz does not have questions. Please return to the quiz list.</p>
+          <h2>Wala pang tanong</h2>
+          <p>Walang tanong ang pagsusulit na ito. Bumalik sa listahan ng pagsusulit.</p>
 
           <button
             type="button"
@@ -123,13 +159,13 @@ export default function QuizPlayer({
         best={best}
         attemptsUsed={attemptsUsed}
         maxAttempts={maxAttempts}
-        onStart={() => setStarted(true)}
+        onStart={startFreshAttempt}
         onBack={() => go("screen-stu-quizzes")}
       />
     );
   } else {
     quizInnerContent = (
-      <section className="quiz-game-stage" aria-label="Active quiz">
+      <section className="quiz-game-stage" aria-label="Kasalukuyang Pagsusulit">
         <div className="quiz-game-stage-inner">
           {early && (
             <QuizGameHeader
@@ -204,7 +240,7 @@ export default function QuizPlayer({
                   className="quiz-primary"
                   onClick={finishQuiz}
                 >
-                  Isumite ang Quiz
+                  Ipasa ang Pagsusulit
                 </button>
               )}
             </div>
@@ -250,8 +286,8 @@ export default function QuizPlayer({
         go={go}
         logout={logout}
         icon="🧠"
-        title={quiz?.title || "Quizzes"}
-        subtitle="" 
+        title={quiz?.title || "Mga Pagsusulit"}
+        subtitle=""
         titleAction={
           <button
             type="button"

@@ -71,7 +71,7 @@ function subjectTheme(subject) {
       icon: "📚",
       bg: "#F6F6F6",
       accent: "#95A5A6",
-      tag: "Lessons",
+      tag: "Mga Aralin",
     }
   );
 }
@@ -81,25 +81,25 @@ function masteryFromPercent(percent = 0) {
 
   if (value >= 90) {
     return {
-      label: "Advanced",
+      label: "Napakahusay",
       icon: "🏆",
       tone: "green",
-      note: "Excellent mastery. You showed strong understanding sa the lesson.",
+      note: "Napakahusay ng iyong pagkaunawa sa aralin.",
     };
   }
 
   if (value >= 75) {
     return {
-      label: "Proficient",
+      label: "Mahusay",
       icon: "🌟",
       tone: "blue",
-      note: "Great work. You understood most sa the lesson.",
+      note: "Mahusay ang iyong pagkaunawa sa aralin.",
     };
   }
 
   if (value >= 50) {
     return {
-      label: "Developing",
+      label: "Umuunlad",
       icon: "🌱",
       tone: "yellow",
       note: "Magandang pagsubok. Balikan ang mga maling sagot.",
@@ -107,10 +107,39 @@ function masteryFromPercent(percent = 0) {
   }
 
   return {
-    label: "Needs Practice",
+    label: "Kailangan pang Magsanay",
     icon: "💪",
     tone: "pink",
-    note: "Try again after reviewing the lesson.",
+    note: "Subukan muli pagkatapos balikan ang aralin.",
+  };
+}
+
+function normalizeQuizMastery(mastery = null) {
+  if (!mastery) return mastery;
+
+  const labelMap = {
+    Advanced: "Napakahusay",
+    Proficient: "Mahusay",
+    Developing: "Umuunlad",
+    "Needs Practice": "Kailangan pang Magsanay",
+  };
+
+  const noteMap = {
+    "Excellent mastery. Keep challenging yourself.": "Napakahusay ng iyong pagkaunawa. Ipagpatuloy ang pagsasanay.",
+    "Excellent mastery. You showed strong understanding sa the lesson.": "Napakahusay ng iyong pagkaunawa sa aralin.",
+    "Mahusay ang iyong pagkaunawa. Balikan pa nang kaunti ang aralin.": "Mahusay ang iyong pagkaunawa. Balikan pa nang kaunti ang aralin.",
+    "Great work. You understood most sa the lesson.": "Mahusay ang iyong pagkaunawa sa aralin.",
+    "You are getting there. Review the missed questions.": "Umunlad ka na. Balikan ang mga tanong na hindi nasagutan nang tama.",
+    "Subukan muli pagkatapos balikan ang aralin.": "Subukan muli pagkatapos balikan ang aralin.",
+  };
+
+  const rawLabel = String(mastery.label || "").trim();
+  const rawNote = String(mastery.note || "").trim();
+
+  return {
+    ...mastery,
+    label: labelMap[rawLabel] || mastery.label,
+    note: noteMap[rawNote] || mastery.note,
   };
 }
 
@@ -1135,10 +1164,9 @@ function QuizGameProgress({ currentIndex = 0, total = 0, answeredCount = 0 }) {
   const progress = total ? Math.round(((currentIndex + 1) / total) * 100) : 0;
 
   return (
-    <div className="quiz-progress-line" aria-label="Quiz progress">
+    <div className="quiz-progress-line" aria-label="Progreso ng Pagsusulit">
       <span>
-        Tanong {Math.min(currentIndex + 1, Math.max(total, 1))} sa{" "}
-        {total || 1}
+        Tanong {Math.min(currentIndex + 1, Math.max(total, 1))}/{total || 1}
       </span>
 
       <div
@@ -1152,7 +1180,7 @@ function QuizGameProgress({ currentIndex = 0, total = 0, answeredCount = 0 }) {
       </div>
 
       <span>
-        {answeredCount}/{total} answered
+        {answeredCount}/{total} nasagutan
       </span>
     </div>
   );
@@ -1167,10 +1195,10 @@ function QuizGameHeader({ quiz, best, go, onBack }) {
         </span>
 
         <div>
-          <h2>{quiz?.title || "Quizzes"}</h2>
+          <h2>{quiz?.title || "Mga Pagsusulit"}</h2>
           <small>
             {quiz?.subject || "Filipino"} • {quiz?.type || "Pagsusulit"}{" "}
-            {best ? `• Best ${best.percent}%` : ""}
+            {best ? `• Pinakamataas ${best.percent}%` : ""}
           </small>
         </div>
       </div>
@@ -1181,13 +1209,13 @@ function QuizGameHeader({ quiz, best, go, onBack }) {
           className="quiz-secondary"
           onClick={onBack || (() => go("screen-stu-quizzes"))}
         >
-          ← Back
+          ← Bumalik
         </button>
 
         <button
           type="button"
           className="quiz-game-help"
-          title="Basahin ang tanong at piliin ang sagot. Makikita ang feedback pagkatapos mong i-submit ang quiz."
+          title="Basahin ang tanong at piliin ang sagot. Makikita ang puna sa sagot pagkatapos mong ipasa ang pagsusulit."
         >
           ?
         </button>
@@ -1198,9 +1226,10 @@ function QuizGameHeader({ quiz, best, go, onBack }) {
 
 function QuizStartCard({ quiz, best, attemptsUsed = 0, maxAttempts = 2, onStart, onBack }) {
   const questionCount = asArray(quiz?.questions).length;
+  const bestMastery = normalizeQuizMastery(best?.mastery || null);
 
   return (
-    <section className="quiz-game-landing-card" aria-label="Quiz start">
+    <section className="quiz-game-landing-card" aria-label="Simula ng Pagsusulit">
       <div className="quiz-game-copy">
         <h2>Handa ka na ba sa Pagsusulit?</h2>
 
@@ -1211,12 +1240,14 @@ function QuizStartCard({ quiz, best, attemptsUsed = 0, maxAttempts = 2, onStart,
         {best && (
           <p>
             <strong>Pinakamataas na Iskor:</strong> {best.score}/{best.total} (
-            {best.percent}%) • {best.mastery?.label || "Naisave ang pag-unlad"}
+            {best.percent}%) • {bestMastery?.label || "Naitala ang pag-unlad"}
           </p>
         )}
 
         <p>
-          <strong>Bilang ng Subok:</strong> {attemptsUsed}/{maxAttempts}
+          <strong>Bilang ng Subok:</strong> {attemptsUsed}/{
+            maxAttempts === 0 ? 'Walang Hanggan' : maxAttempts
+          }
         </p>
 
         <div
@@ -1294,7 +1325,7 @@ function QuizFeedbackMessage({ selectedOption, correctOption }) {
             ? "Nakuha mo ang tamang sagot. Magpatuloy sa susunod na tanong."
             : `Ang tamang sagot ay: ${
                 correctOption?.text || "—"
-              }. Maaari mong gamitin ito sa review pagkatapos ng quiz.`}
+              }. Maaari mo itong gamitin sa pagbalik-aral pagkatapos ng pagsusulit.`}
         </p>
       </div>
     </div>
@@ -1317,7 +1348,7 @@ function QuizQuestionCard({ quiz, question, currentIndex, total }) {
 }
 
 function QuizResultCard({ result }) {
-  const mastery = result?.mastery || masteryFromPercent(result?.percent || 0);
+  const mastery = normalizeQuizMastery(result?.mastery || masteryFromPercent(result?.percent || 0));
   const starCount = Math.max(
     1,
     Math.min(5, Math.ceil(Number(result?.percent || 0) / 20))
@@ -1350,7 +1381,7 @@ function QuizResultCard({ result }) {
     : undefined;
 
   return (
-    <section className="quiz-game-results" aria-label="Quiz result">
+    <section className="quiz-game-results" aria-label="Resulta ng Pagsusulit">
       <div className="quiz-game-results-inner">
         <div className="quiz-result-mascot" aria-hidden="true">
           {mastery.icon || "🏆"}
@@ -1388,7 +1419,7 @@ function QuizResultCard({ result }) {
             <b>
               {result.score}/{result.total}
             </b>
-            <span>Raw score</span>
+            <span>Kabuuang Iskor</span>
           </div>
 
           {result.bestScoreText && (
@@ -1400,12 +1431,18 @@ function QuizResultCard({ result }) {
 
           <div className="quiz-reward-box" style={rewardBoxStyle}>
             <b>+{Number(result.xpAwarded ?? 0)}</b>
-            <span>{Number(result.xpAwarded || 0) > 0 ? "Nakuhang XP" : "No extra XP"}</span>
+            <span>{Number(result.xpAwarded || 0) > 0 ? "Nakuhang XP" : "Walang dagdag na XP"}</span>
           </div>
 
           <div className="quiz-reward-box" style={rewardBoxStyle}>
-            <b>{result.attemptNo || 1} sa {result.maxAttempts || 2}</b>
-            <span>Quiz attempts</span>
+            <b>
+              {result.attemptNo || 1} sa {
+                Number(result.maxAttempts ?? 2) === 0
+                  ? 'Walang Hanggan'
+                  : result.maxAttempts ?? 2
+              }
+            </b>
+            <span>Mga Subok sa Pagsusulit</span>
           </div>
         </div>
       </div>
@@ -1417,6 +1454,7 @@ export {
   asArray,
   subjectTheme,
   masteryFromPercent,
+  normalizeQuizMastery,
   StarRow,
   QuizSharedStyles,
   QuizMascotScene,

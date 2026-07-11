@@ -30,16 +30,16 @@ export default function StudentGroupSubmissionReview({
 
   const icon = isAccepted ? '🏆' : isReturned ? '↩️' : '⏳';
   const title = isAccepted
-    ? 'Group output approved'
+    ? 'Tinanggap ang output ng grupo'
     : isReturned
-      ? 'Group output rejected'
+      ? 'Ibinalik ang output ng grupo'
       : 'Naipasa ang output ng grupo';
 
   const message = isAccepted
-    ? 'Your teacher approved this task and XP has been awarded.'
+    ? 'Tinanggap na ng guro ang gawaing ito at naibigay na ang XP.'
     : isReturned
       ? 'Ibinalik ng guro ang ipinasa ninyo. Basahin ang puna at magpasa muli.'
-      : 'Waiting for your teacher to review your group output.';
+      : 'Hinihintay ang pagsusuri ng guro sa output ng grupo.';
 
   return (
     <div className={`g46-submitted-summary ${status}`} style={{ marginBottom: isReturned ? 24 : undefined }}>
@@ -72,7 +72,7 @@ export default function StudentGroupSubmissionReview({
               marginBottom: 4
             }}
           >
-            Teacher Remarks
+            Puna ng Guro
           </span>
           <strong style={{ color: '#17324d', lineHeight: 1.45 }}>{teacherFeedback}</strong>
         </div>
@@ -80,25 +80,25 @@ export default function StudentGroupSubmissionReview({
 
       <div className="g46-submitted-list">
         <div>
-          <span>Role</span>
+          <span>Tungkulin</span>
           <strong>{submittedRole || completion?.studentRole || '—'}</strong>
         </div>
 
         <div>
           <span>File</span>
-          <strong>{fileName || 'Uploaded group output'}</strong>
+          <strong>{fileName || 'Na-upload na output ng grupo'}</strong>
         </div>
 
         {submittedAt && (
           <div>
-            <span>Submitted</span>
+            <span>Naipasa</span>
             <strong>{submittedAt}</strong>
           </div>
         )}
 
         {isAccepted && (
           <div>
-            <span>XP Earned</span>
+            <span>Nakuhang XP</span>
             <strong>+{xpEarned} XP</strong>
           </div>
         )}
@@ -112,7 +112,7 @@ export default function StudentGroupSubmissionReview({
           rel="noreferrer"
           style={{ marginTop: 16, display: 'inline-flex', width: 'fit-content' }}
         >
-          View Submitted File
+          Tingnan ang Ipinasang File
         </a>
       )}
     </div>

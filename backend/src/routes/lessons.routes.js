@@ -30,8 +30,23 @@ const DEFAULT_MAX_QUIZ_ATTEMPTS = 2;
 const MIN_QUIZ_ATTEMPTS = 1;
 const MAX_CONFIGURABLE_QUIZ_ATTEMPTS = 10;
 
-function normalizeQuizAttemptLimit(value, fallback = DEFAULT_MAX_QUIZ_ATTEMPTS) {
-  const parsed = Number(value);
+function normalizeQuizAttemptLimit(
+  value,
+  fallback = DEFAULT_MAX_QUIZ_ATTEMPTS
+) {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (normalized === 'unlimited') {
+    return 0;
+  }
+
+  const parsed = Number(normalized);
+
+  if (parsed === 0) {
+    return 0;
+  }
 
   if (!Number.isInteger(parsed)) {
     return fallback;
@@ -1931,7 +1946,10 @@ router.post('/:id/quiz-result', requireRole('student'), async (req, res, next) =
       order: [['attemptNo', 'ASC']]
     });
 
-    if (existingQuizAttempts.length >= maxAttempts) {
+    if (
+      maxAttempts > 0 &&
+      existingQuizAttempts.length >= maxAttempts
+    ) {
       return res.status(409).json({
         message: `You already used all ${maxAttempts} quiz attempts. Review your answers instead.`,
         maxAttempts,

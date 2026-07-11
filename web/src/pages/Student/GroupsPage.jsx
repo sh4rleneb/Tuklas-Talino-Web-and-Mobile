@@ -14,7 +14,7 @@ export default function GroupsPage() {
 
   async function complete(taskId) {
     const data = await api(`/groups/tasks/${taskId}/complete`, { method: 'POST' });
-    setMessage(data.xpAwarded ? `Group task complete! +${data.xpAwarded} XP` : 'Already completed.');
+    setMessage(data.xpAwarded ? `Tapos na ang gawain ng pangkat! +${data.xpAwarded} XP` : 'Tapos na ito.');
     load();
   }
 
@@ -31,11 +31,11 @@ export default function GroupsPage() {
               <div className="task-card" key={task.id}>
                 <strong>{task.title}</strong>
                 <p>{task.description}</p>
-                <button className="btn secondary" onClick={() => complete(task.id)}>Complete Task</button>
+                <button className="btn secondary" onClick={() => complete(task.id)}>Tapusin ang Gawain</button>
               </div>
             ))}
           </article>
-        )) : <p className="empty">You are not assigned to a group yet.</p>}
+        )) : <p className="empty">Wala ka pang nakatalagang pangkat.</p>}
       </div>
     </section>
   );

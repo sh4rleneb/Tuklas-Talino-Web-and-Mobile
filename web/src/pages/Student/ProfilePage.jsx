@@ -18,7 +18,7 @@ export default function ProfilePage() {
     load();
   }
 
-  if (!dashboard) return <div className="loading-card">Loading profile...</div>;
+  if (!dashboard) return <div className="loading-card">Inihahanda ang iyong talaan...</div>;
 
   return (
     <section className="profile-page">

@@ -2471,9 +2471,9 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
               <Text style={styles.workspaceLogoutIconText}>🚪</Text>
             </View>
 
-            <Text style={styles.workspaceLogoutTitle}>Mag-logout?</Text>
+            <Text style={styles.workspaceLogoutTitle}>Log out?</Text>
             <Text style={styles.workspaceLogoutBody}>
-              Naka-save ang workspace. Maaari kang bumalik anumang oras.
+              Your workspace is saved. You can return at any time.
             </Text>
 
             <View style={styles.workspaceLogoutActions}>
@@ -2488,7 +2488,7 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
                 style={styles.workspaceLogoutConfirm}
                 onPress={handleLogout}
               >
-                <Text style={styles.workspaceLogoutConfirmText}>Mag-logout</Text>
+                <Text style={styles.workspaceLogoutConfirmText}>Logout</Text>
               </TouchableOpacity>
             </View>
           </View>

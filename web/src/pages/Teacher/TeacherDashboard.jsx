@@ -231,6 +231,27 @@ export default function TeacherDashboard({
   const groups = data.groups || [];
   const students = data.students || [];
   const assignedClasses = data.assignedClasses || [];
+
+  const groupClassOptionMap = new Map();
+
+  asArray(assignedClasses).forEach((item) => {
+    const gradeLevel = Number(item?.gradeLevel || item?.grade || 0);
+    const section = String(item?.section || item?.sectionName || item?.classSection || item?.name || '').replace(/\s+/g, ' ').trim();
+
+    if (![1, 2, 3, 4, 5, 6].includes(gradeLevel) || !section) return;
+
+    const value = `${gradeLevel}||${section}`;
+    groupClassOptionMap.set(value, {
+      value,
+      gradeLevel,
+      section,
+      label: `Grade ${gradeLevel} • ${section}`,
+    });
+  });
+
+  const groupClassOptions = Array.from(groupClassOptionMap.values())
+    .sort((a, b) => a.gradeLevel - b.gradeLevel || a.section.localeCompare(b.section));
+
   const rows = data.rows || [];
   const stats = data.stats || {};
   const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
@@ -1918,9 +1939,26 @@ export default function TeacherDashboard({
                   <h3>Create Group</h3>
                   <p>Set up a group, class section, or collaborative activity team.</p>
 
-                  <input className="input-field" id="t-group-name" placeholder="Group name" />
-                  <input className="input-field" id="t-group-section" placeholder="Description / Section" />
+                    <input className="input-field" id="t-group-name" placeholder="Group name" />
 
+                    {groupClassOptions.length ? (
+                      <select className="input-field" id="t-group-class" defaultValue={groupClassOptions[0]?.value || ''}>
+                        {groupClassOptions.map(option => (
+                          <option value={option.value} key={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <>
+                        <select className="input-field" id="t-group-grade" defaultValue="1">
+                          {[1, 2, 3, 4, 5, 6].map(grade => (
+                            <option value={grade} key={grade}>Grade {grade}</option>
+                          ))}
+                        </select>
+                        <input className="input-field" id="t-group-section" placeholder="Section" />
+                      </>
+                    )}
                   <button className="lms-main-action full" onClick={createGroup}>
                     Create Group
                   </button>
@@ -1931,26 +1969,34 @@ export default function TeacherDashboard({
                   <h3>Add Task</h3>
                   <p>Assign collaborative work with a deadline and XP reward.</p>
 
-                  <select className="input-field" id="t-task-group">
-                    {groups.length ? (
-                      groups.map(group => (
-                        <option value={group.id} key={group.id}>{group.name}</option>
-                      ))
-                    ) : (
-                      <option value="">No groups yet</option>
-                    )}
-                  </select>
+                  <label htmlFor="t-task-group" style={{fontWeight:800,fontSize:13,color:'#475569'}}>Group</label>
+                    <select className="input-field" id="t-task-group">
+                      {groups.length ? (
+                        groups.map(group => (
+                          <option value={group.id} key={group.id}>{group.name}</option>
+                        ))
+                      ) : (
+                        <option value="">No groups yet</option>
+                      )}
+                    </select>
 
-                  <input className="input-field" id="t-task-title" placeholder="Task title" />
+                    <label htmlFor="t-task-title" style={{fontWeight:800,fontSize:13,color:'#475569'}}>Task Title</label>
+                    <input className="input-field" id="t-task-title" placeholder="Task title" />
 
-                  <div className="teacher-two-fields">
-                    <input className="input-field" id="t-task-deadline" type="date" />
-                    <input className="input-field" id="t-task-xp" type="number" min="0" defaultValue="10" placeholder="XP" />
-                  </div>
+                    <div className="teacher-two-fields">
+                      <div style={{display:'grid',gap:6}}>
+                        <label htmlFor="t-task-deadline" style={{fontWeight:800,fontSize:13,color:'#475569'}}>Deadline</label>
+                        <input className="input-field" id="t-task-deadline" type="date" min={new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)} required />
+                      </div>
+                      <div style={{display:'grid',gap:6}}>
+                        <label htmlFor="t-task-xp" style={{fontWeight:800,fontSize:13,color:'#475569'}}>XP Reward</label>
+                        <input className="input-field" id="t-task-xp" type="number" min="0" defaultValue="10" placeholder="XP" />
+                      </div>
+                    </div>
 
-                  <button className="lms-outline-action full" onClick={addTask}>
-                    Add Task
-                  </button>
+                    <button className="lms-outline-action full" onClick={addTask} disabled={!groups.length}>
+                      Add Task
+                    </button>
                 </div>
               </div>
 
@@ -1970,6 +2016,24 @@ export default function TeacherDashboard({
                     const memberCount = members.length;
                     const taskCount = tasks.length;
                     const isOpen = Boolean(openGroupTools[group.id]);
+                    const groupGradeLevel = Number(group.gradeLevel || group.grade || 0);
+                    const groupSection = String(group.section || group.sectionName || group.classSection || group.description || '').replace(/\s+/g, ' ').trim();
+                    const existingMemberIds = new Set(
+                      members
+                        .map(member => String(member.studentId || member.student_id || member.Student?.id || member.student?.id || ''))
+                        .filter(Boolean)
+                    );
+                    const availableStudentsForGroup = students.filter(student => {
+                      const studentId = String(student.id || student.studentId || student.student_id || '');
+                      const studentGradeLevel = Number(student.gradeLevel || student.grade || 0);
+                      const studentSection = String(student.section || student.sectionName || student.classSection || '').replace(/\s+/g, ' ').trim();
+
+                      if (!studentId || existingMemberIds.has(studentId)) return false;
+                      if (groupGradeLevel && studentGradeLevel !== groupGradeLevel) return false;
+                      if (groupSection && studentSection.toLowerCase() !== groupSection.toLowerCase()) return false;
+
+                      return true;
+                    });
 
                     return (
                       <div className="teacher-group-item" key={group.id}>
@@ -1983,6 +2047,8 @@ export default function TeacherDashboard({
                         <div className="teacher-group-meta-row">
                           <span className="lms-mini-pill">👥 {memberCount} member{memberCount === 1 ? '' : 's'}</span>
                           <span className="lms-mini-pill">✅ {taskCount} task{taskCount === 1 ? '' : 's'}</span>
+                          {groupGradeLevel ? <span className="lms-mini-pill">Grade {groupGradeLevel}</span> : null}
+                          {groupSection ? <span className="lms-mini-pill">Section {groupSection}</span> : null}
                         </div>
 
                         <div className="teacher-group-details-box">
@@ -2053,14 +2119,18 @@ export default function TeacherDashboard({
 
                         {isOpen && (
                           <div className="teacher-add-member-row">
-                            <select className="input-field" id={`member-${group.id}`}>
-                              {students.map(student => (
-                                <option key={student.id} value={student.id}>
-                                  {student.name} • Grade {student.gradeLevel}
-                                </option>
-                              ))}
+                            <select className="input-field" id={`member-${group.id}`} disabled={!availableStudentsForGroup.length}>
+                              {availableStudentsForGroup.length ? (
+                                availableStudentsForGroup.map(student => (
+                                  <option key={student.id} value={student.id}>
+                                    {student.name} - Grade {student.gradeLevel}{student.section ? ` - Section ${student.section}` : ''}
+                                  </option>
+                                ))
+                              ) : (
+                                <option value="">No available students for this group</option>
+                              )}
                             </select>
-                            <button className="lms-outline-action" onClick={() => addMember(group.id)}>
+                            <button className="lms-outline-action" onClick={() => addMember(group.id)} disabled={!availableStudentsForGroup.length}>
                               Add Member
                             </button>
                           </div>
@@ -2368,6 +2438,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       mcq: {
         ...base,
         title: 'Quiz',
+          maxAttempts: 2,
         questions: [
           {
             id: makeId(),
@@ -2727,6 +2798,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             type: 'mcq',
             title: activity.title || 'Quiz',
             instructions: activity.instructions || null,
+              maxAttempts: normalizeTeacherQuizAttempts(activity.maxAttempts),
             questions
           };
         }
@@ -4006,6 +4078,16 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
 
 
+function normalizeTeacherQuizAttempts(value, fallback = 2) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(10, Math.max(1, parsed));
+}
+
 function TeacherActivityBlock({
   activity,
   activityIndex,
@@ -4111,7 +4193,40 @@ function TeacherActivityBlock({
 
         {activity.type === 'mcq' && (
           <div className="teacher-inline-mcq">
-            <TeacherQuizTextImporter
+            <div
+                className="teacher-field"
+                style={{
+                  maxWidth: 360,
+                  padding: 14,
+                  borderRadius: 18,
+                  background: '#f8fcf9',
+                  border: '1px solid #dcefe2'
+                }}
+              >
+                <label>Allowed Quiz Attempts</label>
+                <input
+                  className="input-field"
+                  type="number"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={activity.maxAttempts ?? 2}
+                  onChange={(e) => updateActivity(activity.id, { maxAttempts: e.target.value })}
+                  onBlur={(e) => updateActivity(activity.id, {
+                    maxAttempts: normalizeTeacherQuizAttempts(e.target.value)
+                  })}
+                  style={{
+                    minHeight: 52,
+                    fontSize: 16,
+                    padding: '12px 16px'
+                  }}
+                />
+                <small style={{ color: '#64748b', fontWeight: 800, marginTop: 6, display: 'block' }}>
+                  Students can take this quiz 1 to 10 times. Default is 2.
+                </small>
+              </div>
+
+              <TeacherQuizTextImporter
               currentQuestionCount={(activity.questions || []).length}
               onImportQuestions={(questions) => updateActivity(activity.id, { questions })}
             />

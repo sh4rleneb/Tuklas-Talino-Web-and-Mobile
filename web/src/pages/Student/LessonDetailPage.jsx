@@ -5,6 +5,7 @@ import { api } from '../../api/client';
 const STUDENT_SUBJECT_DISPLAY_LABELS = {
   'Oral Comm': 'Komunikasyong Pagsasalita',
   'Oral Communication': 'Komunikasyong Pagsasalita',
+  'Komunikasyong Pagsasalita': 'Komunikasyong Pagsasalita',
   'Pasalitang Komunikasyon': 'Komunikasyong Pagsasalita',
 };
 
@@ -39,20 +40,20 @@ export default function LessonDetailPage() {
 
   async function submitSpeech() {
     await api(`/lessons/${id}/speech`, { method: 'POST', body: { taskId: speechTask.id, transcript } });
-    setMessage('Naisave ang pagbigkas. +6 XP');
+    setMessage('Naitala ang pagbigkas. +6 XP');
   }
 
   async function completeLesson() {
     const data = await api(`/lessons/${id}/complete`, { method: 'POST', body: { score: 100 } });
-    setMessage(data.xpAwarded ? `Lesson complete! +${data.xpAwarded} XP` : 'Lesson was already completed.');
+    setMessage(data.xpAwarded ? `Natapos ang aralin! +${data.xpAwarded} XP` : 'Natapos na dati ang araling ito.');
   }
 
-  if (!lesson) return <div className="loading-card">Loading lesson...</div>;
+  if (!lesson) return <div className="loading-card">Inihahanda ang aralin...</div>;
 
   return (
     <section className="lesson-detail">
       <article className="content-card">
-        <p className="eyebrow">Grade {lesson.gradeLevel} • {formatStudentSubjectDisplay(lesson.subject)}</p>
+        <p className="eyebrow">Baitang {lesson.gradeLevel} • {formatStudentSubjectDisplay(lesson.subject)}</p>
         <h1>{lesson.title}</h1>
         <p>{lesson.instructions}</p>
         <div className="passage">{lesson.passage}</div>
@@ -73,7 +74,7 @@ export default function LessonDetailPage() {
           <h2>Writing Activity</h2>
           <p>{writingTask.prompt}</p>
           <textarea value={writing} onChange={e => setWriting(e.target.value)} placeholder="Isulat ang iyong sagot dito..." />
-          <button className="btn primary" onClick={submitWriting}>Submit Writing</button>
+          <button className="btn primary" onClick={submitWriting}>Ipasa ang Sinulat</button>
         </article>
       )}
 
@@ -82,12 +83,12 @@ export default function LessonDetailPage() {
           <h2>Speech / Oral Practice</h2>
           <p>Target: <strong>{speechTask.targetText}</strong></p>
           <textarea value={transcript} onChange={e => setTranscript(e.target.value)} placeholder="Type or paste transcript while browser/mobile speech support is connected." />
-          <button className="btn secondary" onClick={submitSpeech}>Save Speech Attempt</button>
+          <button className="btn secondary" onClick={submitSpeech}>Itala ang Pagsubok sa Pagbigkas</button>
         </article>
       )}
 
       {message && <div className="alert success">{message}</div>}
-      <button className="btn primary big" onClick={completeLesson}>Mark Lesson Complete</button>
+      <button className="btn primary big" onClick={completeLesson}>Tapusin ang Aralin</button>
     </section>
   );
 }

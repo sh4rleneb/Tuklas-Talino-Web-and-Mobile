@@ -6,6 +6,7 @@ import { subjects } from '../../utils/progress';
 const STUDENT_SUBJECT_DISPLAY_LABELS = {
   'Oral Comm': 'Komunikasyong Pagsasalita',
   'Oral Communication': 'Komunikasyong Pagsasalita',
+  'Komunikasyong Pagsasalita': 'Komunikasyong Pagsasalita',
   'Pasalitang Komunikasyon': 'Komunikasyong Pagsasalita',
 };
 
@@ -17,16 +18,16 @@ function formatStudentSubjectDisplay(subject) {
 
 export default function LessonsPage() {
   const [dashboard, setDashboard] = useState(null);
-  const [subject, setSubject] = useState('All');
+  const [subject, setSubject] = useState('Lahat');
 
   useEffect(() => { api('/students/dashboard').then(setDashboard); }, []);
 
   const lessons = useMemo(() => {
     if (!dashboard) return [];
-    return dashboard.lessons.filter(l => subject === 'All' || l.subject === subject);
+    return dashboard.lessons.filter(l => subject === 'Lahat' || l.subject === subject);
   }, [dashboard, subject]);
 
-  if (!dashboard) return <div className="loading-card">Nilo-load ang mga aralin...</div>;
+  if (!dashboard) return <div className="loading-card">Inihahanda ang mga aralin...</div>;
 
   return (
     <section>

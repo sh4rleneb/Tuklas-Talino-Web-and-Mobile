@@ -152,6 +152,46 @@ function cleanQuizTitle(title, fallback = 'Pagsusulit') {
   return value || fallback;
 }
 
+function normalizeQuizAttemptLimit(
+  value,
+  fallback = DEFAULT_MAX_QUIZ_ATTEMPTS
+) {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (
+    normalized === 'unlimited' ||
+    normalized === '0'
+  ) {
+    return 0;
+  }
+
+  const parsed = Number(normalized);
+
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(10, Math.max(1, parsed));
+}
+
+function isQuizAttemptLimitReached(
+  attemptsUsed,
+  maxAttempts
+) {
+  return (
+    maxAttempts > 0 &&
+    attemptsUsed >= maxAttempts
+  );
+}
+
+function formatQuizAttemptLimit(maxAttempts) {
+  return maxAttempts === 0
+    ? 'Walang Hanggan'
+    : String(maxAttempts);
+}
+
 function quizCatalog(dashboard) {
   return asArray(dashboard?.lessons)
     .map((lesson) => {
@@ -162,7 +202,7 @@ function quizCatalog(dashboard) {
         (activity) =>
           String(activity?.type || '').toLowerCase() === 'mcq'
       );
-      const configuredMaxAttempts = Number(
+      const maxAttempts = normalizeQuizAttemptLimit(
         quizActivity?.maxAttempts ??
         quizActivity?.max_attempts ??
         quizActivity?.dataJson?.maxAttempts ??
@@ -171,9 +211,6 @@ function quizCatalog(dashboard) {
         quizActivity?.data_json?.max_attempts ??
         DEFAULT_MAX_QUIZ_ATTEMPTS
       );
-      const maxAttempts = Number.isInteger(configuredMaxAttempts)
-        ? Math.min(10, Math.max(1, configuredMaxAttempts))
-        : DEFAULT_MAX_QUIZ_ATTEMPTS;
 
       return {
         id: quizId,
@@ -212,15 +249,15 @@ function getQuizAttemptLimit(quiz = {}) {
   const safeQuiz =
     quiz && typeof quiz === 'object' ? quiz : {};
 
-  const value = Number(
+  return normalizeQuizAttemptLimit(
     safeQuiz.maxAttempts ??
     safeQuiz.max_attempts ??
+    safeQuiz.dataJson?.maxAttempts ??
+    safeQuiz.dataJson?.max_attempts ??
+    safeQuiz.data_json?.maxAttempts ??
+    safeQuiz.data_json?.max_attempts ??
     DEFAULT_MAX_QUIZ_ATTEMPTS
   );
-
-  return Number.isInteger(value)
-    ? Math.min(10, Math.max(1, value))
-    : DEFAULT_MAX_QUIZ_ATTEMPTS;
 }
 
 function localizeQuizType(value) {
@@ -404,7 +441,10 @@ export default function QuizScreen({ navigation }) {
  );
   const activeQuizAttempts = activeQuiz ? getQuizAttempts(attempts, activeQuiz) : [];
   const activeQuizMaxAttempts = getQuizAttemptLimit(activeQuiz);
-  const canRetry = activeQuizAttempts.length < activeQuizMaxAttempts;
+  const canRetry = !isQuizAttemptLimitReached(
+    activeQuizAttempts.length,
+    activeQuizMaxAttempts
+  );
   const question = activeQuiz?.questions?.[questionIndex];
   const selectedOptionId = question ? answers[question.id] : null;
   const progressPercent = activeQuiz?.questions?.length
@@ -459,7 +499,10 @@ const closeQuizPreview = useCallback(() => {
   async function submitQuiz() {
     if (!activeQuiz || submitting) return;
 
-    if (activeQuizAttempts.length >= activeQuizMaxAttempts) {
+    if (isQuizAttemptLimitReached(
+      activeQuizAttempts.length,
+      activeQuizMaxAttempts
+    )) {
       Alert.alert(
         'Pagsusulit',
         `${activeQuizMaxAttempts} pagsubok lamang ang pinapayagan para sa pagsusulit na ito.`
@@ -625,7 +668,7 @@ const closeQuizPreview = useCallback(() => {
 
                 <View style={styles.previewStat}>
                   <Text style={styles.previewStatValue}>
-                    {activeQuizAttempts.length}/{activeQuizMaxAttempts}
+                    {activeQuizAttempts.length}/{formatQuizAttemptLimit(activeQuizMaxAttempts)}
                   </Text>
                   <Text style={styles.previewStatLabel}>Pagsubok</Text>
                 </View>
@@ -866,7 +909,10 @@ const closeQuizPreview = useCallback(() => {
             {quizzes.map((quiz, index) => {
               const quizAttempts = getQuizAttempts(attempts, quiz);
               const quizMaxAttempts = getQuizAttemptLimit(quiz);
-              const limitReached = quizAttempts.length >= quizMaxAttempts;
+              const limitReached = isQuizAttemptLimitReached(
+                quizAttempts.length,
+                quizMaxAttempts
+              );
               const best = quizAttempts.reduce(
                 (value, attempt) => Math.max(value, attempt.percent || 0),
                 0

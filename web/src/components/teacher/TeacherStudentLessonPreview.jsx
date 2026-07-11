@@ -69,18 +69,33 @@ function TextLessonCard({ title, subtitle, paragraphs, emptyText }) {
   );
 }
 
-function QuizPreview({ activity }) {
-  const questions = Array.isArray(activity?.questions)
-    ? activity.questions
-    : [];
+function QuizPreview({ activity, activities = [] }) {
+  const quizActivities = Array.isArray(activities) && activities.length
+    ? activities.filter(item => item?.type === 'mcq')
+    : activity
+      ? [activity]
+      : [];
 
-  if (!questions.length) {
+  const visibleQuizActivities = quizActivities
+    .map((item, index) => ({
+      activity: item,
+      blockIndex: index,
+      questions: Array.isArray(item?.questions) ? item.questions : []
+    }))
+    .filter(item => item.questions.length);
+
+  const totalQuestions = visibleQuizActivities.reduce(
+    (sum, item) => sum + item.questions.length,
+    0
+  );
+
+  if (!totalQuestions) {
     return (
       <div className="teacher-student-preview-content-card">
         <div className="teacher-student-preview-card-kicker">
           Student quiz step
         </div>
-        <h3>{activity?.title || 'Quiz'}</h3>
+        <h3>Quiz Preview</h3>
         <p className="teacher-student-preview-muted">
           No Quiz added yet. Add a Quiz activity before publishing.
         </p>
@@ -88,74 +103,136 @@ function QuizPreview({ activity }) {
     );
   }
 
+  let questionNumber = 0;
+
   return (
     <div className="teacher-student-preview-content-card">
       <div className="teacher-student-preview-card-kicker">
         Student quiz step
       </div>
 
-      <h3>{activity?.title || 'Quiz'}</h3>
+      <h3>Quiz Preview</h3>
 
-      {activity?.instructions ? (
-        <p className="teacher-student-preview-muted">
-          {activity.instructions}
-        </p>
-      ) : null}
+      <p className="teacher-student-preview-muted">
+        Showing all {totalQuestions} quiz question{totalQuestions === 1 ? '' : 's'}
+        {visibleQuizActivities.length > 1
+          ? ` from ${visibleQuizActivities.length} quiz blocks.`
+          : '.'}
+      </p>
 
-      {questions.map((question, questionIndex) => {
-        const options = Array.isArray(question?.options)
-          ? question.options
-          : [];
-
-        return (
-          <div
-            className="teacher-student-preview-quiz-item"
-            key={
-              question?.id ||
-              `preview-question-${questionIndex}`
-            }
-          >
-            <div className="teacher-student-preview-question">
-              <strong>Question {questionIndex + 1}</strong>
-              <p>
-                {question?.question ||
-                  question?.prompt ||
-                  question?.text ||
-                  'Untitled question'}
-              </p>
+      {visibleQuizActivities.map(({ activity: quizBlock, blockIndex, questions }) => (
+        <div
+          key={quizBlock?.id || `quiz-preview-block-${blockIndex}`}
+          style={{
+            display: 'grid',
+            gap: 12,
+            marginTop: blockIndex ? 18 : 0
+          }}
+        >
+          {visibleQuizActivities.length > 1 ? (
+            <div
+              style={{
+                padding: '10px 12px',
+                borderRadius: 14,
+                background: '#f8fcf9',
+                border: '1px solid #dcefe2',
+                color: '#17324d',
+                fontWeight: 950
+              }}
+            >
+              {quizBlock?.title || `Quiz Block ${blockIndex + 1}`} - {questions.length}
+              {' '}
+              question{questions.length === 1 ? '' : 's'}
             </div>
+          ) : quizBlock?.instructions ? (
+            <p className="teacher-student-preview-muted">
+              {quizBlock.instructions}
+            </p>
+          ) : null}
 
-            <div className="teacher-student-preview-options">
-              {options.length ? (
-                options.map((option, optionIndex) => (
-                  <div
-                    className="teacher-student-preview-option"
-                    key={
-                      option?.id ||
-                      `preview-option-${questionIndex}-${optionIndex}`
-                    }
-                  >
-                    <span>
-                      {String.fromCharCode(65 + optionIndex)}
-                    </span>
-                    <p>
-                      {option?.text ||
-                        option?.optionText ||
-                        option?.label ||
-                        option?.value ||
-                        'Untitled choice'}
+          {visibleQuizActivities.length > 1 && quizBlock?.instructions ? (
+            <p className="teacher-student-preview-muted">
+              {quizBlock.instructions}
+            </p>
+          ) : null}
+
+          {questions.map((question, questionIndex) => {
+            questionNumber += 1;
+
+            const options = Array.isArray(question?.options)
+              ? question.options
+              : [];
+
+            const correctIndex = options.findIndex(option => Boolean(option?.isCorrect));
+            const correctLetter = correctIndex >= 0
+              ? String.fromCharCode(65 + correctIndex)
+              : '';
+
+            return (
+              <div
+                className="teacher-student-preview-quiz-item"
+                key={
+                  question?.id ||
+                  `preview-question-${blockIndex}-${questionIndex}`
+                }
+              >
+                <div className="teacher-student-preview-question">
+                  <strong>Question {questionNumber}</strong>
+                  <p>
+                    {question?.question ||
+                      question?.prompt ||
+                      question?.text ||
+                      'Untitled question'}
+                  </p>
+                </div>
+
+                <div className="teacher-student-preview-options">
+                  {options.length ? (
+                    options.map((option, optionIndex) => {
+                      const isCorrect = Boolean(option?.isCorrect);
+
+                      return (
+                        <div
+                          className="teacher-student-preview-option"
+                          key={
+                            option?.id ||
+                            `preview-option-${blockIndex}-${questionIndex}-${optionIndex}`
+                          }
+                          style={isCorrect ? {
+                            borderColor: '#86efac',
+                            background: '#f0fdf4'
+                          } : null}
+                        >
+                          <span>
+                            {String.fromCharCode(65 + optionIndex)}
+                          </span>
+                          <p>
+                            {option?.text ||
+                              option?.optionText ||
+                              option?.label ||
+                              option?.value ||
+                              'Untitled choice'}
+                          </p>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="teacher-student-preview-muted">
+                      No answer choices added yet.
                     </p>
+                  )}
+                </div>
+
+                {correctLetter ? (
+                  <div className="teacher-student-preview-note">
+                    Correct answer: {correctLetter}
                   </div>
-                ))
-              ) : (
-                <p className="teacher-student-preview-muted">
-                  No answer choices added yet.
-                </p>
-              )}
-            </div>
-          </div>
-        );
-      })}
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ))}
 
       <div className="teacher-student-preview-note">
         Answer selection is disabled in teacher preview.
@@ -252,7 +329,14 @@ export default function TeacherStudentLessonPreview({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const quizActivity = firstActivity(activities, 'mcq');
+  const quizActivities = useMemo(
+    () => (activities || []).filter(activity => activity?.type === 'mcq'),
+    [activities]
+  );
+  const quizQuestionCount = quizActivities.reduce(
+    (sum, activity) => sum + (Array.isArray(activity?.questions) ? activity.questions.length : 0),
+    0
+  );
   const writingActivity = firstActivity(activities, 'writing');
   const speechActivity = firstActivity(activities, 'speech');
 
@@ -324,8 +408,10 @@ export default function TeacherStudentLessonPreview({
       {
         key: 'quiz',
         title: 'Quiz',
-        subtitle: quizActivity ? 'Question preview' : 'Not added yet',
-        render: () => <QuizPreview activity={quizActivity} />
+        subtitle: quizQuestionCount
+          ? `${quizQuestionCount} question${quizQuestionCount === 1 ? '' : 's'} visible`
+          : 'Not added yet',
+        render: () => <QuizPreview activities={quizActivities} />
       },
       {
         key: 'gawain',
@@ -362,7 +448,7 @@ export default function TeacherStudentLessonPreview({
       ...step,
       number: index + 1
     }));
-  }, [lessonDraft, materialInfo, quizActivity, writingActivity, speechActivity]);
+  }, [lessonDraft, materialInfo, quizActivities, quizQuestionCount, writingActivity, speechActivity]);
 
   useEffect(() => {
     if (activeIndex > steps.length - 1) {

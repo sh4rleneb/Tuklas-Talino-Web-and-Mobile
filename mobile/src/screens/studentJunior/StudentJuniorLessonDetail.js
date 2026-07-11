@@ -1205,6 +1205,76 @@ const stepScrollRef = useRef(null);
   const lessonsListScreen =
     homeRoute === 'StudentSeniorTabs' ? 'StudentSeniorLessonsHome' : 'LessonsList';
 
+  function resetCompletedLessonToList() {
+    stopSpeech();
+
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: lessonsListScreen,
+          params: {
+            refreshToken: Date.now(),
+            completedLessonId: lessonId,
+          },
+        },
+      ],
+    });
+  }
+
+  function openNextLessonAfterCompletion() {
+    if (!nextLesson?.id) {
+      resetCompletedLessonToList();
+      return;
+    }
+
+    stopSpeech();
+
+    navigation.reset({
+      index: 1,
+      routes: [
+        {
+          name: lessonsListScreen,
+          params: {
+            refreshToken: Date.now(),
+            completedLessonId: lessonId,
+          },
+        },
+        {
+          name: 'StudentJuniorLessonDetail',
+          params: {
+            lessonId: nextLesson.id,
+            homeRoute,
+            previousLessonId: lessonId,
+          },
+        },
+      ],
+    });
+  }
+
+  function returnHomeAfterCompletion() {
+    stopSpeech();
+
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: lessonsListScreen,
+          params: {
+            refreshToken: Date.now(),
+            completedLessonId: lessonId,
+          },
+        },
+      ],
+    });
+
+    requestAnimationFrame(() => {
+      navigation.navigate(homeRoute, {
+        screen: 'Tahanan',
+      });
+    });
+  }
+
   async function startRecording() {
     try {
       const permission = await Audio.requestPermissionsAsync();
@@ -3675,68 +3745,101 @@ const stepScrollRef = useRef(null);
                   ],
                 }}
               >
-                {nextLesson ? (
-                  <TouchableOpacity
-                    style={styles.finishHeroButton}
-                    onPress={() =>
-                      navigation.navigate('Mga Aralin', {
-                        screen: 'StudentJuniorLessonDetail',
-                        params: { lessonId: nextLesson.id, homeRoute },
-                      })
-                    }
-                  >
+                <View style={styles.finishNavigationSection}>
+                  {nextLesson ? (
+                    <TouchableOpacity
+                      style={styles.finishHeroButton}
+                      onPress={openNextLessonAfterCompletion}
+                      activeOpacity={0.88}
+                      accessibilityRole="button"
+                      accessibilityLabel="Buksan ang susunod na aralin"
+                    >
+                      <View style={styles.finishHeroIconWrap}>
+                        <Text style={styles.finishHeroIcon}>📘</Text>
+                      </View>
 
-                    <View style={styles.finishHeroTextWrap}>
-                      <Text style={styles.finishHeroTitle}>
-                        Susunod na Aralin
-                      </Text>
+                      <View style={styles.finishHeroTextWrap}>
+                        <Text style={styles.finishHeroTitle}>
+                          Susunod na Aralin
+                        </Text>
 
-                      <Text style={styles.finishHeroSubtitle}>
-                        Magpatuloy sa susunod na aralin.
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ) : null}
+                        <Text style={styles.finishHeroSubtitle}>
+                          Magpatuloy sa bagong aralin
+                        </Text>
+                      </View>
 
-                  <TouchableOpacity
-                    style={styles.finishCardButton}
-                    onPress={() =>
-                      navigation.navigate('Mga Aralin', {
-                        screen: lessonsListScreen,
-                      })
-                    }
-                  >
+                      <View style={styles.finishHeroArrowWrap}>
+                        <Text style={styles.finishHeroArrow}>›</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ) : null}
 
-                    <View style={styles.finishCardTextWrap}>
-                      <Text style={styles.finishCardTitle}>
-                        Bumalik sa mga Aralin
-                      </Text>
+                  <View style={styles.finishSecondaryRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.finishCardButton,
+                        styles.finishLessonsCard,
+                      ]}
+                      onPress={resetCompletedLessonToList}
+                      activeOpacity={0.88}
+                      accessibilityRole="button"
+                      accessibilityLabel="Bumalik sa mga aralin"
+                    >
+                      <View
+                        style={[
+                          styles.finishCardIconWrap,
+                          styles.finishLessonsIconWrap,
+                        ]}
+                      >
+                        <Text style={styles.finishCardIcon}>📚</Text>
+                      </View>
 
-                      <Text style={styles.finishCardSubtitle}>
-                        Pumili ng ibang aralin
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+                      <View style={styles.finishCardTextWrap}>
+                        <Text style={styles.finishCardTitle}>
+                          Mga Aralin
+                        </Text>
 
-                  <TouchableOpacity
-                    style={styles.finishCardButton}
-                    onPress={() =>
-                      navigation.navigate(homeRoute, {
-                        screen: 'Tahanan',
-                      })
-                    }
-                  >
+                        <Text style={styles.finishCardSubtitle}>
+                          Pumili ng ibang aralin
+                        </Text>
+                      </View>
 
-                    <View style={styles.finishCardTextWrap}>
-                      <Text style={styles.finishCardTitle}>
-                        Bumalik sa Tahanan
-                      </Text>
+                      <Text style={styles.finishCardArrow}>›</Text>
+                    </TouchableOpacity>
 
-                      <Text style={styles.finishCardSubtitle}>
-                        Bumalik sa pangunahing pahina
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.finishCardButton,
+                        styles.finishHomeCard,
+                      ]}
+                      onPress={returnHomeAfterCompletion}
+                      activeOpacity={0.88}
+                      accessibilityRole="button"
+                      accessibilityLabel="Bumalik sa tahanan"
+                    >
+                      <View
+                        style={[
+                          styles.finishCardIconWrap,
+                          styles.finishHomeIconWrap,
+                        ]}
+                      >
+                        <Text style={styles.finishCardIcon}>🏠</Text>
+                      </View>
+
+                      <View style={styles.finishCardTextWrap}>
+                        <Text style={styles.finishCardTitle}>
+                          Tahanan
+                        </Text>
+
+                        <Text style={styles.finishCardSubtitle}>
+                          Bumalik sa pangunahing pahina
+                        </Text>
+                      </View>
+
+                      <Text style={styles.finishCardArrow}>›</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </Animated.View>
             </View>
           ) : renderActivity()}
@@ -4280,71 +4383,84 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   finishHeroButton: {
-    marginTop: 24,
-    backgroundColor: '#16A34A',
-    borderRadius: 22,
-    minHeight: 78,
-    paddingHorizontal: 22,
+    width: '100%',
+    minHeight: 88,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#60A5FA',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
+    shadowColor: '#1D4ED8',
+    shadowOffset: {
+      width: 0,
+      height: 7,
+    },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    elevation: 6,
   },
 
   finishHeroTextWrap: {
     flex: 1,
-    marginHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'center',},
+    minWidth: 0,
+    paddingHorizontal: 13,
+  },
 
   finishHeroTitle: {
     color: '#FFFFFF',
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '900',
-    lineHeight: 28,
-    textAlign: 'center',},
+    lineHeight: 23,
+  },
 
   finishHeroSubtitle: {
-    color: '#DCFCE7',
-    fontSize: 14,
+    color: '#DBEAFE',
+    fontSize: 13,
     fontWeight: '700',
     lineHeight: 18,
-    marginTop: 2,
-    textAlign: 'center',},
+    marginTop: 3,
+  },
 
   finishCardButton: {
-    marginTop: 16,
-    backgroundColor: '#FFFFFF',
+    flex: 1,
+    minWidth: 0,
+    minHeight: 146,
     borderRadius: 22,
-    borderWidth: 2,
-    borderColor: '#A7F3D0',
-
-    minHeight: 82,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',},
+    borderWidth: 1.5,
+    padding: 14,
+    justifyContent: 'space-between',
+    shadowColor: '#64748B',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+  },
 
   finishCardTextWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',},
+    minWidth: 0,
+    marginTop: 12,
+  },
 
   finishCardTitle: {
-    color: '#166534',
-    fontSize: 20,
+    color: '#0F172A',
+    fontSize: 16,
     fontWeight: '900',
-    lineHeight: 24,
-    textAlign: 'center',},
+    lineHeight: 21,
+  },
 
   finishCardSubtitle: {
     color: '#64748B',
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 1,
-    textAlign: 'center',},
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 4,
+  },
   recordingButton: { backgroundColor: '#FEE2E2' },
   secondaryText: {
     color: '#166534',
@@ -4443,4 +4559,85 @@ const styles = StyleSheet.create({
     width: '100%',},
   reward: { color: '#F97316', fontSize: 28, fontWeight: '900', marginTop: 14 },
   error: { color: '#B91C1C', textAlign: 'center' },
+  finishNavigationSection: {
+    width: '100%',
+    marginTop: 22,
+    gap: 12,
+  },
+
+  finishHeroIconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  },
+
+  finishHeroIcon: {
+    fontSize: 28,
+  },
+
+  finishHeroArrowWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  },
+
+  finishHeroArrow: {
+    color: '#FFFFFF',
+    fontSize: 31,
+    fontWeight: '700',
+    lineHeight: 32,
+    marginTop: -2,
+  },
+
+  finishSecondaryRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+
+  finishLessonsCard: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+
+  finishHomeCard: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+
+  finishCardIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  finishLessonsIconWrap: {
+    backgroundColor: '#DBEAFE',
+  },
+
+  finishHomeIconWrap: {
+    backgroundColor: '#DCFCE7',
+  },
+
+  finishCardIcon: {
+    fontSize: 24,
+  },
+
+  finishCardArrow: {
+    alignSelf: 'flex-end',
+    color: '#475569',
+    fontSize: 27,
+    fontWeight: '800',
+    lineHeight: 28,
+  },
+
 });

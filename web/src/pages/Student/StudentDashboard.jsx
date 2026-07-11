@@ -62,7 +62,7 @@ function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
     return (
       <img
         src={mappedTuklasBadgeImage}
-        alt={badge?.name || 'Badge'}
+        alt={badge?.name || 'Gantimpala'}
         style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
       />
     );
@@ -105,6 +105,7 @@ function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
 const STUDENT_SUBJECT_DISPLAY_LABELS = {
   'Oral Comm': 'Komunikasyong Pagsasalita',
   'Oral Communication': 'Komunikasyong Pagsasalita',
+  'Komunikasyong Pagsasalita': 'Komunikasyong Pagsasalita',
   'Pasalitang Komunikasyon': 'Komunikasyong Pagsasalita',
 };
 
@@ -171,7 +172,7 @@ function BadgeVisual({ badge }) {
     return (
       <img
         src={mappedBadgeImage}
-        alt={badge?.name || 'Badge'}
+        alt={badge?.name || 'Gantimpala'}
         style={{ width: 56, height: 56, objectFit: 'contain', display: 'inline-block' }}
       />
     );
@@ -219,7 +220,7 @@ export default function StudentDashboard() {
   }, []);
 
   if (error) return <div className="alert error">{error}</div>;
-  if (!data) return <div className="loading-card">Nilo-load ang iyong mapa ng pag-aaral...</div>;
+  if (!data) return <div className="loading-card">Inihahanda ang iyong mapa ng pag-aaral...</div>;
 
   const playful = data.student.gradeLevel <= 2 ? 'playful' : 'senior';
 
@@ -258,7 +259,7 @@ export default function StudentDashboard() {
 
       <div className="section-heading"><h2>Mga Gantimpala</h2><Link to="/student/badges">Tingnan ang mga gantimpala</Link></div>
       <div className="badge-row">
-        {data.badges.length ? data.badges.map(b => <span className="badge-chip" key={b.id}><BadgeVisual badge={b} /> {b.name}</span>) : <p className="empty">Complete lessons bubuksan badges.</p>}
+        {data.badges.length ? data.badges.map(b => <span className="badge-chip" key={b.id}><BadgeVisual badge={b} /> {b.name}</span>) : <p className="empty">Tapusin ang mga aralin upang mabuksan ang mga gantimpala.</p>}
       </div>
     </section>
   );

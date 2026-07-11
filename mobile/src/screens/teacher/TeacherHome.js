@@ -432,14 +432,46 @@ function getTeacherDeadlineValidationMessage(
   return '';
 }
 
-function normalizeTeacherMaxAttempts(value = 2) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return 2;
-  return Math.max(1, Math.min(5, Math.round(parsed)));
+function getTeacherMaxAttemptsFormValue(value = '2') {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (
+    normalized === 'unlimited' ||
+    normalized === '0'
+  ) {
+    return 'unlimited';
+  }
+
+  const parsed = Number(normalized);
+
+  if (!Number.isInteger(parsed)) {
+    return '2';
+  }
+
+  return String(
+    Math.min(10, Math.max(1, parsed))
+  );
+}
+
+function normalizeTeacherMaxAttempts(value = '2') {
+  const normalized =
+    getTeacherMaxAttemptsFormValue(value);
+
+  return normalized === 'unlimited'
+    ? 0
+    : Number(normalized);
 }
 
 function getTeacherAttemptOptions() {
-  return ['1', '2', '3', '4', '5'];
+  return [
+    ...Array.from(
+      { length: 10 },
+      (_, index) => String(index + 1)
+    ),
+    'unlimited',
+  ];
 }
 
 function getTeacherActivityValidationMessage(activity = {}) {
@@ -1371,7 +1403,7 @@ async function handleLogout() {
       instructions: type === 'speech' ? '' : activity.instructions || current.instructions || '',
       deadline: deadlineState.deadline,
       hasDeadline: deadlineState.hasDeadline,
-      maxAttempts: String(
+      maxAttempts: getTeacherMaxAttemptsFormValue(
         activity.maxAttempts ??
         activity.max_attempts ??
         activity.attemptLimit ??
@@ -2410,18 +2442,31 @@ async function handleLogout() {
               />
             <Field label="Activity Title" value={newActivity.title} onChangeText={(value) => setNewActivity((current) => ({ ...current, title: value }))} />
 
-            <Text style={styles.fieldLabel}>Attempts Allowed</Text>
-            <View style={styles.choiceRow}>
-              {getTeacherAttemptOptions().map((attemptOption) => (
-                <SmallButton
-                  key={`activity-attempt-${attemptOption}`}
-                  tone={Number(newActivity.maxAttempts || 2) === Number(attemptOption) ? 'green' : 'slate'}
-                  onPress={() => setNewActivity((current) => ({ ...current, maxAttempts: attemptOption }))}
-                >
-                  {attemptOption} {Number(attemptOption) === 1 ? 'attempt' : 'attempts'}
-                </SmallButton>
-              ))}
-            </View>
+            <SelectMenu
+              label="Attempts Allowed"
+              value={getTeacherMaxAttemptsFormValue(
+                newActivity.maxAttempts ?? '2'
+              )}
+              options={getTeacherAttemptOptions().map(
+                (attemptOption) => ({
+                  value: attemptOption,
+                  label:
+                    attemptOption === 'unlimited'
+                      ? 'Unlimited'
+                      : `${attemptOption} ${
+                          Number(attemptOption) === 1
+                            ? 'attempt'
+                            : 'attempts'
+                        }`,
+                })
+              )}
+              onSelect={(maxAttempts) =>
+                setNewActivity((current) => ({
+                  ...current,
+                  maxAttempts,
+                }))
+              }
+            />
 
             <Text style={styles.fieldLabel}>Deadline Option</Text>
             <View style={styles.choiceRow}>

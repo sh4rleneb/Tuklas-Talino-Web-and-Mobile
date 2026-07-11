@@ -18,7 +18,7 @@ export function LandingScreen({ go }) {
 
 
   const publicNav = [
-    { id: 'home', icon: '🏠', label: 'Home' },
+    { id: 'home', icon: '🏠', label: 'Tahanan' },
     { id: 'modules', icon: '📖', label: 'Modules' },
     { id: 'about', icon: 'ℹ️', label: 'About' },
     { id: 'help', icon: '❔', label: 'Help' },
@@ -71,8 +71,8 @@ export function LandingScreen({ go }) {
   ];
 
   const lmsTools = [
-    { icon: '📝', title: 'Quizzes', desc: 'Students answer assessments while attempts, scores, and progress are recorded.', tone: 'blue' },
-    { icon: '🎮', title: 'Missions', desc: 'Game-like learning tasks help students practice lessons in a more engaging way.', tone: 'purple' },
+    { icon: '📝', title: 'Mga Pagsusulit', desc: 'Students answer assessments while attempts, scores, and progress are recorded.', tone: 'blue' },
+    { icon: '🎮', title: 'Mga Misyon', desc: 'Game-like learning tasks help students practice lessons in a more engaging way.', tone: 'purple' },
     { icon: '🏅', title: 'XP at Badge', desc: 'Reward features encourage participation, completion, and consistent learning.', tone: 'pink' },
     { icon: '📊', title: 'Monitoring', desc: 'Teachers can track lesson completion, quiz performance, XP, and learner status.', tone: 'blue' },
   ];
@@ -492,7 +492,7 @@ export function ChangePasswordScreen({ user, onSubmit, onLogout }) {
               <span className="heading-badge">👤</span>
               <div>
                 <h3>Kumusta, {user?.displayName || 'Mag-aaral'}!</h3>
-                <p>Palitan muna ang temporary password bago magpatuloy.</p>
+                <p>Palitan muna ang temporary PIN/password bago magpatuloy.</p>
               </div>
             </div>
 

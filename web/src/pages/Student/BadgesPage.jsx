@@ -59,7 +59,7 @@ function TuklasBadgeVisual({ badge, fallback = '🏅', size = 72 }) {
     return (
       <img
         src={mappedTuklasBadgeImage}
-        alt={badge?.name || 'Badge'}
+        alt={badge?.name || 'Gantimpala'}
         style={{ width: size, height: size, objectFit: 'contain', display: 'inline-block' }}
       />
     );
@@ -156,7 +156,7 @@ function BadgeVisual({ badge }) {
     return (
       <img
         src={mappedBadgeImage}
-        alt={badge?.name || 'Badge'}
+        alt={badge?.name || 'Gantimpala'}
         style={{ width: 56, height: 56, objectFit: 'contain', display: 'inline-block' }}
       />
     );
@@ -202,7 +202,7 @@ export default function BadgesPage() {
     api('/students/dashboard').then(d => api(`/students/${d.student.id}/badges`).then(setData));
   }, []);
 
-  if (!data) return <div className="loading-card">Loading badges...</div>;
+  if (!data) return <div className="loading-card">Inihahanda ang mga gantimpala...</div>;
 
   const owned = new Set(data.badges.map(b => b.id));
 

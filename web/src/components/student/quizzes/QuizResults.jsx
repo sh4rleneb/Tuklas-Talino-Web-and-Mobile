@@ -4,6 +4,7 @@ import {
   masteryFromPercent,
   QuizSharedStyles,
   QuizResultCard,
+  normalizeQuizMastery,
 } from "./QuizUI";
 
 function list(value) {
@@ -82,6 +83,28 @@ function hydrateAttemptBalikan(attempt = {}, quiz = {}) {
   });
 }
 
+function normalizeResultAttemptLimit(
+  value,
+  fallback = 2
+) {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase();
+
+  if (
+    normalized === 'unlimited' ||
+    normalized === '0'
+  ) {
+    return 0;
+  }
+
+  const parsed = Number(normalized);
+
+  return Number.isInteger(parsed)
+    ? Math.min(10, Math.max(1, parsed))
+    : fallback;
+}
+
 export default function QuizResults({
   data,
   result,
@@ -94,7 +117,7 @@ export default function QuizResults({
 }) {
   const student = data?.student || {};
   const early = Number(student?.gradeLevel || 4) <= 2;
-  const mastery = result?.mastery || masteryFromPercent(result?.percent || 0);
+  const mastery = normalizeQuizMastery(result?.mastery || masteryFromPercent(result?.percent || 0));
 
   const quizzes =
     typeof buildStudentQuizzes === "function"
@@ -103,7 +126,16 @@ export default function QuizResults({
 
   const sourceQuiz = quizzes.find((quiz) => quiz.id === result?.quizId);
   const attemptNo = Number(result?.attemptNo || 1);
-  const maxAttempts = Number(result?.maxAttempts || 2);
+  const maxAttempts = normalizeResultAttemptLimit(
+    result?.maxAttempts ??
+    sourceQuiz?.maxAttempts ??
+    sourceQuiz?.max_attempts ??
+    sourceQuiz?.dataJson?.maxAttempts ??
+    sourceQuiz?.data_json?.maxAttempts ??
+    2
+  );
+  const maxAttemptsLabel =
+    maxAttempts === 0 ? 'Walang Hanggan' : maxAttempts;
   const rawAttemptHistory = Array.isArray(result?.attemptHistory) && result.attemptHistory.length
     ? result.attemptHistory
     : [result].filter(Boolean);
@@ -126,7 +158,13 @@ export default function QuizResults({
     setSelectedBalikanIndex(preferredBalikanIndex);
   }, [result?.id, result?.attemptNo, result?.submittedAt, preferredBalikanIndex]);
 
-  const canRetake = Boolean(sourceQuiz && attemptHistory.length < maxAttempts);
+  const canRetake = Boolean(
+    sourceQuiz &&
+    (
+      maxAttempts === 0 ||
+      attemptHistory.length < maxAttempts
+    )
+  );
   const showBalikan = !canRetake;
   const activeBalikanIndex = Math.min(selectedBalikanIndex, Math.max(0, attemptHistory.length - 1));
   const activeAttempt = attemptHistory[activeBalikanIndex] || result;
@@ -170,7 +208,7 @@ export default function QuizResults({
               <p className={early ? "g12-section-subtitle" : "g46-ref-muted"}>
                 {showBalikan
                   ? "Suriin ang iyong mga sagot."
-                  : "Subukan muna muli. Susunod ang feedback."}
+                  : "Subukan muna muli. Susunod ang puna sa sagot."}
               </p>
             </div>
 
@@ -200,8 +238,8 @@ export default function QuizResults({
               className="quiz-review-item correct"
               style={early ? { fontSize: 24, padding: 26, borderRadius: 30, lineHeight: 1.55 } : { fontSize: 17, lineHeight: 1.45 }}
             >
-              <b>Score saved!</b>
-              <p>Subukan muna muli. Susunod ang feedback.</p>
+              <b>Naitala ang iskor!</b>
+              <p>Subukan muna muli. Susunod ang puna sa sagot.</p>
             </div>
           ) : (
             <div className="quiz-review-list">
@@ -234,10 +272,10 @@ export default function QuizResults({
                         boxShadow: selected ? "0 12px 28px rgba(10, 126, 73, 0.18)" : "none"
                       }}
                     >
-                      <span>Try {attempt.attemptNo || attemptIndex + 1}</span>
+                      <span>Subok {attempt.attemptNo || attemptIndex + 1}</span>
                       {!early && (
                         <small style={{ fontSize: 12, fontWeight: 900, opacity: selected ? 0.95 : 0.78 }}>
-                          Score {reviewAttemptScore(attempt)}
+                          Iskor {reviewAttemptScore(attempt)}
                         </small>
                       )}
                     </button>
@@ -247,7 +285,7 @@ export default function QuizResults({
 
               <section style={{ display: "grid", gap: 12 }}>
                 <h3 className={early ? "g12-section-title" : ""}>
-                  Try {activeAttempt?.attemptNo || activeBalikanIndex + 1} sa {maxAttempts}
+                  Subok {activeAttempt?.attemptNo || activeBalikanIndex + 1}/{maxAttemptsLabel}
                 </h3>
 
                 {activeBalikanItems.map((item, index) => (
@@ -263,11 +301,11 @@ export default function QuizResults({
                     <p>{item.prompt}</p>
 
                     <p>
-                      Your answer: <strong>{item.selectedText || "Walang sagot"}</strong>
+                      Sagot mo: <strong>{item.selectedText || "Walang sagot"}</strong>
                     </p>
 
                     <p>
-                      Correct: <strong>{item.correctText || "—"}</strong>
+                      Tamang sagot: <strong>{item.correctText || "—"}</strong>
                     </p>
                   </article>
                 ))}

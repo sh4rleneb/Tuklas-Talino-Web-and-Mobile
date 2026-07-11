@@ -206,7 +206,7 @@ function withUnlockStates(lessons = [], enforceSequential = false) {
 }
 
 function actionText(lesson = {}) {
-  if (!lesson.unlocked) return 'Naka-lock';
+  if (!lesson.unlocked) return 'Hindi pa bukas';
   if (lesson.completed) return 'Tapos Na';
   if (Number(lesson.progressPercent || 0) > 0) return 'Magpatuloy';
   return 'Simulan';
@@ -557,7 +557,7 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
                   </Text>
 
                   <Text style={styles.openText}>
-                    {locked ? '🔒 Naka-lock' : `${action} →`}
+                    {locked ? '🔒 Hindi pa bukas' : `${action} →`}
                   </Text>
                 </View>
               </TouchableOpacity>

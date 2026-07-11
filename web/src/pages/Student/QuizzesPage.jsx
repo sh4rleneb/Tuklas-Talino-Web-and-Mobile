@@ -5,6 +5,7 @@ import {
   asArray,
   subjectTheme,
   masteryFromPercent,
+  normalizeQuizMastery,
 } from "../../components/student/quizzes/QuizUI";
 import "./QuizzesPagePolish.css";
 
@@ -23,6 +24,44 @@ function SubjectImageIcon({ subject = "", src = "", className = "subject-img-ico
   const resolvedSrc = src || subjectIconSrc(subject);
   if (!resolvedSrc) return <>{fallback}</>;
   return <img src={resolvedSrc} alt="" className={className} aria-hidden="true" />;
+}
+
+function getQuizAttemptLimit(quiz = {}, fallback = 2) {
+  const normalized = String(
+    quiz?.maxAttempts ??
+    quiz?.max_attempts ??
+    quiz?.dataJson?.maxAttempts ??
+    quiz?.dataJson?.max_attempts ??
+    quiz?.data_json?.maxAttempts ??
+    quiz?.data_json?.max_attempts ??
+    fallback
+  ).trim().toLowerCase();
+
+  if (
+    normalized === 'unlimited' ||
+    normalized === '0'
+  ) {
+    return 0;
+  }
+
+  const parsed = Number(normalized);
+
+  return Number.isInteger(parsed)
+    ? Math.min(10, Math.max(1, parsed))
+    : fallback;
+}
+
+function quizAttemptLimitReached(
+  attemptsUsed,
+  maxAttempts
+) {
+  return maxAttempts > 0 && attemptsUsed >= maxAttempts;
+}
+
+function quizAttemptLimitLabel(maxAttempts) {
+  return maxAttempts === 0
+    ? 'Walang Hanggan'
+    : String(maxAttempts);
 }
 
 export default function QuizzesPage({
@@ -52,7 +91,6 @@ export default function QuizzesPage({
       ? getBestQuizAttempt
       : () => null;
 
-  const maxQuizAttempts = 2;
 
   function grade46FilterStyle(active, subjectName = "ALL") {
     if (early) return undefined;
@@ -191,12 +229,17 @@ function specificQuizCardTitle(quiz = {}, earlyMode = false) {
           subject === quizSubjectFilter ||
           (subject === 'Oral Comm' && quizSubjectFilter === 'Komunikasyong Pagsasalita') ||
           (subject === 'Komunikasyong Pagsasalita' && quizSubjectFilter === 'Oral Comm') ||
-          (subject === 'Oral Communication' && quizSubjectFilter === 'Komunikasyong Pagsasalita')
+          (subject === 'Komunikasyong Pagsasalita' && quizSubjectFilter === 'Komunikasyong Pagsasalita')
         );
       });
 
   const recommendedQuizzes =
-    visibleQuizzes.find((quiz) => asArray(quizAttempts?.[quiz.id]).length < maxQuizAttempts) ||
+    visibleQuizzes.find((quiz) =>
+      !quizAttemptLimitReached(
+        asArray(quizAttempts?.[quiz.id]).length,
+        getQuizAttemptLimit(quiz)
+      )
+    ) ||
     visibleQuizzes[0] ||
     quizzes[0];
 
@@ -209,7 +252,7 @@ function specificQuizCardTitle(quiz = {}, earlyMode = false) {
           value === subject.name ||
           (value === 'Oral Comm' && subject.name === 'Komunikasyong Pagsasalita') ||
           (value === 'Komunikasyong Pagsasalita' && subject.name === 'Oral Comm') ||
-          (value === 'Oral Communication' && subject.name === 'Komunikasyong Pagsasalita')
+          (value === 'Komunikasyong Pagsasalita' && subject.name === 'Komunikasyong Pagsasalita')
         );
       }).length,
     }))
@@ -219,9 +262,13 @@ function specificQuizCardTitle(quiz = {}, earlyMode = false) {
   const cards = visibleQuizzes.map((quiz, index) => {
     const attempts = asArray(quizAttempts?.[quiz.id]);
     const attemptsUsed = attempts.length;
-    const attemptsDone = attemptsUsed >= maxQuizAttempts;
+    const maxQuizAttempts = getQuizAttemptLimit(quiz);
+    const attemptsDone = quizAttemptLimitReached(
+      attemptsUsed,
+      maxQuizAttempts
+    );
     const best = getBest(quizAttempts, quiz.id);
-    const mastery = best?.mastery || null;
+    const mastery = best?.mastery ? normalizeQuizMastery(best.mastery) : null;
     const subjectMeta =
       subjects.find((subject) => subject.name === quiz.subject) ||
       subjects[index % subjects.length] ||
@@ -234,7 +281,11 @@ function specificQuizCardTitle(quiz = {}, earlyMode = false) {
     const statusLabel = attemptsDone
       ? "May huling pagbabalik-aral"
       : attemptsUsed
-        ? `Naisave ang pagsubok ${Math.min(attemptsUsed, maxQuizAttempts)}/${maxQuizAttempts}`
+        ? `Naitala ang pagsubok ${
+            maxQuizAttempts === 0
+              ? attemptsUsed
+              : Math.min(attemptsUsed, maxQuizAttempts)
+          }/${quizAttemptLimitLabel(maxQuizAttempts)}`
         : "Handa nang simulan";
     const actionLabel = attemptsDone
       ? "Balikan"

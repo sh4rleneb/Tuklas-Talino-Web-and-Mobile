@@ -4,8 +4,10 @@ export default function Grade46MobileNav({ navItems = [], activeTab = 'home', op
   const [moreOpen, setMoreOpen] = useState(false);
   const wrapRef = useRef(null);
 
-  const primaryItems = navItems.filter(item => ['home', 'lessons', 'quizzes', 'missions'].includes(item.id));
-  const moreItems = navItems.filter(item => ['groups', 'badges', 'profile'].includes(item.id));
+  const primaryIds = ['home', 'lessons', 'quizzes', 'missions'];
+  const primaryItems = navItems.filter(item => primaryIds.includes(item.id));
+  const moreItems = navItems.filter(item => !primaryIds.includes(item.id));
+  const moreIsActive = moreItems.some(item => item.id === activeTab);
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -54,7 +56,7 @@ export default function Grade46MobileNav({ navItems = [], activeTab = 'home', op
           ))}
           <button type="button" className="danger" onClick={handleLogout} role="menuitem">
             <span>↩</span>
-            <b>Logout</b>
+            <b>Lumabas</b>
           </button>
         </div>
       )}
@@ -74,7 +76,7 @@ export default function Grade46MobileNav({ navItems = [], activeTab = 'home', op
 
         <button
           type="button"
-          className={moreOpen || ['groups', 'badges', 'profile'].includes(activeTab) ? 'active' : ''}
+          className={moreOpen || moreIsActive ? 'active' : ''}
           onClick={() => setMoreOpen(value => !value)}
           aria-expanded={moreOpen}
           aria-haspopup="menu"
