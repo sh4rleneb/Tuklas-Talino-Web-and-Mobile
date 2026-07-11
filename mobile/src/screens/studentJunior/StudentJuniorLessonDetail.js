@@ -31,7 +31,6 @@ import ReadingPassageCard from '../../components/lesson/ReadingPassageCard';
 import AudioPlayerCard from '../../components/lesson/AudioPlayerCard';
 import AudioPlayerButton from '../../components/lesson/AudioPlayerButton';
 import ActivityVisualCard from '../../components/lesson/ActivityVisualCard';
-import PowerUpTray from '../../components/lesson/PowerUpTray';
 import ActivityGuideCard from '../../components/lesson/ActivityGuideCard';
 import FillInBlankGame from '../../components/lesson/FillInBlankGame';
 
@@ -450,7 +449,6 @@ function getServerMissionAttemptCount(lesson = {}, activity = {}) {
 }
 
 
-
 function getStableShuffleSeed(value = '') {
   return String(value || '')
     .split('')
@@ -524,7 +522,6 @@ const [balloonProgress, setBalloonProgress] = useState({});
 const [selectedMatch, setSelectedMatch] = useState(null);
 const [matchedPairs, setMatchedPairs] = useState({});
 
-const [selectedWords, setSelectedWords] = useState([]);
 
 const [badgePopup, setBadgePopup] = useState(null);
 const activeBadgePopup = badgePopup || {};
@@ -964,7 +961,6 @@ const stepScrollRef = useRef(null);
     setRecordingUri('');
     setSpeechStatus('');
 
-    setSelectedWords([]);
     setSelectedMatch(null);
     setMatchedPairs({});
     setBalloonProgress({});
@@ -1084,11 +1080,6 @@ const stepScrollRef = useRef(null);
       steps: ['Tingnan', 'Patugtugin', 'Manalo'],
       button: ' Magpatuloy',
     };
-  };
-
-  const handlePowerUpSelection = (nextWords) => {
-    setSelectedWords(nextWords);
-    setWritingAnswer(nextWords.join(' '));
   };
 
 
@@ -1462,7 +1453,6 @@ const stepScrollRef = useRef(null);
       if (data && !data.correct) {
         setMcqChoiceShuffleNonce((prev) => prev + 1);
       }
-
 
 
       const visibleQuestions = buildMissionQuestionPool(
@@ -2717,12 +2707,6 @@ const stepScrollRef = useRef(null);
             />
           ) : (
             <>
-              <PowerUpTray
-                visible={littleLearnerGame}
-                activity={currentActivity}
-                selectedWords={selectedWords}
-                onSelectionChange={handlePowerUpSelection}
-              />
           {!littleLearnerGame && suggestions.length ? (
             <View style={styles.choiceRow}>
               {suggestions.map((suggestion, index) => {
