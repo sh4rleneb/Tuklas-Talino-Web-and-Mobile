@@ -472,7 +472,16 @@ export default function MissionGameScreen({ navigation, route }) {
             setRecordingUri('');
             setSoundStatus('');
           }}
-          onBack={() => navigation.goBack()}
+          onBack={() => {
+            navigation.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'MissionHome',
+                },
+              ],
+            });
+          }}
         />
 
         {missionNoticePopup}
