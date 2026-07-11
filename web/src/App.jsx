@@ -1580,12 +1580,72 @@ if (role === 'admin') {
   }
 
   async function teacherAddMember(groupId) {
-    const studentId = Number(read(`member-${groupId}`));
-    if (!studentId) return notify('Pumili ng student.', 'warn');
+    const select = document.getElementById(`member-${groupId}`);
+
+    const studentIds = [
+      ...new Set(
+        Array.from(select?.selectedOptions || [])
+          .map(option => Number(option.value))
+          .filter(
+            studentId =>
+              Number.isInteger(studentId) &&
+              studentId > 0
+          )
+      )
+    ];
+
+    if (!studentIds.length) {
+      return notify(
+        'Pumili ng kahit isang student.',
+        'warn'
+      );
+    }
+
     await safeRun(async () => {
-      await api(`/groups/${groupId}/members`, { method: 'POST', body: { studentId } });
-      notify('Member added.');
+      let addedCount = 0;
+      const failures = [];
+
+      // Add students one at a time through the existing
+      // validated endpoint. This also ensures only the
+      // first member can be assigned as the initial leader.
+      for (const studentId of studentIds) {
+        try {
+          await api(`/groups/${groupId}/members`, {
+            method: 'POST',
+            body: { studentId }
+          });
+
+          addedCount += 1;
+        } catch (error) {
+          failures.push(
+            error?.message ||
+            `Hindi maidagdag ang student ${studentId}.`
+          );
+        }
+      }
+
       await loadTeacherDashboard();
+
+      if (addedCount === 0 && failures.length > 0) {
+        throw new Error(failures[0]);
+      }
+
+      if (failures.length > 0) {
+        notify(
+          `${addedCount} student(s) added; ` +
+          `${failures.length} failed. ${failures[0]}`,
+          'warn',
+          7000
+        );
+
+        return;
+      }
+
+      notify(
+        addedCount === 1
+          ? '1 student added.'
+          : `${addedCount} students added.`
+      );
     });
   }
 

@@ -2017,7 +2017,7 @@ export default function TeacherDashboard({
                     const taskCount = tasks.length;
                     const isOpen = Boolean(openGroupTools[group.id]);
                     const groupGradeLevel = Number(group.gradeLevel || group.grade || 0);
-                    const groupSection = String(group.section || group.sectionName || group.classSection || group.description || '').replace(/\s+/g, ' ').trim();
+                    const groupSection = String(group.section || group.sectionName || group.classSection || '').replace(/\s+/g, ' ').trim();
                     const existingMemberIds = new Set(
                       members
                         .map(member => String(member.studentId || member.student_id || member.Student?.id || member.student?.id || ''))
@@ -2104,7 +2104,7 @@ export default function TeacherDashboard({
                             type="button"
                             onClick={() => toggleGroupTools(group.id)}
                           >
-                            {isOpen ? 'Hide Add Member' : 'Add Member'}
+                            {isOpen ? 'Hide Add Students' : 'Add Students'}
                           </button>
 
                           <button
@@ -2118,21 +2118,159 @@ export default function TeacherDashboard({
                         </div>
 
                         {isOpen && (
-                          <div className="teacher-add-member-row">
-                            <select className="input-field" id={`member-${group.id}`} disabled={!availableStudentsForGroup.length}>
+                          <div
+                            className="teacher-add-students-panel"
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'minmax(0, 1fr)',
+                              gap: 12,
+                              alignItems: 'stretch',
+                              width: '100%',
+                              maxWidth: '100%',
+                              minWidth: 0,
+                              marginTop: 14,
+                              padding: 14,
+                              background: '#f8fcfa',
+                              border: '1px solid #e3f0e8',
+                              borderRadius: 18,
+                              boxSizing: 'border-box',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'grid',
+                                gap: 3
+                              }}
+                            >
+                              <strong>Select Students</strong>
+
+                            </div>
+
+                            <select
+                              className="input-field"
+                              id={`member-${group.id}`}
+                              multiple
+                              size={
+                                availableStudentsForGroup.length
+                                  ? Math.min(
+                                      8,
+                                      Math.max(
+                                        3,
+                                        availableStudentsForGroup.length
+                                      )
+                                    )
+                                  : 1
+                              }
+                              disabled={
+                                !availableStudentsForGroup.length
+                              }
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                maxWidth: '100%',
+                                minWidth: 0,
+                                minHeight:
+                                  availableStudentsForGroup.length
+                                    ? 130
+                                    : 48,
+                                padding: 8,
+                                boxSizing: 'border-box'
+                              }}
+                            >
                               {availableStudentsForGroup.length ? (
-                                availableStudentsForGroup.map(student => (
-                                  <option key={student.id} value={student.id}>
-                                    {student.name} - Grade {student.gradeLevel}{student.section ? ` - Section ${student.section}` : ''}
-                                  </option>
-                                ))
+                                availableStudentsForGroup.map(
+                                  student => (
+                                    <option
+                                      key={student.id}
+                                      value={student.id}
+                                    >
+                                      {student.name}
+                                      {' - Grade '}
+                                      {student.gradeLevel}
+                                      {student.section
+                                        ? ` - Section ${student.section}`
+                                        : ''}
+                                    </option>
+                                  )
+                                )
                               ) : (
-                                <option value="">No available students for this group</option>
+                                <option value="">
+                                  No available students for this group
+                                </option>
                               )}
                             </select>
-                            <button className="lms-outline-action" onClick={() => addMember(group.id)} disabled={!availableStudentsForGroup.length}>
-                              Add Member
-                            </button>
+
+
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: 8,
+                                flexWrap: 'wrap'
+                              }}
+                            >
+                              <button
+                                className="lms-outline-action"
+                                type="button"
+                                disabled={
+                                  !availableStudentsForGroup.length
+                                }
+                                onClick={() => {
+                                  const select =
+                                    document.getElementById(
+                                      `member-${group.id}`
+                                    );
+
+                                  if (!select) return;
+
+                                  Array.from(select.options).forEach(
+                                    option => {
+                                      option.selected =
+                                        Boolean(option.value);
+                                    }
+                                  );
+                                }}
+                              >
+                                Select All
+                              </button>
+
+                              <button
+                                className="lms-outline-action"
+                                type="button"
+                                disabled={
+                                  !availableStudentsForGroup.length
+                                }
+                                onClick={() => {
+                                  const select =
+                                    document.getElementById(
+                                      `member-${group.id}`
+                                    );
+
+                                  if (!select) return;
+
+                                  Array.from(select.options).forEach(
+                                    option => {
+                                      option.selected = false;
+                                    }
+                                  );
+                                }}
+                              >
+                                Clear
+                              </button>
+
+                              <button
+                                className="lms-outline-action"
+                                type="button"
+                                onClick={() =>
+                                  addMember(group.id)
+                                }
+                                disabled={
+                                  !availableStudentsForGroup.length
+                                }
+                              >
+                                Add Selected Students
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
