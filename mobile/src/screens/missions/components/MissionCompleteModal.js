@@ -31,7 +31,6 @@ export default function MissionCompleteModal({
           <Text style={styles.trophy}>🏆</Text>
         </View>
 
-        <Text style={styles.eyebrow}>MISYON COMPLETE</Text>
         <Text style={styles.title}>{displayTitle}</Text>
         <Text style={styles.subtitle}>
           Mahusay! Nakumpleto mo ang gawain at nakakuha ka ng bagong XP.
@@ -132,7 +131,6 @@ const styles = StyleSheet.create({
     marginTop: 54,
     marginBottom: 72,
     alignSelf: 'stretch',
-
 
 
   },
