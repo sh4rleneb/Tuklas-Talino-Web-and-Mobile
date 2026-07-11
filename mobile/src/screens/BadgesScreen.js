@@ -138,13 +138,35 @@ export default function BadgesScreen({ navigation }) {
     };
   }, []));
 
-  const owned = new Set(badges.map(b => b.id));
+  const owned = new Set(
+    badges
+      .map((badge) => badge?.id)
+      .filter(
+        (badgeId) =>
+          badgeId !== undefined &&
+          badgeId !== null
+      )
+  );
 
-  const earnedCount = badges.length;
+  // Use the same canonical badge list displayed by the cards.
+  // Duplicate earned records must not increase the totals.
+  const earnedCount = allBadges.filter(
+    (badge) => owned.has(badge.id)
+  ).length;
+
   const totalCount = allBadges.length;
-  const lockedCount = Math.max(0, totalCount - earnedCount);
+  const lockedCount = Math.max(
+    0,
+    totalCount - earnedCount
+  );
+
   const completionPercent = totalCount
-    ? Math.round((earnedCount / totalCount) * 100)
+    ? Math.min(
+        100,
+        Math.round(
+          (earnedCount / totalCount) * 100
+        )
+      )
     : 0;
 
   const earnedById = useMemo(
