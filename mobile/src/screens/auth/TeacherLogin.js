@@ -122,16 +122,36 @@ function handleIdentifierChange(value) {
         <View style={styles.topBar}>
 
           <TouchableOpacity
-            style={styles.homeButton}
+            accessibilityRole="button"
+            accessibilityLabel="Bumalik"
+            activeOpacity={0.85}
             onPress={() =>
               navigation.goBack()
             }
+            style={{
+              alignSelf: 'flex-start',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 48,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderWidth: 2,
+              borderColor: '#22C55E',
+              borderRadius: 999,
+              backgroundColor: '#F0FDF4',
+              marginBottom: 18,
+            }}
           >
-
-            <Text style={styles.homeText}>
+            <Text
+              style={{
+                color: '#16A34A',
+                fontSize: 18,
+                fontWeight: '900',
+              }}
+            >
               ← Bumalik
             </Text>
-
           </TouchableOpacity>
 
           <Text style={styles.title}>

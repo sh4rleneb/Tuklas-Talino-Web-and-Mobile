@@ -55,8 +55,35 @@ export default function LessonDashboardScreen({ navigation, route }) {
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
           <Text style={styles.errorText}>Hindi makuha ang aralin. Pakisubukan muli.</Text>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtnText}>← Bumalik</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Bumalik"
+            activeOpacity={0.85}
+            onPress={() => navigation.goBack()}
+            style={{
+              alignSelf: 'flex-start',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 48,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderWidth: 2,
+              borderColor: '#22C55E',
+              borderRadius: 999,
+              backgroundColor: '#F0FDF4',
+              marginBottom: 18,
+            }}
+          >
+            <Text
+              style={{
+                color: '#16A34A',
+                fontSize: 18,
+                fontWeight: '900',
+              }}
+            >
+              ← Bumalik
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

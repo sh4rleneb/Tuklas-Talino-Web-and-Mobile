@@ -2235,10 +2235,34 @@ const stepScrollRef = useRef(null);
             }}
           >
             <TouchableOpacity
-              style={[styles.secondaryButton, styles.equalAlaminActionButton]}
+              accessibilityRole="button"
+              accessibilityLabel="Bumalik"
+              activeOpacity={0.85}
               onPress={goToPreviousStep}
+              style={{
+                alignSelf: 'flex-start',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 48,
+                paddingHorizontal: 20,
+                paddingVertical: 12,
+                borderWidth: 2,
+                borderColor: '#22C55E',
+                borderRadius: 999,
+                backgroundColor: '#F0FDF4',
+                marginBottom: 18,
+              }}
             >
-              <Text style={[styles.secondaryText, styles.equalAlaminActionText]}>← Bumalik</Text>
+              <Text
+                style={{
+                  color: '#16A34A',
+                  fontSize: 18,
+                  fontWeight: '900',
+                }}
+              >
+                ← Bumalik
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -3414,11 +3438,36 @@ const stepScrollRef = useRef(null);
         <View style={styles.center}>
           <Text style={styles.error}>{error || 'Hindi nakita ang aralin.'}</Text>
           <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() =>
+            accessibilityRole="button"
+            accessibilityLabel="Bumalik"
+            activeOpacity={0.85}
+            onPress={() =>
                   navigation.popToTop()
-                }>
-            <Text style={styles.primaryText}>Bumalik</Text>
+                }
+            style={{
+              alignSelf: 'flex-start',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 48,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderWidth: 2,
+              borderColor: '#22C55E',
+              borderRadius: 999,
+              backgroundColor: '#F0FDF4',
+              marginBottom: 18,
+            }}
+          >
+            <Text
+              style={{
+                color: '#16A34A',
+                fontSize: 18,
+                fontWeight: '900',
+              }}
+            >
+              ← Bumalik
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -3436,8 +3485,35 @@ const stepScrollRef = useRef(null);
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.back}>← Bumalik</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Bumalik"
+            activeOpacity={0.85}
+            onPress={() => navigation.goBack()}
+            style={{
+              alignSelf: 'flex-start',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 48,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderWidth: 2,
+              borderColor: '#22C55E',
+              borderRadius: 999,
+              backgroundColor: '#F0FDF4',
+              marginBottom: 18,
+            }}
+          >
+            <Text
+              style={{
+                color: '#16A34A',
+                fontSize: 18,
+                fontWeight: '900',
+              }}
+            >
+              ← Bumalik
+            </Text>
           </TouchableOpacity>
           <View style={styles.studentChip}>
             <Text style={styles.avatar}>{student?.avatar || '🧒'}</Text>
@@ -3851,67 +3927,65 @@ const stepScrollRef = useRef(null);
 
                   <View style={styles.finishSecondaryRow}>
                     <TouchableOpacity
-                      style={[
-                        styles.finishCardButton,
-                        styles.finishLessonsCard,
-                      ]}
-                      onPress={resetCompletedLessonToList}
-                      activeOpacity={0.88}
                       accessibilityRole="button"
-                      accessibilityLabel="Bumalik sa mga aralin"
+                      accessibilityLabel="Bumalik"
+                      activeOpacity={0.85}
+                      onPress={resetCompletedLessonToList}
+                      style={{
+                        alignSelf: 'flex-start',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: 48,
+                        paddingHorizontal: 20,
+                        paddingVertical: 12,
+                        borderWidth: 2,
+                        borderColor: '#22C55E',
+                        borderRadius: 999,
+                        backgroundColor: '#F0FDF4',
+                        marginBottom: 18,
+                      }}
                     >
-                      <View
-                        style={[
-                          styles.finishCardIconWrap,
-                          styles.finishLessonsIconWrap,
-                        ]}
+                      <Text
+                        style={{
+                          color: '#16A34A',
+                          fontSize: 18,
+                          fontWeight: '900',
+                        }}
                       >
-                        <Text style={styles.finishCardIcon}>📚</Text>
-                      </View>
-
-                      <View style={styles.finishCardTextWrap}>
-                        <Text style={styles.finishCardTitle}>
-                          Mga Aralin
-                        </Text>
-
-                        <Text style={styles.finishCardSubtitle}>
-                          Pumili ng ibang aralin
-                        </Text>
-                      </View>
-
-                      <Text style={styles.finishCardArrow}>›</Text>
+                        ← Bumalik
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[
-                        styles.finishCardButton,
-                        styles.finishHomeCard,
-                      ]}
-                      onPress={returnHomeAfterCompletion}
-                      activeOpacity={0.88}
                       accessibilityRole="button"
-                      accessibilityLabel="Bumalik sa tahanan"
+                      accessibilityLabel="Bumalik"
+                      activeOpacity={0.85}
+                      onPress={returnHomeAfterCompletion}
+                      style={{
+                        alignSelf: 'flex-start',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: 48,
+                        paddingHorizontal: 20,
+                        paddingVertical: 12,
+                        borderWidth: 2,
+                        borderColor: '#22C55E',
+                        borderRadius: 999,
+                        backgroundColor: '#F0FDF4',
+                        marginBottom: 18,
+                      }}
                     >
-                      <View
-                        style={[
-                          styles.finishCardIconWrap,
-                          styles.finishHomeIconWrap,
-                        ]}
+                      <Text
+                        style={{
+                          color: '#16A34A',
+                          fontSize: 18,
+                          fontWeight: '900',
+                        }}
                       >
-                        <Text style={styles.finishCardIcon}>🏠</Text>
-                      </View>
-
-                      <View style={styles.finishCardTextWrap}>
-                        <Text style={styles.finishCardTitle}>
-                          Tahanan
-                        </Text>
-
-                        <Text style={styles.finishCardSubtitle}>
-                          Bumalik sa pangunahing pahina
-                        </Text>
-                      </View>
-
-                      <Text style={styles.finishCardArrow}>›</Text>
+                        ← Bumalik
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
