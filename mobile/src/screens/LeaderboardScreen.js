@@ -162,42 +162,94 @@ export default function LeaderboardScreen({ navigation }) {
     };
   }
 
-  function renderPodiumPlayer(player, slotIndex) {
+  function renderPodiumPlayer(player) {
     if (!player) {
-      return <View key={`empty-${slotIndex}`} style={styles.emptyPodiumSlot} />;
+      return null;
     }
 
-    const rank = Number(player.rank || top3.indexOf(player) + 1);
+    const rank = Number(
+      player.rank ||
+      top3.indexOf(player) + 1
+    );
+
     const cfg = podiumConfig(rank);
-    const isMe = String(player.id) === String(student?.id);
+
+    const isMe =
+      String(player.id) ===
+      String(student?.id);
 
     return (
       <View
-        key={player.id || `${player.name}-${rank}`}
+        key={
+          player.id ||
+          `${player.name}-${rank}`
+        }
         style={[
-          styles.podiumPlayer,
-          { width: cfg.cardWidth },
-          rank === 1 && styles.firstPodiumPlayer,
+          styles.podiumFlexCard,
+          rank === 1 &&
+            styles.podiumFlexCardFirst,
         ]}
       >
-        {cfg.crown ? <Text style={styles.crown}>👑</Text> : null}
+        <View style={styles.podiumFlexProfile}>
+          <View
+            style={styles.podiumFlexAvatarWrap}
+          >
+            {cfg.crown ? (
+              <Text style={styles.crown}>
+                👑
+              </Text>
+            ) : null}
 
-        <Text style={[styles.podiumAvatar, { fontSize: cfg.avatarSize }]}>
-          {player.avatar || '🦊'}
-        </Text>
+            <Text
+              style={[
+                styles.podiumAvatar,
+                {
+                  fontSize: cfg.avatarSize,
+                },
+              ]}
+            >
+              {player.avatar || '🦊'}
+            </Text>
+          </View>
 
-        <View style={styles.podiumNameRow}>
-          <Text style={[cfg.nameStyle]} numberOfLines={1}>
-            {player.name || 'Mag-aaral'}
-          </Text>
+          <View style={styles.podiumFlexDetails}>
+            <View
+              style={styles.podiumFlexNameRow}
+            >
+              <Text
+                style={[
+                  cfg.nameStyle,
+                  styles.podiumFlexName,
+                ]}
+                numberOfLines={2}
+              >
+                {player.name || 'Mag-aaral'}
+              </Text>
 
-          {isMe ? <Text style={styles.podiumMeBadge}>Ikaw</Text> : null}
+              {isMe ? (
+                <Text
+                  style={styles.podiumMeBadge}
+                >
+                  Ikaw
+                </Text>
+              ) : null}
+            </View>
+
+            <Text
+              style={[
+                styles.podiumXp,
+                styles.podiumFlexXp,
+              ]}
+            >
+              ⚡ {player.xp || 0} XP
+            </Text>
+          </View>
         </View>
 
-        <Text style={styles.podiumXp}>⚡ {player.xp || 0} XP</Text>
-
-        <View style={[styles.podiumBlock, cfg.blockStyle, { height: cfg.height }]}>
-          <Text style={styles.podiumMedal}>{medal(rank)}</Text>
+        <View style={styles.podiumFlexMedalSide}>
+          <Text style={styles.podiumFlexMedal}>
+            {medal(rank)}
+          </Text>
         </View>
       </View>
     );
@@ -206,7 +258,7 @@ export default function LeaderboardScreen({ navigation }) {
   function renderPodium() {
     if (!top3.length) return null;
 
-    const orderedPodium = [top3[1], top3[0], top3[2]];
+    const orderedPodium = top3;
 
     return (
       <Animated.View style={[styles.podiumCard, podiumScaleStyle]}>
@@ -218,13 +270,13 @@ export default function LeaderboardScreen({ navigation }) {
             </Text>
 
             <View style={styles.topThreeInline}>
-              <Text style={styles.topThreeInlineText}>🏆 Top 3 learners</Text>
+              <Text style={styles.topThreeInlineText}>🏆 Nangungunang 3 Mag-aaral</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.podiumStageWrap}>
-          <View style={styles.podiumStage}>
+          <View style={styles.podiumFlexList}>
             {orderedPodium.map(renderPodiumPlayer)}
           </View>
         </View>
@@ -355,6 +407,90 @@ export default function LeaderboardScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  podiumFlexList: {
+    width: '100%',
+    gap: 12,
+  },
+
+  podiumFlexCard: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 22,
+    backgroundColor: '#FFFBEB',
+  },
+
+  podiumFlexCardFirst: {
+    borderWidth: 2,
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFF7D6',
+  },
+
+  podiumFlexProfile: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  podiumFlexAvatarWrap: {
+    flexShrink: 0,
+    minWidth: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  podiumFlexDetails: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+    gap: 6,
+  },
+
+  podiumFlexNameRow: {
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+
+  podiumFlexName: {
+    flexShrink: 1,
+    minWidth: 0,
+    textAlign: 'left',
+  },
+
+  podiumFlexXp: {
+    alignSelf: 'flex-start',
+    textAlign: 'left',
+  },
+
+  podiumFlexMedalSide: {
+    flexBasis: 96,
+    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    minHeight: 104,
+    borderWidth: 2,
+    borderColor: '#F59E0B',
+    borderRadius: 18,
+    backgroundColor: '#FEF3C7',
+  },
+
+  podiumFlexMedal: {
+    fontSize: 48,
+    textAlign: 'center',
+  },
+
   safe: {
     flex: 1,
     backgroundColor: '#F0FDF4',
