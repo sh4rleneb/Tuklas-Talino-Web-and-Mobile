@@ -57,32 +57,65 @@ export async function createGroup(body) {
 }
 
 
+const GROUP_TASK_MINIMUM_DEADLINE_MS =
+  60 * 60 * 1000;
+
+const GROUP_TASK_ISO_TIMEZONE_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+
 function normalizeTeacherApiDate(value = '') {
   return String(value || '').trim();
 }
 
-function validateGroupTaskCalendarDate(body = {}) {
+function validateGroupTaskCalendarDate(
+  body = {}
+) {
   const rawDate = normalizeTeacherApiDate(
-    body.dueDate ?? body.deadline ?? body.dueAt ?? body.scheduledAt ?? ''
+    body.dueAt ??
+    body.deadline ??
+    body.dueDate ??
+    body.scheduledAt ??
+    ''
   );
 
   if (!rawDate) {
-    throw new Error('Pumili ng date at oras bago gumawa ng group task.');
+    throw new Error(
+      'Select a deadline date and time ' +
+      'before adding the task.'
+    );
   }
 
-  const parsedDate = new Date(rawDate);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    throw new Error('Hindi valid ang deadline ng group task. Pumili muli ng date at oras.');
+  if (
+    !GROUP_TASK_ISO_TIMEZONE_PATTERN.test(
+      rawDate
+    )
+  ) {
+    throw new Error(
+      'Deadline must include a valid date, ' +
+      'time, and timezone.'
+    );
   }
 
-  const now = new Date();
+  const deadlineMs = Date.parse(rawDate);
 
-  if (parsedDate.getTime() <= now.getTime()) {
-    throw new Error('Hindi maaaring nasa nakaraan ang deadline ng group task.');
+  if (!Number.isFinite(deadlineMs)) {
+    throw new Error(
+      'Select a valid deadline date and time.'
+    );
   }
 
-  return parsedDate.toISOString();
+  if (
+    deadlineMs <
+    Date.now() +
+      GROUP_TASK_MINIMUM_DEADLINE_MS
+  ) {
+    throw new Error(
+      'Deadline must be at least one hour ' +
+      'from the current time.'
+    );
+  }
+
+  return new Date(deadlineMs).toISOString();
 }
 
 export async function addGroupTask(groupId, body = {}) {

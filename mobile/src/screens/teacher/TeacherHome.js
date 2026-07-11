@@ -16,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   downloadPdfReport,
@@ -634,27 +634,126 @@ function getTeacherLessonBuilderValidationMessage(draft = {}, activities = [], a
 
 
 
-function getTaskDeadlineDate(value) {
-  const parts = String(value || '').split('-').map((part) => Number(part));
+const GROUP_TASK_MINIMUM_DEADLINE_MS =
+  60 * 60 * 1000;
 
-  if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
-    const [year, month, day] = parts;
-    const parsed = new Date(year, month - 1, day);
+function getMinimumTaskDeadlineDate(
+  now = Date.now()
+) {
+  const exactMinimum =
+    now + GROUP_TASK_MINIMUM_DEADLINE_MS;
 
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
+  const roundedMinimum = new Date(exactMinimum);
+  roundedMinimum.setSeconds(0, 0);
+
+  if (roundedMinimum.getTime() < exactMinimum) {
+    roundedMinimum.setMinutes(
+      roundedMinimum.getMinutes() + 1
+    );
   }
 
-  return new Date();
+  return roundedMinimum;
 }
 
-function formatTaskDeadlineValue(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+function getTaskDeadlineDate(value = '') {
+  const parsedDate = new Date(value);
 
-  return `${year}-${month}-${day}`;
+  if (
+    value &&
+    !Number.isNaN(parsedDate.getTime())
+  ) {
+    return parsedDate;
+  }
+
+  return getMinimumTaskDeadlineDate();
+}
+
+function formatTaskDeadlineValue(value) {
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return '';
+  }
+
+  return parsedDate.toISOString();
+}
+
+function mergeTaskDeadlineDateTime(
+  currentValue,
+  selectedValue,
+  mode
+) {
+  const combinedDate =
+    getTaskDeadlineDate(currentValue);
+
+  const selectedDate =
+    new Date(selectedValue);
+
+  if (mode === 'time') {
+    combinedDate.setHours(
+      selectedDate.getHours(),
+      selectedDate.getMinutes(),
+      0,
+      0
+    );
+  } else {
+    combinedDate.setFullYear(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate()
+    );
+
+    combinedDate.setSeconds(0, 0);
+  }
+
+  return combinedDate;
+}
+
+function formatTaskDeadlineForDisplay(
+  value = ''
+) {
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return '';
+  }
+
+  return parsedDate.toLocaleString('en-PH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getTaskDeadlineValidationMessage(
+  value = '',
+  now = Date.now()
+) {
+  if (!String(value || '').trim()) {
+    return 'Select a deadline date and time.';
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return (
+      'Select a valid deadline date and time.'
+    );
+  }
+
+  if (
+    parsedDate.getTime() <
+    now + GROUP_TASK_MINIMUM_DEADLINE_MS
+  ) {
+    return (
+      'Deadline must be at least one hour ' +
+      'from the current time.'
+    );
+  }
+
+  return '';
 }
 
 function buildTaskDeadlineOptions(dayCount = 90) {
@@ -3187,15 +3286,41 @@ async function handleLogout() {
     return member.Student || member.student || member;
   }
 
-  function getGroupTaskDeadlineLabel(task = {}) {
-    const value = task.dueAt || task.deadline || task.dueDate;
+  function getGroupTaskDeadlineLabel(
+    task = {}
+  ) {
+    const rawDeadline =
+      task.dueAt ||
+      task.deadline ||
+      task.dueDate ||
+      task.scheduledAt ||
+      '';
 
-    if (!value) return '';
+    if (!rawDeadline) {
+      return '';
+    }
 
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
+    const parsedDeadline =
+      new Date(rawDeadline);
 
-    return date.toLocaleDateString();
+    if (
+      Number.isNaN(
+        parsedDeadline.getTime()
+      )
+    ) {
+      return '';
+    }
+
+    return parsedDeadline.toLocaleString(
+      'en-PH',
+      {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }
+    );
   }
 
   async function handleSetGroupLeader(groupId, studentId) {
@@ -3413,45 +3538,227 @@ async function handleLogout() {
             placeholder="Task title"
           />
 
-          <Text style={styles.fieldLabel}>Deadline</Text>
+          <Text style={styles.fieldLabel}>
+            Deadline
+          </Text>
+
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => setTaskDeadlinePickerVisible(true)}
+            disabled={Boolean(busy)}
+            onPress={() => {
+              const initialDeadline =
+                getTaskDeadlineDate(
+                  taskForm.deadline
+                );
+
+              const minimumDeadline =
+                getMinimumTaskDeadlineDate();
+
+              if (Platform.OS === 'android') {
+                DateTimePickerAndroid.open({
+                  value: initialDeadline,
+                  mode: 'date',
+                  display: 'calendar',
+                  minimumDate: minimumDeadline,
+                  onChange: (
+                    dateEvent,
+                    selectedDate
+                  ) => {
+                    if (
+                      dateEvent?.type !== 'set' ||
+                      !selectedDate
+                    ) {
+                      return;
+                    }
+
+                    const deadlineDate =
+                      mergeTaskDeadlineDateTime(
+                        initialDeadline,
+                        selectedDate,
+                        'date'
+                      );
+
+                    DateTimePickerAndroid.open({
+                      value: deadlineDate,
+                      mode: 'time',
+                      display: 'clock',
+                      is24Hour: false,
+                      onChange: (
+                        timeEvent,
+                        selectedTime
+                      ) => {
+                        if (
+                          timeEvent?.type !==
+                            'set' ||
+                          !selectedTime
+                        ) {
+                          return;
+                        }
+
+                        const combinedDeadline =
+                          mergeTaskDeadlineDateTime(
+                            deadlineDate,
+                            selectedTime,
+                            'time'
+                          );
+
+                        const normalizedDeadline =
+                          formatTaskDeadlineValue(
+                            combinedDeadline
+                          );
+
+                        const validationMessage =
+                          getTaskDeadlineValidationMessage(
+                            normalizedDeadline
+                          );
+
+                        if (validationMessage) {
+                          setTaskNotice({
+                            type: 'error',
+                            text:
+                              validationMessage,
+                          });
+
+                          Alert.alert(
+                            'Invalid Deadline',
+                            validationMessage
+                          );
+                          return;
+                        }
+
+                        setTaskNotice(null);
+
+                        setTaskForm(
+                          (current) => ({
+                            ...current,
+                            deadline:
+                              normalizedDeadline,
+                          })
+                        );
+                      },
+                    });
+                  },
+                });
+
+                return;
+              }
+
+              setTaskDeadlinePickerVisible(
+                true
+              );
+            }}
             style={{
               borderWidth: 1,
-              borderColor: '#CBD5E1',
+              borderColor:
+                taskForm.deadline &&
+                getTaskDeadlineValidationMessage(
+                  taskForm.deadline
+                )
+                  ? '#FCA5A5'
+                  : '#CBD5E1',
               backgroundColor: '#FFFFFF',
               borderRadius: 16,
               paddingVertical: 14,
               paddingHorizontal: 14,
-              marginBottom: 12,
+              marginBottom: 8,
+              opacity: busy ? 0.65 : 1,
             }}
           >
             <Text
               style={{
-                color: taskForm.deadline ? '#0F172A' : '#94A3B8',
+                color: taskForm.deadline
+                  ? '#0F172A'
+                  : '#94A3B8',
                 fontWeight: '800',
               }}
             >
-              {taskForm.deadline ? `Deadline: ${taskForm.deadline}` : 'Select a deadline'}
+              {taskForm.deadline
+                ? `Deadline: ${
+                    formatTaskDeadlineForDisplay(
+                      taskForm.deadline
+                    )
+                  }`
+                : 'Select deadline date and time'}
             </Text>
           </TouchableOpacity>
 
-          {taskDeadlinePickerVisible ? (
-            <DateTimePicker
-              value={getTaskDeadlineDate(taskForm.deadline)}
-              mode="date"
-              display={Platform.OS === 'android' ? 'calendar' : 'default'}
-              minimumDate={new Date()}
-              onChange={(event, selectedDate) => {
-                setTaskDeadlinePickerVisible(false);
+          <Text
+            style={[
+              styles.muted,
+              { marginBottom: 12 },
+            ]}
+          >
+            Deadline must be at least one hour
+            from the current time.
+          </Text>
 
-                if (event?.type === 'set' && selectedDate) {
-                  setTaskForm((current) => ({
-                    ...current,
-                    deadline: formatTaskDeadlineValue(selectedDate),
-                  }));
+          {taskForm.deadline &&
+          getTaskDeadlineValidationMessage(
+            taskForm.deadline
+          ) ? (
+            <Text
+              style={{
+                color: '#B91C1C',
+                fontWeight: '700',
+                marginBottom: 12,
+              }}
+            >
+              {getTaskDeadlineValidationMessage(
+                taskForm.deadline
+              )}
+            </Text>
+          ) : null}
+
+          {Platform.OS !== 'android' &&
+          taskDeadlinePickerVisible ? (
+            <DateTimePicker
+              value={getTaskDeadlineDate(
+                taskForm.deadline
+              )}
+              mode="datetime"
+              display="default"
+              minimumDate={
+                getMinimumTaskDeadlineDate()
+              }
+              onChange={(
+                event,
+                selectedDate
+              ) => {
+                setTaskDeadlinePickerVisible(
+                  false
+                );
+
+                if (
+                  event?.type !== 'set' ||
+                  !selectedDate
+                ) {
+                  return;
                 }
+
+                const normalizedDeadline =
+                  formatTaskDeadlineValue(
+                    selectedDate
+                  );
+
+                const validationMessage =
+                  getTaskDeadlineValidationMessage(
+                    normalizedDeadline
+                  );
+
+                if (validationMessage) {
+                  setTaskNotice({
+                    type: 'error',
+                    text: validationMessage,
+                  });
+                  return;
+                }
+
+                setTaskNotice(null);
+
+                setTaskForm((current) => ({
+                  ...current,
+                  deadline: normalizedDeadline,
+                }));
               }}
             />
           ) : null}
@@ -3468,6 +3775,11 @@ async function handleLogout() {
             disabled={
               !groups.length ||
               !taskForm.title.trim() ||
+              Boolean(
+                getTaskDeadlineValidationMessage(
+                  taskForm.deadline
+                )
+              ) ||
               Boolean(busy)
             }
             onPress={async () => {
@@ -3491,14 +3803,33 @@ async function handleLogout() {
                 return;
               }
 
+              const deadlineValidationMessage =
+                getTaskDeadlineValidationMessage(
+                  taskForm.deadline
+                );
+
+              if (deadlineValidationMessage) {
+                setTaskNotice({
+                  type: 'error',
+                  text:
+                    deadlineValidationMessage,
+                });
+                return;
+              }
+
+              const normalizedTaskDeadline =
+                formatTaskDeadlineValue(
+                  taskForm.deadline
+                );
+
               setBusy('task-create');
 
               try {
                 await addGroupTask(groupId, {
                   title: taskForm.title,
                   description: taskForm.description,
-                  dueAt: taskForm.deadline || null,
-                  deadline: taskForm.deadline || null,
+                  dueAt: normalizedTaskDeadline,
+                  deadline: normalizedTaskDeadline,
                   xpReward: Number(
                     taskForm.xpReward || 10
                   ),

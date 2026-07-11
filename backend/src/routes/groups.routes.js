@@ -930,15 +930,20 @@ router.delete(
   }
 );
 
-function makeGroupTaskDeadlineError(message) {
+const GROUP_TASK_MINIMUM_DEADLINE_MS =
+  60 * 60 * 1000;
+
+const GROUP_TASK_ISO_TIMEZONE_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function makeGroupTaskDeadlineError(
+  message,
+  status = 400
+) {
   const err = new Error(message);
-  err.status = 400;
+  err.status = status;
   err.code = 'GROUP_TASK_DEADLINE_INVALID';
   return err;
-}
-
-function todayDateStringInManila() {
-  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 function normalizeGroupTaskDueAt(body = {}) {
@@ -946,36 +951,48 @@ function normalizeGroupTaskDueAt(body = {}) {
     body.dueAt ??
     body.deadline ??
     body.dueDate ??
+    body.scheduledAt ??
     ''
   ).trim();
 
   if (!rawValue) {
-    throw makeGroupTaskDeadlineError('Pumili muna ng deadline sa calendar bago gumawa ng group task.');
+    throw makeGroupTaskDeadlineError(
+      'Deadline date and time are required.'
+    );
   }
 
-  const dateOnlyMatch = rawValue.match(/^\d{4}-\d{2}-\d{2}$/);
-
-  if (dateOnlyMatch) {
-    const today = todayDateStringInManila();
-
-    if (rawValue < today) {
-      throw makeGroupTaskDeadlineError('Hindi maaaring nasa nakaraan ang deadline ng group task. Pumili ng petsa ngayon o sa susunod na araw.');
-    }
-
-    return rawValue;
+  if (
+    !GROUP_TASK_ISO_TIMEZONE_PATTERN.test(
+      rawValue
+    )
+  ) {
+    throw makeGroupTaskDeadlineError(
+      'Deadline must include a valid date, ' +
+      'time, and timezone.'
+    );
   }
 
-  const parsedDate = new Date(rawValue);
+  const deadlineMs = Date.parse(rawValue);
 
-  if (Number.isNaN(parsedDate.getTime())) {
-    throw makeGroupTaskDeadlineError('Hindi valid ang deadline ng group task. Pumili muli ng tamang petsa.');
+  if (!Number.isFinite(deadlineMs)) {
+    throw makeGroupTaskDeadlineError(
+      'Deadline date and time are invalid.'
+    );
   }
 
-  if (parsedDate.getTime() < Date.now()) {
-    throw makeGroupTaskDeadlineError('Hindi maaaring nasa nakaraan ang deadline ng group task. Pumili ng petsa ngayon o sa susunod na araw.');
+  if (
+    deadlineMs <
+    Date.now() +
+      GROUP_TASK_MINIMUM_DEADLINE_MS
+  ) {
+    throw makeGroupTaskDeadlineError(
+      'Deadline must be at least one hour ' +
+      'from the current time.',
+      422
+    );
   }
 
-  return rawValue;
+  return new Date(deadlineMs).toISOString();
 }
 
 router.post('/:id/tasks', requireRole('teacher', 'admin'), async (req, res, next) => {
