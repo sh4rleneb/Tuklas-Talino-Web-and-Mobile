@@ -22,7 +22,7 @@ const uploadsDir = path.join(__dirname, '..', 'uploads');
 
 const requestBodyLimit = process.env.REQUEST_BODY_LIMIT || '2mb';
 const apiRateLimitWindowMs = Number.parseInt(process.env.API_RATE_LIMIT_WINDOW_MS || String(15 * 60 * 1000), 10);
-const apiRateLimitMax = Number.parseInt(process.env.API_RATE_LIMIT_MAX || '100', 10);
+const apiRateLimitMax = Number.parseInt(process.env.API_RATE_LIMIT_MAX || '1000', 10);
 
 const app = express();
 
@@ -61,7 +61,7 @@ const apiLimiter = rateLimit({
   skip: (req) => req.method === 'OPTIONS',
   message: {
     error: 'Too Many Requests',
-    message: 'Too many requests. Please try again later.'
+    message: 'Masyadong maraming kahilingan. Pakisubukan muli pagkalipas ng ilang minuto.'
   }
 });
 
