@@ -1028,6 +1028,7 @@ export default function TeacherHome({ navigation }) {
   const [openGroupTools, setOpenGroupTools] = useState({});
   const [selectedGroupStudentIds, setSelectedGroupStudentIds] = useState({});
   const [taskForm, setTaskForm] = useState({ title: '', description: '', deadline: '', xpReward: '10' });
+  const [taskNotice, setTaskNotice] = useState(null);
   const [taskDeadlinePickerVisible, setTaskDeadlinePickerVisible] = useState(false);
     const [
     teacherStudentSearchQuery,
@@ -3373,6 +3374,27 @@ async function handleLogout() {
           <Text style={styles.cardTitle}>Add Task</Text>
           <Text style={styles.muted}>Assign collaborative work with a deadline and XP reward.</Text>
 
+          {taskNotice ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss task notice"
+              onPress={() => setTaskNotice(null)}
+              style={[
+                styles.taskNoticeCard,
+                taskNotice.type === 'success' &&
+                  styles.taskNoticeSuccess,
+                taskNotice.type === 'warning' &&
+                  styles.taskNoticeWarning,
+                taskNotice.type === 'error' &&
+                  styles.taskNoticeError,
+              ]}
+            >
+              <Text style={styles.taskNoticeText}>
+                {taskNotice.text}
+              </Text>
+            </Pressable>
+          ) : null}
+
           <SelectMenu
             label="Group"
             value={String(taskTargetGroupId)}
@@ -3442,31 +3464,76 @@ async function handleLogout() {
             placeholder="XP"
           />
 
-          <SmallButton disabled={!groups.length || !taskForm.title.trim() || Boolean(busy)} onPress={async () => {
-            const groupId = taskForm.groupId || selectedGroup?.id || groups[0]?.id;
-
-            if (!groupId) {
-              Alert.alert('Add Task', 'Select a group first.');
-              return;
+          <SmallButton
+            disabled={
+              !groups.length ||
+              !taskForm.title.trim() ||
+              Boolean(busy)
             }
+            onPress={async () => {
+              const groupId =
+                taskForm.groupId ||
+                selectedGroup?.id ||
+                groups[0]?.id;
 
-            const saved = await run(
-              'task-create',
-              () => addGroupTask(groupId, {
-                title: taskForm.title,
-                description: taskForm.description,
-                dueAt: taskForm.deadline || null,
-                deadline: taskForm.deadline || null,
-                xpReward: Number(taskForm.xpReward || 10),
-              }),
-              'Task added.'
-            );
+              setWorkspaceNotice(null);
+              setTaskNotice(null);
 
-            if (saved) {
-              setTaskForm({ title: '', description: '', deadline: '', xpReward: '10', groupId: String(groupId) });
-              await load();
-            }
-          }}>Add Task</SmallButton>
+              if (!groupId) {
+                setTaskNotice({
+                  type: 'warning',
+                  text: 'Select a group first.',
+                });
+                return;
+              }
+
+              if (busy) {
+                return;
+              }
+
+              setBusy('task-create');
+
+              try {
+                await addGroupTask(groupId, {
+                  title: taskForm.title,
+                  description: taskForm.description,
+                  dueAt: taskForm.deadline || null,
+                  deadline: taskForm.deadline || null,
+                  xpReward: Number(
+                    taskForm.xpReward || 10
+                  ),
+                });
+
+                setTaskForm({
+                  title: '',
+                  description: '',
+                  deadline: '',
+                  xpReward: '10',
+                  groupId: String(groupId),
+                });
+
+                setTaskNotice({
+                  type: 'success',
+                  text: 'Task added.',
+                });
+
+                await load();
+              } catch (err) {
+                setTaskNotice({
+                  type: 'error',
+                  text:
+                    err?.response?.data?.message ||
+                    err?.data?.message ||
+                    err?.message ||
+                    'Hindi maidagdag ang group task. Pakisubukan muli.',
+                });
+              } finally {
+                setBusy('');
+              }
+            }}
+          >
+            Add Task
+          </SmallButton>
         </SectionCard>
 
         <SectionCard>
@@ -5888,6 +5955,45 @@ const styles = StyleSheet.create({
     borderColor: '#EF4444',
   },
   workspaceNoticeText: {
+    color: '#0F172A',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '900',
+  },
+
+  taskNoticeCard: {
+    width: '100%',
+    alignSelf: 'stretch',
+
+    marginTop: 14,
+    marginBottom: 14,
+
+    borderWidth: 1,
+    borderRadius: 16,
+
+    paddingVertical: 13,
+    paddingHorizontal: 15,
+
+    backgroundColor: '#F8FAFC',
+    borderColor: '#CBD5E1',
+  },
+
+  taskNoticeSuccess: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#22C55E',
+  },
+
+  taskNoticeWarning: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+
+  taskNoticeError: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#EF4444',
+  },
+
+  taskNoticeText: {
     color: '#0F172A',
     fontSize: 14,
     lineHeight: 20,
