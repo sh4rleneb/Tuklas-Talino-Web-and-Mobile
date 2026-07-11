@@ -136,7 +136,7 @@ export default function AdminHome({ navigation }) {
   const [archivedStudents, setArchivedStudents] = useState([]);
   const [archivedTeachers, setArchivedTeachers] = useState([]);
   const [logs, setLogs] = useState([]);
-  
+
 const [auditSearch, setAuditSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [actionDropdownOpen, setActionDropdownOpen] = useState(false);
@@ -311,7 +311,7 @@ async function handleLogout() {
     setPasswordVerifyVisible(true);
   }
 
-  
+
   function requestProtectedAdminAction(config) {
     setAdminActionReason('');
     setAdminActionKeyword('');
@@ -332,12 +332,11 @@ async function handleLogout() {
 
     if (
       pendingAdminAction.keyword &&
-      adminActionKeyword.trim().toUpperCase() !==
-      pendingAdminAction.keyword.toUpperCase()
+      adminActionKeyword.trim() !== String(pendingAdminAction.keyword || '').trim().toUpperCase()
     ) {
       Alert.alert(
         'Confirmation Required',
-        `Type ${pendingAdminAction.keyword} to continue.`
+        `Type ${String(pendingAdminAction.keyword || '').trim().toUpperCase()} using uppercase letters only.`
       );
       return;
     }
@@ -521,7 +520,7 @@ async function executeVerifiedAction() {
     return details.join(' • ');
   }
 
-  
+
   function accountUserIdForEntity(entity = {}) {
     return (
       entity?.userId ||
@@ -1485,7 +1484,7 @@ async function executeVerifiedAction() {
     );
   }
 
-  
+
 function renderLogs() {
     const actionOptions = [...new Set(logs.map(l => l.action).filter(Boolean))];
 
@@ -2066,9 +2065,9 @@ function renderLogs() {
             {busy === 'admin-audit-pdf' ? 'Preparing Admin PDF...' : 'PDF Admin Audit Trail Report'}
           </Button>
 
-          
 
-          
+
+
         </Card>
         <Card>
           <Text style={styles.cardTitle}>System Summary</Text>
@@ -2360,7 +2359,10 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
             </Text>
 
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                styles.adminActionInput,
+              ]}
               value={adminActionReason}
               onChangeText={setAdminActionReason}
               placeholder={pendingAdminAction?.reasonPlaceholder || 'e.g. Reason for this administrative action'}
@@ -2372,12 +2374,43 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
             </Text>
 
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                styles.adminActionInput,
+                styles.adminActionKeywordInput,
+              ]}
               value={adminActionKeyword}
-              onChangeText={setAdminActionKeyword}
+              onChangeText={(value) => {
+                const uppercaseOnly = String(
+                  value || ''
+                ).replace(/[^A-Z]/g, '');
+
+                setAdminActionKeyword(
+                  uppercaseOnly
+                );
+              }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={32}
               placeholder={`Type ${pendingAdminAction?.keyword || ''} to continue`}
               placeholderTextColor="#94A3B8"
             />
+
+            {pendingAdminAction?.keyword ? (
+              <Text
+                style={
+                  styles.adminActionHelperText
+                }
+              >
+                Uppercase letters only. Type{' '}
+                {String(
+                  pendingAdminAction.keyword
+                )
+                  .trim()
+                  .toUpperCase()}{' '}
+                exactly.
+              </Text>
+            ) : null}
 
             <View style={styles.workspaceLogoutActions}>
               <TouchableOpacity
@@ -2390,8 +2423,40 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.workspaceLogoutConfirm}
-                onPress={executeProtectedAdminAction}
+                style={[
+                  styles.workspaceLogoutConfirm,
+                  (
+                    !adminActionReason.trim() ||
+                    (
+                      Boolean(
+                        pendingAdminAction?.keyword
+                      ) &&
+                      adminActionKeyword.trim() !==
+                        String(
+                          pendingAdminAction.keyword
+                        )
+                          .trim()
+                          .toUpperCase()
+                    )
+                  ) && styles.disabled,
+                ]}
+                onPress={
+                  executeProtectedAdminAction
+                }
+                disabled={
+                  !adminActionReason.trim() ||
+                  (
+                    Boolean(
+                      pendingAdminAction?.keyword
+                    ) &&
+                    adminActionKeyword.trim() !==
+                      String(
+                        pendingAdminAction.keyword
+                      )
+                        .trim()
+                        .toUpperCase()
+                  )
+                }
               >
                 <Text style={styles.workspaceLogoutConfirmText}>
                   Continue
@@ -2582,6 +2647,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 22,
   },
+  adminActionInput: {
+    width: '100%',
+    minHeight: 50,
+    alignSelf: 'stretch',
+    flexShrink: 0,
+  },
+  adminActionKeywordInput: {
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    fontWeight: '800',
+  },
+  adminActionHelperText: {
+    width: '100%',
+    alignSelf: 'stretch',
+    marginTop: -10,
+    marginBottom: 14,
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+  },
+
   workspaceLogoutActions: {
     flexDirection: 'row',
     width: '100%',
