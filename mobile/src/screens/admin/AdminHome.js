@@ -2365,7 +2365,12 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
               ]}
               value={adminActionReason}
               onChangeText={setAdminActionReason}
-              placeholder={pendingAdminAction?.reasonPlaceholder || 'e.g. Reason for this administrative action'}
+              placeholder={String(
+                pendingAdminAction?.reasonPlaceholder ||
+                  'e.g. Reason for this administrative action'
+              )
+                .replace(/\s+/g, ' ')
+                .trim()}
               placeholderTextColor="#94A3B8"
             />
 
@@ -2635,9 +2640,16 @@ const styles = StyleSheet.create({
     fontSize: 42,
   },
   workspaceLogoutTitle: {
+    width: '100%',
+    alignSelf: 'stretch',
+
     fontSize: 30,
+    lineHeight: 37,
     fontWeight: '900',
     color: '#0F172A',
+
+    textAlign: 'center',
+
     marginBottom: 8,
   },
   workspaceLogoutBody: {
@@ -2649,9 +2661,17 @@ const styles = StyleSheet.create({
   },
   adminActionInput: {
     width: '100%',
-    minHeight: 50,
+    minHeight: 56,
+
     alignSelf: 'stretch',
     flexShrink: 0,
+
+    paddingHorizontal: 16,
+    paddingVertical: 0,
+
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   adminActionKeywordInput: {
     textTransform: 'uppercase',
@@ -2661,12 +2681,16 @@ const styles = StyleSheet.create({
   adminActionHelperText: {
     width: '100%',
     alignSelf: 'stretch',
+
     marginTop: -10,
     marginBottom: 14,
+
     color: '#64748B',
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '700',
+
+    textAlign: 'center',
   },
 
   workspaceLogoutActions: {
