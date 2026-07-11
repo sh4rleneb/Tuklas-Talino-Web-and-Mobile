@@ -159,6 +159,7 @@ const [auditSearch, setAuditSearch] = useState('');
   const [assignmentForm, setAssignmentForm] = useState({ teacherId: '', gradeLevel: '1', section: '' });
   const [studentGradeFilter, setStudentGradeFilter] = useState('all');
   const [studentSectionFilter, setStudentSectionFilter] = useState('all');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [
     studentGradeFilterMenuOpen,
     setStudentGradeFilterMenuOpen,
@@ -226,11 +227,58 @@ const [auditSearch, setAuditSearch] = useState('');
     ),
   ].sort((first, second) => first.localeCompare(second));
 
-  const filteredStudents = students.filter((student) => {
-    const matchesGrade = studentGradeFilter === 'all' || studentGradeValue(student) === Number(studentGradeFilter);
-    const matchesSection = studentSectionFilter === 'all' || studentSectionValue(student) === studentSectionFilter;
+  const normalizedStudentSearchQuery =
+    normalizeSpaces(studentSearchQuery).toLowerCase();
 
-    return matchesGrade && matchesSection;
+  const filteredStudents = students.filter((student) => {
+    const studentGrade = studentGradeValue(student);
+    const studentSection = studentSectionValue(student);
+
+    const matchesGrade =
+      studentGradeFilter === 'all' ||
+      studentGrade === Number(studentGradeFilter);
+
+    const matchesSection =
+      studentSectionFilter === 'all' ||
+      studentSection === studentSectionFilter;
+
+    const searchableStudent = [
+      normalizeSpaces(
+        student.name ||
+        student.fullName ||
+        student.displayName ||
+        ''
+      ),
+      normalizeSpaces(
+        student.studentCode ||
+        student.student_code ||
+        ''
+      ),
+      normalizeSpaces(
+        student?.User?.username ||
+        student?.user?.username ||
+        ''
+      ),
+      studentGrade ? `Grade ${studentGrade}` : '',
+      studentGrade ? `G${studentGrade}` : '',
+      studentGrade ? String(studentGrade) : '',
+      studentSection,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    const matchesSearch =
+      !normalizedStudentSearchQuery ||
+      searchableStudent.includes(
+        normalizedStudentSearchQuery
+      );
+
+    return (
+      matchesGrade &&
+      matchesSection &&
+      matchesSearch
+    );
   });
 
   const load = useCallback(async () => {
@@ -1258,8 +1306,27 @@ async function executeVerifiedAction() {
   function renderStudents() {
     return (
       <Card>
-        <Text style={styles.cardTitle}>Pamamahala ng Student</Text>
-          <Text style={styles.helperText}>Filter learners by year level and section.</Text>
+        <Text style={styles.cardTitle}>Student Management</Text>
+          <Text style={styles.helperText}>
+            Search and filter active students by year level and section.
+          </Text>
+
+          <Text style={styles.fieldLabel}>Search Students</Text>
+
+          <TextInput
+            value={studentSearchQuery}
+            onChangeText={setStudentSearchQuery}
+            placeholder="Search by name, student code, username, grade, or section..."
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            style={styles.auditSearchInput}
+            onFocus={() => {
+              setStudentGradeFilterMenuOpen(false);
+              setStudentSectionFilterMenuOpen(false);
+            }}
+          />
 
           <Text style={styles.fieldLabel}>Year Level</Text>
 
@@ -1458,7 +1525,7 @@ async function executeVerifiedAction() {
                         section: studentSectionValue(student),
                         promotionReason: reason
                       }),
-                      'Na-update ang klase ng student.'
+                      'Student enrollment updated.'
                     )
                   })}>G{grade}</Button>)}
             </View>
@@ -1487,7 +1554,7 @@ async function executeVerifiedAction() {
                         section: sectionOption,
                         promotionReason: reason,
                       }),
-                      'Na-update ang klase ng student.'
+                      'Student enrollment updated.'
                     ),
                   })}
                 >
