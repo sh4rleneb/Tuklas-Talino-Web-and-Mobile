@@ -5412,11 +5412,18 @@ async function handleLogout() {
 
     const assignedSections = [
       ...new Set(
-        (
-          Array.isArray(classOptions)
-            ? classOptions
-            : []
-        )
+        [
+          ...(
+            Array.isArray(dashboard?.assignedClasses)
+              ? dashboard.assignedClasses
+              : []
+          ),
+          ...(
+            Array.isArray(monitoring?.assignedClasses)
+              ? monitoring.assignedClasses
+              : []
+          ),
+        ]
           .filter((item) => {
             const grade = Number(
               item?.gradeLevel ??
