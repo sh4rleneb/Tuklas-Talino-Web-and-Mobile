@@ -1906,7 +1906,7 @@ async function loadAdminDashboard() {
   if (!confirmed) return;
 
   await safeRun(async () => {
-    await api(`/students/${id}/archive`, { method: 'POST' });
+    await api(`/students/${id}/archive`, { method: 'POST', body: { reason: 'Archived by administrator' } });
     notify('Student archived. You can restore this account from Archived Students.');
     await loadAdminDashboard();
     await loadTeacherDashboard().catch(() => null);
@@ -2029,7 +2029,7 @@ async function archiveTeacher(id) {
   if (!confirmed) return;
 
   await safeRun(async () => {
-    await api(`/teachers/${id}/archive`, { method: 'POST' });
+    await api(`/teachers/${id}/archive`, { method: 'POST', body: { reason: 'Archived by administrator' } });
     notify('Teacher archived. You can restore this account from Archived Teachers.');
     await loadAdminDashboard();
   });
