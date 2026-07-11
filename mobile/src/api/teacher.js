@@ -137,12 +137,28 @@ export async function getTeacherLessons() {
   return api('/lessons/mine');
 }
 
-export async function createStudentAccount(body) {
-  return api('/students', { method: 'POST', body });
+
+export async function getActiveStudents(query = '') {
+  const search = String(query || '').trim();
+  const searchParameter = search
+    ? `&q=${encodeURIComponent(search)}`
+    : '';
+
+  return api(
+    `/students?status=active${searchParameter}`
+  );
 }
 
-export async function getActiveStudents() {
-  return api('/students?status=active');
+export async function updateStudentSection(
+  studentId,
+  section
+) {
+  return api(`/students/${studentId}/section`, {
+    method: 'PATCH',
+    body: {
+      section,
+    },
+  });
 }
 
 

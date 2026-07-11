@@ -33,8 +33,8 @@ import {
   createGroup,
   deleteGroup,
   createLesson,
-  createStudentAccount,
   getActiveStudents,
+  updateStudentSection,
   getPendingGroupChecks,
   getReportSummary,
   getStudentReport,
@@ -1029,8 +1029,30 @@ export default function TeacherHome({ navigation }) {
   const [selectedGroupStudentIds, setSelectedGroupStudentIds] = useState({});
   const [taskForm, setTaskForm] = useState({ title: '', description: '', deadline: '', xpReward: '10' });
   const [taskDeadlinePickerVisible, setTaskDeadlinePickerVisible] = useState(false);
-  const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '' });
-  const [createdStudentAccount, setCreatedStudentAccount] = useState(null);
+    const [
+    teacherStudentSearchQuery,
+    setTeacherStudentSearchQuery,
+  ] = useState('');
+
+  const [
+    teacherStudentSearchResults,
+    setTeacherStudentSearchResults,
+  ] = useState([]);
+
+  const [
+    selectedTeacherStudent,
+    setSelectedTeacherStudent,
+  ] = useState(null);
+
+  const [
+    teacherSectionSearchQuery,
+    setTeacherSectionSearchQuery,
+  ] = useState('');
+
+  const [
+    teacherSelectedSection,
+    setTeacherSelectedSection,
+  ] = useState('');
   const [quizFilter, setQuizFilter] = useState('All');
   const [assessmentQuery, setAssessmentQuery] = useState('');
   const [selectedAssessmentQuizId, setSelectedAssessmentQuizId] = useState('ALL');
@@ -5182,142 +5204,419 @@ async function handleLogout() {
     );
   }
 
-  async function handleCreateStudentAccount() {
-    const name = String(studentForm.name || '').replace(/\s+/g, ' ').trim();
-    const section = String(studentForm.section || '').replace(/\s+/g, ' ').trim();
-    const gradeLevel = Number(studentForm.gradeLevel);
 
-    if (!name) {
-      Alert.alert('Student Account', 'Student name is required.');
+
+    async function handleTeacherStudentSearch() {
+    const query =
+      teacherStudentSearchQuery.trim();
+
+    if (query.length < 2) {
+      Alert.alert(
+        'Search Student',
+        'Enter at least two letters of the student name.'
+      );
       return;
     }
 
-    if (![1, 2, 3, 4, 5, 6].includes(gradeLevel)) {
-      Alert.alert('Student Account', 'Grade must be from 1 to 6.');
+    setBusy('student-search');
+
+    try {
+      const data =
+        await getActiveStudents(query);
+
+      const results =
+        Array.isArray(data?.students)
+          ? data.students
+          : Array.isArray(data)
+            ? data
+            : [];
+
+      setTeacherStudentSearchResults(results);
+      setSelectedTeacherStudent(null);
+      setTeacherSectionSearchQuery('');
+      setTeacherSelectedSection('');
+
+      if (!results.length) {
+        Alert.alert(
+          'Search Student',
+          'No existing student account matched that name.'
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Search Student',
+        error?.message ||
+          'Unable to search for students.'
+      );
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function handleTeacherStudentSectionUpdate() {
+    const studentId =
+      selectedTeacherStudent?.id ??
+      selectedTeacherStudent?.studentId ??
+      selectedTeacherStudent?.student_id;
+
+    const section =
+      teacherSelectedSection.trim();
+
+    if (!studentId) {
+      Alert.alert(
+        'Update Section',
+        'Select an existing student first.'
+      );
       return;
     }
 
     if (!section) {
-      Alert.alert('Student Account', 'Section is required.');
-      return;
-    }
-
-    if (!canUseGradeSection(gradeLevel, section)) {
-      Alert.alert('Student Account', 'You can only create students for your assigned grade level or section.');
-      return;
-    }
-
-    setBusy('student-create');
-    try {
-      const data = await createStudentAccount({ name, gradeLevel, section });
-      const createdStudent = {
-        ...(data?.student || data?.learner || data?.data || data || {}),
-        name: data?.student?.name || data?.name || name,
-        gradeLevel,
-        section,
-      };
-      const createdStudentId = createdStudent.id || createdStudent.studentId || createdStudent.studentCode || `${name}-${gradeLevel}-${section}`;
-
-      function mergeCreatedStudentRows(rows = []) {
-        return [
-          createdStudent,
-          ...rows.filter((student) => {
-            const studentId = student.id || student.studentId || student.studentCode || `${student.name}-${student.gradeLevel}-${student.section}`;
-            return String(studentId) !== String(createdStudentId);
-          }),
-        ];
-      }
-
-      setMonitoring((current) => ({
-        ...current,
-        rows: mergeCreatedStudentRows(current.rows || []),
-      }));
-
-      setStudentReport((current) => mergeCreatedStudentRows(current || []));
-      setAllStudents((current) => mergeCreatedStudentRows(current || []));
-      Alert.alert('Student Account', `Created account for ${createdStudent.name || name}. Temporary PIN: ${data?.temporaryPin || 'Not returned'}`);
-      setStudentForm({ name: '', gradeLevel: String(gradeLevel), section });
       Alert.alert(
-        'Student Account Created',
-        `Username: ${data.username || data.student?.studentCode || 'Created'}\nTemporary PIN: ${data.temporaryPin || 'Check response'}`
+        'Update Section',
+        'Search for and select a section first.'
       );
+      return;
+    }
+
+    setBusy(
+      `student-section-${studentId}`
+    );
+
+    try {
+      const data =
+        await updateStudentSection(
+          studentId,
+          section
+        );
+
+      const updatedStudent =
+        data?.student || {
+          ...selectedTeacherStudent,
+          section,
+        };
+
+      setSelectedTeacherStudent(
+        updatedStudent
+      );
+
+      setTeacherStudentSearchResults(
+        (current) =>
+          current.map((student) => {
+            const currentId =
+              student?.id ??
+              student?.studentId ??
+              student?.student_id;
+
+            return String(currentId) ===
+              String(studentId)
+              ? {
+                  ...student,
+                  ...updatedStudent,
+                  section,
+                }
+              : student;
+          })
+      );
+
+      Alert.alert(
+        'Section Updated',
+        `${updatedStudent.name || 'Student'} is now assigned to ${section}.`
+      );
+
       await load();
-    } catch (err) {
-      Alert.alert('Student Account', err.message || 'Unable to create student account.');
+    } catch (error) {
+      Alert.alert(
+        'Update Section',
+        error?.message ||
+          'Unable to update the student section.'
+      );
     } finally {
       setBusy('');
     }
   }
 
   function renderStudents() {
+    const selectedGrade = Number(
+      selectedTeacherStudent?.gradeLevel ??
+      selectedTeacherStudent?.grade_level ??
+      selectedTeacherStudent?.grade ??
+      0
+    );
+
+    const assignedSections = [
+      ...new Set(
+        (
+          Array.isArray(classOptions)
+            ? classOptions
+            : []
+        )
+          .filter((item) => {
+            const grade = Number(
+              item?.gradeLevel ??
+              item?.grade_level ??
+              item?.grade ??
+              0
+            );
+
+            return grade === selectedGrade;
+          })
+          .map((item) =>
+            String(
+              item?.section ??
+              item?.sectionName ??
+              item?.classSection ??
+              ''
+            )
+              .replace(/\s+/g, ' ')
+              .trim()
+          )
+          .filter(Boolean)
+      ),
+    ].sort((first, second) =>
+      first.localeCompare(second)
+    );
+
+    const sectionSearch =
+      teacherSectionSearchQuery
+        .trim()
+        .toLowerCase();
+
+    const visibleSections =
+      assignedSections.filter(
+        (section) =>
+          !sectionSearch ||
+          section
+            .toLowerCase()
+            .includes(sectionSearch)
+      );
+
     return (
       <>
         <SectionCard>
-          <Text style={styles.cardTitle}>Add Student Account</Text>
-          <Field
-            label="Student Name"
-            value={studentForm.name}
-            onChangeText={(name) => setStudentForm((current) => ({ ...current, name }))}
-            placeholder="Full name"
-          />
+          <Text style={styles.cardTitle}>
+            Find Existing Student
+          </Text>
 
-            <SelectMenu
-              label="Student Grade"
-              value={studentForm.gradeLevel}
-              options={usableGradeOptions}
-              disabled={busy === 'student-create'}
-              onSelect={(gradeLevel) => setStudentForm((current) => ({ ...current, gradeLevel }))}
-            />
-
-          {studentSectionOptions.length ? (
-            <SelectMenu
-              label="Section Suggestions"
-              value={studentForm.section}
-              options={studentSectionOptions}
-              disabled={busy === 'student-create'}
-              placeholder="Choose existing section"
-              onSelect={(section) => setStudentForm((current) => ({ ...current, section }))}
-            />
-          ) : null}
+          <Text style={styles.muted}>
+            Student accounts are created only by
+            administrators. Search for an existing
+            student, then assign the student to one
+            of your sections.
+          </Text>
 
           <Field
-            label={studentSectionOptions.length ? 'Section / Custom Section' : 'Section'}
-            value={studentForm.section}
-            onChangeText={(section) => setStudentForm((current) => ({ ...current, section }))}
-            placeholder="Section name"
+            label="Search Student Name"
+            value={teacherStudentSearchQuery}
+            onChangeText={(value) =>
+              setTeacherStudentSearchQuery(
+                value
+              )
+            }
+            placeholder="Enter student name"
           />
 
-          <SmallButton disabled={Boolean(busy)} onPress={handleCreateStudentAccount}>
-            {busy === 'student-create' ? 'Creating...' : 'Create Student Account'}
+          <SmallButton
+            disabled={
+              Boolean(busy) ||
+              teacherStudentSearchQuery
+                .trim()
+                .length < 2
+            }
+            onPress={
+              handleTeacherStudentSearch
+            }
+          >
+            {busy === 'student-search'
+              ? 'Searching...'
+              : 'Search Student'}
           </SmallButton>
 
-          {createdStudentAccount && (
-            <View style={[styles.studentCard, { marginTop: 12, borderBottomWidth: 0 }]}>
-              <Text style={styles.studentAvatar}>✅</Text>
-              <View style={styles.flex}>
-                <Text style={styles.rowTitle}>Student account created</Text>
-                <Text style={styles.muted}>Username: {createdStudentAccount.username || createdStudentAccount.student?.studentCode || '—'}</Text>
-                <Text style={styles.muted}>Temporary PIN: {createdStudentAccount.temporaryPin || '—'}</Text>
-              </View>
+          {teacherStudentSearchResults.length ? (
+            <View style={styles.softRow}>
+              <Text style={styles.rowTitle}>
+                Search Results
+              </Text>
+
+              <Text style={styles.muted}>
+                Select the student whose section
+                you need to update.
+              </Text>
+
+              {teacherStudentSearchResults.map(
+                (student) => {
+                  const studentId =
+                    student?.id ??
+                    student?.studentId ??
+                    student?.student_id;
+
+                  const selectedId =
+                    selectedTeacherStudent?.id ??
+                    selectedTeacherStudent?.studentId ??
+                    selectedTeacherStudent?.student_id;
+
+                  const isSelected =
+                    String(studentId) ===
+                    String(selectedId);
+
+                  return (
+                    <TouchableOpacity
+                      key={
+                        studentId ||
+                        student?.studentCode ||
+                        student?.student_code ||
+                        student?.name
+                      }
+                      style={[
+                        styles.studentCard,
+                        isSelected &&
+                          styles.selectedRow,
+                      ]}
+                      activeOpacity={0.84}
+                      accessibilityRole="button"
+                      accessibilityState={{
+                        selected: isSelected,
+                      }}
+                      onPress={() => {
+                        setSelectedTeacherStudent(
+                          student
+                        );
+                        setTeacherSectionSearchQuery(
+                          ''
+                        );
+                        setTeacherSelectedSection(
+                          ''
+                        );
+                      }}
+                    >
+                      <View style={styles.flex}>
+                        <Text
+                          style={styles.rowTitle}
+                        >
+                          {student?.name ||
+                            'Student'}
+                        </Text>
+
+                        <Text
+                          style={styles.muted}
+                        >
+                          {student?.studentCode ||
+                            student?.student_code ||
+                            'No student code'}
+                          {' • '}
+                          Grade{' '}
+                          {student?.gradeLevel ??
+                            student?.grade_level ??
+                            student?.grade ??
+                            '-'}
+                          {' • '}
+                          Current section:{' '}
+                          {student?.section ||
+                            'Not assigned'}
+                        </Text>
+                      </View>
+
+                      <Text
+                        style={styles.statusText}
+                      >
+                        {isSelected
+                          ? 'Selected'
+                          : 'Select'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }
+              )}
             </View>
-          )}
+          ) : null}
         </SectionCard>
 
-        <SectionCard>
-          <Text style={styles.cardTitle}>Student Monitoring Report</Text>
-        {currentStudents.map((student) => (
-          <View key={student.id} style={styles.studentCard}>
-            <Text style={styles.studentAvatar}>{student.avatar || '🧒'}</Text>
-            <View style={styles.flex}>
-              <Text style={styles.rowTitle}>{student.name}</Text>
-              <Text style={styles.muted}>Grade {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
-              <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${student.percent || 0}%` }]} /></View>
+        {selectedTeacherStudent ? (
+          <SectionCard>
+            <Text style={styles.cardTitle}>
+              Update Student Section
+            </Text>
+
+            <View style={styles.softRow}>
+              <Text style={styles.rowTitle}>
+                {selectedTeacherStudent.name ||
+                  'Student'}
+              </Text>
+
+              <Text style={styles.muted}>
+                Grade {selectedGrade || '-'}
+                {' • '}
+                Current section:{' '}
+                {selectedTeacherStudent.section ||
+                  'Not assigned'}
+              </Text>
             </View>
-            <Text style={styles.statusText}>{student.percent || 0}%</Text>
-          </View>
-        ))}
-        {!currentStudents.length && <Text style={styles.muted}>No current students yet.</Text>}
-        </SectionCard>
+
+            <Field
+              label="Search Assigned Section"
+              value={teacherSectionSearchQuery}
+              onChangeText={(value) =>
+                setTeacherSectionSearchQuery(
+                  value
+                )
+              }
+              placeholder="Search section"
+            />
+
+            {visibleSections.length ? (
+              <View style={styles.choiceRow}>
+                {visibleSections.map(
+                  (section) => (
+                    <SmallButton
+                      key={
+                        `${selectedGrade}-${section}`
+                      }
+                      tone={
+                        teacherSelectedSection ===
+                        section
+                          ? 'green'
+                          : 'slate'
+                      }
+                      disabled={Boolean(busy)}
+                      onPress={() =>
+                        setTeacherSelectedSection(
+                          section
+                        )
+                      }
+                    >
+                      {teacherSelectedSection ===
+                      section
+                        ? `✓ ${section}`
+                        : section}
+                    </SmallButton>
+                  )
+                )}
+              </View>
+            ) : (
+              <View style={styles.softRow}>
+                <Text style={styles.muted}>
+                  No assigned section matches
+                  this search.
+                </Text>
+              </View>
+            )}
+
+            <SmallButton
+              disabled={
+                Boolean(busy) ||
+                !teacherSelectedSection
+              }
+              onPress={
+                handleTeacherStudentSectionUpdate
+              }
+            >
+              {busy.startsWith(
+                'student-section-'
+              )
+                ? 'Updating Section...'
+                : 'Update Student Section'}
+            </SmallButton>
+          </SectionCard>
+        ) : null}
       </>
     );
   }

@@ -205,7 +205,7 @@ async function buildBadgeProgress(studentId, xp = 0) {
     const target = definition.target || 1;
     const percent = Math.min(100, Math.round((Math.min(current, target) / target) * 100));
 
-    
+
 return {
       code: definition.code,
       name: definition.name,
@@ -631,23 +631,78 @@ async function dashboardPayload(student) {
 
 router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
-    const assignments = await getTeacherAssignments(req);
-    const where = assignedStudentWhere(assignments);
+    const assignments =
+      await getTeacherAssignments(req);
 
-    if (req.query.status) where.status = req.query.status;
-    if (req.query.q) where.name = { [Op.like]: `%${req.query.q}%` };
+    const teacherSearch =
+      req.role === 'teacher' &&
+      Boolean(
+        String(req.query.q || '').trim()
+      );
 
-    const students = await Student.findAll({
-      where,
-      include: [User],
-      order: [['gradeLevel','ASC'], ['name','ASC']]
-    });
+    let where =
+      assignedStudentWhere(assignments);
+
+    if (teacherSearch) {
+      const assignedGrades = [
+        ...new Set(
+          assignments
+            .map((assignment) =>
+              Number(
+                assignment.gradeLevel ??
+                assignment.grade_level ??
+                assignment.grade
+              )
+            )
+            .filter(
+              (gradeLevel) =>
+                Number.isInteger(gradeLevel) &&
+                gradeLevel >= 1 &&
+                gradeLevel <= 6
+            )
+        ),
+      ];
+
+      where = {
+        gradeLevel: {
+          [Op.in]: assignedGrades.length
+            ? assignedGrades
+            : [-1],
+        },
+      };
+    }
+
+    if (req.query.status) {
+      where.status = req.query.status;
+    }
+
+    const search =
+      String(req.query.q || '').trim();
+
+    if (search) {
+      where.name = {
+        [Op.like]: `%${search}%`,
+      };
+    }
+
+    const students =
+      await Student.findAll({
+        where,
+        include: [User],
+        order: [
+          ['gradeLevel', 'ASC'],
+          ['name', 'ASC'],
+        ],
+      });
 
     res.json({ students });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
-router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
+
+router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const body = validate(studentSchema, req.body);
     assertSafeContentPayload({ name: body.name, section: body.section }, 'student account');
@@ -766,6 +821,121 @@ router.get('/:id/badges', requireRole('admin', 'teacher', 'student'), async (req
     });
   } catch (err) { next(err); }
 });
+
+router.patch(
+  '/:id/section',
+  requireRole('teacher'),
+  async (req, res, next) => {
+    try {
+      const student =
+        await Student.findByPk(
+          req.params.id,
+          {
+            include: [User],
+          }
+        );
+
+      if (!student) {
+        return res.status(404).json({
+          message: 'Student not found.',
+        });
+      }
+
+      if (student.status !== 'active') {
+        return res.status(422).json({
+          message:
+            'Only active student accounts can be assigned to a section.',
+        });
+      }
+
+      const section = String(
+        req.body.section || ''
+      )
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (!section) {
+        return res.status(422).json({
+          message: 'A section is required.',
+        });
+      }
+
+      assertSafeContentPayload(
+        { section },
+        'student section'
+      );
+
+      const assignments =
+        await getTeacherAssignments(req);
+
+      const allowedAssignment =
+        assignments.find(
+          (assignment) => {
+            const assignmentGrade =
+              Number(
+                assignment.gradeLevel ??
+                assignment.grade_level ??
+                assignment.grade
+              );
+
+            const assignmentSection =
+              String(
+                assignment.section ??
+                assignment.sectionName ??
+                assignment.classSection ??
+                ''
+              )
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            return (
+              assignmentGrade ===
+                Number(student.gradeLevel) &&
+              assignmentSection
+                .toLowerCase() ===
+                section.toLowerCase()
+            );
+          }
+        );
+
+      if (!allowedAssignment) {
+        return res.status(403).json({
+          message:
+            'You can assign this student only to one of your assigned sections for the same grade level.',
+        });
+      }
+
+      const previousSection =
+        student.section || '';
+
+      student.section = section;
+
+      await student.save();
+
+      await audit(
+        req.user.id,
+        'student.section.update',
+        'student',
+        student.id,
+        {
+          previousSection,
+          section,
+          gradeLevel:
+            student.gradeLevel,
+        }
+      );
+
+      res.json({
+        student,
+        message:
+          'Student section updated.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 
 router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
