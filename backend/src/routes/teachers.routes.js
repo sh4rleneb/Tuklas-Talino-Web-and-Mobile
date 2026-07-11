@@ -1,3 +1,7 @@
+import {
+  findDuplicateAccount,
+  duplicateAccountPayload,
+} from '../services/accountDuplicate.service.js';
 import { sequelize } from '../config/database.js';
 import {
   Router } from 'express'; import bcrypt from 'bcryptjs'; import { Op,
@@ -115,26 +119,65 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const body = validate(teacherSchema, req.body);
     assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher account');
-    const role = await Role.findOne({ where: { name: 'teacher' } });
+
+    const duplicateAccount =
+      await findDuplicateAccount({
+        accountType: 'teacher',
+        name: body.name,
+        email: body.email,
+        username: body.username,
+        code: body.employeeCode,
+      });
+
+    if (duplicateAccount) {
+      return res.status(409).json(
+        duplicateAccountPayload(
+          duplicateAccount
+        )
+      );
+    }
+
+    const role = await Role.findOne({
+      where: { name: 'teacher' },
+    });
+
+    if (!role) {
+      return res.status(500).json({
+        message: 'Teacher role not found.',
+      });
+    }
 
     const temporaryPin = generateTemporaryPin();
-
     const teacherCode = await generateTeacherCode();
+    const passwordHash = await bcrypt.hash(
+      temporaryPin,
+      12
+    );
 
-    const user = await User.create({
-      roleId: role.id,
-      username: teacherCode,
-      email: body.email,
-      displayName: body.name,
-      passwordHash: await bcrypt.hash(temporaryPin, 12),
-      mustChangePassword: true
-    });
+    const teacher = await sequelize.transaction(
+      async (transaction) => {
+        const user = await User.create(
+          {
+            roleId: role.id,
+            username: teacherCode,
+            email: body.email,
+            displayName: body.name,
+            passwordHash,
+            mustChangePassword: true,
+          },
+          { transaction }
+        );
 
-    const teacher = await Teacher.create({
-      userId: user.id,
-      employeeCode: teacherCode,
-      name: body.name
-    });
+        return Teacher.create(
+          {
+            userId: user.id,
+            employeeCode: teacherCode,
+            name: body.name,
+          },
+          { transaction }
+        );
+      }
+    );
     await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
     res.status(201).json({
       teacher,

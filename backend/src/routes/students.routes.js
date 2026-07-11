@@ -1,4 +1,9 @@
 import {
+  findDuplicateAccount,
+  duplicateAccountPayload,
+} from '../services/accountDuplicate.service.js';
+import { sequelize } from '../config/database.js';
+import {
   listMissionsForStudent } from './missions.routes.js';
 import {
   Router } from 'express'; import bcrypt from 'bcryptjs'; import crypto from 'crypto'; import { Op } from 'sequelize'; import { authenticate,
@@ -706,24 +711,61 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
   try {
     const body = validate(studentSchema, req.body);
     assertSafeContentPayload({ name: body.name, section: body.section }, 'student account');
-    const role = await Role.findOne({ where: { name: 'student' } });
+
+    const duplicateAccount =
+      await findDuplicateAccount({
+        accountType: 'student',
+        name: body.name,
+      });
+
+    if (duplicateAccount) {
+      return res.status(409).json(
+        duplicateAccountPayload(
+          duplicateAccount
+        )
+      );
+    }
+
+    const role = await Role.findOne({
+      where: { name: 'student' },
+    });
+
+    if (!role) {
+      return res.status(500).json({
+        message: 'Student role not found.',
+      });
+    }
 
     const temporaryPin = generateTemporaryPin();
     const studentCode = await generateStudentCode();
+    const passwordHash = await bcrypt.hash(
+      temporaryPin,
+      12
+    );
 
-    const user = await User.create({
-      roleId: role.id,
-      username: studentCode,
-      displayName: body.name,
-      passwordHash: await bcrypt.hash(temporaryPin, 12),
-      mustChangePassword: true
-    });
+    const student = await sequelize.transaction(
+      async (transaction) => {
+        const user = await User.create(
+          {
+            roleId: role.id,
+            username: studentCode,
+            displayName: body.name,
+            passwordHash,
+            mustChangePassword: true,
+          },
+          { transaction }
+        );
 
-    const student = await Student.create({
-      ...body,
-      userId: user.id,
-      studentCode
-    });
+        return Student.create(
+          {
+            ...body,
+            userId: user.id,
+            studentCode,
+          },
+          { transaction }
+        );
+      }
+    );
     await audit(req.user.id, 'student.create', 'student', student.id);
     res.status(201).json({
       student,

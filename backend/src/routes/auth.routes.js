@@ -1,3 +1,8 @@
+import {
+  findDuplicateAccount,
+  duplicateAccountPayload,
+} from '../services/accountDuplicate.service.js';
+import { sequelize } from '../config/database.js';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import {
@@ -6,7 +11,7 @@ import {
   studentSchema,
   teacherSchema
 } from '../validators/common.js';
-import { signToken, authenticate, requireRole } from '../middleware/auth.js';
+import { signToken, authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Role, User, Student, Teacher, AdminProfile } from '../models/index.js';
 import { audit } from '../services/audit.service.js';
 
@@ -521,8 +526,8 @@ router.post('/change-password', authenticate, async (req, res, next) => {
 });
 
 /*
-  PUBLIC STUDENT SIGNUP
-  Mobile app can call:
+  ADMIN-PROTECTED LEGACY STUDENT REGISTRATION
+  Only authenticated administrators can call:
   POST /api/auth/register/student
 
   Accepts:
@@ -537,7 +542,12 @@ router.post('/change-password', authenticate, async (req, res, next) => {
     avatar
   }
 */
-router.post('/register/student', async (req, res, next) => {
+router.post(
+  '/register/student',
+  authenticate,
+  requirePasswordChanged,
+  requireRole('admin'),
+  async (req, res, next) => {
   try {
     const name = req.body.name || req.body.fullName;
     const username = req.body.username;
@@ -567,14 +577,20 @@ router.post('/register/student', async (req, res, next) => {
       });
     }
 
-    const existingUser = await User.findOne({
-      where: { username }
-    });
-
-    if (existingUser) {
-      return res.status(409).json({
-        message: 'Username is already taken.'
+    const duplicateAccount =
+      await findDuplicateAccount({
+        accountType: 'student',
+        name,
+        email,
+        username,
       });
+
+    if (duplicateAccount) {
+      return res.status(409).json(
+        duplicateAccountPayload(
+          duplicateAccount
+        )
+      );
     }
 
     const role = await Role.findOne({
@@ -587,27 +603,50 @@ router.post('/register/student', async (req, res, next) => {
       });
     }
 
-    const user = await User.create({
-      roleId: role.id,
-      username,
-      email,
-      passwordHash: await bcrypt.hash(password, 12),
-      displayName: name,
-      status: 'active',
-      mustChangePassword: false
-    });
+    const passwordHash = await bcrypt.hash(
+      password,
+      12
+    );
 
-    const studentCode = `STU-${new Date().getFullYear()}-${Date.now()}`;
+    const studentCode =
+      `STU-${new Date().getFullYear()}-${Date.now()}`;
 
-    const student = await Student.create({
-      userId: user.id,
-      studentCode,
-      name,
-      gradeLevel,
-      section,
-      avatar,
-      status: 'active'
-    });
+    const { user, student } =
+      await sequelize.transaction(
+        async (transaction) => {
+          const createdUser = await User.create(
+            {
+              roleId: role.id,
+              username,
+              email,
+              passwordHash,
+              displayName: name,
+              status: 'active',
+              mustChangePassword: false,
+            },
+            { transaction }
+          );
+
+          const createdStudent =
+            await Student.create(
+              {
+                userId: createdUser.id,
+                studentCode,
+                name,
+                gradeLevel,
+                section,
+                avatar,
+                status: 'active',
+              },
+              { transaction }
+            );
+
+          return {
+            user: createdUser,
+            student: createdStudent,
+          };
+        }
+      );
 
     return res.status(201).json({
       message: 'Student account created successfully.',
@@ -633,35 +672,73 @@ router.post('/register/student', async (req, res, next) => {
 router.post(
   '/register/teacher',
   authenticate,
+  requirePasswordChanged,
   requireRole('admin'),
   async (req, res, next) => {
     try {
       const body = validate(teacherSchema, req.body);
       assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher registration');
 
+      const duplicateAccount =
+        await findDuplicateAccount({
+          accountType: 'teacher',
+          name: body.name,
+          email: body.email,
+          username: body.username,
+          code: body.employeeCode,
+        });
+
+      if (duplicateAccount) {
+        return res.status(409).json(
+          duplicateAccountPayload(
+            duplicateAccount
+          )
+        );
+      }
+
       const role = await Role.findOne({
         where: { name: 'teacher' }
       });
 
-      const user = await User.create({
-        roleId: role.id,
-        username: body.username,
-        email: body.email,
-        passwordHash: await bcrypt.hash(
-          body.password || process.env.DEMO_TEACHER_PASSWORD || 'teach123',
-          12
-        ),
-        displayName: body.name,
-        status: 'active',
-        mustChangePassword: true
-      });
+      if (!role) {
+        return res.status(500).json({
+          message: 'Teacher role not found.',
+        });
+      }
 
-      const teacher = await Teacher.create({
-        userId: user.id,
-        employeeCode: body.employeeCode,
-        name: body.name,
-        status: 'active'
-      });
+      const passwordHash = await bcrypt.hash(
+        body.password ||
+          process.env.DEMO_TEACHER_PASSWORD ||
+          'teach123',
+        12
+      );
+
+      const teacher = await sequelize.transaction(
+        async (transaction) => {
+          const user = await User.create(
+            {
+              roleId: role.id,
+              username: body.username,
+              email: body.email,
+              passwordHash,
+              displayName: body.name,
+              status: 'active',
+              mustChangePassword: true,
+            },
+            { transaction }
+          );
+
+          return Teacher.create(
+            {
+              userId: user.id,
+              employeeCode: body.employeeCode,
+              name: body.name,
+              status: 'active',
+            },
+            { transaction }
+          );
+        }
+      );
 
       await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
 
