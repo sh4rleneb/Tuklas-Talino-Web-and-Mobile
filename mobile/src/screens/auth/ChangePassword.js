@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { changePassword, logout } from '../../api/auth';
 
+import BumalikButton from '../../components/BumalikButton';
 const PASSWORD_POLICY_MESSAGE =
   'Password must be at least 8 characters and include uppercase, lowercase, and special character.';
 
@@ -82,37 +83,10 @@ export default function ChangePassword({ navigation, route }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Bumalik sa login"
-          activeOpacity={0.85}
-          disabled={loading}
+                <BumalikButton
           onPress={handleLogout}
-          style={{
-            alignSelf: 'flex-start',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 48,
-            paddingHorizontal: 20,
-            borderWidth: 2,
-            borderColor: '#22C55E',
-            borderRadius: 999,
-            backgroundColor: '#F0FDF4',
-            marginBottom: 18,
-            opacity: loading ? 0.6 : 1,
-          }}
-        >
-          <Text
-            style={{
-              color: '#16A34A',
-              fontSize: 18,
-              fontWeight: '900',
-            }}
-          >
-            ← Bumalik
-          </Text>
-        </TouchableOpacity>
+          disabled={loading}
+        />
         <View style={styles.card}>
           <Text style={styles.icon}>🔐</Text>
           <Text style={styles.title}>Change Your Password</Text>

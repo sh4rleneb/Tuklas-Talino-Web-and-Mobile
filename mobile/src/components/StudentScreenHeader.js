@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 
+import BumalikButton from './BumalikButton';
 export default function StudentScreenHeader({
   navigation,
   avatar = '🧒',
@@ -13,36 +14,9 @@ export default function StudentScreenHeader({
 }) {
   return (
     <View style={styles.topBar}>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Bumalik"
-        activeOpacity={0.85}
+            <BumalikButton
         onPress={() => navigation.goBack()}
-        style={{
-          alignSelf: 'flex-start',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 48,
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-          borderWidth: 2,
-          borderColor: '#22C55E',
-          borderRadius: 999,
-          backgroundColor: '#F0FDF4',
-          marginBottom: 18,
-        }}
-      >
-        <Text
-          style={{
-            color: '#16A34A',
-            fontSize: 18,
-            fontWeight: '900',
-          }}
-        >
-          ← Bumalik
-        </Text>
-      </TouchableOpacity>
+      />
 
       <View style={styles.studentChip}>
         <Text style={styles.avatar}>

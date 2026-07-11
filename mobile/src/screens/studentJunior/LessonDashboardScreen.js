@@ -13,6 +13,7 @@ import { api } from '../../api/client';
 
 
 
+import BumalikButton from '../../components/BumalikButton';
 export default function LessonDashboardScreen({ navigation, route }) {
   const { lessonId, homeRoute } = route.params || {};
 
@@ -54,37 +55,11 @@ export default function LessonDashboardScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Text style={styles.errorText}>Hindi makuha ang aralin. Pakisubukan muli.</Text>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Bumalik"
-            activeOpacity={0.85}
+          <BumalikButton
             onPress={() => navigation.goBack()}
-            style={{
-              alignSelf: 'flex-start',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: 48,
-              paddingHorizontal: 20,
-              paddingVertical: 12,
-              borderWidth: 2,
-              borderColor: '#22C55E',
-              borderRadius: 999,
-              backgroundColor: '#F0FDF4',
-              marginBottom: 18,
-            }}
-          >
-            <Text
-              style={{
-                color: '#16A34A',
-                fontSize: 18,
-                fontWeight: '900',
-              }}
-            >
-              ← Bumalik
-            </Text>
-          </TouchableOpacity>
+          />
+<Text style={styles.errorText}>Hindi makuha ang aralin. Pakisubukan muli.</Text>
+
         </View>
       </SafeAreaView>
     );
