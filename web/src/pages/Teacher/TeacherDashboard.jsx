@@ -2459,7 +2459,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     passage: '',
     layunin: '',
     alamin: '',
-    lesson: ''
+    aralin: ''
   });
 
   const assignedGrades = [...new Set((assignedClasses || [])
@@ -2498,9 +2498,328 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     }));
   }
 
+  function parseStructuredLessonPassage(value = '') {
+    const rawPassage = String(value || '')
+      .replace(/\r\n?/g, '\n')
+      .trim();
+
+    if (!rawPassage) {
+      return {
+        layunin: '',
+        alamin: '',
+        aralin: ''
+      };
+    }
+
+    const headingPattern =
+      /^[ \t]*(Layunin|Alamin|Lesson|Lessons|Aralin)[ \t]*:[ \t]*/gim;
+
+    const headings = Array.from(
+      rawPassage.matchAll(headingPattern)
+    );
+
+    // Older lessons may contain an ordinary passage without
+    // structured section headings. Keep that content in Aralin.
+    if (!headings.length) {
+      return {
+        layunin: '',
+        alamin: '',
+        aralin: rawPassage
+      };
+    }
+
+    const sections = {
+      layunin: '',
+      alamin: '',
+      aralin: ''
+    };
+
+    headings.forEach((heading, index) => {
+      const label = String(heading[1] || '')
+        .trim()
+        .toLowerCase();
+
+      const contentStart =
+        Number(heading.index) + heading[0].length;
+
+      const contentEnd =
+        index + 1 < headings.length
+          ? Number(headings[index + 1].index)
+          : rawPassage.length;
+
+      const content = rawPassage
+        .slice(contentStart, contentEnd)
+        .trim();
+
+      let field = 'aralin';
+
+      if (label === 'layunin') {
+        field = 'layunin';
+      } else if (label === 'alamin') {
+        field = 'alamin';
+      }
+
+      if (content) {
+        sections[field] = sections[field]
+          ? `${sections[field]}\n\n${content}`
+          : content;
+      }
+    });
+
+    const contentBeforeFirstHeading = rawPassage
+      .slice(0, Number(headings[0].index))
+      .trim();
+
+    if (contentBeforeFirstHeading) {
+      sections.aralin = sections.aralin
+        ? `${contentBeforeFirstHeading}\n\n${sections.aralin}`
+        : contentBeforeFirstHeading;
+    }
+
+    return sections;
+  }
+
+  function lessonActivityRows(lesson = {}) {
+    if (Array.isArray(lesson.activities)) {
+      return lesson.activities;
+    }
+
+    if (Array.isArray(lesson.Activities)) {
+      return lesson.Activities;
+    }
+
+    return [];
+  }
+
+  function normalizeActivityForEditing(activity = {}) {
+    const dataJson =
+      activity?.dataJson &&
+      typeof activity.dataJson === 'object' &&
+      !Array.isArray(activity.dataJson)
+        ? activity.dataJson
+        : {};
+
+    const type = String(
+      activity.type ||
+      activity.activityType ||
+      ''
+    )
+      .trim()
+      .toLowerCase();
+
+    const base = {
+      id: activity.id || makeId(),
+      type,
+      title:
+        activity.title ||
+        dataJson.title ||
+        '',
+      instructions:
+        activity.instructions ||
+        dataJson.instructions ||
+        ''
+    };
+
+    if (type === 'mcq') {
+      const questionRows = Array.isArray(activity.questions)
+        ? activity.questions
+        : Array.isArray(activity.Questions)
+          ? activity.Questions
+          : [];
+
+      return {
+        ...base,
+        maxAttempts:
+          activity.maxAttempts ??
+          dataJson.maxAttempts ??
+          2,
+        questions: questionRows.map(question => {
+          const optionRows = Array.isArray(question?.options)
+            ? question.options
+            : Array.isArray(question?.Options)
+              ? question.Options
+              : [];
+
+          return {
+            id: question?.id || makeId(),
+            question:
+              question?.question ||
+              question?.prompt ||
+              '',
+            options: optionRows.map(option => ({
+              id: option?.id || makeId(),
+              text:
+                option?.text ||
+                option?.optionText ||
+                option?.label ||
+                option?.value ||
+                '',
+              isCorrect: Boolean(
+                option?.isCorrect ||
+                option?.correct
+              )
+            }))
+          };
+        })
+      };
+    }
+
+    if (type === 'writing') {
+      const writingTask =
+        activity.writingTask ||
+        activity.WritingTask ||
+        {};
+
+      const rubric =
+        writingTask?.rubric &&
+        typeof writingTask.rubric === 'object' &&
+        !Array.isArray(writingTask.rubric)
+          ? writingTask.rubric
+          : {};
+
+      const choiceSource =
+        rubric.choices ??
+        rubric.wordBank ??
+        dataJson.choices ??
+        dataJson.wordBank ??
+        [];
+
+      const acceptedAnswers =
+        rubric.acceptedAnswers ??
+        rubric.correctWords ??
+        [];
+
+      const gawainType =
+        rubric.activityType ||
+        dataJson.gawainType ||
+        dataJson.activityType ||
+        'writing_task';
+
+      return {
+        ...base,
+        gawainType:
+          gawainType === 'complete_sentence'
+            ? 'complete_sentence'
+            : 'writing_task',
+        prompt:
+          writingTask.prompt ||
+          activity.prompt ||
+          dataJson.prompt ||
+          rubric.template ||
+          '',
+        template:
+          rubric.template ||
+          dataJson.template ||
+          writingTask.prompt ||
+          '',
+        choicesText: Array.isArray(choiceSource)
+          ? choiceSource.join('\n')
+          : String(choiceSource || ''),
+        correctAnswer:
+          rubric.correctAnswer ||
+          dataJson.correctAnswer ||
+          (
+            Array.isArray(acceptedAnswers)
+              ? acceptedAnswers[0]
+              : acceptedAnswers
+          ) ||
+          ''
+      };
+    }
+
+    if (type === 'speech') {
+      const speechTask =
+        activity.speechTask ||
+        activity.SpeechTask ||
+        {};
+
+      return {
+        ...base,
+        targetText:
+          speechTask.targetText ||
+          activity.targetText ||
+          dataJson.targetText ||
+          ''
+      };
+    }
+
+    if (type === 'matching') {
+      return {
+        ...base,
+        pairs: Array.isArray(activity.pairs)
+          ? activity.pairs
+          : Array.isArray(dataJson.pairs)
+            ? dataJson.pairs
+            : []
+      };
+    }
+
+    if (type === 'vocabulary') {
+      return {
+        ...base,
+        words: Array.isArray(activity.words)
+          ? activity.words
+          : Array.isArray(dataJson.words)
+            ? dataJson.words
+            : []
+      };
+    }
+
+    if (type === 'infographic') {
+      return {
+        ...base,
+        content:
+          activity.content ||
+          dataJson.content ||
+          ''
+      };
+    }
+
+    if (type === 'material') {
+      return {
+        ...base,
+        fileName:
+          activity.fileName ||
+          dataJson.fileName ||
+          '',
+        fileUrl:
+          activity.fileUrl ||
+          activity.url ||
+          dataJson.fileUrl ||
+          dataJson.url ||
+          '',
+        fileType:
+          activity.fileType ||
+          dataJson.fileType ||
+          '',
+        mimeType:
+          activity.mimeType ||
+          dataJson.mimeType ||
+          '',
+        size:
+          activity.size ||
+          dataJson.size ||
+          0
+      };
+    }
+
+    return {
+      ...dataJson,
+      ...base
+    };
+  }
+
   function normalizeLessonForEditing(lesson = {}) {
-    const lessonActivities = Array.isArray(lesson.activities) ? lesson.activities : [];
-    const materialActivity = lessonActivities.find(activity => activity.type === 'material') || null;
+    const lessonActivities = lessonActivityRows(lesson)
+      .map(normalizeActivityForEditing);
+
+    const materialActivity =
+      lessonActivities.find(
+        activity => activity.type === 'material'
+      ) || null;
+
+    const parsedPassage =
+      parseStructuredLessonPassage(lesson.passage);
 
     return {
       gradeLevel: Number(lesson.gradeLevel || 1),
@@ -2508,38 +2827,133 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       title: lesson.title || '',
       xpReward: Number(lesson.xpReward || 25),
       duration: lesson.duration || '10 minuto',
-      instructions: lesson.instructions || materialActivity?.instructions || '',
+      instructions:
+        lesson.instructions ||
+        materialActivity?.instructions ||
+        '',
       passage: lesson.passage || '',
-      layunin: lesson.layunin || '',
-      alamin: lesson.alamin || '',
-      aralin: lesson.aralin || lesson.lesson || lesson.passage || ''
+      layunin:
+        lesson.layunin ||
+        parsedPassage.layunin ||
+        '',
+      alamin:
+        lesson.alamin ||
+        parsedPassage.alamin ||
+        '',
+      aralin:
+        lesson.aralin ||
+        lesson.lesson ||
+        parsedPassage.aralin ||
+        ''
     };
   }
 
-  function editExistingLesson(lesson) {
-    const materialActivity = Array.isArray(lesson.activities)
-      ? lesson.activities.find(activity => activity.type === 'material')
-      : null;
-
-    setEditingLesson(lesson);
-    setLessonDraft(normalizeLessonForEditing(lesson));
-    setActivities(Array.isArray(lesson.activities) ? lesson.activities.filter(activity => activity.type !== 'material') : []);
-
-    if (materialActivity) {
-      setLessonPlanFile({
-        name: materialActivity.fileName || materialActivity.name || 'Lesson Material',
-        size: materialActivity.size || 0,
-        type: materialActivity.fileType || materialActivity.mimeType || '',
-        url: materialActivity.url || materialActivity.fileUrl || materialActivity.materialUrl || ''
-      });
-      setLessonPlanFileStatus('Existing lesson material loaded.');
-    } else {
-      setLessonPlanFile(null);
-      setLessonPlanFileStatus('');
+  async function editExistingLesson(lesson) {
+    if (!lesson?.id) {
+      window.alert('Unable to open this lesson because its ID is missing.');
+      return;
     }
 
-    setBuilderTab('source');
-    setAiDraftNotice(`Editing ${lesson.status === 'published' ? 'published lesson' : 'draft'}: ${lesson.title || 'Untitled Lesson'}`);
+    setAiDraftNotice(
+      `Loading lesson activities for ${lesson.title || 'Untitled Lesson'}...`
+    );
+
+    try {
+      const response = await api(`/lessons/${lesson.id}`);
+      const fullLesson = response?.lesson;
+
+      if (!fullLesson) {
+        throw new Error(
+          'The complete lesson record was not returned.'
+        );
+      }
+
+      const normalizedActivities =
+        lessonActivityRows(fullLesson)
+          .map(normalizeActivityForEditing);
+
+      const materialActivity =
+        normalizedActivities.find(
+          activity => activity.type === 'material'
+        ) || null;
+
+      const editableActivities =
+        normalizedActivities.filter(
+          activity => activity.type !== 'material'
+        );
+
+      const hydratedLesson = {
+        ...lesson,
+        ...fullLesson,
+        activities: normalizedActivities
+      };
+
+      setEditingLesson(hydratedLesson);
+      setLessonDraft(
+        normalizeLessonForEditing(hydratedLesson)
+      );
+      setActivities(editableActivities);
+
+      if (materialActivity) {
+        const materialUrl =
+          materialActivity.fileUrl ||
+          materialActivity.url ||
+          '';
+
+        setLessonPlanFile({
+          name:
+            materialActivity.fileName ||
+            materialActivity.name ||
+            'Lesson Material',
+          fileName:
+            materialActivity.fileName ||
+            materialActivity.name ||
+            'Lesson Material',
+          size: materialActivity.size || 0,
+          rawSize: materialActivity.size || 0,
+          type:
+            materialActivity.fileType ||
+            materialActivity.mimeType ||
+            '',
+          fileType:
+            materialActivity.fileType ||
+            '',
+          mimeType:
+            materialActivity.mimeType ||
+            '',
+          url: materialUrl,
+          fileUrl: materialUrl
+        });
+
+        setLessonPlanFileStatus(
+          'Existing lesson material loaded.'
+        );
+      } else {
+        setLessonPlanFile(null);
+        setLessonPlanFileStatus('');
+      }
+
+      setLessonPlanFilePreview('');
+      setBuilderTab('source');
+
+      setAiDraftNotice(
+        `Editing ${
+          fullLesson.status === 'published'
+            ? 'published lesson'
+            : 'draft'
+        }: ${fullLesson.title || 'Untitled Lesson'}. ` +
+        `${editableActivities.length} activit${
+          editableActivities.length === 1 ? 'y' : 'ies'
+        } loaded.`
+      );
+    } catch (error) {
+      const message =
+        error?.message ||
+        'Unable to load the complete lesson and its activities.';
+
+      setAiDraftNotice(message);
+      window.alert(message);
+    }
   }
 
   function resetLessonBuilder() {
