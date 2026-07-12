@@ -800,6 +800,8 @@ async function syncLessonActivities(
     ])
   );
 
+  let retainedMaterialActivityId = null;
+
   for (
     let activityIndex = 0;
     activityIndex < incomingActivities.length;
@@ -818,6 +820,17 @@ async function syncLessonActivities(
       );
     }
 
+    if (
+      !activity &&
+      String(incomingActivity.type) === 'material'
+    ) {
+      activity =
+        existingActivities.find(
+          (existingActivity) =>
+            String(existingActivity.type) === 'material'
+        ) || null;
+    }
+
     if (!activity) {
       await createActivityTree(
         lesson,
@@ -826,6 +839,10 @@ async function syncLessonActivities(
         transaction
       );
       continue;
+    }
+
+    if (String(activity.type) === 'material') {
+      retainedMaterialActivityId = Number(activity.id);
     }
 
     if (
@@ -884,7 +901,31 @@ async function syncLessonActivities(
     }
   }
 
-  // Existing activities omitted from the request are intentionally
+  const existingMaterialActivities =
+    existingActivities.filter(
+      (activity) => String(activity.type) === 'material'
+    );
+
+  const incomingHasMaterial =
+    incomingActivities.some(
+      (activity) => String(activity?.type) === 'material'
+    );
+
+  for (const materialActivity of existingMaterialActivities) {
+    const shouldRemove =
+      !incomingHasMaterial ||
+      (
+        retainedMaterialActivityId &&
+        Number(materialActivity.id) !==
+          retainedMaterialActivityId
+      );
+
+    if (shouldRemove) {
+      await materialActivity.destroy({ transaction });
+    }
+  }
+
+  // Non-material activities omitted from the request are intentionally
   // retained because they may have learner progress or submissions.
 }
 
