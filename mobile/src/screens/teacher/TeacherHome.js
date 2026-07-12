@@ -56,6 +56,54 @@ import {
 } from '../../api/teacher';
 import { logout } from '../../api/auth';
 
+// TEACHER_DOCUMENT_PICKER_GUARD
+let teacherDocumentPickerInProgress = false;
+
+function canceledTeacherDocumentPickerResult() {
+  return {
+    canceled: true,
+    cancelled: true,
+    type: 'cancel',
+    assets: [],
+  };
+}
+
+async function getTeacherDocumentAsyncSafely(options) {
+  if (teacherDocumentPickerInProgress) {
+    return canceledTeacherDocumentPickerResult();
+  }
+
+  teacherDocumentPickerInProgress = true;
+
+  try {
+    return await DocumentPicker.getDocumentAsync(options);
+  } catch (error) {
+    const message = String(
+      error?.message ||
+      error ||
+      ''
+    );
+
+    if (
+      message.includes(
+        'Different document picking in progress'
+      )
+    ) {
+      return canceledTeacherDocumentPickerResult();
+    }
+
+    throw error;
+  } finally {
+    /*
+     * Give the native picker enough time to close before
+     * permitting another teacher upload request.
+     */
+    setTimeout(() => {
+      teacherDocumentPickerInProgress = false;
+    }, 350);
+  }
+}
+
 const NAV_ITEMS = [
   ['dashboard', '🏠', 'Dashboard'],
   ['lessons', '📚', 'Lessons'],
@@ -1449,7 +1497,7 @@ async function handleLogout() {
     if (busy === 'material') return;
 
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await getTeacherDocumentAsyncSafely({
         type: [
           'application/pdf',
           'application/vnd.ms-powerpoint',

@@ -177,16 +177,7 @@ async function handleLogout() {
 
       </View>
 
-      <TouchableOpacity
-        style={styles.homeButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.homeButtonText}>
-          🏠
-        </Text>
-      </TouchableOpacity>
-
-    </View>
+</View>
 
     <View style={styles.profileCard}>
 
@@ -618,20 +609,7 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
 
-  homeButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#22C55E',
-    borderRadius: 24,
-    paddingHorizontal: 22,
-    paddingVertical: 10,
-  },
 
-  homeButtonText: {
-    color: '#16A34A',
-    fontWeight: '800',
-  },
 
   profileCard: {
     backgroundColor: '#FFFFFF',

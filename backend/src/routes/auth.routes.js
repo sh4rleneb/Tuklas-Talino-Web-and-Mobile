@@ -15,6 +15,12 @@ import { signToken, authenticate, requireRole, requirePasswordChanged } from '..
 import { Role, User, Student, Teacher, AdminProfile } from '../models/index.js';
 import { audit } from '../services/audit.service.js';
 
+import {
+  adminPasswordVerificationLimiter,
+  issueAdminReauthToken,
+  requestAuditContext,
+} from '../middleware/adminReauth.js';
+
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
 const router = Router();
 
@@ -454,35 +460,74 @@ router.get('/me', authenticate, async (req, res) => {
 });
 
 
-router.post('/verify-password', authenticate, async (req, res, next) => {
-  try {
-    const password = String(req.body.password || '');
+router.post(
+  '/verify-password',
+  authenticate,
+  adminPasswordVerificationLimiter,
+  async (req, res, next) => {
+    try {
+      const password =
+        String(req.body.password || '');
 
-    const valid = await bcrypt.compare(
-      password,
-      req.user.passwordHash
-    );
+      const valid = await bcrypt.compare(
+        password,
+        req.user.passwordHash
+      );
 
-    if (!valid) {
-      return res.status(401).json({
-        message: 'Password verification failed.'
+      if (!valid) {
+        return res.status(401).json({
+          message:
+            'Password verification failed.',
+          code:
+            'PASSWORD_VERIFICATION_FAILED',
+        });
+      }
+
+      let reauth = null;
+
+      if (req.role === 'admin') {
+        reauth =
+          issueAdminReauthToken(req);
+      }
+
+      await audit(
+        req.user.id,
+        'auth.verify_password',
+        'user',
+        req.user.id,
+        {
+          ...requestAuditContext(req),
+          issuedAdminReauth:
+            Boolean(reauth),
+        }
+      );
+
+      return res.json({
+        verified: true,
+
+        ...(reauth
+          ? {
+              reauthToken:
+                reauth.token,
+
+              reauthExpiresInSeconds:
+                reauth.expiresInSeconds,
+
+              reauthExpiresAt:
+                new Date(
+                  Date.now() +
+                  reauth.expiresInSeconds *
+                    1000
+                ).toISOString(),
+            }
+          : {}),
       });
+    } catch (err) {
+      next(err);
     }
-
-    await audit(
-      req.user.id,
-      'auth.verify_password',
-      'user',
-      req.user.id
-    );
-
-    return res.json({
-      verified: true
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
+
 
 router.post('/change-password', authenticate, async (req, res, next) => {
   try {

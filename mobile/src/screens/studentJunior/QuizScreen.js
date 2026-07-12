@@ -1399,14 +1399,9 @@ const closeQuizPreview = useCallback(() => {
         </View>
 
         <View style={styles.summaryRow}>
-          <View style={styles.summaryChip}>
+          <View style={[styles.summaryChip, { flex: 1 }]}>
             <Text style={styles.summaryValue}>{quizzes.length}</Text>
             <Text style={styles.summaryLabel}>Pagsusulit</Text>
-          </View>
-
-          <View style={styles.summaryChip}>
-            <Text style={styles.summaryValue}>Iba-iba</Text>
-            <Text style={styles.summaryLabel}>Hangganan ng Pagsubok</Text>
           </View>
         </View>
 

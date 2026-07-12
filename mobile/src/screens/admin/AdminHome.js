@@ -1083,7 +1083,6 @@ async function executeVerifiedAction() {
               disabled={Boolean(busy) || !studentFormValid}
               onPress={async () => {
               const payload = {
-                ...studentForm,
                 name: normalizeSpaces(studentForm.name),
                 gradeLevel: Number(studentForm.gradeLevel),
                 section: studentFormSection,

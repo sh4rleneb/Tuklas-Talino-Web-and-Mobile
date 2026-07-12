@@ -1,10 +1,18 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import {
+  authenticate,
+  requirePasswordChanged,
+  requireRole
+} from '../middleware/auth.js';
 import { synthesizeFilipinoSpeech } from '../services/googleTts.service.js';
 
 const router = Router();
 
-router.use(authenticate);
+router.use(
+  authenticate,
+  requirePasswordChanged,
+  requireRole('student', 'teacher', 'admin')
+);
 
 router.post('/speak', async (req, res, next) => {
   try {
@@ -13,6 +21,13 @@ router.post('/speak', async (req, res, next) => {
     if (!text) {
       return res.status(422).json({
         message: 'Text is required.'
+      });
+    }
+
+    if (text.length > 5000) {
+      return res.status(422).json({
+        message:
+          'Text must not exceed 5,000 characters.'
       });
     }
 

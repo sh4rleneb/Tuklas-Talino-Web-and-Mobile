@@ -183,14 +183,14 @@ export default function BadgesScreen({ navigation }) {
     if (earned) {
       const awardedAt = earned.awardedAt ? new Date(earned.awardedAt) : null;
       return awardedAt && !Number.isNaN(awardedAt.getTime())
-        ? `Na-unlock ${awardedAt.toLocaleDateString()}`
-        : 'Na-unlock';
+        ? `Nabuksan ${awardedAt.toLocaleDateString()}`
+        : 'Nabuksan';
     }
 
     const progress = progressByCode.get(badge.code);
-    if (progress) return `${progress.current}/${progress.target} complete`;
+    if (progress) return `${progress.current}/${progress.target} kompleto`;
     if (badge.xpThreshold != null && Number.isFinite(Number(badge.xpThreshold))) return `${badge.xpThreshold} XP`;
-    return 'Naka-lock';
+    return 'Nakasara';
   }
 
   return (
@@ -217,7 +217,7 @@ export default function BadgesScreen({ navigation }) {
 
             <View style={styles.statChip}>
               <Text style={styles.statValue}>{lockedCount}</Text>
-              <Text style={styles.statLabel}>Naka-lock</Text>
+              <Text style={styles.statLabel}>Nakasara</Text>
             </View>
 
             <View style={styles.statChip}>

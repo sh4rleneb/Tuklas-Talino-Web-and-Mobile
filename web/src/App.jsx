@@ -852,7 +852,13 @@ useEffect(() => {
     setLoading(true);
     return await fn();
   } catch (err) {
-    notify(err.message || fallback, 'bad', noticeDurationMs);
+    const rawMessage = String(err?.message || '').trim();
+    const message =
+      !rawMessage || rawMessage === 'Request failed'
+        ? fallback
+        : rawMessage;
+
+    notify(message, 'bad', noticeDurationMs);
     return null;
   } finally {
     setLoading(false);
@@ -1201,27 +1207,48 @@ if (role === 'admin') {
     const { stay = false, silent = false } = options || {};
 
     return await safeRun(async () => {
-      const data = await api(`/lessons/${selectedLesson.id}/complete`, { method: 'POST', body: {} });
+      const data = await api(`/lessons/${selectedLesson.id}/complete`, {
+        method: 'POST',
+        body: {}
+      });
 
-      setSelectedLesson(prev => prev ? { ...prev, completed: true } : prev);
+      setSelectedLesson(prev =>
+        prev
+          ? {
+              ...prev,
+              completed: true
+            }
+          : prev
+      );
 
       if (!silent) {
-        notify(data.xpAwarded ? `🎉 Natapos! +${data.xpAwarded} XP` : 'Nagawa mo na ang araling ito.');
-      showBadgeUnlockPopup(data?.newBadges);
+        notify(
+          data.xpAwarded
+            ? `🎉 Natapos! +${data.xpAwarded} XP`
+            : 'Nagawa mo na ang araling ito.'
+        );
+        showBadgeUnlockPopup(data?.newBadges);
       }
 
       if (data?.xpAwarded) {
         playMissionSuccessSound();
       }
 
-      await loadStudentDashboard();
+      try {
+        await loadStudentDashboard();
+      } catch (error) {
+        console.warn(
+          '[TuklasTalino] Lesson completed, but dashboard refresh failed:',
+          error
+        );
+      }
 
       if (!stay) {
         go('screen-student');
       }
 
       return data;
-    });
+    }, 'Hindi makumpleto ang aralin. Pakisubukan muli.');
   }
 
   async function submitMcq(question, option, options = {}) {

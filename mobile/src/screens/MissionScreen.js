@@ -546,7 +546,7 @@ export default function MissionScreen({ navigation }) {
 
             <View style={styles.statCard}>
               <Text style={styles.statValue}>{totalXp}</Text>
-              <Text style={styles.statLabel}>XP Rewards</Text>
+              <Text style={styles.statLabel}>Gantimpalang XP</Text>
             </View>
           </View>
         </View>

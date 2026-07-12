@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#7C3AED',
+    color: '#22C55E',
   },
 
   card: {

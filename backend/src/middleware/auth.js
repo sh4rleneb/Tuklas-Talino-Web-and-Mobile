@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { User, Role, Student, Teacher, AdminProfile } from '../models/index.js';
 
 function getJwtSecret() {
@@ -16,14 +17,25 @@ function getJwtSecret() {
 }
 
 export function signToken(user) {
+  const role = user.Role?.name;
+
+  const expiresIn =
+    role === 'admin'
+      ? process.env.ADMIN_JWT_EXPIRES_IN || '2h'
+      : process.env.JWT_EXPIRES_IN || '12h';
+
   return jwt.sign(
     {
       sub: user.id,
-      role: user.Role?.name,
+      role,
     },
     getJwtSecret(),
     {
-      expiresIn: '12h',
+      algorithm: 'HS256',
+      issuer: 'tuklas-talino-api',
+      audience: 'tuklas-talino-app',
+      expiresIn,
+      jwtid: crypto.randomUUID(),
     }
   );
 }
@@ -46,7 +58,15 @@ export async function authenticate(req, res, next) {
       });
     }
 
-    const payload = jwt.verify(token, getJwtSecret());
+    const payload = jwt.verify(
+      token,
+      getJwtSecret(),
+      {
+        algorithms: ['HS256'],
+        issuer: 'tuklas-talino-api',
+        audience: 'tuklas-talino-app',
+      }
+    );
 
     const user = await User.findByPk(payload.sub, {
       include: [
@@ -68,6 +88,7 @@ export async function authenticate(req, res, next) {
     req.student = user.Student || null;
     req.teacher = user.Teacher || null;
     req.admin = user.AdminProfile || null;
+    req.auth = payload;
 
     next();
   } catch (err) {

@@ -900,6 +900,21 @@ router.delete(
   requireRole('teacher', 'admin'),
   async (req, res, next) => {
     try {
+
+      const group = await Group.findByPk(req.params.id);
+
+      if (!group) {
+        return res.status(404).json({
+          message: 'Group not found.'
+        });
+      }
+
+      if (!teacherOwnsGroup(req, group)) {
+        return res.status(403).json({
+          message: 'You can only manage your own groups.'
+        });
+      }
+
       await GroupMember.destroy({
         where: {
           groupId: req.params.id,
@@ -997,12 +1012,27 @@ function normalizeGroupTaskDueAt(body = {}) {
 
 router.post('/:id/tasks', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
+
+    const group = await Group.findByPk(req.params.id);
+
+    if (!group) {
+      return res.status(404).json({
+        message: 'Group not found.'
+      });
+    }
+
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({
+        message: 'You can only manage your own groups.'
+      });
+    }
+
     assertSafeText(req.body.title || '', 'group task title');
     assertSafeText(req.body.description || '', 'group task description');
     const dueAt = normalizeGroupTaskDueAt(req.body);
 
     const task = await GroupTask.create({
-      groupId: req.params.id,
+      groupId: group.id,
       title: req.body.title,
       description: req.body.description || '',
       xpReward: req.body.xpReward || 10,
@@ -1030,6 +1060,20 @@ router.delete('/tasks/:taskId', requireRole('teacher', 'admin'), async (req, res
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found.' });
+    }
+
+    const group = await Group.findByPk(task.groupId);
+
+    if (!group) {
+      return res.status(404).json({
+        message: 'Group not found.'
+      });
+    }
+
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({
+        message: 'You can only manage your own groups.'
+      });
     }
 
     task.status = 'archived';
@@ -1453,6 +1497,21 @@ router.post('/tasks/:taskId/completions/:studentId/return', requireRole('teacher
 
 router.get('/:id/progress', requireRole('teacher', 'admin'), async (req, res, next) => {
   try {
+
+    const group = await Group.findByPk(req.params.id);
+
+    if (!group) {
+      return res.status(404).json({
+        message: 'Group not found.'
+      });
+    }
+
+    if (!teacherOwnsGroup(req, group)) {
+      return res.status(403).json({
+        message: 'You can only view your own groups.'
+      });
+    }
+
     const members = await GroupMember.findAll({
       where: {
         groupId: req.params.id,

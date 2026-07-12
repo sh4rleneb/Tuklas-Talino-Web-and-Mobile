@@ -2901,6 +2901,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
           '';
 
         setLessonPlanFile({
+          activityId: materialActivity.id || null,
           name:
             materialActivity.fileName ||
             materialActivity.name ||
@@ -3266,9 +3267,12 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     const isAllowed = /\.(ppt|pptx|pdf)$/i.test(file.name || '');
 
     if (!isAllowed) {
-      setLessonPlanFile(null);
       setLessonPlanFilePreview('');
-      setLessonPlanFileStatus('Please upload a PPT, PPTX, or PDF lesson material.');
+      setLessonPlanFileStatus(
+        lessonPlanFile
+          ? 'Unsupported file type. The existing lesson material was kept.'
+          : 'Please upload a PPT, PPTX, or PDF lesson material.'
+      );
       setAiDraftNotice('Unsupported file type. Use PPT, PPTX, or PDF only.');
       event.target.value = '';
       return;
@@ -3284,7 +3288,8 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       const data = await uploadForm('/lessons/materials/upload', formData);
       const material = data.material || {};
 
-      setLessonPlanFile({
+      setLessonPlanFile(current => ({
+        activityId: current?.activityId || null,
         name: material.fileName || file.name,
         type: material.fileType || file.type || 'Lesson material',
         size: formatLessonPlanFileSize(material.size || file.size),
@@ -3293,15 +3298,18 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
         fileType: material.fileType || '',
         mimeType: material.mimeType || file.type || '',
         rawSize: Number(material.size || file.size || 0)
-      });
+      }));
 
       setLessonPlanFilePreview('');
       setLessonPlanFileStatus('Material uploaded. Students will see this as Material inside the lesson after you publish.');
       setAiDraftNotice('');
     } catch (err) {
-      setLessonPlanFile(null);
       setLessonPlanFilePreview('');
-      setLessonPlanFileStatus(err?.message || 'Could not upload lesson material. Please try again.');
+      setLessonPlanFileStatus(
+        lessonPlanFile
+          ? `${err?.message || 'Could not upload the replacement material.'} The existing material was kept.`
+          : err?.message || 'Could not upload lesson material. Please try again.'
+      );
       setAiDraftNotice('Upload failed.');
       event.target.value = '';
     }
@@ -3633,6 +3641,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
     if (lessonPlanFile?.fileUrl) {
       preparedActivities.unshift({
+        id: lessonPlanFile.activityId || undefined,
         type: 'material',
         title: 'Lesson Slides',
         instructions: 'Open the attached lesson material before answering the activities.',

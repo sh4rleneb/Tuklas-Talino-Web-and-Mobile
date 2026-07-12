@@ -96,19 +96,154 @@ export const loginSchema = z.object({
   password: z.string().min(1)
 });
 
-export const studentSchema = z.object({
-  name: z.string().trim().min(2, 'Name cannot be empty.'),
-  gradeLevel: z.number().int().min(1).max(6),
-  section: z.string().trim().min(1, 'Section cannot be empty.'),
-  avatar: z.string().default(''),
-  password: z.string().min(6).optional()
-});
+/*
+ * ADMIN_ACCOUNT_INPUT_HARDENING
+ */
 
-export const teacherSchema = z.object({
-  name: z.string().trim().min(2, 'Name cannot be empty.'),
-  email: z.string().email().optional().nullable(),
-  password: z.string().min(6).optional()
-});
+const accountControlOrFormatPattern =
+  /[\p{Cc}\p{Cf}]/u;
+
+const accountRepeatedChunkPattern =
+  /(.{4,20})\1{2,}/iu;
+
+const accountPersonNamePattern =
+  /^[\p{L}\p{M}](?:[\p{L}\p{M} .'\u2019-]*[\p{L}\p{M}.'\u2019])?$/u;
+
+const accountSectionPattern =
+  /^[\p{L}\p{M}\p{N}](?:[\p{L}\p{M}\p{N} .'\u2019-]*[\p{L}\p{M}\p{N}])?$/u;
+
+function normalizeAccountText(value = '') {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+const accountNameSchema =
+  z.string()
+    .transform(normalizeAccountText)
+    .pipe(
+      z.string()
+        .min(
+          2,
+          'Name must contain at least 2 characters.'
+        )
+        .max(
+          120,
+          'Name must not exceed 120 characters.'
+        )
+        .regex(
+          accountPersonNamePattern,
+          'Name contains unsupported characters.'
+        )
+        .refine(
+          (value) =>
+            !accountControlOrFormatPattern.test(value),
+          'Name contains invisible or control characters.'
+        )
+        .refine(
+          (value) =>
+            !accountRepeatedChunkPattern.test(value),
+          'Name contains an invalid repeated pattern.'
+        )
+    );
+
+const accountSectionSchema =
+  z.string()
+    .transform(normalizeAccountText)
+    .pipe(
+      z.string()
+        .min(
+          1,
+          'Section cannot be empty.'
+        )
+        .max(
+          40,
+          'Section must not exceed 40 characters.'
+        )
+        .regex(
+          accountSectionPattern,
+          'Section contains unsupported characters.'
+        )
+        .refine(
+          (value) =>
+            !accountControlOrFormatPattern.test(value),
+          'Section contains invisible or control characters.'
+        )
+        .refine(
+          (value) =>
+            !accountRepeatedChunkPattern.test(value),
+          'Section contains an invalid repeated pattern.'
+        )
+    );
+
+const accountAvatarSchema =
+  z.union([
+    z.literal('🧒'),
+    z.literal(''),
+  ])
+    .optional()
+    .transform(() => '🧒');
+
+const optionalTeacherEmailSchema =
+  z.preprocess(
+    (value) => {
+      if (
+        value === undefined ||
+        value === null
+      ) {
+        return null;
+      }
+
+      const normalized =
+        String(value)
+          .trim()
+          .toLowerCase();
+
+      return normalized || null;
+    },
+    z.union([
+      z.string()
+        .max(
+          254,
+          'Email must not exceed 254 characters.'
+        )
+        .email(),
+
+      z.null(),
+    ])
+  );
+
+export const studentSchema =
+  z.object({
+    name:
+      accountNameSchema,
+
+    gradeLevel:
+      z.number()
+        .int()
+        .min(1)
+        .max(6),
+
+    section:
+      accountSectionSchema,
+
+    avatar:
+      accountAvatarSchema,
+  })
+    .strict();
+
+export const teacherSchema =
+  z.object({
+    name:
+      accountNameSchema,
+
+    email:
+      optionalTeacherEmailSchema
+        .optional(),
+  })
+    .strict();
+
 
 export const lessonSchema = z.object({
   lessonCode: z.string().min(3).optional().default(makeLessonCode),

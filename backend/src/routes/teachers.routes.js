@@ -23,6 +23,11 @@ import {
 } from '../models/index.js';
 import { authenticate, requirePasswordChanged, requireRole } from '../middleware/auth.js';
 import { teacherSchema, validate } from '../validators/common.js';
+import {
+  adminAccountCreationLimiter,
+  requireRecentAdminPassword,
+  requestAuditContext,
+} from '../middleware/adminReauth.js';
 import { audit } from '../services/audit.service.js';
 import { generateTeacherCode } from '../services/accountCode.service.js';
 
@@ -92,6 +97,27 @@ function assignmentPayload(assignments) {
 }
 
 const router = Router();
+
+const SAFE_USER_ATTRIBUTES = Object.freeze([
+  'id',
+  'roleId',
+  'username',
+  'email',
+  'displayName',
+  'status',
+  'mustChangePassword',
+  'lastLoginAt',
+  'createdAt',
+  'updatedAt',
+]);
+
+function safeUserInclude() {
+  return {
+    model: User,
+    attributes: SAFE_USER_ATTRIBUTES,
+  };
+}
+
 router.use(authenticate);
 router.use(requirePasswordChanged);
 
@@ -105,7 +131,7 @@ router.get('/', requireRole('admin'), async (req, res, next) => {
 
     const teachers = await Teacher.findAll({
       where,
-      include: [User],
+      include: [safeUserInclude()],
       order: [['name', 'ASC']]
     });
 
@@ -115,10 +141,21 @@ router.get('/', requireRole('admin'), async (req, res, next) => {
   }
 });
 
-router.post('/', requireRole('admin'), async (req, res, next) => {
+router.post(
+  '/',
+  requireRole('admin'),
+  adminAccountCreationLimiter,
+  requireRecentAdminPassword,
+  async (req, res, next) => {
   try {
     const body = validate(teacherSchema, req.body);
-    assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher account');
+    assertSafeContentPayload(
+        {
+          name: body.name,
+          email: body.email || '',
+        },
+        'teacher account'
+      );
 
     const duplicateAccount =
       await findDuplicateAccount({
@@ -178,7 +215,18 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
         );
       }
     );
-    await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
+    await audit(
+      req.user.id,
+      'teacher.create',
+      'teacher',
+      teacher.id,
+      {
+        teacherCode,
+        name: body.name,
+        email: body.email || null,
+        ...requestAuditContext(req),
+      }
+    );
     res.status(201).json({
       teacher,
       username: teacherCode,
@@ -417,7 +465,7 @@ router.get('/students/:studentId', requireRole('teacher', 'admin'), async (req, 
 
 router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
-    const teacher = await Teacher.findByPk(req.params.id, { include: [User] });
+    const teacher = await Teacher.findByPk(req.params.id, { include: [safeUserInclude()] });
     if (!teacher) return res.status(404).json({ message: 'Teacher not found.' });
 
     assertSafeContentPayload({ name: req.body.name, employeeCode: req.body.employeeCode }, 'teacher profile');
@@ -433,7 +481,7 @@ router.patch('/:id', requireRole('admin'), async (req, res, next) => {
 router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) => {
   try {
     const teacher = await Teacher.findByPk(req.params.id, {
-      include: [User]
+      include: [safeUserInclude()]
     });
 
     if (!teacher || !teacher.User) {
@@ -481,7 +529,7 @@ router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) 
 
 router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
   try {
-    const teacher = await Teacher.findByPk(req.params.id, { include: [User] });
+    const teacher = await Teacher.findByPk(req.params.id, { include: [safeUserInclude()] });
     if (!teacher) return res.status(404).json({ message: 'Teacher not found.' });
 
     const reason = String(req.body.reason || '').trim();
@@ -508,7 +556,7 @@ router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
 
 router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
   try {
-    const teacher = await Teacher.findByPk(req.params.id, { include: [User] });
+    const teacher = await Teacher.findByPk(req.params.id, { include: [safeUserInclude()] });
     if (!teacher) return res.status(404).json({ message: 'Teacher not found.' });
 
     const reason = String(req.body.reason || '').trim();

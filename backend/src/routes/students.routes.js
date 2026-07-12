@@ -40,6 +40,11 @@ import {
 import { audit } from '../services/audit.service.js';
 import { generateStudentCode } from '../services/accountCode.service.js';
 import { studentSchema, validate } from '../validators/common.js';
+import {
+  adminAccountCreationLimiter,
+  requireRecentAdminPassword,
+  requestAuditContext,
+} from '../middleware/adminReauth.js';
 
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
 function generateTemporaryPin() {
@@ -47,6 +52,30 @@ function generateTemporaryPin() {
 }
 
 const router = Router();
+
+const SAFE_USER_ATTRIBUTES = Object.freeze([
+  'id',
+  'roleId',
+  'username',
+  'email',
+  'displayName',
+  'status',
+  'mustChangePassword',
+  'lastLoginAt',
+  'createdAt',
+  'updatedAt',
+]);
+
+function safeUserInclude() {
+  return {
+    model: User,
+    attributes: SAFE_USER_ATTRIBUTES,
+  };
+}
+
+const SAFE_AVATAR_PATTERN =
+  /^[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200D\uFE0F]+$/u;
+
 
 const CORE_BADGE_DEFINITIONS = [
   {
@@ -677,12 +706,20 @@ router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
       };
     }
 
-    if (req.query.status) {
-      where.status = req.query.status;
+    if (
+      req.query.status &&
+      ['active', 'archived'].includes(
+        String(req.query.status)
+      )
+    ) {
+      where.status = String(req.query.status);
     }
 
     const search =
-      String(req.query.q || '').trim();
+      String(req.query.q || '')
+        .normalize('NFKC')
+        .trim()
+        .slice(0, 120);
 
     if (search) {
       where.name = {
@@ -693,7 +730,7 @@ router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
     const students =
       await Student.findAll({
         where,
-        include: [User],
+        include: [safeUserInclude()],
         order: [
           ['gradeLevel', 'ASC'],
           ['name', 'ASC'],
@@ -707,7 +744,12 @@ router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
 });
 
 
-router.post('/', requireRole('admin'), async (req, res, next) => {
+router.post(
+  '/',
+  requireRole('admin'),
+  adminAccountCreationLimiter,
+  requireRecentAdminPassword,
+  async (req, res, next) => {
   try {
     const body = validate(studentSchema, req.body);
     assertSafeContentPayload({ name: body.name, section: body.section }, 'student account');
@@ -766,7 +808,19 @@ router.post('/', requireRole('admin'), async (req, res, next) => {
         );
       }
     );
-    await audit(req.user.id, 'student.create', 'student', student.id);
+    await audit(
+      req.user.id,
+      'student.create',
+      'student',
+      student.id,
+      {
+        studentCode,
+        name: body.name,
+        gradeLevel: body.gradeLevel,
+        section: body.section,
+        ...requestAuditContext(req),
+      }
+    );
     res.status(201).json({
       student,
       username: studentCode,
@@ -1048,7 +1102,7 @@ router.patch(
         await Student.findByPk(
           req.params.id,
           {
-            include: [User],
+            include: [safeUserInclude()],
           }
         );
 
@@ -1074,6 +1128,13 @@ router.patch(
       if (!section) {
         return res.status(422).json({
           message: 'A section is required.',
+        });
+      }
+
+      if (section.length > 80) {
+        return res.status(422).json({
+          message:
+            'Section must not exceed 80 characters.',
         });
       }
 
@@ -1156,62 +1217,105 @@ router.patch(
 
 router.patch('/:id', requireRole('admin'), async (req, res, next) => {
   try {
-    const student = await Student.findByPk(req.params.id, { include: [User] });
-    if (!student) return res.status(404).json({ message: 'Student not found.' });
-
-    assertSafeContentPayload({ name: req.body.name, section: req.body.section }, 'student profile');
-
-    if (
-      req.body.gradeLevel !== undefined &&
-      Number(req.body.gradeLevel) !== Number(student.gradeLevel)
-    ) {
-      const promotionReason = String(
-        req.body.promotionReason || ''
-      ).trim();
-
-      if (!promotionReason) {
-        return res.status(422).json({
-          message: 'Promotion reason is required.'
-        });
+    const student = await Student.findByPk(
+      req.params.id,
+      {
+        include: [safeUserInclude()]
       }
+    );
 
-      const currentGrade = Number(student.gradeLevel);
-      const requestedGrade = Number(req.body.gradeLevel);
-
-      if (requestedGrade !== currentGrade + 1) {
-        return res.status(422).json({
-          message: 'Students may only advance one grade level at a time.'
-        });
-      }
-
-      const completed = await CompletedLesson.count({
-        where: { studentId: student.id }
+    if (!student) {
+      return res.status(404).json({
+        message: 'Student not found.'
       });
-
-      const total = await Lesson.count({
-        where: {
-          gradeLevel: currentGrade,
-          status: 'published'
-        }
-      });
-
-      if (total > 0 && completed < total) {
-        return res.status(422).json({
-          message: 'Student must complete all lessons before promotion.'
-        });
-      }
     }
 
-    const allowed = ['name','gradeLevel','section','avatar','status'];
-    for (const key of allowed) if (req.body[key] !== undefined) student[key] = req.body[key];
-    await student.save();
-    if (req.body.name && student.User) {
-      student.User.displayName = req.body.name;
+    const body =
+      req.body && typeof req.body === 'object'
+        ? req.body
+        : {};
+
+    const allowedFields =
+      new Set(['name', 'section']);
+
+    const unsupportedFields =
+      Object.keys(body).filter(
+        (key) => !allowedFields.has(key)
+      );
+
+    if (unsupportedFields.length) {
+      return res.status(422).json({
+        message:
+          'This endpoint only accepts name and section. Use the dedicated enrollment, avatar, archive, or reactivation endpoint for protected changes.',
+        unsupportedFields
+      });
+    }
+
+    const updates = {};
+
+    if (body.name !== undefined) {
+      const name = String(body.name || '')
+        .normalize('NFKC')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (name.length < 2 || name.length > 160) {
+        return res.status(422).json({
+          message:
+            'Student name must contain 2 to 160 characters.'
+        });
+      }
+
+      updates.name = name;
+    }
+
+    if (body.section !== undefined) {
+      const section = String(body.section || '')
+        .normalize('NFKC')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (!section || section.length > 80) {
+        return res.status(422).json({
+          message:
+            'Section is required and must not exceed 80 characters.'
+        });
+      }
+
+      updates.section = section;
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(422).json({
+        message:
+          'Provide a valid name or section to update.'
+      });
+    }
+
+    assertSafeContentPayload(
+      updates,
+      'student profile'
+    );
+
+    await student.update(updates);
+
+    if (updates.name && student.User) {
+      student.User.displayName = updates.name;
       await student.User.save();
     }
-    await audit(req.user.id, 'student.update', 'student', student.id, req.body);
+
+    await audit(
+      req.user.id,
+      'student.update',
+      'student',
+      student.id,
+      updates
+    );
+
     res.json({ student });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.patch('/:id/avatar', requireRole('admin', 'student'), async (req, res, next) => {
@@ -1219,9 +1323,20 @@ router.patch('/:id/avatar', requireRole('admin', 'student'), async (req, res, ne
     const student = await getStudentForRequest(req, req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found.' });
     if (req.role === 'student' && student.id !== req.student.id) return res.status(403).json({ message: 'Access denied.' });
-    const avatar = typeof req.body.avatar === 'string' ? req.body.avatar.trim() : '';
-    if (!avatar || avatar.length > 16) {
-      return res.status(422).json({ message: 'Choose a valid avatar.' });
+    const avatar =
+      typeof req.body.avatar === 'string'
+        ? req.body.avatar.normalize('NFC').trim()
+        : '';
+
+    if (
+      !avatar ||
+      avatar.length > 16 ||
+      !SAFE_AVATAR_PATTERN.test(avatar)
+    ) {
+      return res.status(422).json({
+        message:
+          'Choose a valid emoji avatar.'
+      });
     }
     student.avatar = avatar;
     await student.save();
@@ -1231,7 +1346,7 @@ router.patch('/:id/avatar', requireRole('admin', 'student'), async (req, res, ne
 
 router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
   try {
-    const student = await Student.findByPk(req.params.id, { include: [User] });
+    const student = await Student.findByPk(req.params.id, { include: [safeUserInclude()] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
 
     const reason = String(req.body.reason || '').trim();
@@ -1258,7 +1373,7 @@ router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
 
 router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
   try {
-    const student = await Student.findByPk(req.params.id, { include: [User] });
+    const student = await Student.findByPk(req.params.id, { include: [safeUserInclude()] });
     if (!student) return res.status(404).json({ message: 'Student not found.' });
 
     const reason = String(req.body.reason || '').trim();
@@ -1286,7 +1401,7 @@ router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
 router.post('/:id/reset-password', requireRole('admin'), async (req, res, next) => {
   try {
     const student = await Student.findByPk(req.params.id, {
-      include: [User]
+      include: [safeUserInclude()]
     });
 
     if (!student || !student.User) {

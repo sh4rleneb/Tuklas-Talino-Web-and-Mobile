@@ -228,7 +228,18 @@ function containsWholeNormalizedTerm(text = '', term = '') {
   if (!normalizedText || !normalizedTerm) return false;
   if (normalizedText === normalizedTerm) return true;
 
-  const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(normalizedTerm).replace(/\\ /g, '\\s+')}([^a-z0-9]|$)`);
+  const termPattern = normalizedTerm
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => escapeRegExp(word))
+    .join('[^a-z0-9]+');
+
+  if (!termPattern) return false;
+
+  const pattern = new RegExp(
+    `(^|[^a-z0-9])${termPattern}([^a-z0-9]|$)`
+  );
+
   return pattern.test(normalizedText);
 }
 
@@ -295,8 +306,19 @@ export function findBlockedTerms(value = '') {
 
     if (!normalizedTerm && !compactTerm) continue;
 
-    const phraseMatch = normalized.includes(normalizedTerm);
-    const compactMatch = compactTerm.length >= 4 && compact.includes(compactTerm);
+    const isMultiwordPhrase =
+      normalizedTerm.split(/\s+/).filter(Boolean).length > 1;
+
+    const phraseMatch =
+      containsWholeNormalizedTerm(normalized, normalizedTerm);
+
+    const compactMatch =
+      compactTerm.length >= 4 &&
+      (
+        isMultiwordPhrase
+          ? compact === compactTerm
+          : compact.includes(compactTerm)
+      );
 
     if (phraseMatch || compactMatch) {
       matches.push(term);

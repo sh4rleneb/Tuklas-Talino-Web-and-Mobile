@@ -329,7 +329,6 @@ const lessonMaterialUpload = multer({
 
     cb(new Error('Only PPT, PPTX, or PDF lesson materials are allowed.'));
   },
-  limits: { fileSize: 25 * 1024 * 1024 }
 });
 
 

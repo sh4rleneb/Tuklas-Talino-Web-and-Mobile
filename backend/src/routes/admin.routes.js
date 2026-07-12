@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { assertSafeText } from '../validators/contentSafety.js';
 import {
   authenticate,
@@ -19,6 +20,133 @@ import {
 import { audit } from '../services/audit.service.js';
 
 const router = Router();
+
+
+// ADMIN_ASSIGNMENT_SECURITY_HARDENING
+const ADMIN_ASSIGNMENT_RATE_LIMIT_WINDOW_MS =
+  Math.max(
+    60 * 1000,
+    Number(
+      process.env.ADMIN_ASSIGNMENT_RATE_LIMIT_WINDOW_MS ||
+      15 * 60 * 1000
+    )
+  );
+
+const ADMIN_ASSIGNMENT_RATE_LIMIT_MAX =
+  Math.max(
+    1,
+    Number(
+      process.env.ADMIN_ASSIGNMENT_RATE_LIMIT_MAX ||
+      20
+    )
+  );
+
+const assignmentMutationLimiter = rateLimit({
+  windowMs: ADMIN_ASSIGNMENT_RATE_LIMIT_WINDOW_MS,
+  limit: ADMIN_ASSIGNMENT_RATE_LIMIT_MAX,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skip: (req) =>
+    ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
+  message: {
+    error: 'Too Many Assignment Changes',
+    message:
+      'Too many teacher-assignment changes were requested. Please wait before trying again.',
+  },
+});
+
+const SECTION_MAX_LENGTH = 40;
+
+const SECTION_NAME_PATTERN =
+  /^[\p{L}\p{N}](?:[\p{L}\p{N} .'-]{0,38}[\p{L}\p{N}])?$/u;
+
+function normalizeSectionName(value = '') {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function hasSuspiciousRepeatedSectionPattern(value = '') {
+  const compact = String(value || '')
+    .normalize('NFKC')
+    .toLocaleLowerCase('en')
+    .replace(/[^\p{L}\p{N}]/gu, '');
+
+  const maximumChunkLength = Math.min(
+    16,
+    Math.floor(compact.length / 3)
+  );
+
+  for (
+    let chunkLength = 4;
+    chunkLength <= maximumChunkLength;
+    chunkLength += 1
+  ) {
+    for (
+      let start = 0;
+      start + chunkLength * 3 <= compact.length;
+      start += 1
+    ) {
+      const chunk = compact.slice(
+        start,
+        start + chunkLength
+      );
+
+      if (
+        compact.slice(
+          start,
+          start + chunkLength * 3
+        ) === chunk.repeat(3)
+      ) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function getSectionValidationError(section = '') {
+  if (!section) {
+    return 'Section is required.';
+  }
+
+  if (section.length > SECTION_MAX_LENGTH) {
+    return (
+      `Section must not exceed ` +
+      `${SECTION_MAX_LENGTH} characters.`
+    );
+  }
+
+  if (!SECTION_NAME_PATTERN.test(section)) {
+    return (
+      'Section may contain only letters, numbers, ' +
+      'spaces, periods, apostrophes, and hyphens.'
+    );
+  }
+
+  if (hasSuspiciousRepeatedSectionPattern(section)) {
+    return (
+      'Section contains an invalid repeated pattern.'
+    );
+  }
+
+  return null;
+}
+
+function adminRequestAuditMetadata(req, metadata = {}) {
+  return {
+    ...metadata,
+    sourceIp: String(req.ip || '').slice(0, 80),
+    userAgent: String(
+      req.get('user-agent') || ''
+    ).slice(0, 300),
+    requestId: String(
+      req.get('x-request-id') || ''
+    ).slice(0, 120),
+  };
+}
 
 function loginSecurityForUser(user = {}, now = new Date()) {
   const lockedUntilValue = user?.lockedUntil || null;
@@ -70,9 +198,21 @@ function adminUserPayload(user = {}) {
       ? user.toJSON()
       : { ...user };
 
+  const loginSecurity =
+    loginSecurityForUser(plain);
+
+  const {
+    passwordHash,
+    failedLoginAttempts,
+    totalFailedLoginAttempts,
+    failedLoginWindowStartedAt,
+    lockedUntil,
+    ...safeUser
+  } = plain;
+
   return {
-    ...plain,
-    loginSecurity: loginSecurityForUser(plain),
+    ...safeUser,
+    loginSecurity,
   };
 }
 
@@ -198,7 +338,7 @@ router.patch('/accounts/:id/status', async (req, res, next) => {
       status: user.status
     });
 
-    res.json({ user });
+    res.json({ user: adminUserPayload(user) });
   } catch (err) {
     next(err);
   }
@@ -290,7 +430,19 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
     }
 
     const gradeLevel = Number(req.body.gradeLevel);
-    const section = String(req.body.section || '').trim();
+    const section = normalizeSectionName(
+      req.body.section
+    );
+
+    const sectionValidationError =
+      getSectionValidationError(section);
+
+    if (sectionValidationError) {
+      return res.status(422).json({
+        message: sectionValidationError
+      });
+    }
+
     assertSafeText(section, 'section');
 
     if (![1, 2, 3, 4, 5, 6].includes(gradeLevel)) {
@@ -299,23 +451,31 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
       });
     }
 
-    if (!section) {
-      return res.status(422).json({
-        message: 'Section is required.'
-      });
-    }
-
     if (gradeLevel != Number(student.gradeLevel)) {
 
       const promotionReason = String(
         req.body.promotionReason || ''
-      ).trim();
+      )
+        .normalize('NFKC')
+        .replace(/\s+/g, ' ')
+        .trim();
 
       if (!promotionReason) {
         return res.status(422).json({
           message: 'Promotion reason is required.'
         });
       }
+
+      if (promotionReason.length > 500) {
+        return res.status(422).json({
+          message: 'Promotion reason must not exceed 500 characters.'
+        });
+      }
+
+      assertSafeText(
+        promotionReason,
+        'promotion reason'
+      );
 
       const currentGrade = Number(student.gradeLevel);
 
@@ -363,7 +523,7 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
           oldGrade: previousGrade,
           newGrade: gradeLevel,
           section,
-          reason: req.body.promotionReason
+          reason: promotionReason
         }
       );
 
@@ -378,7 +538,7 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
   }
 });
 
-router.post('/teachers/:id/assignments', async (req, res, next) => {
+router.post('/teachers/:id/assignments', assignmentMutationLimiter, async (req, res, next) => {
   try {
     const teacher = await Teacher.findByPk(req.params.id);
 
@@ -389,18 +549,24 @@ router.post('/teachers/:id/assignments', async (req, res, next) => {
     }
 
     const gradeLevel = Number(req.body.gradeLevel);
-    const section = String(req.body.section || '').trim();
+    const section = normalizeSectionName(
+      req.body.section
+    );
+
+    const sectionValidationError =
+      getSectionValidationError(section);
+
+    if (sectionValidationError) {
+      return res.status(422).json({
+        message: sectionValidationError
+      });
+    }
+
     assertSafeText(section, 'section');
 
     if (![1, 2, 3, 4, 5, 6].includes(gradeLevel)) {
       return res.status(422).json({
         message: 'Grade level must be from Grade 1 to Grade 6 only.'
-      });
-    }
-
-    if (!section) {
-      return res.status(422).json({
-        message: 'Section is required.'
       });
     }
 
@@ -415,9 +581,32 @@ router.post('/teachers/:id/assignments', async (req, res, next) => {
       }
     });
 
-    if (!created && assignment.status !== 'active') {
-      await assignment.update({ status: 'active' });
+    const reactivated =
+      !created && assignment.status !== 'active';
+
+    if (reactivated) {
+      await assignment.update({
+        status: 'active'
+      });
     }
+
+    await audit(
+      req.user.id,
+      created
+        ? 'teacher_assignment.create'
+        : reactivated
+          ? 'teacher_assignment.reactivate'
+          : 'teacher_assignment.confirm',
+      'teacher_assignment',
+      assignment.id,
+      adminRequestAuditMetadata(req, {
+        teacherId: teacher.id,
+        gradeLevel,
+        section,
+        created,
+        reactivated
+      })
+    );
 
     res.status(created ? 201 : 200).json({
       message: 'Teacher assignment saved successfully.',
@@ -428,7 +617,7 @@ router.post('/teachers/:id/assignments', async (req, res, next) => {
   }
 });
 
-router.delete('/teacher-assignments/:id', async (req, res, next) => {
+router.delete('/teacher-assignments/:id', assignmentMutationLimiter, async (req, res, next) => {
   try {
     const assignment = await TeacherAssignment.findByPk(req.params.id);
 
@@ -438,7 +627,25 @@ router.delete('/teacher-assignments/:id', async (req, res, next) => {
       });
     }
 
+    const deletedAssignment = {
+      teacherId: assignment.teacherId,
+      gradeLevel: assignment.gradeLevel,
+      section: assignment.section,
+      previousStatus: assignment.status
+    };
+
     await assignment.destroy();
+
+    await audit(
+      req.user.id,
+      'teacher_assignment.delete',
+      'teacher_assignment',
+      assignment.id,
+      adminRequestAuditMetadata(
+        req,
+        deletedAssignment
+      )
+    );
 
     res.json({
       message: 'Teacher assignment removed successfully.'
@@ -450,9 +657,18 @@ router.delete('/teacher-assignments/:id', async (req, res, next) => {
 
 router.get('/audit-logs', async (req, res, next) => {
   try {
+    const requestedLimit = Number.parseInt(
+      String(req.query.limit || '100'),
+      10
+    );
+
+    const limit = Number.isInteger(requestedLimit)
+      ? Math.min(500, Math.max(1, requestedLimit))
+      : 100;
+
     const logs = await AuditLog.findAll({
       order: [['createdAt', 'DESC']],
-      limit: Number(req.query.limit || 100)
+      limit
     });
 
     res.json({ logs });

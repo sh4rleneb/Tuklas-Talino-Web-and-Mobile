@@ -495,6 +495,7 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
   const [mcqChoiceShuffleNonce, setMcqChoiceShuffleNonce] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [writingAnswer, setWritingAnswer] = useState('');
+  const [writingSelectedTileIds, setWritingSelectedTileIds] = useState([]);
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [recording, setRecording] = useState(false);
   const [recordingUri, setRecordingUri] = useState('');
@@ -958,6 +959,7 @@ const stepScrollRef = useRef(null);
 
   useEffect(() => {
     setWritingAnswer('');
+    setWritingSelectedTileIds([]);
     setSpeechTranscript('');
     setRecordingUri('');
     setSpeechStatus('');
@@ -1050,7 +1052,7 @@ const stepScrollRef = useRef(null);
         title: 'Laro sa Pagbuo ng Sagot',
         mission: 'Buuin ang tamang sagot gamit ang mga pantulong at punuin ang kahon ng sagot upang makuha ang iyong bituin.',
         steps: ['Pumili', 'Buuin', 'Kunin ang Bituin'],
-        button: '🏁 Kunin ang Bituin',
+        button: '⭐ Kunin ang Bituin',
       };
     }
 
@@ -1548,38 +1550,77 @@ const stepScrollRef = useRef(null);
   }
 
   async function submitWriting(answerOverride = null) {
+    // ACTUAL WRITING WORD GAME: submission feedback
     const task = currentActivity?.writingTask;
+
     if (!task?.id) {
-      Alert.alert('Pagsulat', 'Wala pang gawaing pagsulat para sa aktibidad na ito.');
+      Alert.alert(
+        'Pagsulat',
+        'Wala pang gawaing pagsulat para sa aktibidad na ito.'
+      );
       return;
     }
-    const answer = answerOverride ?? writingAnswer;
 
+    const answer = String(
+      answerOverride ?? writingAnswer
+    ).trim();
 
-    if (answer.trim().length < 2) {
-      Alert.alert('Pagsulat', 'Isulat muna ang iyong sagot bago magpatuloy.');
+    if (answer.length < 2) {
+      Alert.alert(
+        'Pagsulat',
+        'Bumuo muna ng sagot bago magpatuloy.'
+      );
       return;
     }
 
     setSubmitting(true);
-    try {
-      const data = await api(`/lessons/${lessonId}/writing`, {
-        method: 'POST',
-        body: {
-          taskId: task.id,
-          content: answer,
-          autoChecked: Boolean(task.rubricJson?.autoChecked),
-        },
-      });
+    setActivityNotice(null);
 
-      // Success feedback is already shown in the Fill-in-the-Blank UI.
+    try {
+      const data = await api(
+        `/lessons/${lessonId}/writing`,
+        {
+          method: 'POST',
+          body: {
+            taskId: task.id,
+            content: answer,
+            autoChecked: Boolean(
+              task.rubricJson?.autoChecked
+            ),
+          },
+        }
+      );
+
       if (data.correct === false) {
+        setActivityNotice({
+          type: 'warning',
+          title: '🔄 Subukan Muli',
+          message:
+            'Hindi pa tama ang pagkakasunod-sunod. Ayusin muli ang mga salita.',
+        });
         return;
       }
 
+      setActivityNotice({
+        type: 'success',
+        title:
+          data.correct === true
+            ? '🌟 Tama ang Sagot!'
+            : '✅ Naipasa ang Sagot!',
+        message:
+          data.correct === true
+            ? 'Magaling! Nakuha mo ang bituin.'
+            : 'Matagumpay na naipasa ang iyong sagot.',
+      });
+
       await saveNextStep('writing');
     } catch (err) {
-      Alert.alert('Pagsulat', 'Hindi maitala ang iyong sagot. Pakisubukan muli.');
+      setActivityNotice({
+        type: 'error',
+        title: 'Hindi Naitala ang Sagot',
+        message:
+          'Hindi maitala ang iyong sagot. Pakisubukan muli.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -2639,205 +2680,740 @@ const stepScrollRef = useRef(null);
     }
 
     if (currentStep?.type === 'activity' && currentActivity?.type === 'writing') {
-      const suggestions = currentActivity.writingTask?.rubricJson?.choices
-        || currentActivity.writingTask?.rubricJson?.wordBank
-        || [];
+      // WRITING TILE GAME UI
+      const task = currentActivity?.writingTask || {};
+      const rubric =
+        task.rubricJson &&
+        typeof task.rubricJson === 'object'
+          ? task.rubricJson
+          : {};
+
       const game = getGameMeta(currentActivity);
 
-
       const isFillInBlank =
-        currentActivity?.writingTask?.rubricJson?.gawainType ===
-        'complete_sentence';
+        rubric.gawainType === 'complete_sentence';
 
-      return (
-        <View style={[
-          styles.card,
-          littleLearnerGame && {
-            borderWidth: 3,
-            borderColor: '#A7F3D0',
-            backgroundColor: '#F0FDF4',
-            shadowColor: '#22C55E',
-            shadowOpacity: 0.12,
-            shadowRadius: 12,
-            shadowOffset: {
-              width: 0,
-              height: 6,
-            },
-            elevation: 5,
-          },
-        ]}>
-          {renderGameHeader(currentActivity)}
-          {littleLearnerGame && (
-            <Text
-              style={{
-                textAlign: 'center',
-                fontSize: 22,
-                marginBottom: 10,
-              }}
-            >
-              🌈 ⭐ 🎈 ⭐ 🌈
-            </Text>
-          )}
+      /*
+       * Keep the existing fill-in-the-blank activity because it is
+       * already an interactive game and does not require manual typing.
+       */
+      if (isFillInBlank) {
+        return (
+          <View
+            style={[
+              styles.card,
+              littleLearnerGame && {
+                borderWidth: 3,
+                borderColor: '#A7F3D0',
+                backgroundColor: '#F0FDF4',
+                shadowColor: '#22C55E',
+                shadowOpacity: 0.12,
+                shadowRadius: 12,
+                shadowOffset: {
+                  width: 0,
+                  height: 6,
+                },
+                elevation: 5,
+              },
+            ]}
+          >
+            {renderGameHeader(currentActivity)}
 
-          {!littleLearnerGame && (
-            <Text style={styles.cardTitle}>
-              ✍️ {currentActivity.title}
-            </Text>
-          )}
-          {littleLearnerGame ? null : (
+            {littleLearnerGame ? (
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontSize: 22,
+                  marginBottom: 14,
+                }}
+              >
+                🌈 ⭐ 🎈 ⭐ 🌈
+              </Text>
+            ) : null}
+
+            {!littleLearnerGame ? (
               <>
+                <Text style={styles.cardTitle}>
+                  ✍️ {currentActivity.title}
+                </Text>
+
                 <ActivityGuideCard
                   activity={currentActivity}
                   littleLearnerGame={littleLearnerGame}
                 />
-                {renderStudentStoryCard(currentActivity, lesson)}
+
+                {renderStudentStoryCard(
+                  currentActivity,
+                  lesson
+                )}
               </>
-            )}
-          {<ActivityVisualCard
-            activity={currentActivity}
-            lesson={lesson}
-          />}
-          {isFillInBlank ? (
+            ) : null}
+
+            <ActivityVisualCard
+              activity={currentActivity}
+              lesson={lesson}
+            />
+
             <FillInBlankGame
-              rubric={currentActivity.writingTask?.rubricJson}
+              rubric={rubric}
               submitting={submitting}
               onSubmit={(answer) => {
                 setWritingAnswer(answer);
                 submitWriting(answer);
               }}
             />
-          ) : (
-            <>
-          {!littleLearnerGame && suggestions.length ? (
-            <View style={styles.choiceRow}>
-              {suggestions.map((suggestion, index) => {
-                const label = String(suggestion?.text || suggestion?.word || suggestion);
-                return (
-                  <TouchableOpacity key={`${label}-${index}`} style={styles.choiceChip} onPress={() => setWritingAnswer(label)}>
-                    <Text style={styles.choiceText}>{label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : null}
-          <View style={littleLearnerGame ? {
-            backgroundColor: '#F8FAFC',
-            borderColor: '#BBF7D0',
-            borderWidth: 2,
-            borderRadius: 24,
-            padding: 12,
-            marginBottom: 16,
-          } : null}>
-            {littleLearnerGame ? (
-              <Text style={{ color: '#15803D', fontWeight: '900', fontSize: 17, marginBottom: 8 }}>
-                🧩 Tagabuo ng Sagot
-              </Text>
-            ) : null}
-            <TextInput
-              style={[
-                styles.input,
-                littleLearnerGame && {
-                  borderColor: '#86EFAC',
-                  backgroundColor: '#FFFFFF',
-                  minHeight: 92,
-                  fontSize: 18,
-                },
-              ]}
-              multiline
-              value={writingAnswer}
-              onChangeText={setWritingAnswer}
-              placeholder={littleLearnerGame ? 'Pindutin ang mga pantulong o isulat ang iyong sagot dito...' : 'Isulat ang iyong sagot dito...'}
-            />
           </View>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => {
-              submitWriting();
-            }}
-            disabled={submitting}
-          >
-            <Text style={styles.primaryText}>
-              {submitting
-                ? 'Itinatala...'
-                : littleLearnerGame
-                  ? game.button
-                  : 'Itala at Magpatuloy'}
-            </Text>
-          </TouchableOpacity>
-            </>
-          )}
-        </View>
+        );
+      }
+
+      const toTileText = (value) => {
+        if (
+          value &&
+          typeof value === 'object'
+        ) {
+          return String(
+            value.text ??
+            value.word ??
+            value.label ??
+            value.value ??
+            ''
+          ).trim();
+        }
+
+        return String(value || '').trim();
+      };
+
+      const configuredTileSource = [
+        rubric.wordBank,
+        rubric.choices,
+        rubric.correctWords,
+      ].find(
+        (value) =>
+          Array.isArray(value) &&
+          value.length > 0
       );
-    }
 
+      const directAnswer = String(
+        rubric.correctAnswer ||
+        rubric.answer ||
+        (
+          Array.isArray(rubric.correctAnswers)
+            ? rubric.correctAnswers[0]
+            : ''
+        ) ||
+        (
+          Array.isArray(rubric.acceptedAnswers)
+            ? rubric.acceptedAnswers[0]
+            : ''
+        ) ||
+        currentActivity?.dataJson?.correctAnswer ||
+        currentActivity?.data_json?.correctAnswer ||
+        ''
+      ).trim();
 
-    if (currentStep?.type === 'finish') {
+      const fallbackSource = String(
+        directAnswer ||
+        task.prompt ||
+        currentActivity.prompt ||
+        currentActivity.content ||
+        currentActivity.instructions ||
+        ''
+      )
+        .replace(/[.,!?;:"“”()[\]{}]/g, '')
+        .trim();
+
+      const sourceWords = (
+        configuredTileSource
+          ? configuredTileSource.map(toTileText)
+          : fallbackSource.split(/\s+/)
+      ).filter(Boolean);
+
+      const activityKey = String(
+        task.id ||
+        currentActivity.id ||
+        currentActivity.activityId ||
+        currentActivity.title ||
+        step
+      );
+
+      const baseTiles = sourceWords.map(
+        (text, index) => ({
+          id: `${activityKey}-tile-${index}`,
+          text,
+        })
+      );
+
+      /*
+       * Use a stable rotation and reversal so the tile order does
+       * not change during every React render.
+       */
+      const numericSeed = Number(
+        task.id ||
+        currentActivity.id ||
+        0
+      );
+
+      const tileOffset =
+        baseTiles.length > 1
+          ? (
+              Number.isFinite(numericSeed)
+                ? Math.abs(numericSeed)
+                : activityKey.length
+            ) % baseTiles.length
+          : 0;
+
+      const wordTiles = [
+        ...baseTiles.slice(tileOffset),
+        ...baseTiles.slice(0, tileOffset),
+      ].reverse();
+
+      const validTileIds = new Set(
+        wordTiles.map((tile) => tile.id)
+      );
+
+      const selectedTileIds =
+        writingSelectedTileIds.filter(
+          (id) => validTileIds.has(id)
+        );
+
+      const selectedTiles =
+        selectedTileIds
+          .map((id) =>
+            wordTiles.find(
+              (tile) => tile.id === id
+            )
+          )
+          .filter(Boolean);
+
+      const template = String(
+        rubric.template ||
+        rubric.sentence ||
+        ''
+      ).trim();
+
+      const templateHasBlank =
+        /_{2,}|\[blank\]/i.test(template);
+
+      const fillTemplate = (
+        templateValue,
+        words
+      ) => {
+        let blankIndex = 0;
+
+        return String(templateValue || '')
+          .replace(
+            /_{2,}|\[blank\]/gi,
+            () => {
+              const word =
+                words[blankIndex] || '';
+
+              blankIndex += 1;
+              return word;
+            }
+          )
+          .replace(/\s+([.,!?;:])/g, '$1')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+
+      const buildAnswer = (tileIds) => {
+        const selectedWords = tileIds
+          .map((id) =>
+            wordTiles.find(
+              (tile) => tile.id === id
+            )
+          )
+          .filter(Boolean)
+          .map((tile) => tile.text);
+
+        if (templateHasBlank) {
+          return fillTemplate(
+            template,
+            selectedWords
+          );
+        }
+
+        return selectedWords
+          .join(' ')
+          .replace(/\s+([.,!?;:])/g, '$1')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+
+      const builtAnswer =
+        buildAnswer(selectedTileIds);
+
+      /*
+       * When every configured choice is a full phrase or sentence,
+       * treat the game as a one-choice activity instead of requiring
+       * the student to combine all choices.
+       */
+      const singleChoiceMode =
+        sourceWords.length > 1 &&
+        sourceWords.every(
+          (value) =>
+            value.trim().split(/\s+/).length > 1
+        );
+
+      const updateSelectedTiles = (
+        nextIds
+      ) => {
+        setWritingSelectedTileIds(nextIds);
+        setWritingAnswer(
+          buildAnswer(nextIds)
+        );
+        setActivityNotice(null);
+      };
+
+      const selectTile = (tile) => {
+        if (
+          selectedTileIds.includes(tile.id)
+        ) {
+          return;
+        }
+
+        const nextIds = singleChoiceMode
+          ? [tile.id]
+          : [
+              ...selectedTileIds,
+              tile.id,
+            ];
+
+        updateSelectedTiles(nextIds);
+      };
+
+      const removeTile = (tileId) => {
+        updateSelectedTiles(
+          selectedTileIds.filter(
+            (id) => id !== tileId
+          )
+        );
+      };
+
+      const removeLastTile = () => {
+        updateSelectedTiles(
+          selectedTileIds.slice(0, -1)
+        );
+      };
+
+      const clearTiles = () => {
+        updateSelectedTiles([]);
+      };
+
+      const promptText = String(
+        currentActivity.instructions ||
+        task.prompt ||
+        currentActivity.prompt ||
+        'I-tap ang mga salita sa tamang pagkakasunod-sunod.'
+      ).trim();
+
       return (
         <View
           style={[
             styles.card,
             littleLearnerGame && {
               borderWidth: 3,
-              borderColor: '#FDE68A',
+              borderColor: '#A7F3D0',
               backgroundColor: '#F0FDF4',
+              shadowColor: '#22C55E',
+              shadowOpacity: 0.12,
+              shadowRadius: 12,
+              shadowOffset: {
+                width: 0,
+                height: 6,
+              },
+              elevation: 5,
             },
           ]}
         >
+          {renderGameHeader(currentActivity)}
+
           {littleLearnerGame ? (
+            <Text
+              style={{
+                textAlign: 'center',
+                fontSize: 22,
+                marginBottom: 14,
+              }}
+            >
+              🌈 ⭐ 🎈 ⭐ 🌈
+            </Text>
+          ) : null}
+
+          {!littleLearnerGame ? (
             <>
-              <Text
-                style={{
-                  textAlign: 'center',
-                  fontSize: 22,
-                  marginBottom: 10,
-                }}
-              >
-                 ⭐ 🌈 ⭐ 🎈
+              <Text style={styles.cardTitle}>
+                ✍️ {currentActivity.title}
               </Text>
 
-              <Text
-                style={{
-                  fontSize: 30,
-                  fontWeight: '900',
-                  textAlign: 'center',
-                  color: '#15803D',
-                }}
-              >
-                Ang Galing!
-              </Text>
+              <ActivityGuideCard
+                activity={currentActivity}
+                littleLearnerGame={littleLearnerGame}
+              />
 
-              <Text
-                style={{
-                  marginTop: 14,
-                  marginBottom: 24,
-                  fontSize: 20,
-                  lineHeight: 30,
-                  textAlign: 'center',
-                  color: '#334155',
-                }}
-              >
-                Natapos mo na ang lahat ng gawain sa araling ito!
-              </Text>
+              {renderStudentStoryCard(
+                currentActivity,
+                lesson
+              )}
             </>
+          ) : null}
+
+          <ActivityVisualCard
+            activity={currentActivity}
+            lesson={lesson}
+          />
+
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderWidth: 2,
+              borderColor: '#A7F3D0',
+              borderRadius: 22,
+              padding: 16,
+              marginBottom: 16,
+            }}
+          >
+            <Text
+              style={{
+                color: '#15803D',
+                fontSize: 19,
+                fontWeight: '900',
+                marginBottom: 8,
+              }}
+            >
+              🧩 Tagabuo ng Sagot
+            </Text>
+
+            <Text
+              style={{
+                color: '#475569',
+                fontSize: 16,
+                lineHeight: 23,
+                fontWeight: '700',
+              }}
+            >
+              {promptText}
+            </Text>
+          </View>
+
+          <Text
+            style={{
+              color: '#166534',
+              fontSize: 17,
+              fontWeight: '900',
+              marginBottom: 10,
+            }}
+          >
+            Iyong Sagot
+          </Text>
+
+          <View
+            style={{
+              minHeight: 118,
+              backgroundColor: '#FFFFFF',
+              borderWidth: 3,
+              borderColor: '#6EE7B7',
+              borderRadius: 22,
+              padding: 14,
+              marginBottom: 16,
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignContent: 'flex-start',
+              gap: 8,
+            }}
+          >
+            {selectedTiles.length ? (
+              selectedTiles.map(
+                (tile, index) => (
+                  <TouchableOpacity
+                    key={`selected-${tile.id}`}
+                    onPress={() =>
+                      removeTile(tile.id)
+                    }
+                    disabled={submitting}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      `Alisin ang ${tile.text}`
+                    }
+                    style={{
+                      backgroundColor: '#DCFCE7',
+                      borderWidth: 2,
+                      borderColor: '#22C55E',
+                      borderRadius: 17,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: '#166534',
+                        fontSize: 17,
+                        fontWeight: '900',
+                      }}
+                    >
+                      {singleChoiceMode
+                        ? tile.text
+                        : `${index + 1}. ${tile.text}`}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              )
+            ) : (
+              <Text
+                style={{
+                  color: '#94A3B8',
+                  fontSize: 17,
+                  lineHeight: 24,
+                  fontWeight: '700',
+                }}
+              >
+                I-tap ang mga pagpipilian sa ibaba upang mabuo ang sagot.
+              </Text>
+            )}
+          </View>
+
+          <Text
+            style={{
+              color: '#166534',
+              fontSize: 17,
+              fontWeight: '900',
+              marginBottom: 10,
+            }}
+          >
+            🔤 Mga Pagpipilian
+          </Text>
+
+          {wordTiles.length ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 10,
+                marginBottom: 18,
+              }}
+            >
+              {wordTiles.map((tile) => {
+                const selected =
+                  selectedTileIds.includes(
+                    tile.id
+                  );
+
+                return (
+                  <TouchableOpacity
+                    key={tile.id}
+                    disabled={
+                      selected ||
+                      submitting
+                    }
+                    onPress={() =>
+                      selectTile(tile)
+                    }
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      `Piliin ang ${tile.text}`
+                    }
+                    style={{
+                      backgroundColor:
+                        selected
+                          ? '#E2E8F0'
+                          : '#FEF3C7',
+                      borderWidth: 2,
+                      borderColor:
+                        selected
+                          ? '#CBD5E1'
+                          : '#F59E0B',
+                      borderRadius: 17,
+                      paddingHorizontal: 14,
+                      paddingVertical: 11,
+                      opacity:
+                        selected ? 0.45 : 1,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          selected
+                            ? '#64748B'
+                            : '#92400E',
+                        fontSize: 17,
+                        fontWeight: '900',
+                      }}
+                    >
+                      {tile.text}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           ) : (
-            <>
-              <Text style={styles.title}>🏁 Tapusin ang Aralin</Text>
-
-              <Text style={styles.body}>
-                Magaling! Natapos mo ang lahat ng hamon sa araling ito.
+            <View
+              style={{
+                backgroundColor: '#FEF3C7',
+                borderWidth: 2,
+                borderColor: '#F59E0B',
+                borderRadius: 18,
+                padding: 14,
+                marginBottom: 18,
+              }}
+            >
+              <Text
+                style={{
+                  color: '#92400E',
+                  fontSize: 15,
+                  lineHeight: 22,
+                  fontWeight: '800',
+                }}
+              >
+                Wala pang word bank o tamang sagot na inilagay para sa gawaing ito.
               </Text>
-            </>
+            </View>
           )}
 
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: '#FFFFFF',
+                borderWidth: 2,
+                borderColor: '#22C55E',
+                borderRadius: 18,
+                paddingVertical: 13,
+                alignItems: 'center',
+                opacity:
+                  selectedTileIds.length
+                    ? 1
+                    : 0.45,
+              }}
+              disabled={
+                !selectedTileIds.length ||
+                submitting
+              }
+              onPress={removeLastTile}
+            >
+              <Text
+                style={{
+                  color: '#15803D',
+                  fontSize: 15,
+                  fontWeight: '900',
+                }}
+              >
+                ↶ Alisin
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: '#FFFFFF',
+                borderWidth: 2,
+                borderColor: '#22C55E',
+                borderRadius: 18,
+                paddingVertical: 13,
+                alignItems: 'center',
+                opacity:
+                  selectedTileIds.length
+                    ? 1
+                    : 0.45,
+              }}
+              disabled={
+                !selectedTileIds.length ||
+                submitting
+              }
+              onPress={clearTiles}
+            >
+              <Text
+                style={{
+                  color: '#15803D',
+                  fontSize: 15,
+                  fontWeight: '900',
+                }}
+              >
+                ↻ Ulitin
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {activityNotice ? (
+            <View
+              style={[
+                styles.feedbackCard,
+                getStudentActivityNoticeTone(
+                  activityNotice
+                ) === 'success' &&
+                  styles.feedbackSuccess,
+                getStudentActivityNoticeTone(
+                  activityNotice
+                ) === 'warning' &&
+                  styles.feedbackWarning,
+                getStudentActivityNoticeTone(
+                  activityNotice
+                ) === 'error' &&
+                  styles.feedbackError,
+              ]}
+            >
+              <View style={styles.feedbackIconBubble}>
+                <Text style={styles.feedbackIcon}>
+                  {getStudentActivityNoticeIcon(
+                    activityNotice
+                  )}
+                </Text>
+              </View>
+
+              <View style={styles.feedbackCopy}>
+                <Text style={styles.feedbackTitle}>
+                  {getStudentActivityNoticeTitle(
+                    activityNotice
+                  )}
+                </Text>
+
+                {getStudentActivityNoticeMessage(
+                  activityNotice
+                ) ? (
+                  <Text style={styles.feedbackMessage}>
+                    {getStudentActivityNoticeMessage(
+                      activityNotice
+                    )}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+
           <TouchableOpacity
-            style={styles.primaryButton}
-            disabled={submitting}
-            onPress={finishLesson}
+            style={[
+              styles.primaryButton,
+              (
+                !builtAnswer ||
+                !wordTiles.length ||
+                submitting
+              ) &&
+                styles.disabledButton,
+            ]}
+            disabled={
+              !builtAnswer ||
+              !wordTiles.length ||
+              submitting
+            }
+            onPress={() =>
+              submitWriting(builtAnswer)
+            }
+            activeOpacity={0.86}
           >
             <Text style={styles.primaryText}>
-              {littleLearnerGame
-                ? '🌟 Kunin ang Iyong Gantimpala!'
-                : '⭐ Tapusin ang Aralin'}
+              {submitting
+                ? 'Sinusuri...'
+                : (
+                    game.button ||
+                    '⭐ Kunin ang Bituin'
+                  )}
             </Text>
           </TouchableOpacity>
         </View>
