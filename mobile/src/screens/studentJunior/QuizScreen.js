@@ -1083,7 +1083,7 @@ const closeQuizPreview = useCallback(() => {
               {canRetry ? (
                 <View style={styles.reviewNotice}>
                   <Text style={styles.reviewNoticeTitle}>
-                    Naitala ang iskor!
+                    May natitira ka pang pagsubok
                   </Text>
 
                   <Text style={styles.reviewNoticeText}>
@@ -1856,12 +1856,12 @@ const styles = StyleSheet.create({
   },
 
   resultRetryButtonSpacing: {
-    marginTop: 34,
-    marginBottom: 10,
+    marginTop: 18,
+    marginBottom: 8,
   },
 
   resultBackButtonSpacing: {
-    marginTop: 0,
+    marginTop: 8,
   },
 
   attemptPill: {
@@ -2078,77 +2078,86 @@ const styles = StyleSheet.create({
   },
 
   resultCard: {
+    width: '100%',
     backgroundColor: '#FFFFFF',
-    marginTop: 14,
+    marginTop: 10,
     alignItems: 'center',
-    paddingVertical: 30,
-    paddingHorizontal: 22,
-    borderRadius: 30,
+    paddingVertical: 20,
+    paddingHorizontal: 18,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#BBF7D0',
     shadowColor: '#14532D',
-    shadowOpacity: 0.10,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 9 },
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
 
   resultEmoji: {
-    fontSize: 54,
+    fontSize: 40,
   },
 
   resultTitle: {
+    maxWidth: '100%',
     color: '#0F172A',
-    fontSize: 34,
+    fontSize: 28,
+    lineHeight: 34,
     fontWeight: '900',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
 
   resultScoreCircle: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
+    width: 106,
+    height: 106,
+    borderRadius: 53,
     backgroundColor: '#ECFDF5',
     borderWidth: 2,
-    borderColor: '#86EFAC',
+    borderColor: '#4ADE80',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
+    marginTop: 14,
   },
 
   resultIskor: {
-    color: '#16A34A',
-    fontSize: 46,
+    color: '#15803D',
+    fontSize: 34,
+    lineHeight: 40,
     fontWeight: '900',
   },
 
   resultMeta: {
-    color: '#64748B',
-    marginTop: 14,
-    fontSize: 19,
-    fontWeight: '800',
+    color: '#475569',
+    marginTop: 10,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '900',
+    textAlign: 'center',
   },
 
   masteryText: {
+    maxWidth: 420,
     color: '#166534',
     fontWeight: '900',
-    marginTop: 12,
-    fontSize: 17,
+    marginTop: 8,
+    fontSize: 16,
+    lineHeight: 22,
     textAlign: 'center',
   },
 
   xpAward: {
     color: '#EA580C',
     fontWeight: '900',
-    marginTop: 10,
-    fontSize: 17,
+    marginTop: 8,
+    fontSize: 16,
+    lineHeight: 22,
     textAlign: 'center',
   },
 
   reviewWrap: {
     width: '100%',
-    marginTop: 20,
+    marginTop: 16,
   },
 
   reviewTitle: {
@@ -2167,36 +2176,39 @@ const styles = StyleSheet.create({
 
   bestAttemptText: {
     color: '#166534',
-    fontSize: 15,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: '900',
     textAlign: 'center',
-    marginTop: 10,
+    marginTop: 8,
   },
 
   reviewNotice: {
     width: '100%',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F0FDF4',
     borderWidth: 1,
     borderColor: '#86EFAC',
-    borderRadius: 20,
-    padding: 18,
-    marginTop: 22,
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginTop: 14,
   },
 
   reviewNoticeTitle: {
     color: '#166534',
-    fontSize: 18,
+    fontSize: 16,
+    lineHeight: 21,
     fontWeight: '900',
-    textAlign: 'center',
+    textAlign: 'left',
   },
 
   reviewNoticeText: {
     color: '#475569',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    lineHeight: 21,
-    textAlign: 'center',
-    marginTop: 6,
+    lineHeight: 19,
+    textAlign: 'left',
+    marginTop: 4,
   },
 
   attemptHistoryRow: {
