@@ -864,6 +864,181 @@ router.get('/:id/badges', requireRole('admin', 'teacher', 'student'), async (req
   } catch (err) { next(err); }
 });
 
+router.post(
+  '/teacher-sections',
+  requireRole('teacher'),
+  async (req, res, next) => {
+    try {
+      const gradeLevel = Number(
+        req.body.gradeLevel
+      );
+
+      const section = String(
+        req.body.section || ''
+      )
+        .normalize('NFKC')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (
+        !Number.isInteger(gradeLevel) ||
+        gradeLevel < 1 ||
+        gradeLevel > 6
+      ) {
+        return res.status(422).json({
+          message:
+            'Grade level must be from Grade 1 to Grade 6 only.',
+        });
+      }
+
+      if (section.length < 2) {
+        return res.status(422).json({
+          message:
+            'The section name must contain at least two characters.',
+        });
+      }
+
+      if (section.length > 80) {
+        return res.status(422).json({
+          message:
+            'The section name must not exceed 80 characters.',
+        });
+      }
+
+      assertSafeContentPayload(
+        { section },
+        'teacher section'
+      );
+
+      const teacherId = Number(
+        req.teacher?.id || 0
+      );
+
+      if (!teacherId) {
+        return res.status(403).json({
+          message:
+            'Unable to identify the authenticated teacher.',
+        });
+      }
+
+      const activeAssignments =
+        await getTeacherAssignments(req);
+
+      const hasGradeAccess =
+        Array.isArray(activeAssignments) &&
+        activeAssignments.some(
+          (assignment) =>
+            Number(
+              assignment.gradeLevel ??
+              assignment.grade_level ??
+              assignment.grade
+            ) === gradeLevel
+        );
+
+      if (!hasGradeAccess) {
+        return res.status(403).json({
+          message:
+            'You may add sections only under a grade level already assigned to your account.',
+        });
+      }
+
+      const gradeAssignments =
+        await TeacherAssignment.findAll({
+          where: {
+            teacherId,
+            gradeLevel,
+          },
+        });
+
+      const normalizedSectionKey =
+        section.toLowerCase();
+
+      let assignment =
+        gradeAssignments.find((item) => {
+          const existingSection = String(
+            item.section || ''
+          )
+            .normalize('NFKC')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+
+          return (
+            existingSection ===
+            normalizedSectionKey
+          );
+        }) || null;
+
+      let created = false;
+      let reactivated = false;
+
+      if (assignment) {
+        if (assignment.status !== 'active') {
+          await assignment.update({
+            status: 'active',
+          });
+
+          reactivated = true;
+        }
+      } else {
+        const result =
+          await TeacherAssignment.findOrCreate({
+            where: {
+              teacherId,
+              gradeLevel,
+              section,
+            },
+            defaults: {
+              status: 'active',
+            },
+          });
+
+        assignment = result[0];
+        created = result[1];
+
+        if (
+          !created &&
+          assignment.status !== 'active'
+        ) {
+          await assignment.update({
+            status: 'active',
+          });
+
+          reactivated = true;
+        }
+      }
+
+      await audit(
+        req.user.id,
+        'teacher.section.create',
+        'teacher_assignment',
+        assignment.id,
+        {
+          teacherId,
+          gradeLevel,
+          section: assignment.section,
+          created,
+          reactivated,
+        }
+      );
+
+      res.status(created ? 201 : 200).json({
+        assignment,
+        created,
+        reactivated,
+        message: created
+          ? 'Section added successfully.'
+          : reactivated
+            ? 'Existing section reactivated successfully.'
+            : 'This section already exists and is ready to use.',
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+
 router.patch(
   '/:id/section',
   requireRole('teacher'),

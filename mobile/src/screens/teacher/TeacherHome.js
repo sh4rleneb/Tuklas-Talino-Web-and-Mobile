@@ -33,6 +33,7 @@ import {
   createGroup,
   deleteGroup,
   createLesson,
+  createTeacherSection,
   getActiveStudents,
   updateStudentSection,
   getPendingGroupChecks,
@@ -1153,6 +1154,21 @@ export default function TeacherHome({ navigation }) {
     teacherSelectedSection,
     setTeacherSelectedSection,
   ] = useState('');
+
+  const [
+    teacherNewSectionName,
+    setTeacherNewSectionName,
+  ] = useState('');
+
+  const [
+    teacherAddingSection,
+    setTeacherAddingSection,
+  ] = useState(false);
+
+  useEffect(() => {
+    setTeacherNewSectionName('');
+    setTeacherAddingSection(false);
+  }, [selectedTeacherStudent]);
   const [quizFilter, setQuizFilter] = useState('All');
   const [assessmentQuery, setAssessmentQuery] = useState('');
   const [selectedAssessmentQuizId, setSelectedAssessmentQuizId] = useState('ALL');
@@ -5651,6 +5667,205 @@ async function handleLogout() {
     }
   }
 
+  async function handleTeacherSectionCreate() {
+    const gradeLevel = Number(
+      selectedTeacherStudent?.gradeLevel ??
+      selectedTeacherStudent?.grade_level ??
+      selectedTeacherStudent?.grade ??
+      0
+    );
+
+    const section = String(
+      teacherNewSectionName || ''
+    )
+      .normalize('NFKC')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!selectedTeacherStudent) {
+      Alert.alert(
+        'Add Section',
+        'Select a student before adding a section.'
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(gradeLevel) ||
+      gradeLevel < 1 ||
+      gradeLevel > 6
+    ) {
+      Alert.alert(
+        'Add Section',
+        'The selected student has an invalid grade level.'
+      );
+      return;
+    }
+
+    if (section.length < 2) {
+      Alert.alert(
+        'Add Section',
+        'Enter a section name with at least two characters.'
+      );
+      return;
+    }
+
+    if (section.length > 80) {
+      Alert.alert(
+        'Add Section',
+        'The section name must not exceed 80 characters.'
+      );
+      return;
+    }
+
+    const currentSection = String(
+      selectedTeacherStudent?.section || ''
+    )
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (
+      currentSection &&
+      currentSection.toLowerCase() ===
+        section.toLowerCase()
+    ) {
+      Alert.alert(
+        'Add Section',
+        `${section} is already the student's current section.`
+      );
+      return;
+    }
+
+    setBusy('section-create');
+
+    try {
+      const data =
+        await createTeacherSection(
+          gradeLevel,
+          section
+        );
+
+      const assignment =
+        data?.assignment || {
+          gradeLevel,
+          section,
+          status: 'active',
+        };
+
+      const savedSection = String(
+        assignment?.section || section
+      )
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const assignmentRow = {
+        ...assignment,
+        gradeLevel:
+          Number(
+            assignment?.gradeLevel ??
+            assignment?.grade_level ??
+            gradeLevel
+          ) || gradeLevel,
+        section: savedSection,
+        status: 'active',
+      };
+
+      function mergeAssignedClass(current) {
+        const state =
+          current &&
+          typeof current === 'object'
+            ? current
+            : {};
+
+        const assignedClasses =
+          Array.isArray(state.assignedClasses)
+            ? state.assignedClasses
+            : [];
+
+        const duplicateIndex =
+          assignedClasses.findIndex((item) => {
+            const itemGrade = Number(
+              item?.gradeLevel ??
+              item?.grade_level ??
+              item?.grade ??
+              0
+            );
+
+            const itemSection = String(
+              item?.section ??
+              item?.sectionName ??
+              item?.classSection ??
+              ''
+            )
+              .replace(/\s+/g, ' ')
+              .trim()
+              .toLowerCase();
+
+            return (
+              itemGrade === gradeLevel &&
+              itemSection ===
+                savedSection.toLowerCase()
+            );
+          });
+
+        const nextAssignedClasses =
+          duplicateIndex >= 0
+            ? assignedClasses.map(
+                (item, index) =>
+                  index === duplicateIndex
+                    ? {
+                        ...item,
+                        ...assignmentRow,
+                      }
+                    : item
+              )
+            : [
+                ...assignedClasses,
+                assignmentRow,
+              ];
+
+        return {
+          ...state,
+          assignedClasses:
+            nextAssignedClasses,
+        };
+      }
+
+      setDashboard((current) =>
+        mergeAssignedClass(current)
+      );
+
+      setMonitoring((current) =>
+        mergeAssignedClass(current)
+      );
+
+      setTeacherSelectedSection(
+        savedSection
+      );
+      setTeacherNewSectionName('');
+      setTeacherAddingSection(false);
+
+      Alert.alert(
+        data?.created
+          ? 'Section Added'
+          : 'Section Available',
+        data?.message ||
+          `${savedSection} is ready to use for Grade ${gradeLevel}.`
+      );
+    } catch (error) {
+      Alert.alert(
+        'Add Section',
+        error?.response?.data?.message ||
+          error?.data?.message ||
+          error?.message ||
+          'Unable to add the new section.'
+      );
+    } finally {
+      setBusy('');
+    }
+  }
+
+
   async function handleTeacherStudentSectionUpdate() {
     const studentId =
       selectedTeacherStudent?.id ??
@@ -5672,6 +5887,24 @@ async function handleLogout() {
       Alert.alert(
         'Update Section',
         'Search for and select a section first.'
+      );
+      return;
+    }
+
+    const currentSection = String(
+      selectedTeacherStudent?.section || ''
+    )
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (
+      currentSection &&
+      section.toLowerCase() ===
+        currentSection.toLowerCase()
+    ) {
+      Alert.alert(
+        'Update Section',
+        'Select a different section before updating this student.'
       );
       return;
     }
@@ -5741,6 +5974,15 @@ async function handleLogout() {
       0
     );
 
+    const currentSection = String(
+      selectedTeacherStudent?.section || ''
+    )
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const currentSectionKey =
+      currentSection.toLowerCase();
+
     const assignedSections = [
       ...new Set(
         [
@@ -5781,19 +6023,23 @@ async function handleLogout() {
       first.localeCompare(second)
     );
 
-    const sectionSearch =
-      teacherSectionSearchQuery
-        .trim()
-        .toLowerCase();
+    const availableSections =
+      assignedSections.filter((section) => {
+        const sectionKey =
+          section.toLowerCase();
 
-    const visibleSections =
-      assignedSections.filter(
-        (section) =>
-          !sectionSearch ||
-          section
-            .toLowerCase()
-            .includes(sectionSearch)
-      );
+        const isCurrentSection =
+          Boolean(currentSectionKey) &&
+          sectionKey === currentSectionKey;
+
+        return !isCurrentSection;
+      });
+
+    const sectionOptions =
+      availableSections.map((section) => ({
+        label: section,
+        value: section,
+      }));
 
     return (
       <>
@@ -5812,203 +6058,497 @@ async function handleLogout() {
           <Field
             label="Search Student Name"
             value={teacherStudentSearchQuery}
-            onChangeText={(value) =>
-              setTeacherStudentSearchQuery(
-                value
-              )
-            }
-            placeholder="Enter student name"
+            onChangeText={(value) => {
+              setTeacherStudentSearchQuery(value);
+
+              if (!value.trim()) {
+                setTeacherStudentSearchResults([]);
+                setSelectedTeacherStudent(null);
+                setTeacherSectionSearchQuery('');
+                setTeacherSelectedSection('');
+              }
+            }}
+            placeholder="Enter at least two letters"
           />
 
-          <SmallButton
-            disabled={
-              Boolean(busy) ||
-              teacherStudentSearchQuery
-                .trim()
-                .length < 2
-            }
-            onPress={
-              handleTeacherStudentSearch
-            }
-          >
-            {busy === 'student-search'
-              ? 'Searching...'
-              : 'Search Student'}
-          </SmallButton>
+          <Text style={styles.studentSearchHint}>
+            Search using at least two letters of the
+            student's name.
+          </Text>
+
+          <View style={styles.studentSearchActions}>
+            <SmallButton
+              disabled={
+                Boolean(busy) ||
+                teacherStudentSearchQuery
+                  .trim()
+                  .length < 2
+              }
+              onPress={
+                handleTeacherStudentSearch
+              }
+            >
+              {busy === 'student-search'
+                ? 'Searching...'
+                : 'Search Student'}
+            </SmallButton>
+
+            {teacherStudentSearchQuery.trim() ||
+            teacherStudentSearchResults.length ? (
+              <SmallButton
+                tone="slate"
+                disabled={Boolean(busy)}
+                onPress={() => {
+                  setTeacherStudentSearchQuery('');
+                  setTeacherStudentSearchResults([]);
+                  setSelectedTeacherStudent(null);
+                  setTeacherSectionSearchQuery('');
+                  setTeacherSelectedSection('');
+                }}
+              >
+                Clear Search
+              </SmallButton>
+            ) : null}
+          </View>
 
           {teacherStudentSearchResults.length ? (
-            <View style={styles.softRow}>
-              <Text style={styles.rowTitle}>
-                Search Results
-              </Text>
+            <View style={styles.studentResultsPanel}>
+              <View style={styles.studentResultsHeader}>
+                <View style={styles.studentResultsHeaderCopy}>
+                  <Text style={styles.rowTitle}>
+                    Search Results
+                  </Text>
 
-              <Text style={styles.muted}>
-                Select the student whose section
-                you need to update.
-              </Text>
+                  <Text style={styles.muted}>
+                    Select one student to continue.
+                  </Text>
+                </View>
 
-              {teacherStudentSearchResults.map(
-                (student) => {
-                  const studentId =
-                    student?.id ??
-                    student?.studentId ??
-                    student?.student_id;
+                <View style={styles.studentResultCountBadge}>
+                  <Text
+                    style={styles.studentResultCountText}
+                  >
+                    {teacherStudentSearchResults.length}{' '}
+                    {teacherStudentSearchResults.length === 1
+                      ? 'result'
+                      : 'results'}
+                  </Text>
+                </View>
+              </View>
 
-                  const selectedId =
-                    selectedTeacherStudent?.id ??
-                    selectedTeacherStudent?.studentId ??
-                    selectedTeacherStudent?.student_id;
+              <View style={styles.studentResultList}>
+                {teacherStudentSearchResults.map(
+                  (student) => {
+                    const studentId =
+                      student?.id ??
+                      student?.studentId ??
+                      student?.student_id;
 
-                  const isSelected =
-                    String(studentId) ===
-                    String(selectedId);
+                    const selectedId =
+                      selectedTeacherStudent?.id ??
+                      selectedTeacherStudent?.studentId ??
+                      selectedTeacherStudent?.student_id;
 
-                  return (
-                    <TouchableOpacity
-                      key={
-                        studentId ||
-                        student?.studentCode ||
-                        student?.student_code ||
-                        student?.name
-                      }
-                      style={[
-                        styles.studentCard,
-                        isSelected &&
-                          styles.selectedRow,
-                      ]}
-                      activeOpacity={0.84}
-                      accessibilityRole="button"
-                      accessibilityState={{
-                        selected: isSelected,
-                      }}
-                      onPress={() => {
-                        setSelectedTeacherStudent(
-                          student
-                        );
-                        setTeacherSectionSearchQuery(
-                          ''
-                        );
-                        setTeacherSelectedSection(
-                          ''
-                        );
-                      }}
-                    >
-                      <View style={styles.flex}>
-                        <Text
-                          style={styles.rowTitle}
-                        >
-                          {student?.name ||
-                            'Student'}
-                        </Text>
+                    const isSelected =
+                      studentId != null &&
+                      selectedId != null &&
+                      String(studentId) ===
+                        String(selectedId);
 
-                        <Text
-                          style={styles.muted}
-                        >
-                          {student?.studentCode ||
-                            student?.student_code ||
-                            'No student code'}
-                          {' • '}
-                          Grade{' '}
-                          {student?.gradeLevel ??
-                            student?.grade_level ??
-                            student?.grade ??
-                            '-'}
-                          {' • '}
-                          Current section:{' '}
-                          {student?.section ||
-                            'Not assigned'}
-                        </Text>
-                      </View>
+                    const studentName =
+                      student?.name || 'Student';
 
-                      <Text
-                        style={styles.statusText}
+                    const studentCode =
+                      student?.studentCode ||
+                      student?.student_code ||
+                      'No student code';
+
+                    const studentGrade =
+                      student?.gradeLevel ??
+                      student?.grade_level ??
+                      student?.grade ??
+                      '-';
+
+                    const studentSection =
+                      student?.section ||
+                      'Not assigned';
+
+                    return (
+                      <TouchableOpacity
+                        key={
+                          studentId ||
+                          studentCode ||
+                          studentName
+                        }
+                        style={[
+                          styles.studentSearchResultCard,
+                          isSelected &&
+                            styles.studentSearchResultCardSelected,
+                        ]}
+                        activeOpacity={0.84}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          isSelected
+                            ? `${studentName}, selected`
+                            : `Select ${studentName}`
+                        }
+                        accessibilityState={{
+                          selected: isSelected,
+                        }}
+                        onPress={() => {
+                          setSelectedTeacherStudent(
+                            student
+                          );
+                          setTeacherSectionSearchQuery(
+                            ''
+                          );
+                          setTeacherSelectedSection(
+                            ''
+                          );
+                        }}
                       >
-                        {isSelected
-                          ? 'Selected'
-                          : 'Select'}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }
-              )}
+                        <View
+                          style={
+                            styles.studentSearchResultTop
+                          }
+                        >
+                          <View
+                            style={[
+                              styles.studentSearchAvatar,
+                              isSelected &&
+                                styles.studentSearchAvatarSelected,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.studentSearchAvatarText,
+                                isSelected &&
+                                  styles.studentSearchAvatarTextSelected,
+                              ]}
+                            >
+                              {String(studentName)
+                                .trim()
+                                .charAt(0)
+                                .toUpperCase() || 'S'}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={
+                              styles.studentSearchResultCopy
+                            }
+                          >
+                            <Text
+                              style={
+                                styles.studentSearchResultName
+                              }
+                            >
+                              {studentName}
+                            </Text>
+
+                            <Text
+                              style={
+                                styles.studentSearchResultMeta
+                              }
+                            >
+                              {studentCode} • Grade{' '}
+                              {studentGrade}
+                            </Text>
+
+                            <Text
+                              style={
+                                styles.studentSearchResultSection
+                              }
+                            >
+                              Current section: {studentSection}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.studentSelectionBadge,
+                            isSelected
+                              ? styles.studentSelectionBadgeSelected
+                              : styles.studentSelectionBadgeDefault,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.studentSelectionBadgeText,
+                              isSelected &&
+                                styles.studentSelectionBadgeTextSelected,
+                            ]}
+                          >
+                            {isSelected
+                              ? '✓ Selected Student'
+                              : 'Select Student'}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }
+                )}
+              </View>
             </View>
           ) : null}
         </SectionCard>
 
         {selectedTeacherStudent ? (
           <SectionCard>
-            <Text style={styles.cardTitle}>
-              Update Student Section
-            </Text>
+            <View style={styles.studentUpdateHeader}>
+              <View
+                style={
+                  styles.studentUpdateHeaderCopy
+                }
+              >
+                <Text style={styles.cardTitle}>
+                  Update Student Section
+                </Text>
 
-            <View style={styles.softRow}>
-              <Text style={styles.rowTitle}>
-                {selectedTeacherStudent.name ||
-                  'Student'}
-              </Text>
-
-              <Text style={styles.muted}>
-                Grade {selectedGrade || '-'}
-                {' • '}
-                Current section:{' '}
-                {selectedTeacherStudent.section ||
-                  'Not assigned'}
-              </Text>
-            </View>
-
-            <Field
-              label="Search Assigned Section"
-              value={teacherSectionSearchQuery}
-              onChangeText={(value) =>
-                setTeacherSectionSearchQuery(
-                  value
-                )
-              }
-              placeholder="Search section"
-            />
-
-            {visibleSections.length ? (
-              <View style={styles.choiceRow}>
-                {visibleSections.map(
-                  (section) => (
-                    <SmallButton
-                      key={
-                        `${selectedGrade}-${section}`
-                      }
-                      tone={
-                        teacherSelectedSection ===
-                        section
-                          ? 'green'
-                          : 'slate'
-                      }
-                      disabled={Boolean(busy)}
-                      onPress={() =>
-                        setTeacherSelectedSection(
-                          section
-                        )
-                      }
-                    >
-                      {teacherSelectedSection ===
-                      section
-                        ? `✓ ${section}`
-                        : section}
-                    </SmallButton>
-                  )
-                )}
-              </View>
-            ) : (
-              <View style={styles.softRow}>
                 <Text style={styles.muted}>
-                  No assigned section matches
-                  this search.
+                  Choose a different assigned section
+                  for this student.
                 </Text>
               </View>
+
+              <TouchableOpacity
+                style={styles.changeStudentButton}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel="Choose another student"
+                onPress={() => {
+                  setSelectedTeacherStudent(null);
+                  setTeacherSectionSearchQuery('');
+                  setTeacherSelectedSection('');
+                }}
+              >
+                <Text
+                  style={styles.changeStudentButtonText}
+                >
+                  Change
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.selectedStudentSummary}>
+              <View style={styles.selectedStudentHeader}>
+                <View style={styles.selectedStudentAvatar}>
+                  <Text
+                    style={
+                      styles.selectedStudentAvatarText
+                    }
+                  >
+                    {String(
+                      selectedTeacherStudent.name ||
+                        'Student'
+                    )
+                      .trim()
+                      .charAt(0)
+                      .toUpperCase() || 'S'}
+                  </Text>
+                </View>
+
+                <View style={styles.selectedStudentCopy}>
+                  <Text
+                    style={styles.selectedStudentEyebrow}
+                  >
+                    SELECTED STUDENT
+                  </Text>
+
+                  <Text
+                    style={styles.selectedStudentName}
+                  >
+                    {selectedTeacherStudent.name ||
+                      'Student'}
+                  </Text>
+
+                  <Text
+                    style={styles.selectedStudentMeta}
+                  >
+                    {selectedTeacherStudent.studentCode ||
+                      selectedTeacherStudent.student_code ||
+                      'No student code'}
+                    {' • '}
+                    Grade {selectedGrade || '-'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.currentSectionBanner}>
+                <Text style={styles.currentSectionLabel}>
+                  Current Section
+                </Text>
+
+                <Text style={styles.currentSectionValue}>
+                  {currentSection || 'Not assigned'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.sectionChoiceLabel}>
+              New Section
+            </Text>
+
+            <Text style={styles.sectionChoiceHelp}>
+              Select a different section assigned to
+              your account for Grade{' '}
+              {selectedGrade || '-'}.
+            </Text>
+
+            <SelectMenu
+              label="Select Existing Section"
+              value={teacherSelectedSection}
+              options={sectionOptions}
+              onSelect={(value) => {
+                setTeacherSelectedSection(value);
+                setTeacherAddingSection(false);
+                setTeacherNewSectionName('');
+              }}
+              disabled={
+                Boolean(busy) ||
+                !sectionOptions.length
+              }
+              placeholder={
+                sectionOptions.length
+                  ? 'Select an assigned section'
+                  : 'No other existing sections'
+              }
+            />
+
+            <Text style={styles.sectionDropdownHint}>
+              Existing sections assigned to your
+              account for Grade{' '}
+              {selectedGrade || '-'} are listed here.
+            </Text>
+
+            {!sectionOptions.length ? (
+              <View style={styles.sectionEmptyState}>
+                <Text
+                  style={styles.sectionEmptyStateText}
+                >
+                  No other existing section is
+                  available. Add a new section for
+                  this grade level below.
+                </Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity
+              style={[
+                styles.sectionCreateToggle,
+                teacherAddingSection &&
+                  styles.sectionCreateToggleActive,
+                Boolean(busy) &&
+                  styles.disabledButton,
+              ]}
+              disabled={Boolean(busy)}
+              activeOpacity={0.84}
+              accessibilityRole="button"
+              accessibilityLabel={
+                teacherAddingSection
+                  ? 'Cancel adding a new section'
+                  : 'Add a new section'
+              }
+              onPress={() => {
+                setTeacherAddingSection(
+                  (current) => !current
+                );
+                setTeacherNewSectionName('');
+              }}
+            >
+              <Text
+                style={[
+                  styles.sectionCreateToggleText,
+                  teacherAddingSection &&
+                    styles.sectionCreateToggleTextActive,
+                ]}
+              >
+                {teacherAddingSection
+                  ? 'Cancel New Section'
+                  : '+ Add New Section'}
+              </Text>
+            </TouchableOpacity>
+
+            {teacherAddingSection ? (
+              <View style={styles.sectionCreateCard}>
+                <Text
+                  style={styles.sectionCreateTitle}
+                >
+                  Add Grade {selectedGrade || '-'} Section
+                </Text>
+
+                <Text
+                  style={styles.sectionCreateHelp}
+                >
+                  The new section will be added only
+                  under your existing Grade{' '}
+                  {selectedGrade || '-'} assignment.
+                </Text>
+
+                <Field
+                  label="New Section Name"
+                  value={teacherNewSectionName}
+                  onChangeText={
+                    setTeacherNewSectionName
+                  }
+                  placeholder="Example: Courage"
+                />
+
+                <Text
+                  style={styles.sectionCreateInputHint}
+                >
+                  Enter between 2 and 80 characters.
+                </Text>
+
+                <SmallButton
+                  disabled={
+                    Boolean(busy) ||
+                    teacherNewSectionName
+                      .trim()
+                      .length < 2
+                  }
+                  onPress={
+                    handleTeacherSectionCreate
+                  }
+                >
+                  {busy === 'section-create'
+                    ? 'Adding Section...'
+                    : 'Add and Select Section'}
+                </SmallButton>
+              </View>
+            ) : null}
+
+            {teacherSelectedSection ? (
+              <View style={styles.sectionChangePreview}>
+                <Text
+                  style={styles.sectionChangePreviewLabel}
+                >
+                  Ready to update
+                </Text>
+
+                <Text
+                  style={styles.sectionChangePreviewValue}
+                >
+                  {currentSection || 'Not assigned'}
+                  {'  →  '}
+                  {teacherSelectedSection}
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.sectionSelectionHint}>
+                Select a new section to enable the
+                update action.
+              </Text>
             )}
 
             <SmallButton
               disabled={
                 Boolean(busy) ||
-                !teacherSelectedSection
+                !teacherSelectedSection ||
+                teacherSelectedSection
+                  .toLowerCase() ===
+                  currentSectionKey
               }
               onPress={
                 handleTeacherStudentSectionUpdate
@@ -6764,6 +7304,332 @@ const styles = StyleSheet.create({
   body: { color: '#475569', marginTop: 7, lineHeight: 20 },
   softRow: { backgroundColor: '#F0FDF4', borderRadius: 14, padding: 12, marginTop: 9 },
   selectedRow: { borderWidth: 2, borderColor: '#22C55E' },
+  studentSearchHint: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+    marginTop: 7,
+    marginBottom: 12,
+  },
+  studentSearchActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 8,
+  },
+  studentResultsPanel: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    padding: 12,
+    marginTop: 16,
+  },
+  studentResultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 12,
+  },
+  studentResultsHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  studentResultCountBadge: {
+    backgroundColor: '#DCFCE7',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  studentResultCountText: {
+    color: '#166534',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  studentResultList: {
+    gap: 10,
+  },
+  studentSearchResultCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#DCE7E1',
+    padding: 13,
+  },
+  studentSearchResultCardSelected: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 2,
+    borderColor: '#16A34A',
+  },
+  studentSearchResultTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  studentSearchAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+  studentSearchAvatarSelected: {
+    backgroundColor: '#16A34A',
+  },
+  studentSearchAvatarText: {
+    color: '#475569',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  studentSearchAvatarTextSelected: {
+    color: '#FFFFFF',
+  },
+  studentSearchResultCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  studentSearchResultName: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  studentSearchResultMeta: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+    marginTop: 3,
+  },
+  studentSearchResultSection: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  studentSelectionBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 11,
+  },
+  studentSelectionBadgeDefault: {
+    backgroundColor: '#F1F5F9',
+  },
+  studentSelectionBadgeSelected: {
+    backgroundColor: '#16A34A',
+  },
+  studentSelectionBadgeText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  studentSelectionBadgeTextSelected: {
+    color: '#FFFFFF',
+  },
+  studentUpdateHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  studentUpdateHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  changeStudentButton: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  changeStudentButtonText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  selectedStudentSummary: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    padding: 14,
+    marginTop: 14,
+  },
+  selectedStudentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectedStudentAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  selectedStudentAvatarText: {
+    color: '#FFFFFF',
+    fontSize: 19,
+    fontWeight: '900',
+  },
+  selectedStudentCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  selectedStudentEyebrow: {
+    color: '#15803D',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.7,
+  },
+  selectedStudentName: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  selectedStudentMeta: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  currentSectionBanner: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 12,
+  },
+  currentSectionLabel: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  currentSectionValue: {
+    color: '#166534',
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  sectionChoiceLabel: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 18,
+  },
+  sectionChoiceHelp: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  sectionDropdownHint: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17,
+    marginTop: 8,
+  },
+  sectionCreateToggle: {
+    width: '100%',
+    minHeight: 46,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#16A34A',
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginTop: 14,
+  },
+  sectionCreateToggleActive: {
+    borderColor: '#64748B',
+    backgroundColor: '#F8FAFC',
+  },
+  sectionCreateToggleText: {
+    color: '#15803D',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  sectionCreateToggleTextActive: {
+    color: '#475569',
+  },
+  sectionCreateCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    padding: 14,
+    marginTop: 10,
+  },
+  sectionCreateTitle: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  sectionCreateHelp: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 5,
+  },
+  sectionCreateInputHint: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 7,
+  },
+  sectionEmptyState: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+    marginTop: 10,
+  },
+  sectionEmptyStateText: {
+    color: '#64748B',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  sectionChangePreview: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    padding: 12,
+    marginTop: 14,
+  },
+  sectionChangePreviewLabel: {
+    color: '#15803D',
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionChangePreviewValue: {
+    color: '#166534',
+    fontSize: 15,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  sectionSelectionHint: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 12,
+  },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   lessonListCard: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 16, padding: 12, marginTop: 12 },
   lessonListHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

@@ -182,6 +182,20 @@ export async function getActiveStudents(query = '') {
   );
 }
 
+export async function createTeacherSection(
+  gradeLevel,
+  section
+) {
+  return api('/students/teacher-sections', {
+    method: 'POST',
+    body: {
+      gradeLevel,
+      section,
+    },
+  });
+}
+
+
 export async function updateStudentSection(
   studentId,
   section
