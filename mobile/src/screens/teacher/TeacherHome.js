@@ -235,7 +235,7 @@ function SelectMenu({ label, value, options = [], onSelect, disabled = false, pl
               })}
             </ScrollView>
             <TouchableOpacity style={styles.selectClose} onPress={() => setVisible(false)}>
-              <Text style={styles.selectCloseText}>Isara</Text>
+              <Text style={styles.selectCloseText}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
