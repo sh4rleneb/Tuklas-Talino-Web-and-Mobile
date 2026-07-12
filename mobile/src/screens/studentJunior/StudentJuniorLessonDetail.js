@@ -4512,13 +4512,16 @@ const styles = StyleSheet.create({
   },
 
   finishCardButton: {
-    flex: 1,
+    width: '100%',
     minWidth: 0,
-    minHeight: 146,
-    borderRadius: 22,
+    minHeight: 82,
+    borderRadius: 20,
     borderWidth: 1.5,
-    padding: 14,
-    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
     shadowColor: '#64748B',
     shadowOffset: {
       width: 0,
@@ -4530,8 +4533,9 @@ const styles = StyleSheet.create({
   },
 
   finishCardTextWrap: {
+    flex: 1,
     minWidth: 0,
-    marginTop: 12,
+    marginHorizontal: 12,
   },
 
   finishCardTitle: {
@@ -4684,7 +4688,6 @@ const styles = StyleSheet.create({
 
   finishSecondaryRow: {
     width: '100%',
-    flexDirection: 'row',
     alignItems: 'stretch',
     gap: 10,
   },
@@ -4720,14 +4723,13 @@ const styles = StyleSheet.create({
   },
 
   finishCardArrow: {
-    width: '100%',
+    width: 26,
     alignSelf: 'center',
     color: '#475569',
     fontSize: 27,
     fontWeight: '800',
     lineHeight: 28,
-    textAlign: 'center',
-    marginTop: 6,
+    textAlign: 'right',
   },
 
 });
