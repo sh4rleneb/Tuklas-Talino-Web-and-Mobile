@@ -1678,26 +1678,30 @@ if (role === 'admin') {
     });
   }
 
-  function todayDateInputValueInManila() {
-    return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  }
+  const GROUP_TASK_MINIMUM_DEADLINE_MS = 60 * 60 * 1000;
 
   function validateWebGroupTaskDeadline(value) {
     const rawValue = String(value || '').trim();
 
     if (!rawValue) {
-      throw new Error('Pumili muna ng deadline sa calendar bago gumawa ng group task.');
+      throw new Error('Pumili muna ng deadline at oras bago gumawa ng group task.');
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(rawValue)) {
-      throw new Error('Hindi valid ang deadline ng group task. Pumili muli ng tamang petsa.');
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(rawValue)) {
+      throw new Error('Hindi valid ang deadline ng group task. Pumili muli ng tamang petsa at oras.');
     }
 
-    if (rawValue < todayDateInputValueInManila()) {
-      throw new Error('Hindi maaaring nasa nakaraan ang deadline ng group task. Pumili ng petsa ngayon o sa susunod na araw.');
+    const deadlineMs = Date.parse(`${rawValue}:00+08:00`);
+
+    if (!Number.isFinite(deadlineMs)) {
+      throw new Error('Hindi valid ang deadline ng group task. Pumili muli ng tamang petsa at oras.');
     }
 
-    return rawValue;
+    if (deadlineMs < Date.now() + GROUP_TASK_MINIMUM_DEADLINE_MS) {
+      throw new Error('Ang deadline ay kailangang hindi bababa sa isang oras mula ngayon.');
+    }
+
+    return new Date(deadlineMs).toISOString();
   }
 
   function getWebGroupTaskPayload() {

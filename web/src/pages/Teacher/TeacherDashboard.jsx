@@ -1986,7 +1986,7 @@ export default function TeacherDashboard({
                     <div className="teacher-two-fields">
                       <div style={{display:'grid',gap:6}}>
                         <label htmlFor="t-task-deadline" style={{fontWeight:800,fontSize:13,color:'#475569'}}>Deadline</label>
-                        <input className="input-field" id="t-task-deadline" type="date" min={new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)} required />
+                        <input className="input-field" id="t-task-deadline" type="datetime-local" min={new Date(Date.now() + 8 * 60 * 60 * 1000 + 61 * 60 * 1000).toISOString().slice(0, 16)} step="60" required />
                       </div>
                       <div style={{display:'grid',gap:6}}>
                         <label htmlFor="t-task-xp" style={{fontWeight:800,fontSize:13,color:'#475569'}}>XP Reward</label>
