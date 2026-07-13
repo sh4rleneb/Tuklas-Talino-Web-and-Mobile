@@ -2505,6 +2505,10 @@ const stepScrollRef = useRef(null);
           )}
           {questions[currentQuestionIndex] && (() => {
             const question = questions[currentQuestionIndex];
+            const visibleOptions = shuffleChoicesForAttempt(
+              question.options || question.choices || [],
+              `${currentMissionAttemptKey}:question:${question.id}:attempt:${Math.max(1, currentMissionAttemptCount)}`
+            );
             return (
             <View key={question.id} style={styles.questionBlock}>
               {littleLearnerGame ? (
@@ -2560,7 +2564,7 @@ const stepScrollRef = useRef(null);
                   </Text>
                 </View>
               )}
-              {(question.options || []).map((option, index) => {
+              {visibleOptions.map((option, index) => {
                 const answer = mcqAnswers[question.id];
                 const selected = answer?.selectedOptionId === option.id;
                 return (
