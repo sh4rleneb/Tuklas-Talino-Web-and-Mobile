@@ -14,6 +14,10 @@ import {
 import { signToken, authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
 import { Role, User, Student, Teacher, AdminProfile } from '../models/index.js';
 import { audit } from '../services/audit.service.js';
+import {
+  issueOneTimeLoginToken,
+  consumeOneTimeLoginToken,
+} from '../services/oneTimeLoginToken.service.js';
 
 import {
   adminPasswordVerificationLimiter,
@@ -449,6 +453,102 @@ router.post('/login', async (req, res, next) => {
     next(err);
   }
 });
+
+// TUKLAS_ONE_TIME_LOGIN_JTI_V1
+router.post(
+  '/one-time-login/issue',
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const userId =
+        req.user?.id ||
+        req.user?.userId;
+
+      const issued =
+        issueOneTimeLoginToken(userId);
+
+      return res.status(201).json({
+        oneTimeToken: issued.token,
+        tokenType: 'One-Time',
+        expiresAt: issued.expiresAt,
+        consumableOnce: true,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  '/one-time-login/redeem',
+  async (req, res, next) => {
+    try {
+      const suppliedToken = String(
+        req.body?.oneTimeToken ||
+        req.body?.token ||
+        ''
+      ).trim();
+
+      let consumed;
+
+      try {
+        consumed =
+          consumeOneTimeLoginToken(
+            suppliedToken
+          );
+      } catch (error) {
+        const statusCode =
+          Number.isInteger(error?.statusCode)
+            ? error.statusCode
+            : 401;
+
+        return res.status(statusCode).json({
+          message:
+            error?.message ||
+            'The one-time login token cannot be used.',
+        });
+      }
+
+      const user = await User.findByPk(
+        consumed.userId,
+        {
+          include: [
+            Role,
+            Student,
+            Teacher,
+            AdminProfile,
+          ],
+        }
+      );
+
+      if (!user) {
+        return res.status(401).json({
+          message:
+            'The account for this token no longer exists.',
+        });
+      }
+
+      const verification =
+        verifyLoginAccount(user);
+
+      if (verification) {
+        return res
+          .status(verification.status)
+          .json({
+            message: verification.message,
+          });
+      }
+
+      return res.json({
+        token: signToken(user),
+        user: publicUser(user),
+        oneTimeTokenConsumed: true,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 router.post('/logout', authenticate, async (req, res) => {
   await audit(req.user.id, 'auth.logout', 'user', req.user.id);
