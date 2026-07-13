@@ -9,6 +9,8 @@ export default function BumalikButton({
   onPress,
   disabled = false,
   style,
+  textStyle,
+  label = '← Bumalik',
   accessibilityLabel = 'Bumalik',
 }) {
   return (
@@ -24,8 +26,8 @@ export default function BumalikButton({
         disabled && styles.disabled,
       ]}
     >
-      <Text style={styles.text}>
-        ← Bumalik
+      <Text style={[styles.text, textStyle]}>
+        {label}
       </Text>
     </TouchableOpacity>
   );

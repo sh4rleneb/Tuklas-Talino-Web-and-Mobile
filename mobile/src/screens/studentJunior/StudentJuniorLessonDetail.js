@@ -4003,7 +4003,11 @@ const stepScrollRef = useRef(null);
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.topBar}>
-                    <BumalikButton
+          <BumalikButton
+            label="← Aklatan ng mga Aralin"
+            accessibilityLabel="Bumalik sa aklatan ng mga aralin"
+            style={styles.lessonLibraryTopButton}
+            textStyle={styles.lessonLibraryTopText}
             onPress={() => navigation.goBack()}
           />
           <View style={styles.studentChip}>
@@ -4551,6 +4555,25 @@ const stepScrollRef = useRef(null);
 }
 
 const styles = StyleSheet.create({
+  lessonLibraryTopText: {
+    color: '#15803D',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  lessonLibraryTopButton: {
+    marginBottom: 0,
+    minHeight: 42,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: '#22C55E',
+    backgroundColor: '#F0FDF4',
+    maxWidth: '68%',
+    flexShrink: 1,
+  },
+
 
   // MOBILE_JUNIOR_QUIZ_EQUAL_NAV_BUTTONS_V1
   quizNavigationRow: {
@@ -4720,7 +4743,13 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
   page: { padding: 18, paddingBottom: 160 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 18,
+  },
   back: { color: '#16A34A', fontWeight: '900' },
   studentChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 6 },
   avatar: { fontSize: 20, marginRight: 5 },
