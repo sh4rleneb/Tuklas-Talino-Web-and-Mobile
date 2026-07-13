@@ -95,6 +95,9 @@ function taskSearchText(task) {
 
 export default function GroupsScreen({ navigation }) {
   const [groups, setGroups] = useState([]);
+  // MOBILE_G12_GROUP_ROLE_TO_TASK_V1
+  const [juniorGroupStepById, setJuniorGroupStepById] = useState({});
+  const [juniorGroupRoleById, setJuniorGroupRoleById] = useState({});
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -259,6 +262,149 @@ export default function GroupsScreen({ navigation }) {
     );
   }
 
+
+
+  function chooseJuniorGroupRole(group, role) {
+    const gradeLevel = Number(
+      student?.gradeLevel ||
+      student?.grade ||
+      0
+    );
+
+    if (
+      ![1, 2].includes(gradeLevel) ||
+      !group?.id ||
+      !role
+    ) {
+      return;
+    }
+
+    const groupKey = String(group.id);
+
+    setJuniorGroupRoleById((current) => ({
+      ...current,
+      [groupKey]: role,
+    }));
+
+    setJuniorGroupStepById((current) => ({
+      ...current,
+      [groupKey]: 'task',
+    }));
+  }
+
+  function returnToJuniorGroupRoles(groupId) {
+    const groupKey = String(groupId || '');
+
+    setJuniorGroupStepById((current) => ({
+      ...current,
+      [groupKey]: 'role',
+    }));
+  }
+
+  function renderJuniorGroupTask(group) {
+    const tasks = Array.isArray(group?.tasks)
+      ? group.tasks
+      : [];
+
+    const task =
+      tasks.find(
+        (item) =>
+          !item.completed &&
+          !item.pendingTeacherCheck
+      ) ||
+      tasks.find((item) => !item.completed) ||
+      tasks[0] ||
+      null;
+
+    const groupKey = String(group?.id || '');
+    const selectedRole =
+      juniorGroupRoleById[groupKey] || null;
+
+    const selectedRoleLabel =
+      selectedRole?.title ||
+      selectedRole?.label ||
+      selectedRole?.name ||
+      '';
+
+    return (
+      <View>
+        <Card>
+          <Text style={styles.cardTitle}>
+            🧩 Oras ng pagtutulungan!
+          </Text>
+
+          <Text style={styles.muted}>
+            Gawin ang misyon nang magkakasama.
+          </Text>
+
+          {selectedRole ? (
+            <View
+              style={{
+                alignSelf: 'flex-start',
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 999,
+                backgroundColor: '#FFF7D6',
+                borderWidth: 1,
+                borderColor: '#F4D77A',
+              }}
+            >
+              <Text
+                style={{
+                  color: '#334155',
+                  fontWeight: '900',
+                }}
+              >
+                Tungkulin: {selectedRole.icon || '⭐'}{' '}
+                {selectedRoleLabel}
+              </Text>
+            </View>
+          ) : null}
+        </Card>
+
+        {task ? (
+          renderTask(group, task)
+        ) : (
+          <Card>
+            <View style={styles.emptyMini}>
+              <Text style={styles.emptyMiniTitle}>
+                Wala pang misyon
+              </Text>
+
+              <Text style={styles.muted}>
+                Maaaring magdagdag ang guro.
+              </Text>
+            </View>
+          </Card>
+        )}
+
+        <TouchableOpacity
+          activeOpacity={0.86}
+          style={[
+            styles.primaryButton,
+            {
+              marginTop: 12,
+              backgroundColor: '#E2E8F0',
+            },
+          ]}
+          onPress={() => returnToJuniorGroupRoles(group?.id)}
+        >
+          <Text
+            style={[
+              styles.primaryButtonText,
+              { color: '#0F172A' },
+            ]}
+          >
+            Bumalik
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   function renderTask(group, task) {
     const bucket = getTaskBucket(task);
     const isBusy = busyTaskId === task.id;
@@ -292,7 +438,7 @@ export default function GroupsScreen({ navigation }) {
 
         {canSubmit && (
           <PrimaryButton variant="secondary" onPress={() => complete(task.id)}>
-            {isBusy ? 'Isinusumite...' : task.returnedByTeacher ? 'Nakatulong ako sa aming pangkat!' : 'Nakatulong ako sa aming pangkat!'}
+            {isBusy ? 'Isinusumite...' : 'Nakatulong ako sa aming pangkat!'}
           </PrimaryButton>
         )}
       </Card>
@@ -301,6 +447,23 @@ export default function GroupsScreen({ navigation }) {
 
 
   function renderTrabahoSelection(group) {
+    const juniorGradeLevel = Number(
+      student?.gradeLevel ||
+      student?.grade ||
+      0
+    );
+
+    const juniorGroupKey = String(group?.id || '');
+    const juniorGroupStep =
+      juniorGroupStepById[juniorGroupKey] || 'role';
+
+    if (
+      [1, 2].includes(juniorGradeLevel) &&
+      juniorGroupStep === 'task'
+    ) {
+      return renderJuniorGroupTask(group);
+    }
+
     return (
       <Card style={[styles.jobScreen, styles.roleSelectionPanel]}>
         {/* MOBILE_ROLE_SELECTION_FILIPINO_V2 */}
@@ -326,6 +489,7 @@ export default function GroupsScreen({ navigation }) {
               onPress={() => {
                 setSelectedRole(role);
                 setMissionStep('task');
+                chooseJuniorGroupRole(group, role);
               }}
             >
               <Text style={[styles.jobIcon, styles.roleSelectionIcon]}>
@@ -533,7 +697,7 @@ export default function GroupsScreen({ navigation }) {
                 </View>
 
                 <View style={styles.stepPill}>
-                  <Text style={styles.stepText}>Trabaho</Text>
+                  <Text style={styles.stepText}>Tungkulin</Text>
                 </View>
 
                 <View style={styles.stepPill}>
