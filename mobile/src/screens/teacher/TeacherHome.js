@@ -1594,10 +1594,10 @@ async function handleLogout() {
         activity.max_attempts ??
         activity.attemptLimit ??
         activity.attemptsAllowed ??
-        activity.dataJson?.maxAttempts ??
-        activity.dataJson?.max_attempts ??
-        activity.data_json?.maxAttempts ??
-        activity.data_json?.max_attempts ??
+        activity?.dataJson?.maxAttempts ??
+        activity?.dataJson?.max_attempts ??
+        activity?.data_json?.maxAttempts ??
+        activity?.data_json?.max_attempts ??
         current.maxAttempts ??
         '2'
       ),

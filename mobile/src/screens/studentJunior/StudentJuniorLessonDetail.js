@@ -330,7 +330,7 @@ function normalizeMissionQuestion(question = {}, index = 0, sourceKey = 'mission
     question.options ??
     question.choices ??
     question.answers ??
-    question.dataJson?.options ??
+    question?.dataJson?.options ??
     [];
 
   const options = Array.isArray(rawOptions)
@@ -368,10 +368,10 @@ function collectMissionQuestionsFromActivity(activity = {}, rows = []) {
   appendMissionQuestionRows(rows, activity.mcqQuestions);
   appendMissionQuestionRows(rows, activity.questionPool);
   appendMissionQuestionRows(rows, activity.questionPools);
-  appendMissionQuestionRows(rows, activity.dataJson?.questions);
-  appendMissionQuestionRows(rows, activity.dataJson?.mcqQuestions);
-  appendMissionQuestionRows(rows, activity.dataJson?.questionPool);
-  appendMissionQuestionRows(rows, activity.dataJson?.questionPools);
+  appendMissionQuestionRows(rows, activity?.dataJson?.questions);
+  appendMissionQuestionRows(rows, activity?.dataJson?.mcqQuestions);
+  appendMissionQuestionRows(rows, activity?.dataJson?.questionPool);
+  appendMissionQuestionRows(rows, activity?.dataJson?.questionPools);
 
   return rows;
 }
@@ -3703,9 +3703,9 @@ const stepScrollRef = useRef(null);
       );
     }
 
-    const fileUrl = currentActivity.dataJson?.fileUrl;
-    const rawVocabulary = Array.isArray(currentActivity.dataJson?.words)
-      ? currentActivity.dataJson.words
+    const fileUrl = currentActivity?.dataJson?.fileUrl;
+    const rawVocabulary = Array.isArray(currentActivity?.dataJson?.words)
+      ? currentActivity?.dataJson.words
       : [];
 
     const vocabulary = rawVocabulary
@@ -3732,14 +3732,14 @@ const stepScrollRef = useRef(null);
         /[\p{L}\p{N}]/u.test(item.word)
       ));
 
-    const pairs = Array.isArray(currentActivity.dataJson?.pairs)
-      ? currentActivity.dataJson.pairs.filter(Boolean)
+    const pairs = Array.isArray(currentActivity?.dataJson?.pairs)
+      ? currentActivity?.dataJson.pairs.filter(Boolean)
       : [];
 
     return (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{currentActivity.title || 'Gawain sa Aralin'}</Text>
-        <Text style={styles.body}>{currentActivity.instructions || currentActivity.dataJson?.content || 'Basahin muna ang gawaing ito bago magpatuloy.'}</Text>
+        <Text style={styles.body}>{currentActivity.instructions || currentActivity?.dataJson?.content || 'Basahin muna ang gawaing ito bago magpatuloy.'}</Text>
         <ActivityGuideCard
             activity={currentActivity}
             littleLearnerGame={littleLearnerGame}

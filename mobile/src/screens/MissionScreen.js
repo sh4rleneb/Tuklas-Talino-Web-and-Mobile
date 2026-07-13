@@ -238,7 +238,7 @@ function getMissionAttemptCount(mission = {}) {
     mission.quizAttemptCount ??
     mission.latestAttempt?.attemptNo ??
     mission.attempt?.attemptNo ??
-    mission.dataJson?.attemptCount ??
+    mission?.dataJson?.attemptCount ??
     0;
 
   const fromArray = Array.isArray(mission.attempts)

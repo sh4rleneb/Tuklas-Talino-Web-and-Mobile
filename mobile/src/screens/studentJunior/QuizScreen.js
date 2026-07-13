@@ -274,10 +274,10 @@ function getQuizAttemptLimit(quiz = {}) {
   return normalizeQuizAttemptLimit(
     safeQuiz.maxAttempts ??
     safeQuiz.max_attempts ??
-    safeQuiz.dataJson?.maxAttempts ??
-    safeQuiz.dataJson?.max_attempts ??
-    safeQuiz.data_json?.maxAttempts ??
-    safeQuiz.data_json?.max_attempts ??
+    safeQuiz?.dataJson?.maxAttempts ??
+    safeQuiz?.dataJson?.max_attempts ??
+    safeQuiz?.data_json?.maxAttempts ??
+    safeQuiz?.data_json?.max_attempts ??
     DEFAULT_MAX_QUIZ_ATTEMPTS
   );
 }

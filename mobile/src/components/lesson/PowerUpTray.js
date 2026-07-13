@@ -65,7 +65,7 @@ function collectFallbackWords(words, value) {
 
 function buildWordPowerUps(activity = {}) {
   const words = [];
-  const rubric = activity.writingTask?.rubricJson || activity.rubricJson || activity.dataJson || {};
+  const rubric = activity.writingTask?.rubricJson || activity.rubricJson || activity?.dataJson || {};
 
   [
     rubric.correctAnswer,
