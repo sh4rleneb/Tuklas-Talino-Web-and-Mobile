@@ -267,6 +267,30 @@ const lessonMaterialUploadDir = path.join(__dirname, '../../uploads/lesson-mater
 fs.mkdirSync(lessonMaterialUploadDir, { recursive: true });
 
 
+const lessonMaterialAllowedMimes = new Map([
+  [
+    '.pdf',
+    new Set([
+      'application/pdf'
+    ])
+  ],
+  [
+    '.ppt',
+    new Set([
+      'application/vnd.ms-powerpoint'
+    ])
+  ],
+  [
+    '.pptx',
+    new Set([
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    ])
+  ]
+]);
+
+
+
+
 const speechUploadDir = path.join(__dirname, '../../uploads/speech-recordings');
 
 fs.mkdirSync(speechUploadDir, { recursive: true });
@@ -320,14 +344,25 @@ const lessonMaterialUpload = multer({
   }),
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
-    const allowedExts = new Set(['.ppt', '.pptx', '.pdf']);
+    const mimeType = String(file.mimetype || '').toLowerCase();
 
-    if (allowedExts.has(ext)) {
-      cb(null, true);
+    const allowedMimes =
+      lessonMaterialAllowedMimes.get(ext);
+
+    if (!allowedMimes || !allowedMimes.has(mimeType)) {
+      cb(new Error('Only valid PPT, PPTX, or PDF lesson materials are allowed.'));
       return;
     }
 
-    cb(new Error('Only PPT, PPTX, or PDF lesson materials are allowed.'));
+    cb(null, true);
+  },
+  limits: {
+    fileSize: 20 * 1024 * 1024,
+    files: 1,
+    fields: 10,
+    parts: 11,
+    fieldNameSize: 100,
+    fieldSize: 256 * 1024,
   },
 });
 
