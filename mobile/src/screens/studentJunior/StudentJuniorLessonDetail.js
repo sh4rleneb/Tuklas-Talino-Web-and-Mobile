@@ -3557,12 +3557,9 @@ const stepScrollRef = useRef(null);
             ) : null}
 
               <View style={styles.speechStopAudioRow}>
-                <AudioPlayerButton
-                  icon="⏹"
-                  label={littleLearnerGame ? "Ihinto" : "Ihinto ang Tunog"}
-                  style={styles.speechStopAudioButton}
-                  textStyle={styles.speechStopAudioText}
-                  danger
+                <TouchableOpacity
+                  style={styles.speechStopSoundButton}
+                  activeOpacity={0.85}
                   onPress={async () => {
                     await stopSpeech();
 
@@ -3578,7 +3575,12 @@ const stepScrollRef = useRef(null);
                     setPlaying(false);
                     setSpeechStatus('Nahinto ang pagpapatugtog.');
                   }}
-                />
+                >
+                  <Text style={styles.speechStopSoundIcon}>⏹</Text>
+                  <Text style={styles.speechStopSoundText}>
+                    {littleLearnerGame ? 'Ihinto' : 'Ihinto ang Tunog'}
+                  </Text>
+                </TouchableOpacity>
               </View>
           </View>
             <TouchableOpacity
@@ -5352,19 +5354,37 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 8,
   },
 
-  speechStopAudioButton: {
-    width: '46%',
-    maxWidth: 190,
-    alignSelf: 'center',
+  speechStopSoundButton: {
+    width: '42%',
+    maxWidth: 170,
+    height: 112,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#EF4444',
+    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
 
-  speechStopAudioText: {
+  speechStopSoundIcon: {
+    fontSize: 34,
+    lineHeight: 38,
     textAlign: 'center',
-    width: '100%',
+  },
+
+  speechStopSoundText: {
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#B91C1C',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 
 });
