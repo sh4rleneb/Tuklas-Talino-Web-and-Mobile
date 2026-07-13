@@ -141,8 +141,162 @@ function formatXpLogNote(log = {}) {
   return fallbacks[log.sourceType] || 'Nakuhang XP';
 }
 
+
+function normalizeXpSourceType(log = {}) {
+  return String(
+    log.sourceType ||
+    log.source_type ||
+    log.type ||
+    log.kind ||
+    ''
+  ).trim().toLowerCase();
+}
+
+function getXpSourceLabel(log = {}) {
+  const sourceType = normalizeXpSourceType(log);
+
+  const labels = {
+    lesson: 'Aralin',
+    quiz: 'Pagsusulit',
+    mcq: 'Tanong na may pagpipilian',
+    writing: 'Pagsulat',
+    speech: 'Pagbigkas',
+    mission: 'Misyon',
+    group: 'Pangkat',
+    group_task: 'Gawaing pangkat',
+    badge: 'Gantimpala',
+  };
+
+  return labels[sourceType] || 'Gawain';
+}
+
+function getDetailedXpIcon(log = {}) {
+  const sourceType = normalizeXpSourceType(log);
+
+  if (sourceType === 'lesson') return '📚';
+  if (sourceType === 'quiz') return '📝';
+  if (sourceType === 'mcq') return '🧠';
+  if (sourceType === 'writing') return '✍️';
+  if (sourceType === 'speech') return '🎤';
+  if (sourceType === 'mission') return '🚀';
+  if (sourceType === 'group' || sourceType === 'group_task') return '👥';
+  if (sourceType === 'badge') return '🏅';
+
+  return '⭐';
+}
+
+function extractXpLogLessonTitle(note = '') {
+  const value = String(note || '').replace(/\s+/g, ' ').trim();
+
+  const forMatch = value.match(/\bfor\s+(.+?)(?:\s*:\s*\d+%|\s*$)/i);
+  if (forMatch) return translateXpLessonTitle(forMatch[1]);
+
+  const completedMatch = value.match(/^Completed\s+(.+)$/i);
+  if (completedMatch) return translateXpLessonTitle(completedMatch[1]);
+
+  return '';
+}
+
+function extractXpLogPercent(note = '') {
+  const value = String(note || '');
+  const match = value.match(/(\d+(?:\.\d+)?)\s*%/);
+  return match ? `${match[1]}%` : '';
+}
+
+function formatDetailedXpLogNote(log = {}) {
+  const value = String(log.note || '').replace(/\s+/g, ' ').trim();
+  const normalized = value.toLowerCase();
+
+  const translations = {
+    'correct fill-in-the-blank writing task': 'Tamang sagot sa gawaing pagpuno sa patlang',
+    'correct mcq answer': 'Tamang sagot sa tanong na may pagpipilian',
+    'correct answer': 'Tamang sagot',
+    'lesson completed': 'Natapos ang aralin',
+    'completed lesson': 'Natapos ang aralin',
+    'quiz completed': 'Natapos ang pagsusulit',
+    'completed quiz': 'Natapos ang pagsusulit',
+    'submitted quiz result': 'Nakapagsumite ng resulta ng pagsusulit',
+    'perfect quiz': 'Perpektong iskor sa pagsusulit',
+    'writing task submitted': 'Naisumite ang gawaing pagsulat',
+    'submitted writing attempt': 'Nakapagsumite ng pagsubok sa pagsulat',
+    'speech attempt submitted': 'Naisumite ang pagsubok sa pagbigkas',
+    'submitted speech attempt': 'Nakapagsumite ng pagsubok sa pagbigkas',
+    'mission completed': 'Natapos ang misyon',
+    'group task completed': 'Natapos ang gawaing pangkat',
+    'earned badge': 'Nakakuha ng gantimpala',
+    'completed nouns': 'Natapos ang aralin: Pangngalan',
+  };
+
+  if (translations[normalized]) return translations[normalized];
+
+  const quizParticipation = value.match(/^Quiz participation for\s+(.+?)(?:\s*:\s*(\d+(?:\.\d+)?)%)?$/i);
+  if (quizParticipation) return 'Pakikilahok sa pagsusulit';
+
+  const quizImprovement = value.match(/^Quiz improvement\s+(.+?)\s+for\s+(.+?)(?:\s*:\s*(\d+(?:\.\d+)?)%)?$/i);
+  if (quizImprovement) return `Pagbuti sa pagsusulit (${quizImprovement[1]})`;
+
+  const completedMatch = value.match(/^Completed\s+(.+)$/i);
+  if (completedMatch) return `Natapos ang aralin: ${translateXpLessonTitle(completedMatch[1])}`;
+
+  const submittedMatch = value.match(/^Submitted\s+(.+?)\s+attempt$/i);
+  if (submittedMatch) {
+    const attemptType = submittedMatch[1].toLowerCase();
+    if (attemptType === 'speech') return 'Nakapagsumite ng pagsubok sa pagbigkas';
+    if (attemptType === 'writing') return 'Nakapagsumite ng pagsubok sa pagsulat';
+    return `Nakapagsumite ng pagsubok sa ${translateXpLessonTitle(attemptType)}`;
+  }
+
+  const fallbacks = {
+    lesson: 'Nakuhang XP sa aralin',
+    quiz: 'Nakuhang XP sa pagsusulit',
+    mcq: 'Nakuhang XP sa tamang sagot',
+    writing: 'Nakuhang XP sa gawaing pagsulat',
+    speech: 'Nakuhang XP sa pagbigkas',
+    mission: 'Nakuhang XP sa misyon',
+    group: 'Nakuhang XP sa gawaing pangkat',
+    group_task: 'Nakuhang XP sa gawaing pangkat',
+    badge: 'Nakuhang XP sa gantimpala',
+  };
+
+  return fallbacks[normalizeXpSourceType(log)] || 'Nakuhang XP';
+}
+
+function getXpDetailLines(log = {}) {
+  const rawNote = String(log.note || '').replace(/\s+/g, ' ').trim();
+  const details = [
+    `Pinagmulan: ${getXpSourceLabel(log)}`,
+    `Nakuha: +${Number(log.points || 0)} XP`,
+  ];
+
+  const lessonTitle = extractXpLogLessonTitle(rawNote);
+  if (lessonTitle) details.push(`Aralin/Gawain: ${lessonTitle}`);
+
+  const percent = extractXpLogPercent(rawNote);
+  if (percent) details.push(`Iskor: ${percent}`);
+
+  details.push(`Kailan: ${formatXpLogDate(log)}`);
+
+  return details;
+}
+
+function getXpProfileDetail(log = {}) {
+  const rawNote = String(log.note || '').replace(/\s+/g, ' ').trim();
+  const lessonTitle = extractXpLogLessonTitle(rawNote);
+  const percent = extractXpLogPercent(rawNote);
+  const parts = [`Pinagmulan: ${getXpSourceLabel(log)}`];
+
+  if (lessonTitle) parts.push(`Gawain: ${lessonTitle}`);
+  if (percent) parts.push(`Iskor: ${percent}`);
+
+  return parts.join(' • ');
+}
+
 export default function XPHistoryScreen({ navigation, route }) {
   const logs = route?.params?.xpLogs || [];
+  const totalListedXp = logs.reduce(
+    (sum, log) => sum + Number(log?.points || 0),
+    0
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -152,8 +306,8 @@ export default function XPHistoryScreen({ navigation, route }) {
         </TouchableOpacity>
 
         <View style={styles.headerCard}>
-          <Text style={styles.title}>⭐ Kasaysayan ng XP</Text>
-          <Text style={styles.subtitle}>Lahat ng natanggap na XP at tala ng mga gawain.</Text>
+          <Text style={styles.title}>⭐ Detalyadong Kasaysayan ng XP</Text>
+          <Text style={styles.subtitle}>Makikita rito ang pinagmulan, puntos, petsa, at detalye ng bawat XP.</Text>
         </View>
 
         {logs.length ? (
@@ -165,11 +319,22 @@ export default function XPHistoryScreen({ navigation, route }) {
                 <Text style={styles.xpLogIcon}>{getXpIcon(log)}</Text>
               </View>
 
-              <View style={styles.xpLogContent}>
-                <Text style={styles.xpLogPoints}>+{log.points} XP</Text>
-                <Text style={styles.xpLogNote}>{formatXpLogNote(log)}</Text>
-                <Text style={styles.xpDate}>🕒 {formatXpLogDate(log)}</Text>
-              </View>
+                <View style={styles.xpLogContent}>
+                  <View style={styles.xpLogTopRow}>
+                    <Text style={styles.xpLogPoints}>+{Number(log.points || 0)} XP</Text>
+                    <Text style={styles.xpSourceBadge}>{getXpSourceLabel(log)}</Text>
+                  </View>
+
+                  <Text style={styles.xpLogNote}>{formatDetailedXpLogNote(log)}</Text>
+
+                  <View style={styles.xpDetailList}>
+                    {getXpDetailLines(log).map((detail) => (
+                      <Text key={detail} style={styles.xpDetailText}>
+                        {detail}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
             </View>
           ))
         ) : (
