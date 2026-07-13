@@ -76,8 +76,8 @@ export default function LessonDashboardScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page}>
 
-        <TouchableOpacity style={styles.backRow} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Aklatan ng mga Aralin</Text>
+        <TouchableOpacity style={[styles.backRow, styles.lessonLibraryTopButton]} onPress={() => navigation.goBack()}>
+          <Text style={[styles.backText, styles.lessonLibraryTopText]}>← Aklatan ng mga Aralin</Text>
         </TouchableOpacity>
 
         <View style={styles.pill}>
@@ -141,14 +141,60 @@ export default function LessonDashboardScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
+  lessonLibraryTopText: {
+    color: '#15803D',
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+
+  lessonLibraryTopButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: '#22C55E',
+    backgroundColor: '#F0FDF4',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 2,
+    marginBottom: 14,
+    flexShrink: 1,
+  },
+
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   loadingText: { marginTop: 12, color: '#64748B', fontWeight: '700' },
   errorText: { color: '#EF4444', fontWeight: '700', textAlign: 'center', marginBottom: 16 },
   page: { padding: 20, paddingBottom: 40 },
-
-  backRow: { marginBottom: 16 },
-  backText: { color: '#22C55E', fontWeight: '900', fontSize: 15 },
+  backRow: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: '#22C55E',
+    backgroundColor: '#F0FDF4',
+    marginBottom: 16,
+    flexShrink: 1,
+  },
+  backText: {
+    color: '#15803D',
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
 
   pill: {
     alignSelf: 'flex-start',
