@@ -243,7 +243,7 @@ function handleIdentifierChange(value) {
             >
               {loading
                 ? 'Naglo-load...'
-                : '✨ Login'}
+                : '✨ Mag-login'}
             </Text>
 
           </TouchableOpacity>

@@ -253,7 +253,7 @@ function handleStudentIdChange(value) {
             <Text style={styles.loginText}>
               {loading
                 ? '⏳ Naglo-log in...'
-                : '✨ Login'}
+                : '✨ Mag-login'}
             </Text>
 
           </TouchableOpacity>
