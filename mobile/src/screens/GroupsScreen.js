@@ -450,7 +450,7 @@ export default function GroupsScreen({ navigation }) {
 
         <View style={styles.header}>
           <View style={styles.heroCard}>
-            <Text style={styles.title}>👥 Mga Gawain ng Grupo</Text>
+            <Text style={styles.title}>👥 Mga Gawain ng Pangkat</Text>
             <Text style={styles.muted}>
               Makipagtulungan, subaybayan ang progreso, at isumite ang mga gawain para sa pag-apruba ng guro.
             </Text>
@@ -458,7 +458,7 @@ export default function GroupsScreen({ navigation }) {
             <View style={styles.summaryRow}>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryValue}>{summary.groups}</Text>
-                <Text style={styles.summaryLabel}>Mga Grupo</Text>
+                <Text style={styles.summaryLabel}>Mga Pangkat</Text>
               </View>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryValue}>{summary.todo}</Text>
@@ -480,7 +480,7 @@ export default function GroupsScreen({ navigation }) {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Maghanap ng grupo o gawain"
+            placeholder="Maghanap ng pangkat o gawain"
             placeholderTextColor={colors.muted}
             style={styles.searchInput}
             autoCapitalize="none"
