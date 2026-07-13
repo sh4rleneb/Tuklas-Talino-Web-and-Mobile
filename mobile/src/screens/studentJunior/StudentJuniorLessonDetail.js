@@ -1371,17 +1371,17 @@ const stepScrollRef = useRef(null);
         lesson
       );
 
-      const quizCompleted =
+      const quizAnswered =
         quizQuestions.length > 0 &&
         quizQuestions.every(
           (question) =>
-            mcqAnswers[question.id]?.correct === true
+            Boolean(mcqAnswers[question.id]?.selectedOptionId)
         );
 
-      if (!quizCompleted) {
+      if (!quizAnswered) {
         setActivityNotice({
           type: 'warning',
-          text: 'Sagutan muna nang tama ang pagsusulit bago magpatuloy sa susunod na hakbang.',
+          text: 'Sagutan muna ang pagsusulit bago magpatuloy sa susunod na hakbang.',
         });
         return;
       }
@@ -1418,7 +1418,7 @@ const stepScrollRef = useRef(null);
     if (
       answerQuestionLockRef.current ||
       submitting ||
-      mcqAnswers[question.id]?.correct === true
+      Boolean(mcqAnswers[question.id]?.selectedOptionId)
     ) {
       return;
     }
@@ -1453,14 +1453,14 @@ const stepScrollRef = useRef(null);
 
       setMcqAnswers(nextAnswers);
 
-      const quizPassed =
+      const quizAnswered =
         visibleQuestions.length > 0 &&
         visibleQuestions.every(
           (visibleQuestion) =>
-            nextAnswers[visibleQuestion.id]?.correct === true
+            Boolean(nextAnswers[visibleQuestion.id]?.selectedOptionId)
         );
 
-      if (quizPassed) {
+      if (quizAnswered) {
         setMcqPassed((prev) => ({
           ...prev,
           [String(
@@ -2419,7 +2419,7 @@ const stepScrollRef = useRef(null);
         questions.length > 0 &&
         questions.every(
           (question) =>
-            mcqAnswers[question.id]?.correct === true
+            Boolean(mcqAnswers[question.id]?.selectedOptionId)
         );
       return (
         <View style={styles.card}>
@@ -2588,7 +2588,7 @@ const stepScrollRef = useRef(null);
                   setActivityNotice({
                     type: 'warning',
                     title: 'Kailangan ng Sagot',
-                    message: 'Pumili muna ng tamang sagot bago magpatuloy.',
+                    message: 'Pumili muna ng sagot bago magpatuloy.',
                   });
                   return;
                 }
