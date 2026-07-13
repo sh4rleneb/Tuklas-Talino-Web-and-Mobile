@@ -3437,6 +3437,7 @@ const stepScrollRef = useRef(null);
                   backgroundColor: '#FFE2EA',
                   borderRadius: 16,
                   padding: 16,
+                  marginTop: 26,
                   marginBottom: 14,
                 }}
               >
@@ -3467,6 +3468,7 @@ const stepScrollRef = useRef(null);
                   backgroundColor: '#FFF7ED',
                   borderRadius: 14,
                   padding: 14,
+                  marginTop: 26,
                   marginBottom: 12,
                   borderWidth: 1,
                   borderColor: '#FED7AA',
@@ -3537,8 +3539,6 @@ const stepScrollRef = useRef(null);
                   ? (recording ? 'Itigil' : 'Itala ang Boses')
                   : (recording ? 'Ihinto ang Pagtatala ng Boses' : 'Simulan ang Pagtatala ng Boses')
               }
-              style={styles.speechStopAudioButton}
-              textStyle={styles.speechStopAudioText}
               danger={recording}
               onPress={recording ? stopRecording : startRecording}
             />
@@ -3556,29 +3556,43 @@ const stepScrollRef = useRef(null);
               />
             ) : null}
 
-            <AudioPlayerButton
-              icon="⏹"
-              label={littleLearnerGame ? "Ihinto" : "Ihinto ang Tunog"}
-              style={styles.speechStopAudioButton}
-              textStyle={styles.speechStopAudioText}
-              danger
-              onPress={async () => {
-                await stopSpeech();
+              <View style={styles.speechStopAudioRow}>
+                <AudioPlayerButton
+                  icon="⏹"
+                  label={littleLearnerGame ? "Ihinto" : "Ihinto ang Tunog"}
+                  style={styles.speechStopAudioButton}
+                  textStyle={styles.speechStopAudioText}
+                  danger
+                  onPress={async () => {
+                    await stopSpeech();
 
-                if (soundRef.current) {
-                  try {
-                    await soundRef.current.stopAsync();
-                    await soundRef.current.unloadAsync();
-                  } catch {}
+                    if (soundRef.current) {
+                      try {
+                        await soundRef.current.stopAsync();
+                        await soundRef.current.unloadAsync();
+                      } catch {}
 
-                  soundRef.current = null;
-                }
+                      soundRef.current = null;
+                    }
 
-                setPlaying(false);
-                setSpeechStatus('Nahinto ang pagpapatugtog.');
-              }}
-            />
+                    setPlaying(false);
+                    setSpeechStatus('Nahinto ang pagpapatugtog.');
+                  }}
+                />
+              </View>
           </View>
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                (submitting || !recordingUri) && styles.disabledButton,
+              ]}
+              onPress={submitSpeech}
+              disabled={submitting || !recordingUri}
+            >
+              <Text style={styles.primaryText}>
+                {submitting ? 'Ipinapasa...' : 'Ipasa ang Pagbigkas'}
+              </Text>
+            </TouchableOpacity>
           {speechStatus ? <Text style={styles.statusMessage}>{localizeStudentVisibleMessage(speechStatus)}</Text> : null}
         </View>
       );
@@ -5334,8 +5348,15 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     textAlign: 'right',
   },
+  speechStopAudioRow: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   speechStopAudioButton: {
+    width: '46%',
+    maxWidth: 190,
     alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
