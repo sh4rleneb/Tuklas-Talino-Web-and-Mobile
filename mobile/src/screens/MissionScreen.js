@@ -258,6 +258,25 @@ function missionAttemptLabel(mission = {}) {
   return `Pagsubok ${Math.max(1, used + 1)} sa ${max}`;
 }
 
+
+function getMissionProgress(mission = {}) {
+  if (isCompleted(mission) || isClaimable(mission)) return 100;
+
+  const backendProgress = Number(mission.progress ?? mission.percent ?? 0);
+  const attemptsUsed = getMissionAttemptCount(mission);
+  const maxAttempts = Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS);
+
+  const attemptProgress =
+    attemptsUsed > 0 && Number.isFinite(maxAttempts) && maxAttempts > 0
+      ? Math.round((Math.min(attemptsUsed, maxAttempts) / maxAttempts) * 100)
+      : 0;
+
+  return Math.max(
+    0,
+    Math.min(100, Math.max(backendProgress, attemptProgress))
+  );
+}
+
 function buildMergedMissions(backendMissions = []) {
   return MISSION_GAMES.map((mission) => {
     const backend = backendMissions.find(
@@ -572,7 +591,7 @@ export default function MissionScreen({ navigation }) {
           const tone = getTone(mission.tone);
           const completed = isCompleted(mission);
           const claimable = isClaimable(mission);
-          const progress = completed ? 100 : claimable ? 100 : Number(mission.progress || 0);
+          const progress = getMissionProgress(mission);
 
           return (
             <TouchableOpacity

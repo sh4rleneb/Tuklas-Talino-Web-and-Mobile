@@ -372,26 +372,91 @@ function collectMissionQuestionsFromActivity(activity = {}, rows = []) {
   return rows;
 }
 
-function buildMissionQuestionPool(activity = {}, lesson = {}, limit = MISSION_QUESTION_POOL_LIMIT) {
-  const rows = [];
 
-  collectMissionQuestionsFromActivity(activity, rows);
+function shuffleMissionQuestionsForAttempt(questions = [], attemptKey = '') {
+  const list = [...questions];
+  let seed = String(attemptKey || 'mission-attempt')
+    .split('')
+    .reduce((hash, char) => ((hash << 5) - hash + char.charCodeAt(0)) | 0, 0);
 
-  if (rows.length < limit) {
-    (lesson?.activities || [])
-      .filter(item => String(item?.type || '').toLowerCase() === 'mcq')
-      .forEach(item => collectMissionQuestionsFromActivity(item, rows));
+  for (let index = list.length - 1; index > 0; index -= 1) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const swapIndex = seed % (index + 1);
+    const current = list[index];
+    list[index] = list[swapIndex];
+    list[swapIndex] = current;
   }
 
-  return uniqueMissionQuestions(
-    rows.map((question, index) =>
-      normalizeMissionQuestion(
-        question,
-        index,
-        String(activity?.id || activity?.title || lesson?.id || 'mission')
-      )
-    )
-  ).slice(0, limit);
+  return list;
+}
+
+function selectMissionQuestionsForAttempt(
+  questions = [],
+  limit = MISSION_QUESTION_POOL_LIMIT,
+  attemptKey = ''
+) {
+  const uniqueQuestions = uniqueMissionQuestions(questions);
+  if (!uniqueQuestions.length) return [];
+
+  const questionCount = Math.max(
+    1,
+    Math.min(Number(limit) || MISSION_QUESTION_POOL_LIMIT, uniqueQuestions.length)
+  );
+
+  const attemptNoMatch = String(attemptKey || '').match(/attempt:(\d+)/);
+  const attemptNo = Math.max(1, Number(attemptNoMatch?.[1] || 1));
+  const baseKey = String(attemptKey || 'mission-attempt').replace(
+    /attempt:\d+/,
+    'attempt:base'
+  );
+
+  const stablePool = shuffleMissionQuestionsForAttempt(uniqueQuestions, baseKey);
+
+  if (stablePool.length <= questionCount) {
+    return shuffleMissionQuestionsForAttempt(stablePool, attemptKey);
+  }
+
+  const startIndex = ((attemptNo - 1) * questionCount) % stablePool.length;
+  const selectedQuestions = [];
+
+  for (
+    let offset = 0;
+    offset < stablePool.length && selectedQuestions.length < questionCount;
+    offset += 1
+  ) {
+    selectedQuestions.push(stablePool[(startIndex + offset) % stablePool.length]);
+  }
+
+  return shuffleMissionQuestionsForAttempt(selectedQuestions, attemptKey);
+}
+
+function buildMissionQuestionPool(
+  activity = {},
+  lesson = {},
+  limit = MISSION_QUESTION_POOL_LIMIT,
+  attemptKey = ''
+) {
+  const rows = [];
+  collectMissionQuestionsFromActivity(activity, rows);
+
+  (Array.isArray(lesson?.activities) ? lesson.activities : [])
+    .filter((item) => item && String(item.id || '') !== String(activity?.id || ''))
+    .forEach((item) => collectMissionQuestionsFromActivity(item, rows));
+
+  const sourceKey = String(activity?.id || activity?.title || lesson?.id || 'mission');
+  const normalizedQuestions = rows.map((question, index) =>
+    normalizeMissionQuestion(question, index, sourceKey)
+  );
+
+  const selectionKey =
+    attemptKey ||
+    `${sourceKey}:attempt:${Math.max(1, getServerMissionAttemptCount(lesson, activity))}`;
+
+  return selectMissionQuestionsForAttempt(
+    normalizedQuestions,
+    limit,
+    selectionKey
+  );
 }
 
 function getMissionAttemptStorageKey(lesson = {}, activity = {}) {
@@ -1366,10 +1431,7 @@ const stepScrollRef = useRef(null);
       currentStep?.type === 'activity' &&
       currentActivity?.type === 'mcq'
     ) {
-      const quizQuestions = buildMissionQuestionPool(
-        currentActivity,
-        lesson
-      );
+      const quizQuestions = buildMissionQuestionPool(currentActivity, lesson, MISSION_QUESTION_POOL_LIMIT, `${currentMissionAttemptKey}:attempt:${Math.max(1, currentMissionAttemptCount)}`);
 
       const quizAnswered =
         quizQuestions.length > 0 &&
@@ -1438,10 +1500,7 @@ const stepScrollRef = useRef(null);
         setMcqChoiceShuffleNonce((prev) => prev + 1);
       }
 
-      const visibleQuestions = buildMissionQuestionPool(
-        currentActivity,
-        lesson
-      );
+      const visibleQuestions = buildMissionQuestionPool(currentActivity, lesson, MISSION_QUESTION_POOL_LIMIT, `${currentMissionAttemptKey}:attempt:${Math.max(1, currentMissionAttemptCount)}`);
 
       const nextAnswers = {
         ...mcqAnswers,
@@ -2414,7 +2473,7 @@ const stepScrollRef = useRef(null);
 
     if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
  {
-            const questions = buildMissionQuestionPool(currentActivity, lesson);
+            const questions = buildMissionQuestionPool(currentActivity, lesson, MISSION_QUESTION_POOL_LIMIT, `${currentMissionAttemptKey}:attempt:${Math.max(1, currentMissionAttemptCount)}`);
       const allAnswered =
         questions.length > 0 &&
         questions.every(
