@@ -1,4 +1,12 @@
-import { api, apiText, apiBinary } from './client';
+import {
+  api,
+  apiText,
+  apiBinary,
+} from './client';
+import {
+  clearAdminReauthProof,
+  getAdminReauthHeaders,
+} from './auth';
 
 export async function getAdminStats() {
   return api('/admin/stats');
@@ -42,11 +50,29 @@ export async function getArchivedTeachers() {
 }
 
 export async function createStudentAccount(body) {
-  return api('/students', { method: 'POST', body });
+  try {
+    return await api('/students', {
+      method: 'POST',
+      headers: getAdminReauthHeaders(),
+      body,
+    });
+  } catch (error) {
+    clearAdminReauthProof();
+    throw error;
+  }
 }
 
 export async function createTeacherAccount(body) {
-  return api('/teachers', { method: 'POST', body });
+  try {
+    return await api('/teachers', {
+      method: 'POST',
+      headers: getAdminReauthHeaders(),
+      body,
+    });
+  } catch (error) {
+    clearAdminReauthProof();
+    throw error;
+  }
 }
 
 export async function assignTeacher(teacherId, body) {

@@ -51,7 +51,11 @@ import {
   updateAccountStatus,
   removeAccountLockdown,
 } from '../../api/admin';
-import { logout, verifyPassword } from '../../api/auth';
+import {
+  hasAdminReauthProof,
+  logout,
+  verifyPassword,
+} from '../../api/auth';
 const NAV_ITEMS = [
   ['overview', '🏠', 'Overview'],
   ['accounts', '➕', 'Add Accounts'],
@@ -352,7 +356,8 @@ async function handleLogout() {
   function hasActiveVerificationSession() {
     return (
       verificationExpiresAt &&
-      Date.now() < verificationExpiresAt
+      Date.now() < verificationExpiresAt &&
+      hasAdminReauthProof()
     );
   }
 
@@ -408,10 +413,22 @@ async function handleLogout() {
 
 async function executeVerifiedAction() {
     try {
-      await verifyPassword(passwordVerifyInput);
+      const verification =
+        await verifyPassword(
+          passwordVerifyInput
+        );
+
+      const serverExpiry =
+        Date.parse(
+          String(
+            verification?.reauthExpiresAt || ''
+          )
+        );
 
       setVerificationExpiresAt(
-        Date.now() + (5 * 60 * 1000)
+        Number.isFinite(serverExpiry)
+          ? serverExpiry
+          : Date.now() + (5 * 60 * 1000)
       );
 
       const action = pendingAction;
@@ -1076,12 +1093,13 @@ async function executeVerifiedAction() {
             ) : null}
             {studentValidation.section && (
               <Text style={styles.errorText}>
-                Section is required.
+                Section must use A-Z letters and spaces only. Each word must have at least 2 letters.
               </Text>
             )}
             <Button
               disabled={Boolean(busy) || !studentFormValid}
-              onPress={async () => {
+              onPress={() =>
+                  runProtectedAction(async () => {
               const payload = {
                 name: normalizeSpaces(studentForm.name),
                 gradeLevel: Number(studentForm.gradeLevel),
@@ -1124,7 +1142,7 @@ async function executeVerifiedAction() {
                 setStudentForm({ name: '', gradeLevel: '1', section: '', sectionMode: 'existing', newSection: '' });
                 setStudentSectionMenuOpen(false);
               }
-            }}>Create Student</Button>
+            })}>Create Student</Button>
           </>
         ) : (
           <>
@@ -1135,7 +1153,7 @@ async function executeVerifiedAction() {
             </Text>
 
             <Field
-              label="Teacher Full Name"
+              label="Teacher First and Last Name"
               value={teacherForm.name}
               placeholder="e.g. Maria Santos"
               onChangeText={(name) =>
@@ -1145,6 +1163,10 @@ async function executeVerifiedAction() {
                 }))
               }
             />
+            {/* STRICT_TEACHER_FULL_NAME_UI */}
+            <Text style={styles.helperText}>
+              First and last name are required. Use A-Z letters and spaces only. Each name must have at least 2 letters.
+            </Text>
             {teacherValidation.name && (
               <Text style={styles.errorText}>
                 Enter the teacher's first and last name.
@@ -1175,7 +1197,8 @@ async function executeVerifiedAction() {
 
             <Button
               disabled={Boolean(busy) || !teacherFormValid}
-              onPress={async () => {
+              onPress={() =>
+                  runProtectedAction(async () => {
               const teacherEmail = String(teacherForm.email || '').trim();
               const teacherPayload = {
                 name: normalizeSpaces(teacherForm.name),
@@ -1215,7 +1238,7 @@ async function executeVerifiedAction() {
 
                 setTeacherForm({ name: '', email: '' });
               }
-            }}>Add Teacher</Button>
+            })}>Add Teacher</Button>
           </>
         )}
       </Card>

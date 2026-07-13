@@ -24,8 +24,35 @@ export function isValidName(value = '') {
   );
 }
 
-export function isValidSection(value = '') {
-  return normalizeSpaces(value).length > 0;
+// STRICT_TEACHER_FULL_NAME
+const strictTeacherFullNamePattern =
+  /^[A-Za-z]{2,}(?: [A-Za-z]{2,})+$/;
+
+export function isValidTeacherFullName(
+  value = ''
+) {
+  const name = normalizeSpaces(value);
+
+  return (
+    name.length <= 100 &&
+    strictTeacherFullNamePattern.test(name)
+  );
+}
+
+// STRICT_SECTION_CLIENT_VALIDATION
+const strictSectionPattern =
+  /^[A-Za-z]{2,}(?: [A-Za-z]{2,})*$/;
+
+export function isValidSection(
+  value = ''
+) {
+  const section =
+    normalizeSpaces(value);
+
+  return (
+    section.length <= 40 &&
+    strictSectionPattern.test(section)
+  );
 }
 
 export function isValidGrade(value) {
@@ -55,7 +82,7 @@ export function studentErrors(form) {
 
 export function teacherErrors(form) {
   return {
-    name: !isValidName(form.name),
+    name: !isValidTeacherFullName(form.name),
     email: !isValidEmail(form.email),
   };
 }
