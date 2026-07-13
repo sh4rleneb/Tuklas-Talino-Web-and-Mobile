@@ -1,7 +1,12 @@
 import PDFDocument from 'pdfkit';
+import { PERMISSIONS } from '../constants/permissions.js';
 import { Router } from 'express';
 import { Op } from 'sequelize';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import {
+  authenticate,
+  requireAnyPermission,
+  requireRole
+} from '../middleware/auth.js';
 import {
   User,
   Student,
@@ -17,7 +22,13 @@ import {
 } from '../models/index.js';
 
 const router = Router();
-router.use(authenticate, requireRole('admin', 'teacher'));
+router.use(
+  authenticate,
+  requireAnyPermission(
+    PERMISSIONS.REPORTS_ALL_VIEW,
+    PERMISSIONS.REPORTS_ASSIGNED_VIEW
+  )
+);
 
 
 async function getTeacherAssignments(req) {

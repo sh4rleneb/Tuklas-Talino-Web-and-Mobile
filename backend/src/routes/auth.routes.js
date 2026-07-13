@@ -1,8 +1,9 @@
 import {
   findDuplicateAccount,
   duplicateAccountPayload,
-} from '../services/accountDuplicate.service.js';
+  } from '../services/accountDuplicate.service.js';
 import { sequelize } from '../config/database.js';
+import { PERMISSIONS } from '../constants/permissions.js';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import {
@@ -11,7 +12,12 @@ import {
   studentSchema,
   teacherSchema
 } from '../validators/common.js';
-import { signToken, authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
+import { signToken,
+  authenticate,
+  requireRole,
+  requirePasswordChanged,
+  requirePermission
+} from '../middleware/auth.js';
 import { Role, User, Student, Teacher, AdminProfile } from '../models/index.js';
 import { audit } from '../services/audit.service.js';
 import {
@@ -465,6 +471,9 @@ router.post('/login', async (req, res, next) => {
 router.post(
   '/one-time-login/issue',
   authenticate,
+  requirePermission(
+    PERMISSIONS.ONE_TIME_LOGIN_ISSUE
+  ),
   async (req, res, next) => {
     try {
       const userId =

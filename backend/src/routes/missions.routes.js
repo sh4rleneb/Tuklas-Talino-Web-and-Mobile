@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { authenticate, requireRole, requirePasswordChanged } from '../middleware/auth.js';
+import { PERMISSIONS } from '../constants/permissions.js';
+import {
+  authenticate,
+  requirePermission,
+  requirePasswordChanged
+} from '../middleware/auth.js';
 import { CompletedLesson, MissionCompletion, Student } from '../models/index.js';
 import { awardXp, calculateLevel, nextLevelXp } from '../services/progress.service.js';
 
@@ -7,7 +12,11 @@ const router = Router();
 
 router.use(authenticate);
 router.use(requirePasswordChanged);
-router.use(requireRole('student'));
+router.use(
+  requirePermission(
+    PERMISSIONS.MISSIONS_PARTICIPATE
+  )
+);
 
 const MISSION_CATALOG = {
   'word-match': {

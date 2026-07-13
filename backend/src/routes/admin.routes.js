@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import { PERMISSIONS } from '../constants/permissions.js';
 import rateLimit from 'express-rate-limit';
 import { assertSafeText } from '../validators/contentSafety.js';
 import {
   authenticate,
-  requireRole,
+  requirePermission,
   requirePasswordChanged
 } from '../middleware/auth.js';
 
@@ -216,7 +217,10 @@ function adminUserPayload(user = {}) {
   };
 }
 
-router.use(authenticate, requireRole('admin'));
+router.use(
+  authenticate,
+  requirePermission(PERMISSIONS.ADMIN_ACCESS)
+);
 router.use(requirePasswordChanged);
 
 router.get('/stats', async (req, res, next) => {

@@ -1,0 +1,108 @@
+export const PERMISSIONS = Object.freeze({
+  ADMIN_ACCESS: 'admin.access',
+  ACCOUNTS_VIEW: 'accounts.view',
+  ACCOUNTS_MANAGE: 'accounts.manage',
+  AUDIT_LOGS_VIEW: 'audit.logs.view',
+
+  TEACHERS_VIEW: 'teachers.view',
+  TEACHERS_MANAGE: 'teachers.manage',
+  TEACHER_ASSIGNMENTS_MANAGE:
+    'teacher.assignments.manage',
+
+  STUDENTS_VIEW: 'students.view',
+  STUDENTS_MANAGE: 'students.manage',
+  STUDENT_SELF_VIEW: 'student.self.view',
+  STUDENT_SELF_UPDATE: 'student.self.update',
+
+  LESSONS_VIEW: 'lessons.view',
+  LESSONS_MANAGE: 'lessons.manage',
+  LESSON_PROGRESS_UPDATE:
+    'lessons.progress.update',
+
+  GROUPS_VIEW: 'groups.view',
+  GROUPS_MANAGE: 'groups.manage',
+  GROUP_TASK_COMPLETE: 'groups.tasks.complete',
+
+  REVIEWS_VIEW: 'reviews.view',
+  REVIEWS_GRADE: 'reviews.grade',
+
+  REPORTS_ALL_VIEW: 'reports.all.view',
+  REPORTS_ASSIGNED_VIEW: 'reports.assigned.view',
+  REPORTS_SELF_VIEW: 'reports.self.view',
+
+  MISSIONS_PARTICIPATE: 'missions.participate',
+  PROFILE_SELF_UPDATE: 'profile.self.update',
+
+  TTS_USE: 'tts.use',
+  ONE_TIME_LOGIN_ISSUE:
+    'auth.oneTimeLogin.issue',
+});
+
+export const ROLE_PERMISSIONS = Object.freeze({
+  admin: Object.freeze([
+    PERMISSIONS.ADMIN_ACCESS,
+    PERMISSIONS.ACCOUNTS_VIEW,
+    PERMISSIONS.ACCOUNTS_MANAGE,
+    PERMISSIONS.AUDIT_LOGS_VIEW,
+
+    PERMISSIONS.TEACHERS_VIEW,
+    PERMISSIONS.TEACHERS_MANAGE,
+    PERMISSIONS.TEACHER_ASSIGNMENTS_MANAGE,
+
+    PERMISSIONS.STUDENTS_VIEW,
+    PERMISSIONS.STUDENTS_MANAGE,
+
+    PERMISSIONS.LESSONS_VIEW,
+    PERMISSIONS.LESSONS_MANAGE,
+
+    PERMISSIONS.GROUPS_VIEW,
+    PERMISSIONS.GROUPS_MANAGE,
+
+    PERMISSIONS.REVIEWS_VIEW,
+    PERMISSIONS.REVIEWS_GRADE,
+
+    PERMISSIONS.REPORTS_ALL_VIEW,
+
+    PERMISSIONS.TTS_USE,
+    PERMISSIONS.ONE_TIME_LOGIN_ISSUE,
+  ]),
+
+  teacher: Object.freeze([
+    PERMISSIONS.TEACHERS_VIEW,
+    PERMISSIONS.STUDENTS_VIEW,
+
+    PERMISSIONS.LESSONS_VIEW,
+    PERMISSIONS.LESSONS_MANAGE,
+
+    PERMISSIONS.GROUPS_VIEW,
+    PERMISSIONS.GROUPS_MANAGE,
+
+    PERMISSIONS.REVIEWS_VIEW,
+    PERMISSIONS.REVIEWS_GRADE,
+
+    PERMISSIONS.REPORTS_ASSIGNED_VIEW,
+
+    PERMISSIONS.TTS_USE,
+  ]),
+
+  student: Object.freeze([
+    PERMISSIONS.STUDENT_SELF_VIEW,
+    PERMISSIONS.STUDENT_SELF_UPDATE,
+
+    PERMISSIONS.LESSONS_VIEW,
+    PERMISSIONS.LESSON_PROGRESS_UPDATE,
+
+    PERMISSIONS.GROUPS_VIEW,
+    PERMISSIONS.GROUP_TASK_COMPLETE,
+
+    PERMISSIONS.REPORTS_SELF_VIEW,
+    PERMISSIONS.MISSIONS_PARTICIPATE,
+    PERMISSIONS.PROFILE_SELF_UPDATE,
+
+    PERMISSIONS.TTS_USE,
+  ]),
+});
+
+export function permissionsForRole(role) {
+  return ROLE_PERMISSIONS[String(role || '').trim()] || [];
+}

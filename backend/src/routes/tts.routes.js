@@ -1,8 +1,9 @@
 import { Router } from 'express';
+import { PERMISSIONS } from '../constants/permissions.js';
 import {
   authenticate,
   requirePasswordChanged,
-  requireRole
+  requirePermission
 } from '../middleware/auth.js';
 import { synthesizeFilipinoSpeech } from '../services/googleTts.service.js';
 
@@ -11,7 +12,7 @@ const router = Router();
 router.use(
   authenticate,
   requirePasswordChanged,
-  requireRole('student', 'teacher', 'admin')
+  requirePermission(PERMISSIONS.TTS_USE)
 );
 
 router.post('/speak', async (req, res, next) => {

@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { permissionsForRole } from '../constants/permissions.js';
 import crypto from 'crypto';
 import { User, Role, Student, Teacher, AdminProfile } from '../models/index.js';
 
@@ -97,6 +98,64 @@ export async function authenticate(req, res, next) {
       message: 'Invalid or expired token.',
     });
   }
+}
+
+export function hasPermission(
+  role,
+  permission
+) {
+  if (!permission) return false;
+
+  return permissionsForRole(role).includes(
+    permission
+  );
+}
+
+export function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: 'Authentication required.',
+      });
+    }
+
+    if (!hasPermission(req.role, permission)) {
+      return res.status(403).json({
+        message:
+          'You do not have permission to access this resource.',
+        requiredPermission: permission,
+      });
+    }
+
+    return next();
+  };
+}
+
+export function requireAnyPermission(
+  ...permissions
+) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: 'Authentication required.',
+      });
+    }
+
+    const allowed = permissions.some(
+      (permission) =>
+        hasPermission(req.role, permission)
+    );
+
+    if (!allowed) {
+      return res.status(403).json({
+        message:
+          'You do not have permission to access this resource.',
+        requiredPermissions: permissions,
+      });
+    }
+
+    return next();
+  };
 }
 
 export function requireRole(...roles) {
