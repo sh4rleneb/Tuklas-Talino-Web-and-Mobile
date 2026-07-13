@@ -57,9 +57,9 @@ const assignmentMutationLimiter = rateLimit({
 
 const SECTION_MAX_LENGTH = 40;
 
+// STRICT_ADMIN_SECTION_VALIDATION
 const SECTION_NAME_PATTERN =
-  /^[\p{L}\p{N}](?:[\p{L}\p{N} .'-]{0,38}[\p{L}\p{N}])?$/u;
-
+  /^[A-Za-z]{2,}(?: [A-Za-z]{2,})*$/;
 function normalizeSectionName(value = '') {
   return String(value || '')
     .normalize('NFKC')
@@ -121,8 +121,8 @@ function getSectionValidationError(section = '') {
 
   if (!SECTION_NAME_PATTERN.test(section)) {
     return (
-      'Section may contain only letters, numbers, ' +
-      'spaces, periods, apostrophes, and hyphens.'
+      'Section must use A-Z letters and spaces only. ' +
+      'Each word must contain at least 2 letters.'
     );
   }
 

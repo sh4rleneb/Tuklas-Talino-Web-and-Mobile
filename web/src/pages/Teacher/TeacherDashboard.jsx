@@ -206,8 +206,15 @@ export default function TeacherDashboard({
       return;
     }
 
-    if (!section) {
-      setStudentAccountError('Section is required.');
+    // STRICT_SECTION_TEACHER_STUDENT_CREATION
+    if (
+      !/^[A-Za-z]{2,}(?: [A-Za-z]{2,})*$/.test(
+        section
+      )
+    ) {
+      setStudentAccountError(
+        'Section must use A-Z letters and spaces only. Each word must have at least 2 letters.'
+      );
       return;
     }
 

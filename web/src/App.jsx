@@ -5,7 +5,12 @@ import {
   readStudentNavigationState,
   saveStudentNavigationState
 } from './utils/studentNavigationState.js';
-import { api, downloadFile, uploadForm } from './api/client';
+import {
+  api,
+  downloadFile,
+  getAdminReauthHeaders,
+  uploadForm,
+} from './api/client';
 import { speakText, stopSpeech } from './services/tts.service';
 import { useAuth } from './contexts/AuthContext';
 import QuizzesPage from './pages/Student/QuizzesPage';
@@ -1880,6 +1885,7 @@ async function loadAdminDashboard() {
     return await safeRun(async () => {
       const created = await api('/students', {
         method: 'POST',
+          headers: getAdminReauthHeaders(),
         body: payload,
       });
 
@@ -1893,6 +1899,7 @@ async function loadAdminDashboard() {
     return await safeRun(async () => {
       const created = await api('/teachers', {
         method: 'POST',
+          headers: getAdminReauthHeaders(),
         body: payload,
       });
 
@@ -1906,10 +1913,26 @@ async function loadAdminDashboard() {
     await safeRun(async () => {
       const teacherId = read('a-assign-teacher');
       const gradeLevel = Number(read('a-assign-grade'));
-      const section = read('a-assign-section');
+      const section = String(
+        read('a-assign-section') || ''
+      )
+        .replace(/\s+/g, ' ')
+        .trim();
 
       if (!teacherId || !gradeLevel || !section) {
         window.alert('Pumili ng guro, baitang, at seksyon.');
+        return;
+      }
+
+      // STRICT_SECTION_ASSIGNMENT_CLIENT
+      if (
+        !/^[A-Za-z]{2,}(?: [A-Za-z]{2,})*$/.test(
+          section
+        )
+      ) {
+        window.alert(
+          'Section must use A-Z letters and spaces only. Each word must have at least 2 letters.'
+        );
         return;
       }
 

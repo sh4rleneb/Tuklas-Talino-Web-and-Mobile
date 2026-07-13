@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { TeacherRedesignStyles } from '../../components/styles/StyleBlocks';
 import { fmtDate } from '../../utils/studentHelpers';
-import { verifyPassword } from '../../api/client';
+import {
+  hasAdminReauthProof,
+  verifyPassword,
+} from '../../api/client';
 
 export default function AdminDashboard({
   data,
@@ -33,16 +36,34 @@ export default function AdminDashboard({
   const [stuErrors, setStuErrors] = useState({});
   const [stuSubmitting, setStuSubmitting] = useState(false);
   const [stuCredentials, setStuCredentials] = useState(null);
+  const [stuAdminPassword, setStuAdminPassword] = useState('');
 
   // Add Teacher form state (mirrors mobile AdminHome)
   const [tchForm, setTchForm] = useState({ name: '', email: '' });
   const [tchErrors, setTchErrors] = useState({});
   const [tchSubmitting, setTchSubmitting] = useState(false);
   const [tchCredentials, setTchCredentials] = useState(null);
+  const [tchAdminPassword, setTchAdminPassword] = useState('');
 
   // Validation helpers (mirrors mobile accountValidation.js)
   function normalizeSpaces(v = '') {
     return String(v).replace(/\s+/g, ' ').trim();
+  }
+
+  // STRICT_SECTION_WEB_VALIDATION
+  const strictSectionPattern =
+    /^[A-Za-z]{2,}(?: [A-Za-z]{2,})*$/;
+
+  function isValidSection(
+    value = ''
+  ) {
+    const section =
+      normalizeSpaces(value);
+
+    return (
+      section.length <= 40 &&
+      strictSectionPattern.test(section)
+    );
   }
   function isValidName(v = '') {
     const name = normalizeSpaces(v);
@@ -50,6 +71,21 @@ export default function AdminDashboard({
     const parts = name.split(' ').map(p => p.trim()).filter(Boolean);
     return parts.length >= 2 && parts.every(part => /[A-Za-zÀ-ÿ]/.test(part));
   }
+  // STRICT_TEACHER_FULL_NAME
+  const strictTeacherFullNamePattern =
+    /^[A-Za-z]{2,}(?: [A-Za-z]{2,})+$/;
+
+  function isValidTeacherFullName(
+    value = ''
+  ) {
+    const name = normalizeSpaces(value);
+
+    return (
+      name.length <= 100 &&
+      strictTeacherFullNamePattern.test(name)
+    );
+  }
+
   function isValidGrade(v) {
     const g = Number(v);
     return Number.isInteger(g) && g >= 1 && g <= 6;
@@ -63,12 +99,16 @@ export default function AdminDashboard({
     return {
       name: !isValidName(form.name),
       gradeLevel: !isValidGrade(form.gradeLevel),
-      section: !(form.sectionMode === 'new' ? normalizeSpaces(form.newSection) : normalizeSpaces(form.section)),
+      section: !isValidSection(
+        form.sectionMode === 'new'
+          ? form.newSection
+          : form.section
+      ),
     };
   }
   function validateTeacher(form) {
     return {
-      name: !isValidName(form.name),
+      name: !isValidTeacherFullName(form.name),
       email: !isValidEmail(form.email),
     };
   }
@@ -78,47 +118,146 @@ export default function AdminDashboard({
 
   async function handleAddStudent(e) {
     e.preventDefault();
+
     const errs = validateStudent(stuForm);
     setStuErrors(errs);
+
     if (hasErrors(errs)) return;
+
+    if (
+      !hasAdminReauthProof() &&
+      !String(stuAdminPassword || '').trim()
+    ) {
+      window.alert(
+        'Enter the administrator password to create this student.'
+      );
+      return;
+    }
+
     setStuSubmitting(true);
     setStuCredentials(null);
+
     try {
+      if (!hasAdminReauthProof()) {
+        await verifyPassword(
+          stuAdminPassword
+        );
+      }
+
       const payload = {
-        name: normalizeSpaces(stuForm.name),
-        gradeLevel: Number(stuForm.gradeLevel),
-        section: stuForm.sectionMode === 'new' ? normalizeSpaces(stuForm.newSection) : normalizeSpaces(stuForm.section),
+        name:
+          normalizeSpaces(stuForm.name),
+
+        gradeLevel:
+          Number(stuForm.gradeLevel),
+
+        section:
+          stuForm.sectionMode === 'new'
+            ? normalizeSpaces(
+                stuForm.newSection
+              )
+            : normalizeSpaces(
+                stuForm.section
+              ),
+
         avatar: '🧒',
       };
-      const saved = await addStudent(payload);
+
+      const saved =
+        await addStudent(payload);
+
       if (saved) {
-        setStuCredentials({ username: saved.username, pin: saved.temporaryPin });
-        setStuForm({ name: '', gradeLevel: '', section: '', sectionMode: 'existing', newSection: '' });
+        setStuCredentials({
+          username: saved.username,
+          pin: saved.temporaryPin,
+        });
+
+        setStuForm({
+          name: '',
+          gradeLevel: '',
+          section: '',
+          sectionMode: 'existing',
+          newSection: '',
+        });
+
         setStuErrors({});
       }
+    } catch (err) {
+      window.alert(
+        err?.message ||
+        'Administrator password verification failed.'
+      );
     } finally {
+      setStuAdminPassword('');
       setStuSubmitting(false);
     }
   }
 
   async function handleAddTeacher(e) {
     e.preventDefault();
+
     const errs = validateTeacher(tchForm);
     setTchErrors(errs);
+
     if (hasErrors(errs)) return;
+
+    if (
+      !hasAdminReauthProof() &&
+      !String(tchAdminPassword || '').trim()
+    ) {
+      window.alert(
+        'Enter the administrator password to create this teacher.'
+      );
+      return;
+    }
+
     setTchSubmitting(true);
     setTchCredentials(null);
+
     try {
-      const teacherEmail = String(tchForm.email || '').trim();
-      const payload = { name: normalizeSpaces(tchForm.name) };
-      if (teacherEmail) payload.email = teacherEmail;
-      const saved = await addTeacher(payload);
+      if (!hasAdminReauthProof()) {
+        await verifyPassword(
+          tchAdminPassword
+        );
+      }
+
+      const teacherEmail =
+        String(
+          tchForm.email || ''
+        ).trim();
+
+      const payload = {
+        name:
+          normalizeSpaces(tchForm.name),
+      };
+
+      if (teacherEmail) {
+        payload.email = teacherEmail;
+      }
+
+      const saved =
+        await addTeacher(payload);
+
       if (saved) {
-        setTchCredentials({ username: saved.username, pin: saved.temporaryPin });
-        setTchForm({ name: '', email: '' });
+        setTchCredentials({
+          username: saved.username,
+          pin: saved.temporaryPin,
+        });
+
+        setTchForm({
+          name: '',
+          email: '',
+        });
+
         setTchErrors({});
       }
+    } catch (err) {
+      window.alert(
+        err?.message ||
+        'Administrator password verification failed.'
+      );
     } finally {
+      setTchAdminPassword('');
       setTchSubmitting(false);
     }
   }
@@ -531,16 +670,27 @@ const filteredLogs = logs.filter(log => {
   function hasActiveVerificationSession() {
     return (
       verificationExpiresAt &&
-      Date.now() < verificationExpiresAt
+      Date.now() < verificationExpiresAt &&
+      hasAdminReauthProof()
     );
   }
 
 async function executeVerifiedOpenVault() {
     try {
-      await verifyPassword(passwordInput);
+      const verification =
+        await verifyPassword(passwordInput);
+
+      const serverExpiry =
+        Date.parse(
+          String(
+            verification?.reauthExpiresAt || ''
+          )
+        );
 
       setVerificationExpiresAt(
-        Date.now() + (5 * 60 * 1000)
+        Number.isFinite(serverExpiry)
+          ? serverExpiry
+          : Date.now() + (5 * 60 * 1000)
       );
 
       setGeneratedPin('');
@@ -862,9 +1012,44 @@ function teacherNameForAssignment(assignment) {
                         </>
                       )}
 
-                      {stuErrors.section && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Section is required.</p>}
+                      {stuErrors.section && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Section must use A-Z letters and spaces only. Each word must have at least 2 letters.</p>}
 
-                      <p className="add-teacher-helper-note" style={{ margin: '8px 0 18px', color: '#687a72', fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>
+                                            <div style={{ height: 10 }} />
+
+                      <label
+                        style={{
+                          display: 'block',
+                          marginBottom: 4,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Administrator Password
+                      </label>
+
+                      <input
+                        className="input-field"
+                        type="password"
+                        value={stuAdminPassword}
+                        autoComplete="current-password"
+                        placeholder="Required once every 5 minutes"
+                        onChange={e =>
+                          setStuAdminPassword(
+                            e.target.value
+                          )
+                        }
+                      />
+
+                      <p
+                        style={{
+                          margin: '5px 0 12px',
+                          color: '#687a72',
+                          fontSize: 13,
+                        }}
+                      >
+                        Enter the administrator password to create this student. A recent verification may be reused for up to five minutes.
+                      </p>
+
+<p className="add-teacher-helper-note" style={{ margin: '8px 0 18px', color: '#687a72', fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>
                         The system automatically generates the student's username and temporary PIN.
                         The student must change the PIN on first login.
                       </p>
@@ -922,7 +1107,45 @@ function teacherNameForAssignment(assignment) {
                       />
                       {tchErrors.email && <p style={{ color: '#dc2626', fontSize: 13, margin: '4px 0 8px' }}>Invalid email address.</p>}
 
-                      <p className="add-teacher-helper-note" style={{ margin: '8px 0 18px', color: '#687a72', fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>
+                                            <div style={{ height: 10 }} />
+
+                      <label
+                        style={{
+                          display: 'block',
+                          marginBottom: 4,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Administrator Password
+                      </label>
+
+                      <input
+                        className="input-field"
+                        type="password"
+                        value={tchAdminPassword}
+                        autoComplete="current-password"
+                        placeholder="Required once every 5 minutes"
+                        onChange={e =>
+                          setTchAdminPassword(
+                            e.target.value
+                          )
+                        }
+                      />
+
+                      <p
+                        style={{
+                          margin: '5px 0 12px',
+                          color: '#687a72',
+                          fontSize: 13,
+                        }}
+                      >
+                        Enter the administrator password to create this teacher. A recent verification may be reused for up to five minutes.
+                      </p>
+
+<p className="add-teacher-helper-note" style={{ margin: '8px 0 18px', color: '#687a72', fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>
+                        {/* STRICT_TEACHER_FULL_NAME_UI */}
+                        First and last name are required. Use A-Z letters and spaces only. Each name must have at least 2 letters.
+                        <br />
                         Username (TCH-YYYY-XXX) and employee code are generated automatically.
                         The teacher must change the PIN on first login.
                       </p>

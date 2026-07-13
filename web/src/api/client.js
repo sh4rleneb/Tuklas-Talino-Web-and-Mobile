@@ -1,10 +1,80 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+// ADMIN_REAUTH_WEB_CACHE
+let adminReauthProof = null;
+
+export function clearAdminReauthProof() {
+  adminReauthProof = null;
+}
+
+export function hasAdminReauthProof() {
+  if (
+    !adminReauthProof?.token ||
+    !Number.isFinite(adminReauthProof.expiresAt) ||
+    Date.now() >= adminReauthProof.expiresAt
+  ) {
+    clearAdminReauthProof();
+    return false;
+  }
+
+  return true;
+}
+
+export function getAdminReauthHeaders() {
+  if (!hasAdminReauthProof()) {
+    throw new Error(
+      'Administrator password verification is required.'
+    );
+  }
+
+  return {
+    'X-Admin-Reauth': adminReauthProof.token,
+  };
+}
+
+function cacheAdminReauthProof(data = {}) {
+  const token =
+    String(data.reauthToken || '').trim();
+
+  if (!token) {
+    clearAdminReauthProof();
+    return;
+  }
+
+  const explicitExpiry =
+    Date.parse(
+      String(data.reauthExpiresAt || '')
+    );
+
+  const ttlSeconds =
+    Number(data.reauthExpiresInSeconds);
+
+  const fallbackExpiry =
+    Date.now() +
+    (
+      Number.isFinite(ttlSeconds) &&
+      ttlSeconds > 0
+        ? ttlSeconds * 1000
+        : 5 * 60 * 1000
+    );
+
+  adminReauthProof = {
+    token,
+
+    expiresAt:
+      Number.isFinite(explicitExpiry)
+        ? explicitExpiry
+        : fallbackExpiry,
+  };
+}
+
+
 export function getToken() {
   return localStorage.getItem('tuklas_token');
 }
 
 export function setToken(token) {
+  clearAdminReauthProof();
   if (token) localStorage.setItem('tuklas_token', token);
   else localStorage.removeItem('tuklas_token');
 }
@@ -24,6 +94,14 @@ export async function api(path, options = {}) {
   const contentType = response.headers.get('content-type') || '';
   const data = contentType.includes('application/json') ? await response.json() : await response.text();
   if (!response.ok) {
+
+      if (
+        response.status === 401 ||
+        response.status === 428
+      ) {
+        clearAdminReauthProof();
+      }
+
     const error = new Error(data?.message || 'Request failed');
     error.details = data?.details;
     throw error;
@@ -33,10 +111,19 @@ export async function api(path, options = {}) {
 
 
 export async function verifyPassword(password) {
-  return api('/auth/verify-password', {
+  clearAdminReauthProof();
+
+  const data = await api('/auth/verify-password', {
     method: 'POST',
-    body: { password }
+
+    body: {
+      password,
+    },
   });
+
+  cacheAdminReauthProof(data);
+
+  return data;
 }
 
 export async function uploadForm(path, formData, options = {}) {

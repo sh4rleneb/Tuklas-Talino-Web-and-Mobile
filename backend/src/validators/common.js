@@ -109,9 +109,9 @@ const accountRepeatedChunkPattern =
 const accountPersonNamePattern =
   /^[\p{L}\p{M}](?:[\p{L}\p{M} .'\u2019-]*[\p{L}\p{M}.'\u2019])?$/u;
 
+// STRICT_SECTION_CREATION
 const accountSectionPattern =
-  /^[\p{L}\p{M}\p{N}](?:[\p{L}\p{M}\p{N} .'\u2019-]*[\p{L}\p{M}\p{N}])?$/u;
-
+  /^[A-Za-z]{2,}(?: [A-Za-z]{2,})*$/;
 function normalizeAccountText(value = '') {
   return String(value || '')
     .normalize('NFKC')
@@ -148,14 +148,47 @@ const accountNameSchema =
         )
     );
 
+// STRICT_TEACHER_FULL_NAME
+const teacherFullNamePattern =
+  /^[A-Za-z]{2,}(?: [A-Za-z]{2,})+$/;
+
+const teacherFullNameSchema =
+  z.string()
+    .transform(normalizeAccountText)
+    .pipe(
+      z.string()
+        .min(
+          5,
+          'Teacher name must include a first name and last name.'
+        )
+        .max(
+          100,
+          'Teacher name must not exceed 100 characters.'
+        )
+        .regex(
+          teacherFullNamePattern,
+          'Teacher name must use A-Z letters and spaces only. Each name must contain at least 2 letters.'
+        )
+    )
+    .refine(
+      (value) =>
+        !accountControlOrFormatPattern.test(value),
+      'Teacher name contains invisible or control characters.'
+    )
+    .refine(
+      (value) =>
+        !accountRepeatedChunkPattern.test(value),
+      'Teacher name contains an invalid repeated pattern.'
+    );
+
 const accountSectionSchema =
   z.string()
     .transform(normalizeAccountText)
     .pipe(
       z.string()
         .min(
-          1,
-          'Section cannot be empty.'
+          2,
+          'Section must contain at least 2 letters.'
         )
         .max(
           40,
@@ -163,7 +196,7 @@ const accountSectionSchema =
         )
         .regex(
           accountSectionPattern,
-          'Section contains unsupported characters.'
+          'Section must use A-Z letters and spaces only. Each word must contain at least 2 letters.'
         )
         .refine(
           (value) =>
@@ -236,7 +269,7 @@ export const studentSchema =
 export const teacherSchema =
   z.object({
     name:
-      accountNameSchema,
+      teacherFullNameSchema,
 
     email:
       optionalTeacherEmailSchema
