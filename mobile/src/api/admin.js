@@ -75,8 +75,8 @@ export async function createTeacherAccount(body) {
   }
 }
 
-export async function assignTeacher(teacherId, body) {
-  return api(`/admin/teachers/${teacherId}/assignments`, {
+export async function assignTeacher(teacherUuid, body) {
+  return api(`/admin/teachers/${teacherUuid}/assignments`, {
     method: 'POST',
     body,
   });

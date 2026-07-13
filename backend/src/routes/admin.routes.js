@@ -538,9 +538,25 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
   }
 });
 
-router.post('/teachers/:id/assignments', assignmentMutationLimiter, async (req, res, next) => {
+router.post('/teachers/:teacherUuid/assignments', assignmentMutationLimiter, async (req, res, next) => {
   try {
-    const teacher = await Teacher.findByPk(req.params.id);
+    const teacherUuid = String(
+      req.params.teacherUuid || ''
+    ).trim().toLowerCase();
+
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(teacherUuid)
+    ) {
+      return res.status(400).json({
+        message: 'A valid teacher UUID is required.'
+      });
+    }
+
+    const teacher = await Teacher.findOne({
+      where: {
+        uuid: teacherUuid
+      }
+    });
 
     if (!teacher) {
       return res.status(404).json({

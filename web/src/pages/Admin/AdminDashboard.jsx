@@ -1189,7 +1189,7 @@ function teacherNameForAssignment(assignment) {
                     <select className="input-field" id="a-assign-teacher" defaultValue="">
                       <option value="">Select teacher</option>
                       {teachers.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                        <option key={t.uuid || t.id} value={t.uuid || t.id}>{t.name}</option>
                       ))}
                     </select>
 

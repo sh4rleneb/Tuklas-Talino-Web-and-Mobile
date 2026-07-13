@@ -193,7 +193,14 @@ const [auditSearch, setAuditSearch] = useState('');
   }
 
   function teacherRecordId(teacher = {}) {
-    return teacher.id ?? teacher.teacherId ?? teacher.teacher_id ?? teacher.profileId ?? teacher.profile_id;
+    return (
+      teacher.uuid ??
+      teacher.id ??
+      teacher.teacherId ??
+      teacher.teacher_id ??
+      teacher.profileId ??
+      teacher.profile_id
+    );
   }
 
   function studentGradeValue(student = {}) {
@@ -1251,7 +1258,7 @@ async function executeVerifiedAction() {
         <Card>
           <Text style={styles.cardTitle}>I-assign ang Teacher</Text>
           <Text style={styles.fieldLabel}>Teacher</Text>
-          <View style={styles.choiceRow}>{teachers.map((teacher) => <Button key={teacher.id} tone={Number(assignmentForm.teacherId) === Number(teacher.id) ? 'green' : 'slate'} onPress={() => setAssignmentForm((current) => ({ ...current, teacherId: teacher.id }))}>{teacher.name}</Button>)}</View>
+          <View style={styles.choiceRow}>{teachers.map((teacher) => <Button key={teacherRecordId(teacher)} tone={String(assignmentForm.teacherId) === String(teacherRecordId(teacher)) ? 'green' : 'slate'} onPress={() => setAssignmentForm((current) => ({ ...current, teacherId: teacherRecordId(teacher) }))}>{teacher.name}</Button>)}</View>
             <Text style={styles.fieldLabel}>Grade</Text>
             <View style={styles.choiceRow}>
               {gradeOptions.map((grade) => (
