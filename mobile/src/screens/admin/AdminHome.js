@@ -136,6 +136,8 @@ export default function AdminHome({ navigation }) {
   }, [recentCredentials]);
 
   const [students, setStudents] = useState([]);
+  // MOBILE_ADMIN_STUDENT_MANAGEMENT_PAGING_V1
+  const [studentRenderLimit, setStudentRenderLimit] = useState(25);
   const [teachers, setTeachers] = useState([]);
   const [archivedStudents, setArchivedStudents] = useState([]);
   const [archivedTeachers, setArchivedTeachers] = useState([]);
@@ -291,6 +293,23 @@ const [auditSearch, setAuditSearch] = useState('');
       matchesSearch
     );
   });
+
+  const visibleStudents = filteredStudents.slice(0, studentRenderLimit);
+  const hiddenFilteredStudentCount = Math.max(
+    filteredStudents.length - visibleStudents.length,
+    0
+  );
+
+  useEffect(() => {
+    setStudentRenderLimit(25);
+  }, [
+    section,
+    studentSearch,
+    studentGradeFilter,
+    studentSectionFilter,
+    students.length,
+  ]);
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1499,10 +1518,10 @@ async function executeVerifiedAction() {
           ) : null}
 
           <Text style={styles.muted}>
-            Showing {filteredStudents.length} of {students.length} active student{students.length === 1 ? '' : 's'}.
+            Ipinapakita ang {visibleStudents.length} sa {filteredStudents.length} tugmang aktibong mag-aaral. Kabuuan: {students.length}.
           </Text>
 
-        {filteredStudents.map((student) => (
+        {visibleStudents.map((student) => (
           <View key={student.id} style={styles.recordCard}>
             <Text style={styles.rowTitle}>{student.avatar || '🧒'} {student.name}</Text>
             <Text style={styles.muted}>{student.studentCode} • Grade {student.gradeLevel} • {student.section} • {student.xp || 0} XP</Text>
@@ -1593,7 +1612,24 @@ async function executeVerifiedAction() {
             </View>
           </View>
         ))}
-        {!filteredStudents.length && <Text style={styles.muted}>{students.length ? 'No students match the selected filters.' : 'No active students.'}</Text>}
+        {hiddenFilteredStudentCount > 0 && (
+          <Button
+            tone="slate"
+            onPress={() =>
+              setStudentRenderLimit((current) => current + 25)
+            }
+          >
+            Magpakita pa ng {Math.min(25, hiddenFilteredStudentCount)} mag-aaral
+          </Button>
+        )}
+
+        {!filteredStudents.length && (
+          <Text style={styles.muted}>
+            {students.length
+              ? 'Walang mag-aaral na tumutugma sa napiling filter.'
+              : 'Walang aktibong mag-aaral.'}
+          </Text>
+        )}
       </Card>
     );
   }
