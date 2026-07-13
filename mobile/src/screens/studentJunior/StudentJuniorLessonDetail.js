@@ -155,7 +155,6 @@ function getBadgeImageSource(badge = {}) {
   return BADGE_IMAGE_SOURCES['tuklas-kampeon'];
 }
 
-
 async function createSpeechRecording() {
   if (Audio?.Recording?.createAsync) {
     const result = await Audio.Recording.createAsync(
@@ -184,7 +183,6 @@ async function createSpeechRecording() {
   throw new Error('Hindi available ang microphone recording sa device na ito. I-update ang app o Expo package.');
 }
 
-
 function localizeStudentVisibleMessage(value = '') {
   const original = String(value || '').trim();
   if (!original) return '';
@@ -202,7 +200,6 @@ function localizeStudentVisibleMessage(value = '') {
 
   return message;
 }
-
 
 function getStudentActivityNoticeTone(notice = {}) {
   const type = String(notice?.type || '').toLowerCase();
@@ -249,7 +246,6 @@ function optionalProgressRequest(request, fallback) {
     throw err;
   });
 }
-
 
 const MAX_MISSION_ATTEMPTS = 2;
 const MISSION_QUESTION_POOL_LIMIT = 6;
@@ -449,7 +445,6 @@ function getServerMissionAttemptCount(lesson = {}, activity = {}) {
   return Math.max(0, Math.min(MAX_MISSION_ATTEMPTS, count));
 }
 
-
 function getStableShuffleSeed(value = '') {
   return String(value || '')
     .split('')
@@ -508,7 +503,6 @@ export default function StudentJuniorLessonDetail({ navigation, route }) {
 const [lessonProgress,setLessonProgress]=useState(0);
 const [lessonDuration,setLessonDuration]=useState(0);
 
-
   const [speechStatus, setSpeechStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -523,7 +517,6 @@ const [balloonProgress, setBalloonProgress] = useState({});
 
 const [selectedMatch, setSelectedMatch] = useState(null);
 const [matchedPairs, setMatchedPairs] = useState({});
-
 
 const [badgePopup, setBadgePopup] = useState(null);
 const activeBadgePopup = badgePopup || {};
@@ -545,7 +538,6 @@ const advanceLockRef = useRef(false);
 const lessonGradeLevel = Number(student?.gradeLevel || lesson?.gradeLevel || 0);
 const littleLearnerGame = lessonGradeLevel <= 2;
 const isUpperGradeLesson = lessonGradeLevel > 2;
-
 
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
@@ -579,7 +571,6 @@ useEffect(() => {
 const celebrationRotate = useRef(new Animated.Value(0)).current;
 const stepScrollRef = useRef(null);
 
-
   useEffect(() => {
     if (!lessonId) {
       setError('Walang pagkakakilanlan ng aralin.');
@@ -612,7 +603,6 @@ const stepScrollRef = useRef(null);
             }
           }
         }
-
 
         setLesson(loadedLesson);
         setMcqAnswers(restoredAnswers);
@@ -717,7 +707,6 @@ const stepScrollRef = useRef(null);
     continueButtonAnim.setValue(1);
   }, [completed]);
 
-
   useEffect(() => {
     const id = xpCounter.addListener(({ value }) => {
       setAnimatedXp(Math.round(value));
@@ -727,7 +716,6 @@ const stepScrollRef = useRef(null);
       xpCounter.removeListener(id);
     };
   }, [xpCounter]);
-
 
   const activities = useMemo(
     () => (Array.isArray(lesson?.activities) ? lesson.activities : []),
@@ -956,7 +944,6 @@ const stepScrollRef = useRef(null);
   );
   const activeDisplayStep = displaySteps[activeDisplayStepIndex] || displaySteps[0];
 
-
   useEffect(() => {
     setWritingAnswer('');
     setWritingSelectedTileIds([]);
@@ -992,7 +979,6 @@ const stepScrollRef = useRef(null);
     return () => clearTimeout(id);
   }, [gateToast]);
 
-
   useEffect(() => {
     if (!stepScrollRef.current) return;
 
@@ -1009,7 +995,6 @@ const stepScrollRef = useRef(null);
 
   useEffect(() => {
   }, [activities]);
-
 
   function ensureMissionAttemptStarted(activityOverride = currentActivity) {
     const attemptKey = getMissionAttemptStorageKey(lesson, activityOverride);
@@ -1085,7 +1070,6 @@ const stepScrollRef = useRef(null);
     };
   };
 
-
   const getOptionEmoji = (text = '') => {
     const value = String(text).trim().toLowerCase();
 
@@ -1158,7 +1142,6 @@ const stepScrollRef = useRef(null);
           </View>
         </View>
 
-
       </View>
     );
   };
@@ -1188,7 +1171,6 @@ const stepScrollRef = useRef(null);
 
     return () => clearInterval(timer);
   }, [lessonListening]);
-
 
   const formatAudioTime = (ms=0)=>{
     const total=Math.floor(ms/1000);
@@ -1342,7 +1324,6 @@ const stepScrollRef = useRef(null);
     }
   }
 
-
   function saveNextStep(activityType) {
     let nextStep = Math.min(step + 1, totalSteps);
 
@@ -1457,7 +1438,6 @@ const stepScrollRef = useRef(null);
         setMcqChoiceShuffleNonce((prev) => prev + 1);
       }
 
-
       const visibleQuestions = buildMissionQuestionPool(
         currentActivity,
         lesson
@@ -1526,7 +1506,6 @@ const stepScrollRef = useRef(null);
                 : 'Mali ang sagot.'
             ),
       });
-
 
       if (
         data.correct &&
@@ -1924,7 +1903,6 @@ const stepScrollRef = useRef(null);
           ))}
         </View>
 
-
       </View>
     );
   }
@@ -2031,7 +2009,6 @@ const stepScrollRef = useRef(null);
               {layuninDisplayText}
             </Text>
 
-
           </View>
 
           <View
@@ -2084,7 +2061,6 @@ const stepScrollRef = useRef(null);
               if (lessonListening) {
                 await stopSpeech();
 
-
                 return;
               }
 
@@ -2098,7 +2074,6 @@ const stepScrollRef = useRef(null);
                   },
 
                   onFinish: () => {
-
 
                   },
                 }
@@ -2135,7 +2110,6 @@ const stepScrollRef = useRef(null);
                   : '👆 Pindutin ang ▶ upang magsimula.'
             }
           </Text>
-
 
           {lessonDuration > 0 && (
             <View
@@ -2247,7 +2221,6 @@ const stepScrollRef = useRef(null);
                 {alaminDisplayText}
               </Text>
             )}
-
 
           </View>
 
@@ -3564,6 +3537,8 @@ const stepScrollRef = useRef(null);
                   ? (recording ? 'Itigil' : 'Itala ang Boses')
                   : (recording ? 'Ihinto ang Pagtatala ng Boses' : 'Simulan ang Pagtatala ng Boses')
               }
+              style={styles.speechStopAudioButton}
+              textStyle={styles.speechStopAudioText}
               danger={recording}
               onPress={recording ? stopRecording : startRecording}
             />
@@ -3584,6 +3559,8 @@ const stepScrollRef = useRef(null);
             <AudioPlayerButton
               icon="⏹"
               label={littleLearnerGame ? "Ihinto" : "Ihinto ang Tunog"}
+              style={styles.speechStopAudioButton}
+              textStyle={styles.speechStopAudioText}
               danger
               onPress={async () => {
                 await stopSpeech();
@@ -3603,30 +3580,9 @@ const stepScrollRef = useRef(null);
             />
           </View>
           {speechStatus ? <Text style={styles.statusMessage}>{localizeStudentVisibleMessage(speechStatus)}</Text> : null}
-          {littleLearnerGame ? null : (
-          <TextInput
-            style={[
-              styles.input,
-              littleLearnerGame && {
-                borderColor: '#FDE68A',
-                backgroundColor: '#FFFBEB',
-                minHeight: 82,
-                fontSize: 18,
-              },
-            ]}
-            multiline
-            value={speechTranscript}
-            onChangeText={setSpeechTranscript}
-            placeholder="Isulat ang iyong binigkas..."
-          />
-          )}
-          <TouchableOpacity style={styles.primaryButton} onPress={submitSpeech} disabled={submitting}>
-            <Text style={styles.primaryText}>{submitting ? 'Itinatala...' : littleLearnerGame ? game.button : 'Isumite ang Pagbigkas'}</Text>
-          </TouchableOpacity>
         </View>
       );
     }
-
 
     if (
       currentStep?.type === 'activity' &&
@@ -4134,7 +4090,6 @@ const stepScrollRef = useRef(null);
           </View>
         ) : null}
 
-
         {!completed && step > 1 ? (
           <TouchableOpacity
             style={styles.previousStepButton}
@@ -4583,7 +4538,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
 
-
   // MOBILE_JUNIOR_QUIZ_EQUAL_NAV_BUTTONS_V1
   quizNavigationRow: {
     flexDirection: 'row',
@@ -4999,7 +4953,6 @@ const styles = StyleSheet.create({
   optionCorrect: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
   optionIncorrect: { backgroundColor: '#FEE2E2', borderColor: '#EF4444' },
 
-
   optionText: {
     color: '#0F172A',
     fontSize: 16,
@@ -5294,7 +5247,6 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
 
-
   disabledButton: { backgroundColor: '#CBD5E1' },
   primaryText: { color: '#FFF', fontWeight: '900',
     textAlign: 'center',
@@ -5381,6 +5333,17 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 28,
     textAlign: 'right',
+  },
+
+  speechStopAudioButton: {
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  speechStopAudioText: {
+    textAlign: 'center',
+    width: '100%',
   },
 
 });

@@ -7,6 +7,8 @@ export default function AudioPlayerButton({
   onPress,
   disabled = false,
   danger = false,
+  style,
+  textStyle,
 }) {
   return (
     <TouchableOpacity
@@ -37,14 +39,15 @@ export default function AudioPlayerButton({
       </Text>
 
       <Text
-        style={{
+        style={[{
           marginTop: 8,
           fontSize: 14,
           fontWeight: '900',
           color: danger ? '#B91C1C' : '#166534',
           textAlign: 'center',
           lineHeight: 18,
-        }}
+        }, textStyle,
+        style]}
       >
         {label}
       </Text>
