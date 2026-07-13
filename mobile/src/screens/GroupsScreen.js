@@ -112,25 +112,25 @@ export default function GroupsScreen({ navigation }) {
     {
       key: 'reader',
       icon: '📖',
-      title: 'Reader',
+      title: 'Tagabasa',
       description: 'Basahin ang salita o kuwento.',
     },
     {
       key: 'speaker',
       icon: '🎤',
-      title: 'Speaker',
+      title: 'Tagapagsalita',
       description: 'Bigkasin ang sagot nang malinaw.',
     },
     {
       key: 'helper',
       icon: '⭐',
-      title: 'Helper',
+      title: 'Katulong',
       description: 'Tumulong sa kaklase.',
     },
     {
       key: 'checker',
       icon: '✅',
-      title: 'Checker',
+      title: 'Tagasuri',
       description: 'Tingnan kung tapos na ang gawain.',
     },
   ];
@@ -302,34 +302,41 @@ export default function GroupsScreen({ navigation }) {
 
   function renderTrabahoSelection(group) {
     return (
-      <Card style={styles.jobScreen}>
-        <Text style={styles.jobTitle}>
-          Pumili ng Tungkulin
-        </Text>
+      <Card style={[styles.jobScreen, styles.roleSelectionPanel]}>
+        {/* MOBILE_ROLE_SELECTION_FILIPINO_V2 */}
+        <View style={styles.roleSelectionHeadingRow}>
+          <View style={styles.roleSelectionHeadingIcon}>
+            <Text style={styles.roleSelectionHeadingEmoji}>⭐</Text>
+          </View>
+          <View style={styles.roleSelectionHeadingCopy}>
+            <Text style={[styles.jobTitle, styles.roleSelectionTitle]}>
+              Pumili ng Tungkulin
+            </Text>
+            <Text style={[styles.jobSubtitle, styles.roleSelectionSubtitle]}>
+              Piliin ang iyong tungkulin.
+            </Text>
+          </View>
+        </View>
 
-        <Text style={styles.jobSubtitle}>
-          Bawat kasapi ng pangkat ay may mahalagang tungkulin.
-        </Text>
-
-        <View style={styles.jobGrid}>
+        <View style={[styles.jobGrid, styles.roleSelectionGrid]}>
           {TEAM_ROLES.map((role) => (
             <TouchableOpacity
               key={role.key}
-              style={styles.jobCard}
+              style={[styles.jobCard, styles.roleSelectionOption]}
               onPress={() => {
                 setSelectedRole(role);
                 setMissionStep('task');
               }}
             >
-              <Text style={styles.jobIcon}>
+              <Text style={[styles.jobIcon, styles.roleSelectionIcon]}>
                 {role.icon}
               </Text>
 
-              <Text style={styles.jobCardTitle}>
+              <Text style={[styles.jobCardTitle, styles.roleSelectionRoleTitle]}>
                 {role.title}
               </Text>
 
-              <Text style={styles.jobCardDescription}>
+              <Text style={[styles.jobCardDescription, styles.roleSelectionRoleDescription]}>
                 {role.description}
               </Text>
             </TouchableOpacity>
@@ -603,6 +610,106 @@ export default function GroupsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  // MOBILE_ROLE_SELECTION_FILIPINO_V2
+  roleSelectionPanel: {
+    borderRadius: 28,
+    padding: 18,
+    backgroundColor: '#F9FFFC',
+    borderWidth: 1,
+    borderColor: '#DDF4E7',
+    shadowColor: '#14532D',
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  roleSelectionHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  roleSelectionHeadingIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    backgroundColor: '#FFF8DC',
+    borderWidth: 1,
+    borderColor: '#F8DEA0',
+  },
+  roleSelectionHeadingEmoji: {
+    fontSize: 30,
+  },
+  roleSelectionHeadingCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  roleSelectionTitle: {
+    color: '#0F2742',
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  roleSelectionSubtitle: {
+    color: '#5D7090',
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '700',
+    marginBottom: 0,
+  },
+  roleSelectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+    marginHorizontal: -4,
+  },
+  roleSelectionOption: {
+    flexBasis: '46%',
+    flexGrow: 1,
+    minWidth: 132,
+    minHeight: 154,
+    marginHorizontal: 4,
+    marginBottom: 10,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#DDF4E7',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#166534',
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3,
+  },
+  roleSelectionIcon: {
+    fontSize: 42,
+    lineHeight: 50,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  roleSelectionRoleTitle: {
+    color: '#0F2742',
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  roleSelectionRoleDescription: {
+    color: '#5D7090',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+
   safe: {
     flex: 1,
     backgroundColor: '#F6FFF5',
