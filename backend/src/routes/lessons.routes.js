@@ -1604,7 +1604,7 @@ router.post('/:id/mcq', requireRole('student'), async (req, res, next) => {
           5,
           'mcq',
           question.id,
-          'Correct MCQ answer'
+          'Tamang sagot sa pagpipilian'
         );
 
         newBadges = xpResult?.getDataValue?.('newBadges') || xpResult?.newBadges || [];
@@ -1628,7 +1628,7 @@ router.post('/:id/mcq', requireRole('student'), async (req, res, next) => {
       xpAwarded,
       newBadges,
       message: xpAwarded
-        ? 'Correct answer. XP awarded once for this question.'
+        ? 'Tamang sagot. Isang beses lang ibinibigay ang XP para sa tanong na ito.'
         : 'Answer saved. No extra XP for repeated or incorrect answers.',
     });
   } catch (err) {
@@ -2412,7 +2412,7 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
         6,
         'speech',
         task.id,
-        'Submitted speech attempt'
+        'Nakapagsumite ng pagsubok sa pagbigkas'
       );
 
       xpAwarded = 6;
@@ -2438,8 +2438,8 @@ router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
       xpAwarded,
       newBadges,
       message: xpAwarded
-        ? 'Speech attempt saved. +6 XP'
-        : 'Speech attempt saved. XP already awarded for this activity.'
+        ? 'Na-save ang pagsubok sa pagbigkas. +6 XP'
+        : 'Na-save ang pagsubok sa pagbigkas. Naibigay na ang XP para sa gawaing ito.'
     });
   } catch (err) {
     next(err);

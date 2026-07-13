@@ -25,6 +25,65 @@ function formatXpLogDate(log) {
   });
 }
 
+function translateXpLessonTitle(value) {
+  const raw = String(value || '').replace(/\s+/g, ' ').trim();
+  const lower = raw.toLowerCase();
+
+  const lessonTitleMap = {
+    noun: 'Pangngalan',
+    nouns: 'Pangngalan',
+    verb: 'Pandiwa',
+    verbs: 'Pandiwa',
+    adjective: 'Pang-uri',
+    adjectives: 'Pang-uri',
+    pronoun: 'Panghalip',
+    pronouns: 'Panghalip',
+    adverb: 'Pang-abay',
+    adverbs: 'Pang-abay',
+  };
+
+  return lessonTitleMap[lower] || raw;
+}
+
+function getXpNote(log) {
+  const note = String(log?.note || '').replace(/\s+/g, ' ').trim();
+
+  if (!note) return 'Nakuhang XP';
+
+  const exactTranslations = {
+    'Completed lesson': 'Natapos ang aralin',
+    'Completed quiz': 'Natapos ang pagsusulit',
+    'Submitted quiz result': 'Nakapagsumite ng resulta ng pagsusulit',
+    'Correct MCQ answer': 'Tamang sagot sa pagpipilian',
+    'Correct answer': 'Tamang sagot',
+    'Submitted speech attempt': 'Nakapagsumite ng pagsubok sa pagbigkas',
+    'Submitted writing attempt': 'Nakapagsumite ng pagsubok sa pagsulat',
+    'Earned badge': 'Nakakuha ng badge',
+    'Mission completed': 'Natapos ang misyon',
+    'Completed Nouns': 'Natapos ang aralin: Pangngalan',
+  };
+
+  if (exactTranslations[note]) {
+    return exactTranslations[note];
+  }
+
+  const completedMatch = note.match(/^Completed\s+(.+)$/i);
+  if (completedMatch) {
+    return `Natapos ang aralin: ${translateXpLessonTitle(completedMatch[1])}`;
+  }
+
+  const submittedMatch = note.match(/^Submitted\s+(.+?)\s+attempt$/i);
+  if (submittedMatch) {
+    const attemptType = submittedMatch[1].toLowerCase();
+    if (attemptType === 'speech') return 'Nakapagsumite ng pagsubok sa pagbigkas';
+    if (attemptType === 'writing') return 'Nakapagsumite ng pagsubok sa pagsulat';
+    return `Nakapagsumite ng pagsubok sa ${translateXpLessonTitle(attemptType)}`;
+  }
+
+  return note;
+}
+
+
 function getXpIcon(log) {
   if (log.sourceType === 'lesson') return '📚';
   if (log.sourceType === 'quiz') return '📝';
