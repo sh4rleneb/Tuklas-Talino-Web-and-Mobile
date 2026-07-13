@@ -76,8 +76,8 @@ export default function LessonDashboardScreen({ navigation, route }) {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.page}>
 
-        <TouchableOpacity style={[styles.backRow, styles.lessonLibraryTopButton]} onPress={() => navigation.goBack()}>
-          <Text style={[styles.backText, styles.lessonLibraryTopText]}>← Aklatan ng mga Aralin</Text>
+        <TouchableOpacity style={styles.backRow} onPress={() => navigation.goBack()}>
+          <Text style={styles.backText}>← Aklatan ng mga Aralin</Text>
         </TouchableOpacity>
 
         <View style={styles.pill}>
@@ -141,33 +141,7 @@ export default function LessonDashboardScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  lessonLibraryTopText: {
-    color: '#15803D',
-    fontSize: 15,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
 
-  lessonLibraryTopButton: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 999,
-    borderWidth: 2,
-    borderColor: '#22C55E',
-    backgroundColor: '#F0FDF4',
-    shadowColor: '#16A34A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    elevation: 2,
-    marginBottom: 14,
-    flexShrink: 1,
-  },
 
   safe: { flex: 1, backgroundColor: '#F6FFF5' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
@@ -179,19 +153,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 999,
+    minHeight: 48,
+    paddingHorizontal: 22,
+    paddingVertical: 10,
     borderWidth: 2,
-    borderColor: '#22C55E',
-    backgroundColor: '#F0FDF4',
-    marginBottom: 16,
+    borderColor: '#BBF7D0',
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 3,
+    marginBottom: 18,
     flexShrink: 1,
   },
   backText: {
-    color: '#15803D',
-    fontSize: 15,
+    color: '#16A34A',
+    fontSize: 17,
     fontWeight: '900',
     textAlign: 'center',
   },
