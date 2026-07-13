@@ -642,7 +642,7 @@ const lessonColors = [
 
               <View style={styles.sectionHeader}>
 
-                <Text style={styles.sectionTitle}>
+                <Text style={[styles.sectionTitle, { flexShrink: 1, maxWidth: '66%', marginRight: 10 }]}>
                   👥 Mga Gawain ng Pangkat
                 </Text>
 
@@ -655,7 +655,7 @@ const lessonColors = [
                   }}
                 >
                   <Text style={styles.allLessons}>
-                    Buksan ang Pangkat →
+                    Buksan →
                   </Text>
                 </TouchableOpacity>
 

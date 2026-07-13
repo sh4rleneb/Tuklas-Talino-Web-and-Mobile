@@ -391,11 +391,11 @@ export default function StudentJuniorHome({ navigation }) {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { flexShrink: 1, maxWidth: '66%', marginRight: 10 }]}>
               Mga Gawain ng Pangkat
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Mga Pangkat')}>
-              <Text style={styles.sectionLink}>Buksan ang Pangkat →</Text>
+            <TouchableOpacity style={{ flexShrink: 0 }} onPress={() => navigation.navigate('Mga Pangkat')}>
+              <Text style={styles.sectionLink}>Buksan →</Text>
             </TouchableOpacity>
           </View>
 
