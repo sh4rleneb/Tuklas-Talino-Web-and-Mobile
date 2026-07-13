@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { User, Role, Student, Teacher, AdminProfile } from '../models/index.js';
 
+import { jwtPrivateKey as ES256_PRIVATE_KEY, jwtPublicKey as ES256_PUBLIC_KEY } from '../config/jwtEs256.js';
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET;
 
@@ -29,9 +30,9 @@ export function signToken(user) {
       sub: user.id,
       role,
     },
-    getJwtSecret(),
+    ES256_PRIVATE_KEY,
     {
-      algorithm: 'HS256',
+      algorithm: 'ES256',
       issuer: 'tuklas-talino-api',
       audience: 'tuklas-talino-app',
       expiresIn,
@@ -60,9 +61,9 @@ export async function authenticate(req, res, next) {
 
     const payload = jwt.verify(
       token,
-      getJwtSecret(),
+      ES256_PUBLIC_KEY,
       {
-        algorithms: ['HS256'],
+        algorithms: ['ES256'],
         issuer: 'tuklas-talino-api',
         audience: 'tuklas-talino-app',
       }

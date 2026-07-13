@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 
+import { jwtPrivateKey as ES256_PRIVATE_KEY, jwtPublicKey as ES256_PUBLIC_KEY } from '../config/jwtEs256.js';
 const ADMIN_REAUTH_ISSUER =
   'tuklas-talino-admin-reauth';
 
@@ -97,9 +98,9 @@ export function issueAdminReauthToken(req) {
       purpose: ADMIN_REAUTH_PURPOSE,
       sessionJti,
     },
-    getJwtSecret(),
+    ES256_PRIVATE_KEY,
     {
-      algorithm: 'HS256',
+      algorithm: 'ES256',
       issuer: ADMIN_REAUTH_ISSUER,
       audience: ADMIN_REAUTH_AUDIENCE,
       expiresIn: expiresInSeconds,
@@ -144,9 +145,9 @@ export function requireRecentAdminPassword(
   try {
     const payload = jwt.verify(
       proof,
-      getJwtSecret(),
+      ES256_PUBLIC_KEY,
       {
-        algorithms: ['HS256'],
+        algorithms: ['ES256'],
         issuer: ADMIN_REAUTH_ISSUER,
         audience: ADMIN_REAUTH_AUDIENCE,
       }

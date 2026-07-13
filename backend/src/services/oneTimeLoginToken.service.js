@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import jwt from 'jsonwebtoken';
 
+import { jwtPrivateKey as ES256_PRIVATE_KEY, jwtPublicKey as ES256_PUBLIC_KEY } from '../config/jwtEs256.js';
 const JWT_ISSUER =
   process.env.JWT_ISSUER ||
   'tuklas-talino-api';
@@ -14,7 +15,7 @@ const ONE_TIME_AUDIENCE =
 const JWT_ALGORITHM = String(
   process.env.JWT_ALGORITHM ||
   process.env.JWT_ALG ||
-  'HS256'
+  'ES256'
 ).toUpperCase();
 
 const TTL_SECONDS = Number.parseInt(
@@ -27,9 +28,7 @@ const STORE_DIR =
   path.resolve('.runtime/one-time-login');
 
 const ALLOWED_ALGORITHMS = new Set([
-  'HS256',
-  'HS384',
-  'HS512',
+  'ES256',
 ]);
 
 function createServiceError(
@@ -220,9 +219,9 @@ export function issueOneTimeLoginToken(
       userId: normalizedUserId,
       tokenUse: 'one-time-login',
     },
-    getJwtSecret(),
+    ES256_PRIVATE_KEY,
     {
-      algorithm: JWT_ALGORITHM,
+      algorithm: 'ES256',
       issuer: JWT_ISSUER,
       audience: ONE_TIME_AUDIENCE,
       expiresIn: TTL_SECONDS,
@@ -279,9 +278,9 @@ export function consumeOneTimeLoginToken(
   try {
     payload = jwt.verify(
       token,
-      getJwtSecret(),
+      ES256_PUBLIC_KEY,
       {
-        algorithms: [JWT_ALGORITHM],
+        algorithms: ['ES256'],
         issuer: JWT_ISSUER,
         audience: ONE_TIME_AUDIENCE,
       }
