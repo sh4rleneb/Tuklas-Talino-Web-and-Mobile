@@ -598,11 +598,7 @@ async function dashboardPayload(student) {
 
 
 
-  console.log('[DASHBOARD DEBUG]', {
-    studentId: student.id,
-    xp: student.xp,
-    level: calculateLevel(student.xp)
-  });
+  void 0;
 
   return {
     student,

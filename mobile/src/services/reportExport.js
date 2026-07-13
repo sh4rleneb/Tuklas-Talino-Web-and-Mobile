@@ -51,25 +51,25 @@ export function summaryReportHtml(title, reportText) {
 
 
 async function shareReportFile(fileUri, options) {
-  console.log('[SHARE] fileUri =', fileUri);
+  void 0;
 
   const available = await Sharing.isAvailableAsync();
-  console.log('[SHARE] available =', available);
+  void 0;
 
   if (!available) {
-    console.log('[SHARE] Sharing unavailable');
+    void 0;
     return fileUri;
   }
 
   try {
     const result = await Sharing.shareAsync(fileUri, options);
-    console.log('[SHARE] result =', result);
+    void 0;
   } catch (err) {
-    console.log('========== SHARE ERROR ==========');
-    console.log('Message:', err?.message);
-    console.log('Name:', err?.name);
-    console.log('Raw:', err);
-    console.log('=================================');
+    void 0;
+    void 0;
+    void 0;
+    void 0;
+    void 0;
     throw err;
   }
 
@@ -77,8 +77,8 @@ async function shareReportFile(fileUri, options) {
 }
 
 async function saveReportFile(file, title, filename, options) {
-  console.log('[SAVE] file.uri =', file.uri);
-  console.log('[SAVE] exists =', file.exists);
+  void 0;
+  void 0;
 
   return shareReportFile(file.uri, {
     ...options,
@@ -128,7 +128,7 @@ export async function downloadPdfReport({
     destination.delete();
   }
 
-  console.log('[PDF] Downloading with File.downloadFileAsync');
+  void 0;
 
   const file = await File.downloadFileAsync(
     url,
@@ -141,7 +141,7 @@ export async function downloadPdfReport({
     }
   );
 
-  console.log('[PDF] Saved to:', file.uri);
+  void 0;
 
   return saveReportFile(file, title, filename, {
     mimeType: 'application/pdf',

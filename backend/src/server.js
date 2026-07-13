@@ -144,7 +144,7 @@ connectDatabase()
   .then(async() => {
     await syncModels();
     server.listen(port, bindHost, () =>
-      console.log(`Tuklas Talino API running on http://${bindHost}:${port}`)
+      void 0
     );
   })
   .catch((err) => {

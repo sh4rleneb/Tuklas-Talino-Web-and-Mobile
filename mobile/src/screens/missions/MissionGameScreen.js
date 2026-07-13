@@ -367,11 +367,7 @@ export default function MissionGameScreen({ navigation, route }) {
       try {
         setSubmitting(true);
 
-        console.log('[MISSION] submitting', {
-          missionId,
-          attempts,
-          gradeLevel: mission.gradeLevel,
-        });
+        void 0;
 
         const data = await api(`/missions/${missionId}/complete`, {
           method: 'POST',
@@ -382,10 +378,7 @@ export default function MissionGameScreen({ navigation, route }) {
           },
         });
 
-        console.log(
-          '[MISSION] response',
-          JSON.stringify(data, null, 2)
-        );
+        void 0;
 
         if (Array.isArray(data?.newBadges) && data.newBadges.length) {
           setBadgePopup(data.newBadges[0]);

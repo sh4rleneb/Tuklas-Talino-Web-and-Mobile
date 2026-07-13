@@ -472,9 +472,7 @@ export async function awardThresholdBadges(student) {
       }
     }
 
-    console.log(
-      `[BADGE LOOP] ${badge.code}: ${Date.now() - badgeTimer} ms`
-    );
+    void 0;
   }
 
   profile('badge loop');

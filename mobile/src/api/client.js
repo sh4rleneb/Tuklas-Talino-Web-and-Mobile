@@ -101,9 +101,9 @@ export async function apiBinary(path, options = {}) {
 
   const blob = await response.blob();
 
-  console.log('[apiBinary]');
-  console.log('type=', blob.type);
-  console.log('size=', blob.size);
+  void 0;
+  void 0;
+  void 0;
 
   return blob;
 

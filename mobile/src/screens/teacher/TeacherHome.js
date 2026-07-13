@@ -2383,7 +2383,7 @@ async function handleLogout() {
       return;
     }
 
-    console.log('[PendingGroupCheck] Approving with:', { taskId, studentId });
+    void 0;
 
     const saved = await run(
       `pending-group-approve-${taskId}-${studentId}`,
@@ -2391,7 +2391,7 @@ async function handleLogout() {
       'Group check approved.'
     );
 
-    console.log('[PendingGroupCheck] Approve saved result:', saved);
+    void 0;
 
     if (saved) {
       removePendingGroupCheckRow(row);
@@ -2417,7 +2417,7 @@ async function handleLogout() {
           text: 'Revise',
           style: 'destructive',
           onPress: async () => {
-            console.log('[PendingGroupCheck] Returning with:', { taskId, studentId });
+            void 0;
 
             const saved = await run(
               `pending-group-revise-${taskId}-${studentId}`,
@@ -2425,7 +2425,7 @@ async function handleLogout() {
               'Group check returned for revision.'
             );
 
-            console.log('[PendingGroupCheck] Return saved result:', saved);
+            void 0;
 
             if (saved) {
               removePendingGroupCheckRow(row);

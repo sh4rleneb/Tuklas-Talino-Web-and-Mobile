@@ -106,7 +106,7 @@ export default function RootNavigator() {
         setInitialRouteParams(undefined);
         setInitialRoute(homeRoute);
       } catch (err) {
-        console.log('Boot restore failed:', err?.message);
+        void 0;
       } finally {
         setBooting(false);
       }

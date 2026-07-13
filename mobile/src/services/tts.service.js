@@ -25,7 +25,7 @@ export async function speakText(text, callbacks = {}) {
   isRequestInProgress = true;
 
   try {
-    console.log('[TTS] Requesting audio');
+    void 0;
 
     const response = await api('/tts/speak', {
       method: 'POST',
@@ -34,15 +34,12 @@ export async function speakText(text, callbacks = {}) {
       },
     });
 
-    console.log('[TTS] Response received');
+    void 0;
 
     const base64Audio =
       response?.audioContent || '';
 
-    console.log(
-      '[TTS] Base64 length:',
-      base64Audio?.length || 0
-    );
+    void 0;
 
     if (!base64Audio) {
       isRequestInProgress = false;
@@ -52,7 +49,7 @@ export async function speakText(text, callbacks = {}) {
     const audioFile = new File(Paths.cache, `tts-${Date.now()}.mp3`);
     const fileUri = audioFile.uri;
 
-    console.log('[TTS] Writing file:', fileUri);
+    void 0;
 
     await LegacyFileSystem.writeAsStringAsync(
       fileUri,
@@ -67,7 +64,7 @@ export async function speakText(text, callbacks = {}) {
       currentSound = null;
     }
 
-    console.log('[TTS] Creating sound');
+    void 0;
 
     const result =
       await Audio.Sound.createAsync(
@@ -109,24 +106,24 @@ export async function speakText(text, callbacks = {}) {
       }
     });
 
-    console.log('[TTS] Playback started');
+    void 0;
   } catch (err) {
     isRequestInProgress = false;
 
-    console.log('========== TTS ERROR ==========');
-    console.log('Message:', err?.message);
-    console.log('Name:', err?.name);
+    void 0;
+    void 0;
+    void 0;
 
     if (err?.response) {
-      console.log('Response:', JSON.stringify(err.response, null, 2));
+      void 0;
     }
 
     if (err?.details) {
-      console.log('Details:', JSON.stringify(err.details, null, 2));
+      void 0;
     }
 
-    console.log('Raw Error:', err);
-    console.log('===============================');
+    void 0;
+    void 0;
 
     console.error('Mobile Google TTS failed:', err);
   }
