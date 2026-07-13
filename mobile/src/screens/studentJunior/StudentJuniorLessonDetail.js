@@ -2572,33 +2572,25 @@ const stepScrollRef = useRef(null);
           );
           })()}
           {!littleLearnerGame && questions.length > 1 ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginTop: 20,
-              marginBottom: 12,
-            }}
-          >
+          <View style={styles.quizNavigationRow}>
             <TouchableOpacity
               disabled={currentQuestionIndex === 0}
               style={[
-                styles.secondaryButton,
-                currentQuestionIndex === 0 && { opacity: 0.4 },
+                styles.quizNavigationSideButton,
+                styles.quizNavigationPreviousButton,
+                currentQuestionIndex === 0 && styles.quizNavigationDisabled,
               ]}
               onPress={() =>
                 setCurrentQuestionIndex(i => Math.max(0, i - 1))
               }
             >
-              <Text style={styles.secondaryText}>← Nakaraan</Text>
+              <Text style={[styles.quizNavigationSideText, styles.quizNavigationPreviousText]}>
+                ← Nakaraan
+              </Text>
             </TouchableOpacity>
 
             <Text
-              style={{
-                fontWeight: '700',
-                color: '#475569',
-              }}
+              style={styles.quizNavigationCounter}
             >
               {currentQuestionIndex + 1} / {questions.length}
             </Text>
@@ -2609,13 +2601,12 @@ const stepScrollRef = useRef(null);
                 !mcqAnswers[questions[currentQuestionIndex]?.id]
               }
               style={[
-                styles.primaryButton,
+                styles.quizNavigationSideButton,
+                styles.quizNavigationNextButton,
                 (
                   currentQuestionIndex >= questions.length - 1 ||
                   !mcqAnswers[questions[currentQuestionIndex]?.id]
-                ) && {
-                  opacity: 0.4,
-                },
+                ) && styles.quizNavigationDisabled,
               ]}
               onPress={() => {
                 const current = questions[currentQuestionIndex];
@@ -2634,7 +2625,7 @@ const stepScrollRef = useRef(null);
                 );
               }}
             >
-              <Text style={styles.primaryText}>Susunod →</Text>
+              <Text style={[styles.quizNavigationSideText, styles.quizNavigationNextText]}>Susunod →</Text>
             </TouchableOpacity>
           </View>
           ) : null}
@@ -4560,6 +4551,52 @@ const stepScrollRef = useRef(null);
 }
 
 const styles = StyleSheet.create({
+
+  // MOBILE_JUNIOR_QUIZ_EQUAL_NAV_BUTTONS_V1
+  quizNavigationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  quizNavigationSideButton: {
+    minWidth: 116,
+    height: 46,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  quizNavigationPreviousButton: {
+    backgroundColor: '#EEF7FF',
+  },
+  quizNavigationNextButton: {
+    backgroundColor: '#16A34A',
+  },
+  quizNavigationSideText: {
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  quizNavigationPreviousText: {
+    color: '#0F7A4B',
+  },
+  quizNavigationNextText: {
+    color: '#FFFFFF',
+  },
+  quizNavigationCounter: {
+    minWidth: 48,
+    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  quizNavigationDisabled: {
+    opacity: 0.45,
+  },
+
   completionToast: {
     flexDirection: 'row',
     alignItems: 'center',
