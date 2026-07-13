@@ -387,6 +387,7 @@ export default function LeaderboardScreen({ navigation }) {
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
 
         <StudentScreenHeader
+          showBack={false}
           navigation={navigation}
           avatar={student?.avatar}
           gradeLevel={student?.gradeLevel}

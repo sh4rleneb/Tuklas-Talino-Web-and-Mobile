@@ -9,14 +9,17 @@ import {
 import BumalikButton from './BumalikButton';
 export default function StudentScreenHeader({
   navigation,
+  showBack = true,
   avatar = '🧒',
   gradeLevel,
 }) {
   return (
     <View style={styles.topBar}>
-            <BumalikButton
-        onPress={() => navigation.goBack()}
-      />
+      {showBack ? (
+        <BumalikButton
+          onPress={() => navigation.goBack()}
+        />
+      ) : null}
 
       <View style={styles.studentChip}>
         <Text style={styles.avatar}>

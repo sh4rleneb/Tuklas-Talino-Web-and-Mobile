@@ -607,6 +607,7 @@ export default function GroupsScreen({ navigation }) {
         }
       >
         <StudentScreenHeader
+          showBack={false}
           navigation={navigation}
           avatar={student?.avatar}
           gradeLevel={student?.gradeLevel}

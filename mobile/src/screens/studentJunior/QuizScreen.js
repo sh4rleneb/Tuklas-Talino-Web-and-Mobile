@@ -1383,6 +1383,7 @@ const closeQuizPreview = useCallback(() => {
         showsVerticalScrollIndicator={false}
       >
         <StudentScreenHeader
+          showBack={false}
           navigation={navigation}
           avatar={student?.avatar}
           gradeLevel={student?.gradeLevel}

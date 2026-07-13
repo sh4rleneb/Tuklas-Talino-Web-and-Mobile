@@ -197,6 +197,7 @@ export default function BadgesScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <StudentScreenHeader
+          showBack={false}
         navigation={navigation}
         avatar={student?.avatar}
         gradeLevel={student?.gradeLevel}
