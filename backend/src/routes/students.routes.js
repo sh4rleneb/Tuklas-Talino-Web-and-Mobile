@@ -47,6 +47,7 @@ import {
 } from '../middleware/adminReauth.js';
 
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
+import { ALLOWED_AVATARS } from '../constants/avatars.js';
 function generateTemporaryPin() {
   return Array.from({ length: 4 }, () => crypto.randomInt(2, 10)).join('');
 }
@@ -75,7 +76,6 @@ function safeUserInclude() {
 
 const SAFE_AVATAR_PATTERN =
   /^[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200D\uFE0F]+$/u;
-
 
 const CORE_BADGE_DEFINITIONS = [
   {
@@ -1327,7 +1327,7 @@ router.patch('/:id/avatar', requireRole('admin', 'student'), async (req, res, ne
     if (
       !avatar ||
       avatar.length > 16 ||
-      !SAFE_AVATAR_PATTERN.test(avatar)
+      !ALLOWED_AVATARS.includes(avatar)
     ) {
       return res.status(422).json({
         message:

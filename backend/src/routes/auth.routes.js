@@ -26,6 +26,7 @@ import {
 } from '../middleware/adminReauth.js';
 
 import { assertSafeContentPayload } from '../validators/contentSafety.js';
+import { ALLOWED_AVATARS } from '../constants/avatars.js';
 const router = Router();
 
 function normalizeLoginIdentifier(value, role = '') {
@@ -185,6 +186,7 @@ async function resetFailedLoginState(user) {
 
 function publicUser(user) {
   return {
+    uuid: user.uuid,
     id: user.id,
     username: user.username,
     email: user.email,
@@ -432,7 +434,12 @@ router.post('/login', async (req, res, next) => {
     }
 
     const requestedAvatar = loginAvatar(req.body.avatar);
-    if (user.Role?.name === 'student' && user.Student && requestedAvatar) {
+    if (
+      user.Role?.name === 'student' &&
+      user.Student &&
+      requestedAvatar &&
+      ALLOWED_AVATARS.includes(requestedAvatar)
+    ) {
       user.Student.avatar = requestedAvatar;
       await user.Student.save();
     }
@@ -701,6 +708,12 @@ router.post(
     const gradeLevel = Number(req.body.gradeLevel);
     const section = req.body.section || 'N/A';
     const avatar = req.body.avatar || '🙂';
+
+    if (!ALLOWED_AVATARS.includes(avatar)) {
+      return res.status(422).json({
+        message: 'Choose a valid avatar.'
+      });
+    }
 
     assertSafeContentPayload({ name, section }, 'student registration');
 
