@@ -1,4 +1,6 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState,
+  useEffect,
+} from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -57,6 +59,119 @@ function isVisibleGrupoRecord(item) {
   );
 }
 
+
+
+
+function isGradeOneOrTwoStudent(student = {}) {
+  const grade = Number(
+    student.gradeLevel ||
+    student.grade ||
+    student.currentGradeLevel ||
+    0
+  );
+
+  return grade === 1 || grade === 2;
+}
+
+function hasAlreadyHelpedGroupTask(task = {}) {
+  return Boolean(
+    task.completed ||
+    task.pendingTeacherCheck ||
+    task.submitted ||
+    task.submittedAt ||
+    task.completedAt ||
+    task.verificationStatus === 'pending' ||
+    task.verificationStatus === 'approved'
+  );
+}
+
+
+function isGroupTaskRemaining(task = {}) {
+  const bucket = getTaskBucket(task);
+
+  return (
+    bucket === 'todo' &&
+    !task.pendingTeacherCheck &&
+    !task.submitted &&
+    !task.submittedAt &&
+    !hasAlreadyHelpedGroupTask(task)
+  );
+}
+
+function countRemainingGroupTasks(group = {}) {
+  return (group.tasks || []).filter(isGroupTaskRemaining).length;
+}
+
+function friendlyGroupTaskErrorMessage(message = '') {
+  const raw = String(message || '').trim();
+  const lower = raw.toLowerCase();
+
+  if (
+    lower.includes('already been submitted') &&
+    lower.includes('teacher review')
+  ) {
+    return 'Naipasa na ang gawaing ito at naghihintay na sa pagsusuri ng guro.';
+  }
+
+  if (
+    lower.includes('already been submitted') ||
+    lower.includes('waiting for teacher review')
+  ) {
+    return 'Naipasa na ang gawaing ito at hinihintay na ang pagsusuri ng guro.';
+  }
+
+  if (lower.includes('only the assigned group leader')) {
+    return 'Ang nakatalagang pinuno ng pangkat lamang ang maaaring magpasa ng gawaing ito.';
+  }
+
+  if (lower.includes('this group has no members')) {
+    return 'Wala pang kasapi ang grupong ito.';
+  }
+
+  if (lower.includes('group task not found')) {
+    return 'Hindi makita ang gawaing pangkat.';
+  }
+
+  if (lower.includes('group not found')) {
+    return 'Hindi makita ang grupo.';
+  }
+
+  return raw || 'Hindi maipasa ang gawaing pangkat sa ngayon. Subukan muli.';
+}
+
+
+function isGroupTaskAlreadySubmittedMessage(message = '') {
+  const lower = String(message || '').toLowerCase();
+
+  return (
+    lower.includes('already been submitted') ||
+    lower.includes('waiting for teacher review') ||
+    lower.includes('teacher review')
+  );
+}
+
+function getStudentGroupRole(group = {}) {
+  const directRole =
+    group.currentStudentRole ||
+    group.studentRole ||
+    group.memberRole ||
+    group.role ||
+    group.currentMember?.studentRole ||
+    group.currentMember?.role ||
+    group.currentStudentMembership?.studentRole ||
+    group.currentStudentMembership?.role ||
+    group.currentStudentMembership?.groupRole ||
+    '';
+
+  const normalized = String(directRole || '').trim();
+
+  if (normalized) return normalized;
+
+  return group.currentStudentIsLeader
+    ? 'Pinuno ng Pangkat'
+    : 'Kasapi ng Pangkat';
+}
+
 function getVisibleGroups(rawGroups = []) {
   return (Array.isArray(rawGroups) ? rawGroups : [])
     .filter(isVisibleGrupoRecord)
@@ -104,6 +219,17 @@ export default function GroupsScreen({ navigation }) {
   const [busyTaskId, setBusyTaskId] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(null);
+
+
+  useEffect(() => {
+    if (!notice) return undefined;
+
+    const timer = setTimeout(() => {
+      setNotice(null);
+    }, 4500);
+
+    return () => clearTimeout(timer);
+  }, [notice]);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedGrupoId, setSelectedGrupoId] = useState(null);
@@ -162,6 +288,56 @@ export default function GroupsScreen({ navigation }) {
     load({ quiet: true });
   }, [load]);
 
+
+  function markGroupTaskPendingLocally(taskId, completionPatch = {}) {
+    const submittedAt = completionPatch.submittedAt || new Date().toISOString();
+
+    setGroups((previousGroups) =>
+      previousGroups.map((group) => ({
+        ...group,
+        tasks: (group.tasks || []).map((task) => {
+          if (Number(task.id) !== Number(taskId)) {
+            return task;
+          }
+
+          const existingCompletion =
+            task.completion ||
+            (Array.isArray(task.completions) ? task.completions[0] : null) ||
+            {};
+
+          const nextCompletion = {
+            ...existingCompletion,
+            ...completionPatch,
+            groupTaskId: task.id,
+            verificationStatus:
+              completionPatch.verificationStatus ||
+              existingCompletion.verificationStatus ||
+              'pending',
+            studentRole:
+              completionPatch.studentRole ||
+              existingCompletion.studentRole ||
+              getStudentGroupRole(group),
+            submittedAt,
+          };
+
+          return {
+            ...task,
+            pendingTeacherCheck: true,
+            submitted: true,
+            submittedAt,
+            completion: nextCompletion,
+            completions: [
+              nextCompletion,
+              ...(Array.isArray(task.completions)
+                ? task.completions.filter((item) => item !== existingCompletion)
+                : []),
+            ],
+          };
+        }),
+      }))
+    );
+  }
+
   async function complete(taskId) {
     if (busyTaskId) return;
 
@@ -169,7 +345,34 @@ export default function GroupsScreen({ navigation }) {
     setNotice(null);
 
     try {
-      const data = await api(`/groups/tasks/${taskId}/complete`, { method: 'POST' });
+      const studentRole = getStudentGroupRole(
+        typeof selectedGrupo !== 'undefined' && selectedGrupo
+          ? selectedGrupo
+          : (
+              typeof groups !== 'undefined' && Array.isArray(groups)
+                ? groups.find((group) =>
+                    Array.isArray(group.tasks) &&
+                    group.tasks.some((task) => Number(task.id) === Number(taskId))
+                  )
+                : {}
+            )
+      );
+
+      const submissionPayload = {
+        studentRole,
+      };
+
+      const data = await api(`/groups/tasks/${taskId}/complete`, {
+        method: 'POST',
+        body: submissionPayload,
+      });
+
+      markGroupTaskPendingLocally(taskId, {
+        ...(data?.completion || data?.taskCompletion || {}),
+        studentRole,
+        verificationStatus: 'pending',
+      });
+
       setNotice({
         tone: 'success',
         message: data.message || 'Naipasa na para sa pagsusuri ng guro.',
@@ -180,10 +383,22 @@ export default function GroupsScreen({ navigation }) {
 
       await load({ quiet: true });
     } catch (err) {
+      const rawMessage = err?.message || '';
+      const alreadySubmitted = isGroupTaskAlreadySubmittedMessage(rawMessage);
+
       setNotice({
-        tone: 'error',
-        message: err.message || 'Hindi maipasa ang gawaing ito.',
+        tone: alreadySubmitted ? 'success' : 'error',
+        message: friendlyGroupTaskErrorMessage(rawMessage || 'Hindi maipasa ang gawaing ito.'),
       });
+
+      if (alreadySubmitted) {
+        markGroupTaskPendingLocally(taskId, {
+          verificationStatus: 'pending',
+        });
+        setCompletedTaskId(taskId);
+        setMissionStep('done');
+        await load({ quiet: true });
+      }
     } finally {
       setBusyTaskId(null);
     }
@@ -334,7 +549,7 @@ export default function GroupsScreen({ navigation }) {
           </Text>
 
           <Text style={styles.muted}>
-            Gawin ang misyon nang magkakasama.
+            Gawin ang Misyon ng Pangkat nang magkakasama.
           </Text>
 
           {selectedRole ? (
@@ -371,7 +586,7 @@ export default function GroupsScreen({ navigation }) {
           <Card>
             <View style={styles.emptyMini}>
               <Text style={styles.emptyMiniTitle}>
-                Wala pang misyon
+                Wala pang Misyon ng Pangkat
               </Text>
 
               <Text style={styles.muted}>
@@ -381,26 +596,47 @@ export default function GroupsScreen({ navigation }) {
           </Card>
         )}
 
-        <TouchableOpacity
-          activeOpacity={0.86}
-          style={[
-            styles.primaryButton,
-            {
-              marginTop: 12,
-              backgroundColor: '#E2E8F0',
-            },
-          ]}
-          onPress={() => returnToJuniorGroupRoles(group?.id)}
-        >
-          <Text
-            style={[
-              styles.primaryButtonText,
-              { color: '#0F172A' },
-            ]}
-          >
-            Bumalik
-          </Text>
-        </TouchableOpacity>
+
+
+      </View>
+    );
+  }
+
+
+  function renderGroupStepTabs() {
+    const steps = [
+      { key: 'choose', label: 'Pumili' },
+      { key: 'job', label: 'Tungkulin' },
+      { key: 'task', label: 'Gawain' },
+      { key: 'done', label: 'Tapos' },
+    ];
+
+    return (
+      <View style={styles.groupFlowTabs}>
+        {steps.map((step) => {
+          const active = missionStep === step.key;
+
+          return (
+            <TouchableOpacity
+              key={step.key}
+              activeOpacity={0.85}
+              onPress={() => setMissionStep(step.key)}
+              style={[
+                styles.groupFlowTab,
+                active && styles.groupFlowTabActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.groupFlowTabText,
+                  active && styles.groupFlowTabTextActive,
+                ]}
+              >
+                {step.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     );
   }
@@ -408,7 +644,8 @@ export default function GroupsScreen({ navigation }) {
   function renderTask(group, task) {
     const bucket = getTaskBucket(task);
     const isBusy = busyTaskId === task.id;
-    const canSubmit = group.currentStudentIsLeader && !task.completed && !task.pendingTeacherCheck;
+    const isEarlyGroup = isGradeOneOrTwoStudent(group);
+    const canIpasa = group.currentStudentIsLeader && !task.completed && !task.pendingTeacherCheck;
 
     return (
       <Card key={task.id} style={styles.inner}>
@@ -436,7 +673,21 @@ export default function GroupsScreen({ navigation }) {
           ) : null}
         </View>
 
-        {canSubmit && (
+        {isEarlyGroup && hasAlreadyHelpedGroupTask(task) ? (
+          <View style={styles.helpedNotice}>
+            <Text style={styles.helpedNoticeIcon}>🌟</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.helpedNoticeTitle}>
+                Nakatulong ka na sa pangkat!
+              </Text>
+              <Text style={styles.helpedNoticeText}>
+                Hinihintay na lang natin ang pagsusuri ng guro.
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {canIpasa && (
           <PrimaryButton variant="secondary" onPress={() => complete(task.id)}>
             {isBusy ? 'Isinusumite...' : 'Nakatulong ako sa aming pangkat!'}
           </PrimaryButton>
@@ -534,7 +785,7 @@ export default function GroupsScreen({ navigation }) {
             setCompletedTaskId(null);
           }}
         >
-          <Text style={styles.primaryButtonText}>Bumalik sa mga Pangkat</Text>
+          <Text style={styles.primaryButtonText}>Bumalik sa mga Grupo</Text>
         </PrimaryButton>
       </Card>
     );
@@ -592,6 +843,107 @@ export default function GroupsScreen({ navigation }) {
     );
   }
 
+
+  function renderChooseGroupContent() {
+    return filteredGroups.map((group) => (
+      <TouchableOpacity
+        key={group.id}
+        style={styles.teamCard}
+        onPress={() => {
+          setSelectedGrupoId(group.id);
+          setMissionStep('job');
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={styles.group}>
+            👥 {group.name}
+          </Text>
+
+          <Text style={styles.muted}>
+            {countRemainingGroupTasks(group)} natitirang gawain
+          </Text>
+        </View>
+
+        <Text style={styles.teamArrow}>→</Text>
+      </TouchableOpacity>
+    ));
+  }
+
+  function renderChooseGroupPrompt(targetLabel = 'pumili') {
+    return (
+      <View style={styles.emptyMini}>
+        <Text style={styles.emptyMiniTitle}>
+          Pumili muna ng grupo
+        </Text>
+        <Text style={styles.muted}>
+          Pindutin ang “Pumili” at pumili ng grupo bago pumunta sa {targetLabel}.
+        </Text>
+      </View>
+    );
+  }
+
+  function renderDoneGroupContent() {
+    const sourceGroups = selectedGrupo ? [selectedGrupo] : filteredGroups;
+
+    const groupsWithDoneTasks = sourceGroups
+      .map((group) => ({
+        ...group,
+        tasks: (group.tasks || []).filter((task) => {
+          const bucket = getTaskBucket(task);
+          return (
+            bucket === 'done' ||
+            bucket === 'pending' ||
+            hasAlreadyHelpedGroupTask(task)
+          );
+        }),
+      }))
+      .filter((group) => (group.tasks || []).length);
+
+    if (!groupsWithDoneTasks.length) {
+      return (
+        <View style={styles.emptyMini}>
+          <Text style={styles.emptyMiniTitle}>
+            Wala pang tapos na gawain
+          </Text>
+          <Text style={styles.muted}>
+            Kapag nakatulong ka na o naipasa na ng lider ang gawain, makikita ito rito.
+          </Text>
+        </View>
+      );
+    }
+
+    return groupsWithDoneTasks.map((group) => (
+      <View key={`done-${group.id}`} style={styles.doneGroupBlock}>
+        <Text style={styles.doneGroupTitle}>👥 {group.name}</Text>
+        {(group.tasks || []).map((task) => renderTask(group, task))}
+      </View>
+    ));
+  }
+
+  function renderGroupTabContent() {
+    if (missionStep === 'choose') {
+      return renderChooseGroupContent();
+    }
+
+    if (missionStep === 'job') {
+      return selectedGrupo
+        ? renderTrabahoSelection(selectedGrupo)
+        : renderChooseGroupPrompt('tungkulin');
+    }
+
+    if (missionStep === 'task') {
+      return selectedGrupo
+        ? renderGrupo(selectedGrupo)
+        : renderChooseGroupPrompt('gawain');
+    }
+
+    if (missionStep === 'done') {
+      return renderDoneGroupContent();
+    }
+
+    return renderChooseGroupContent();
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -623,7 +975,7 @@ export default function GroupsScreen({ navigation }) {
             <View style={styles.summaryRow}>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryValue}>{summary.groups}</Text>
-                <Text style={styles.summaryLabel}>Mga Pangkat</Text>
+                <Text style={styles.summaryLabel}>Pakikipagtulungan ng Grupo</Text>
               </View>
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryValue}>{summary.todo}</Text>
@@ -683,7 +1035,7 @@ export default function GroupsScreen({ navigation }) {
           </Card>
         ) : filteredGroups.length ? (
           <>
-            <Card style={styles.teamMissionCard}>
+<Card style={styles.teamMissionCard}>
               <Text style={styles.teamMissionTitle}>
                 👥 Gawain ng Pangkat
               </Text>
@@ -692,63 +1044,11 @@ export default function GroupsScreen({ navigation }) {
                 Pumili. Tumulong. Isumite.
               </Text>
 
-              <View style={styles.stepRow}>
-                <View style={styles.stepPill}>
-                  <Text style={styles.stepText}>Pumili</Text>
-                </View>
+              {renderGroupStepTabs()}
 
-                <View style={styles.stepPill}>
-                  <Text style={styles.stepText}>Tungkulin</Text>
-                </View>
-
-                <View style={styles.stepPill}>
-                  <Text style={styles.stepText}>Gawain</Text>
-                </View>
-
-                <View style={styles.stepTapos}>
-                  <Text style={styles.stepTaposText}>
-                    Tapos ({summary.done})
-                  </Text>
-                </View>
-              </View>
-
-              {filteredGroups.map((group) => (
-                <TouchableOpacity
-                  key={group.id}
-                  style={styles.teamCard}
-                  onPress={() => {
-                    setSelectedGrupoId(group.id);
-                    setMissionStep('job');
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.group}>
-                      👥 {group.name}
-                    </Text>
-
-                    <Text style={styles.muted}>
-                      {(group.tasks || []).filter(
-                        (task) => !task.completed
-                      ).length} natitirang gawain
-                    </Text>
-                  </View>
-
-                  <Text style={styles.teamArrow}>→</Text>
-                </TouchableOpacity>
-              ))}
+              {renderGroupTabContent()}
             </Card>
 
-            {missionStep === 'job' && selectedGrupo
-              ? renderTrabahoSelection(selectedGrupo)
-              : null}
-
-            {missionStep === 'task' && selectedGrupo
-              ? renderGrupo(selectedGrupo)
-              : null}
-
-            {missionStep === 'done'
-              ? renderWaitingForTeacher()
-              : null}
           </>
         ) : (
           <Card style={styles.emptyCard}>
@@ -826,52 +1126,44 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   roleSelectionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'stretch',
-    justifyContent: 'space-between',
-    marginHorizontal: -4,
+    flexDirection: 'column',
+    gap: 14,
+    marginTop: 16,
+    width: '100%',
   },
   roleSelectionOption: {
-    flexBasis: '46%',
-    flexGrow: 1,
-    minWidth: 132,
-    minHeight: 154,
-    marginHorizontal: 4,
-    marginBottom: 10,
+    width: '100%',
+    minHeight: 132,
     paddingVertical: 18,
-    paddingHorizontal: 10,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#DDF4E7',
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 18,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#166534',
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#DDF4E7',
   },
   roleSelectionIcon: {
     fontSize: 42,
-    lineHeight: 50,
     marginBottom: 8,
     textAlign: 'center',
   },
   roleSelectionRoleTitle: {
-    color: '#0F2742',
-    fontSize: 20,
-    lineHeight: 24,
+    width: '100%',
+    fontSize: 24,
+    lineHeight: 30,
     fontWeight: '900',
+    color: colors.ink,
     textAlign: 'center',
-    marginBottom: 6,
+    marginTop: 4,
   },
   roleSelectionRoleDescription: {
-    color: '#5D7090',
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '700',
+    width: '100%',
+    marginTop: 8,
+    fontSize: 17,
+    lineHeight: 24,
+    fontWeight: '800',
+    color: colors.muted,
     textAlign: 'center',
   },
 
@@ -1486,4 +1778,69 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+
+  helpedNotice: {
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 20,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 2,
+    borderColor: '#86EFAC',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  helpedNoticeIcon: {
+    fontSize: 28,
+  },
+  helpedNoticeTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#166534',
+  },
+  helpedNoticeText: {
+    marginTop: 3,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+    lineHeight: 20,
+  },
+
+  groupFlowTabs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 0,
+    marginBottom: 18,
+  },
+  groupFlowTab: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  groupFlowTabActive: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+  },
+  groupFlowTabText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  groupFlowTabTextActive: {
+    color: '#15803D',
+  },
+
+  doneGroupBlock: {
+    marginTop: 10,
+  },
+  doneGroupTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.ink,
+    marginBottom: 10,
+  },
 });

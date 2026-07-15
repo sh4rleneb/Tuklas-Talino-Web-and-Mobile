@@ -332,17 +332,17 @@ export default function LessonLibrary({ navigation, variant = 'junior' }) {
 
           <View style={styles.heroTop}>
             <View style={styles.heroTextWrap}>
-              <Text style={styles.eyebrow}>
-                {playful ? 'MAPA NG MGA HAMON' : 'SENTRO NG PAG-AARAL'}
-              </Text>
+              {!playful && (
+                <Text style={styles.eyebrow}>SENTRO NG PAG-AARAL</Text>
+              )}
               <Text style={styles.title}>
                 {playful ? 'Aklatan ng Aralin' : 'Mga Aralin sa Filipino'}
               </Text>
-              <Text style={styles.subtitle}>
-                {playful
-                  ? 'Pumili ng aralin, mangolekta ng bituin, kumita ng XP, at i-unlock ang susunod na hamon.'
-                  : 'Piliin ang kategorya, ipagpatuloy ang aralin, at subaybayan ang progreso mo.'}
-              </Text>
+              {!playful && (
+                <Text style={styles.subtitle}>
+                  Piliin ang kategorya, ipagpatuloy ang aralin, at subaybayan ang progreso mo.
+                </Text>
+              )}
             </View>
 
             <View style={styles.gradeBadge}>
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
 
   heroTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
 
   heroTextWrap: {

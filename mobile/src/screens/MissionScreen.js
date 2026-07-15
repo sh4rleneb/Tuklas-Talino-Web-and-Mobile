@@ -1,5 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { api } from '../api/client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -13,7 +15,8 @@ import {
 } from 'react-native';
 
 
-const MAX_MISSION_ATTEMPTS = 2;
+const MAX_MISSION_ATTEMPTS = 5;
+const MISSION_ATTEMPT_STORAGE_KEY = 'tuklas_mobile_misyon_attempts_v1';
 
 const MOBILE_MISSION_TYPE_FALLBACKS = [
   'word-match',
@@ -23,6 +26,53 @@ const MOBILE_MISSION_TYPE_FALLBACKS = [
   'story-quest',
   'fill-in-the-blank',
 ];
+
+const TAGALOG_MISSION_TITLES = Object.freeze({
+  'word-match': 'Pagtutugma ng Salita',
+  'letter-pop': 'Pagpili ng Titik',
+  'picture-guess': 'Hulaan ang Larawan',
+  'sentence-builder': 'Pagbuo ng Pangungusap',
+  'story-quest': 'Pag-unawa sa Kuwento',
+  'sound-and-say': 'Pakikinig at Pagbigkas',
+  'fill-in-the-blank': 'Punan ang Patlang',
+});
+
+const TAGALOG_MISSION_TITLES_BY_ENGLISH = Object.freeze({
+  'word match': 'Pagtutugma ng Salita',
+  'letter pop': 'Pagpili ng Titik',
+  'picture guess': 'Hulaan ang Larawan',
+  'sentence builder': 'Pagbuo ng Pangungusap',
+  'story quest': 'Pag-unawa sa Kuwento',
+  'sound and say': 'Pakikinig at Pagbigkas',
+  'fill in the blank': 'Punan ang Patlang',
+  'fill-in-the-blank': 'Punan ang Patlang',
+});
+
+function getTagalogMissionTitle(
+  missionId,
+  fallbackTitle = ''
+) {
+  const id = String(missionId || '')
+    .trim()
+    .toLowerCase();
+
+  const fallback = String(fallbackTitle || '')
+    .trim();
+
+  const normalizedFallback = fallback
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+
+  return (
+    TAGALOG_MISSION_TITLES[id] ||
+    TAGALOG_MISSION_TITLES_BY_ENGLISH[
+      normalizedFallback
+    ] ||
+    fallback ||
+    'Misyon'
+  );
+}
 
 function normalizeMissionCatalog(rows = []) {
   return rows.slice(0, 6).map((mission = {}, index) => {
@@ -50,8 +100,8 @@ function normalizeMissionCatalog(rows = []) {
       ...mission,
       id: mission.id || mission.key || mission.missionId || slug || `mission-${index + 1}`,
       missionId: mission.missionId || mission.id || mission.key || slug || `mission-${index + 1}`,
-      title: rawTitle,
-      name: rawTitle,
+      title: getTagalogMissionTitle(mission.id || mission.missionId || slug, rawTitle),
+      name: getTagalogMissionTitle(mission.id || mission.missionId || slug, rawTitle),
       subtitle: mission.subtitle || mission.tagline || mission.description || '',
       description: mission.description || mission.instructions || mission.subtitle || '',
       instructions: mission.instructions || mission.description || mission.guide || '',
@@ -60,7 +110,10 @@ function normalizeMissionCatalog(rows = []) {
       type: mission.type || mission.gameType || mission.kind || fallbackType,
       gameType: mission.gameType || mission.type || mission.kind || fallbackType,
       xpReward: Number(mission.xpReward || mission.rewardXp || mission.xp || 20),
-      maxAttempts: Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS),
+      maxAttempts: Math.max(
+        MAX_MISSION_ATTEMPTS,
+        Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS)
+      ),
       questionPool: mission.questionPool || mission.questions || mission.pool || [],
       questions: mission.questions || mission.questionPool || mission.pool || [],
       state: mission.state || mission.status || 'ready',
@@ -91,12 +144,20 @@ const MISSION_GAMES = normalizeMissionCatalog([
     module: 'Pagbasa',
     xp: 12,
     baseStatus: 'Handa na',
-    short: 'Piliin ang pantig!',
-    instruction: 'Piliin ang nawawalang titik o pantig. Kapag tama, mabubuo ang salita at may gantimpalang XP.',
-    sample: 'ba + ___ = bata',
+    short: 'Piliin ang pantig na bubuo sa salita!',
+    instruction: 'Tap the balloon na bubuo sa salita. Kapag tama, pop!',
+    sample: 'pu + ___ = 🌳',
     reward: 'Pag-unlad sa sunod-sunod na pagbasa',
-    tone: 'sun'
-  },
+    tone: 'sun',
+    missionLabel: 'Misyong Pantig',
+    prompt: 'pu + ___ = 🌳',
+    prefix: 'pu',
+    resultEmoji: '🌳',
+    resultWord: 'puno',
+    clue: 'Halamang may katawan, sanga, at dahon.',
+    options: ['no', 'la', 'sa'],
+    correct: 'no',
+},
   {
     id: 'picture-guess',
     title: 'Hulaan ang Larawan',
@@ -125,7 +186,7 @@ const MISSION_GAMES = normalizeMissionCatalog([
   },
   {
     id: 'story-quest',
-    title: 'Pag-unawa sa Kwento',
+    title: 'Pag-unawa sa Kuwento',
     icon: '📖',
     module: 'Panitikan',
     xp: 20,
@@ -140,7 +201,7 @@ const MISSION_GAMES = normalizeMissionCatalog([
     id: 'sound-and-say',
     title: 'Pakikinig at Pagbigkas',
     icon: '🎙️',
-    module: 'Komunikasyong Pagsasalita',
+    module: 'Oral Comm',
     xp: 15,
     baseStatus: 'Handa na',
     short: 'Magsanay bumigkas ng salitang Filipino o maikling parirala.',
@@ -201,27 +262,72 @@ function getTone(tone) {
   return TONES[tone] || TONES.mint;
 }
 
+async function readStoredMissionAttempts() {
+  try {
+    const raw = await AsyncStorage.getItem(MISSION_ATTEMPT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+async function writeStoredMissionAttempts(nextAttempts = {}) {
+  try {
+    await AsyncStorage.setItem(
+      MISSION_ATTEMPT_STORAGE_KEY,
+      JSON.stringify(nextAttempts || {})
+    );
+  } catch (error) {
+    // Local persistence is best-effort only.
+  }
+}
+
 function missionState(mission = {}) {
   return String(mission.state || mission.status || '').toLowerCase();
 }
 
 function statusLabel(mission = {}) {
   const state = missionState(mission);
+  const finishedAttempts = hasUsedAllMissionAttempts(mission);
 
-  if (state === 'claimed' || state === 'completed') return 'Natapos';
-  if (state === 'ready_to_claim') return 'Kunin ang XP';
-  if (state === 'locked') return 'Naka-lock';
+  if (state === 'claimed') {
+    return 'Natapos';
+  }
+
+  if (
+    finishedAttempts &&
+    (state === 'ready_to_claim' || state === 'completed')
+  ) {
+    return state === 'ready_to_claim'
+      ? 'Kunin ang Bituin'
+      : 'Natapos';
+  }
+
+  if (state === 'locked') {
+    return 'Naka-lock';
+  }
 
   return mission.baseStatus || 'Handa na';
 }
 
 function isClaimable(mission = {}) {
-  return missionState(mission) === 'ready_to_claim';
+  return (
+    missionState(mission) === 'ready_to_claim' &&
+    hasUsedAllMissionAttempts(mission)
+  );
 }
 
 function isCompleted(mission = {}) {
   const state = missionState(mission);
-  return state === 'claimed' || state === 'completed';
+
+  if (state === 'claimed') {
+    return true;
+  }
+
+  return (
+    state === 'completed' &&
+    hasUsedAllMissionAttempts(mission)
+  );
 }
 
 function getMissionKey(mission = {}) {
@@ -250,59 +356,238 @@ function getMissionAttemptCount(mission = {}) {
   return Math.max(0, Math.min(MAX_MISSION_ATTEMPTS, Number(rawAttempts || fromArray || 0)));
 }
 
-function missionAttemptLabel(mission = {}) {
-  const used = getMissionAttemptCount(mission);
-  const max = Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS);
-
-  if (used >= max) return `Pagsubok ${max} sa ${max} • Naubos na`;
-  return `Pagsubok ${Math.max(1, used + 1)} sa ${max}`;
+function getMissionMaxAttempts(mission = {}) {
+  return Math.max(
+    MAX_MISSION_ATTEMPTS,
+    Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS)
+  );
 }
 
+function hasUsedAllMissionAttempts(mission = {}) {
+  return getMissionAttemptCount(mission) >= getMissionMaxAttempts(mission);
+}
+
+function missionAttemptLabel(mission = {}) {
+  const state = missionState(mission);
+  const used = getMissionAttemptCount(mission);
+  const max = getMissionMaxAttempts(mission);
+  const finishedAttempts = used >= max;
+
+  if (state === 'claimed') {
+    return 'Natapos na';
+  }
+
+  if (
+    finishedAttempts &&
+    (state === 'completed' || state === 'ready_to_claim')
+  ) {
+    return state === 'ready_to_claim'
+      ? 'Kumpleto • Kunin ang Bituin'
+      : 'Natapos na';
+  }
+
+  if (finishedAttempts) {
+    return `Pagsubok ${max} sa ${max} • Naubos na`;
+  }
+
+  const currentAttemptNo = Number(
+    mission.currentAttemptNo ??
+    mission.nextAttemptNo ??
+    0
+  );
+
+  const nextAttempt = Math.min(
+    max,
+    Math.max(1, currentAttemptNo || used + 1)
+  );
+
+  return `Pagsubok ${nextAttempt} sa ${max}`;
+}
 
 function getMissionProgress(mission = {}) {
-  if (isCompleted(mission) || isClaimable(mission)) return 100;
-
-  const backendProgress = Number(mission.progress ?? mission.percent ?? 0);
+  const state = missionState(mission);
   const attemptsUsed = getMissionAttemptCount(mission);
-  const maxAttempts = Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS);
+  const maxAttempts = getMissionMaxAttempts(mission);
+  const finishedAttempts = attemptsUsed >= maxAttempts;
+
+  if (state === 'claimed') {
+    return 100;
+  }
 
   const attemptProgress =
     attemptsUsed > 0 && Number.isFinite(maxAttempts) && maxAttempts > 0
       ? Math.round((Math.min(attemptsUsed, maxAttempts) / maxAttempts) * 100)
       : 0;
 
+  if (
+    !finishedAttempts &&
+    (state === 'completed' || state === 'ready_to_claim')
+  ) {
+    return Math.max(
+      0,
+      Math.min(99, attemptProgress)
+    );
+  }
+
+  const backendProgress = Number(
+    mission.progress ??
+    mission.percent ??
+    0
+  );
+
+  const safeProgress = Math.max(
+    Number.isFinite(backendProgress) ? backendProgress : 0,
+    attemptProgress
+  );
+
+  if (
+    finishedAttempts &&
+    (state === 'completed' || state === 'ready_to_claim')
+  ) {
+    return 100;
+  }
+
   return Math.max(
     0,
-    Math.min(100, Math.max(backendProgress, attemptProgress))
+    Math.min(99, safeProgress)
   );
 }
 
 function buildMergedMissions(backendMissions = []) {
+  const backendRows = Array.isArray(backendMissions) ? backendMissions : [];
+
   return MISSION_GAMES.map((mission) => {
-    const backend = backendMissions.find(
-      (item) =>
-        String(item.missionId || item.id || '') === String(mission.id)
+    const backend = backendRows.find((item) => {
+      const backendKey = String(item.missionId || item.id || item.key || '');
+      const localKeys = [
+        mission.missionId,
+        mission.id,
+        mission.key,
+        mission.gameId,
+      ].filter(Boolean).map(String);
+
+      return localKeys.includes(backendKey);
+    });
+
+    const xp = Number(
+      backend?.xp ??
+      backend?.xpReward ??
+      backend?.rewardXp ??
+      mission.xp ??
+      mission.xpReward ??
+      20
     );
 
-    return {
-      ...(backend || {}),
+    const attemptCount = getMissionAttemptCount(backend || mission);
+    const maxAttempts = Math.max(
+      MAX_MISSION_ATTEMPTS,
+      Number(
+        backend?.maxAttempts ??
+        mission.maxAttempts ??
+        MAX_MISSION_ATTEMPTS
+      )
+    );
+
+    const currentAttemptNo = Math.min(
+      maxAttempts,
+      Math.max(1, attemptCount + 1)
+    );
+
+    const state =
+      backend?.state ||
+      backend?.status ||
+      mission.state ||
+      mission.status ||
+      'ready';
+
+    const progress = getMissionProgress({
       ...mission,
-      state: backend?.state || backend?.status || mission.state || 'ready',
-      progress: Number(backend?.progress ?? backend?.percent ?? 0),
-      attemptCount: getMissionAttemptCount(backend || mission),
-      attemptsUsed: getMissionAttemptCount(backend || mission),
-      maxAttempts: Number(backend?.maxAttempts ?? mission.maxAttempts ?? MAX_MISSION_ATTEMPTS),
+      ...(backend || {}),
+      attemptCount,
+      attemptsUsed: attemptCount,
+      currentAttemptNo,
+      attemptNo: currentAttemptNo,
+      attemptLabel: `Pagsubok ${currentAttemptNo} sa ${maxAttempts}`,
+      maxAttempts,
+    });
+
+    return {
+      ...mission,
+      ...(backend || {}),
+
+      // Keep local game id for frontend routing/game selection.
+      id: mission.id,
+      gameId: mission.gameId || mission.id,
+      type: mission.type,
+      gameType: mission.gameType,
+
+      // Keep backend id for claim/complete API behavior.
+      missionId:
+        backend?.missionId ||
+        backend?.id ||
+        mission.missionId ||
+        mission.id,
+
+      // Backend is source of truth for public mission reward/content fields.
+      title: getTagalogMissionTitle(mission.id, mission.title || backend?.title),
+      name: getTagalogMissionTitle(mission.id, mission.name || mission.title || backend?.title),
+      xp,
+      xpReward: xp,
+      rewardXp: xp,
+
+      // Web-style frontend card content.
+      module: backend?.module || mission.module,
+      short:
+        backend?.short ||
+        backend?.tagline ||
+        backend?.description ||
+        mission.short ||
+        mission.subtitle ||
+        '',
+      subtitle:
+        backend?.subtitle ||
+        backend?.tagline ||
+        backend?.description ||
+        mission.subtitle ||
+        mission.short ||
+        '',
+      description:
+        backend?.description ||
+        backend?.instructions ||
+        mission.description ||
+        mission.instruction ||
+        '',
+      instructions:
+        backend?.instructions ||
+        backend?.description ||
+        mission.instructions ||
+        mission.instruction ||
+        '',
+
+      icon: backend?.icon || backend?.emoji || mission.icon,
+      tone: backend?.tone || backend?.color || mission.tone,
+
+      state,
+      status: state,
+      baseStatus: backend?.baseStatus || mission.baseStatus || 'Handa na',
+      progress,
+      attemptCount,
+      attemptsUsed: attemptCount,
+      maxAttempts,
+      requirement: backend?.requirement || mission.requirement || null,
     };
   });
 }
 
-export default function MissionScreen({ navigation }) {
+export default function MissionScreen({ navigation, route }) {
   const [missions, setMissions] = useState(MISSION_GAMES);
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState(null);
   const [selectedMission, setSelectedMission] = useState(null);
   const [error, setError] = useState('');
+  const [missionAttemptOverrides, setMissionAttemptOverrides] = useState({});
+  const missionAttemptOverridesRef = useRef({});
 
   const gradeLevel = Number(student?.gradeLevel || 1);
   const isEarlyGrade = gradeLevel <= 2;
@@ -313,32 +598,187 @@ export default function MissionScreen({ navigation }) {
   );
 
   const totalXp = useMemo(
-    () => missions.reduce((sum, mission) => sum + Number(mission.xp || 0), 0),
+    () => missions.reduce(
+      (sum, mission) => sum + Number(mission.xpReward ?? mission.xp ?? 0),
+      0
+    ),
     [missions]
   );
 
-  const load = useCallback(async () => {
+
+  const syncMissionAttemptOverrides = useCallback((nextOverrides = {}) => {
+    const normalizedOverrides = nextOverrides || {};
+    missionAttemptOverridesRef.current = normalizedOverrides;
+
+    setMissionAttemptOverrides((currentOverrides) => {
+      const currentText = JSON.stringify(currentOverrides || {});
+      const nextText = JSON.stringify(normalizedOverrides);
+
+      return currentText === nextText
+        ? currentOverrides
+        : normalizedOverrides;
+    });
+  }, []);
+
+  const buildMissionsWithAttemptOverrides = useCallback((
+    backendMissions = [],
+    overrides = {}
+  ) => {
+    const merged = buildMergedMissions(
+      Array.isArray(backendMissions) ? backendMissions : []
+    );
+
+    return merged.map((mission = {}) => {
+      const keys = [
+        mission.missionId,
+        mission.id,
+        mission.key,
+        mission.gameId,
+        mission.type,
+        mission.gameType,
+      ]
+        .filter(Boolean)
+        .map(String);
+
+      const override = keys
+        .map((key) => overrides[key])
+        .find(Boolean);
+
+      if (!override) {
+        return mission;
+      }
+
+      const maxAttempts = Math.max(
+        MAX_MISSION_ATTEMPTS,
+        Number(
+          override.maxAttempts ||
+          mission.maxAttempts ||
+          MAX_MISSION_ATTEMPTS
+        )
+      );
+
+      const overrideAttemptNo = Number(
+        override.attemptNo || 0
+      );
+
+      const attemptCount = Math.max(
+        getMissionAttemptCount(mission),
+        overrideAttemptNo
+      );
+
+      const cappedAttemptCount = Math.max(
+        0,
+        Math.min(maxAttempts, attemptCount)
+      );
+
+      const progress = Math.round(
+        (cappedAttemptCount / maxAttempts) * 100
+      );
+
+      const shouldRemainActive =
+        cappedAttemptCount > 0 &&
+        cappedAttemptCount < maxAttempts &&
+        missionState(mission) !== 'claimed';
+
+      return {
+        ...mission,
+        attemptCount: cappedAttemptCount,
+        attemptsUsed: cappedAttemptCount,
+        currentAttemptNo: Math.min(
+          maxAttempts,
+          cappedAttemptCount + 1
+        ),
+        attemptNo: Math.min(
+          maxAttempts,
+          cappedAttemptCount + 1
+        ),
+        attemptLabel: `Pagsubok ${Math.min(maxAttempts, cappedAttemptCount + 1)} sa ${maxAttempts}`,
+        maxAttempts,
+        progress,
+        percent: progress,
+        state: shouldRemainActive ? 'ready' : mission.state,
+        status: shouldRemainActive ? 'ready' : mission.status,
+      };
+    });
+  }, []);
+
+  const load = useCallback(async (overrides = missionAttemptOverridesRef.current) => {
+    const storedOverrides = await readStoredMissionAttempts();
+    const combinedOverrides = {
+      ...storedOverrides,
+      ...overrides,
+    };
     setLoading(true);
     setError('');
 
     try {
       const dashboard = await api('/dashboard');
-      const merged = buildMergedMissions(dashboard.missions || []);
+      const merged = buildMissionsWithAttemptOverrides(dashboard.missions || [], combinedOverrides);
+      syncMissionAttemptOverrides(combinedOverrides);
 
       setMissions(merged);
       setStudent(dashboard.student || null);
     } catch (err) {
-      setMissions(buildMergedMissions([]));
+      setMissions(buildMissionsWithAttemptOverrides([], combinedOverrides));
+      syncMissionAttemptOverrides(combinedOverrides);
       setError('Hindi makuha ang mga misyon. Pakisubukan muli.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [buildMissionsWithAttemptOverrides, syncMissionAttemptOverrides]);
 
   useFocusEffect(
     useCallback(() => {
+      const update = route?.params?.missionAttemptUpdate;
+
+      if (update?.missionApiId || update?.missionId) {
+        const attemptNo = Number(update.attemptNo || 0);
+        const maxAttempts = Math.max(
+          MAX_MISSION_ATTEMPTS,
+          Number(update.maxAttempts || MAX_MISSION_ATTEMPTS)
+        );
+
+        const keys = [
+          update.missionApiId,
+          update.missionId,
+          update.gameId,
+        ]
+          .filter(Boolean)
+          .map(String);
+
+        const nextOverrides = {
+          ...missionAttemptOverridesRef.current,
+        };
+
+        keys.forEach((key) => {
+          const previous = Number(
+            nextOverrides[key]?.attemptNo || 0
+          );
+
+          nextOverrides[key] = {
+            attemptNo: Math.max(previous, attemptNo),
+            maxAttempts,
+          };
+        });
+
+        syncMissionAttemptOverrides(nextOverrides);
+        writeStoredMissionAttempts(nextOverrides);
+        load(nextOverrides);
+
+        navigation.setParams?.({
+          missionAttemptUpdate: undefined,
+        });
+
+        return;
+      }
+
       load();
-    }, [load])
+    }, [
+      load,
+      navigation,
+      route?.params?.missionAttemptUpdate,
+      syncMissionAttemptOverrides,
+    ])
   );
 
   async function claimMission(mission) {
@@ -358,7 +798,7 @@ export default function MissionScreen({ navigation }) {
 
       Alert.alert(
         'Nakuha ang Gantimpala',
-        data.message || `+${data.xpAwarded || mission.xp} XP ang nakuha!`
+        data.message || `+${data.xpAwarded || mission.xpReward || mission.xp} XP ang nakuha!`
       );
 
       setSelectedMission(null);
@@ -506,8 +946,10 @@ export default function MissionScreen({ navigation }) {
                   }
 
                   navigation.navigate('MissionGame', {
-                    missionId,
+                    missionId: selectedMission.gameId || selectedMission.id,
+                    missionApiId: getMissionKey(selectedMission),
                     mission: selectedMission,
+                    gradeLevel,
                   });
                 }}
             >
@@ -517,7 +959,7 @@ export default function MissionScreen({ navigation }) {
                   : completed
                     ? '✓ Natapos'
                     : claimable
-                      ? 'Kunin ang XP'
+                      ? 'Kunin ang Bituin'
                       : 'Simulan ang Misyon'}
               </Text>
             </TouchableOpacity>
@@ -542,7 +984,7 @@ export default function MissionScreen({ navigation }) {
                 Maglaro, magsanay, at kumita ng XP!
               </Text>
               <Text style={styles.heroSubtitle}>
-                Piliin ang misyon para sa Pagbasa, Bokabularyo, Panitikan, Komunikasyong Pagsasalita, at Pagsulat.
+                Piliin ang misyon para sa Pagbasa, Bokabularyo, Panitikan, Oral Comm, at Pagsulat.
               </Text>
             </View>
 

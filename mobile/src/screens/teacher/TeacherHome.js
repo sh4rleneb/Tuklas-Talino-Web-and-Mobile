@@ -2533,7 +2533,7 @@ async function handleLogout() {
 
         {builderStep === 0 && (
           <SectionCard>
-            <Text style={styles.cardTitle}>Optional Lesson Material</Text>
+            <Text style={styles.cardTitle}>Lesson Material</Text>
             <Text style={styles.muted}>Upload a PPT, PPTX, or PDF file. PDFs can preview inside the student lesson. PPT/PPTX files open as slides or download.</Text>
             {draft.material && (
               <View style={styles.softRow}>
@@ -2541,9 +2541,68 @@ async function handleLogout() {
                 <Text style={styles.muted}>{draft.material.fileType} • {Math.round((draft.material.size || 0) / 1024)} KB</Text>
               </View>
             )}
-            <SmallButton disabled={busy === 'material'} onPress={pickMaterial}>{busy === 'material' ? 'Uploading...' : 'Upload PPT/PDF Material'}</SmallButton>
-            <Field label="Teacher Notes" value={draft.instructions} onChangeText={(value) => setDraft((current) => ({ ...current, instructions: value }))} multiline placeholder="Notes and instructions for the student" />
-            <SmallButton onPress={() => setBuilderStep(1)}>Next: Lesson Details →</SmallButton>
+            <Pressable
+              disabled={busy === 'material'}
+              onPress={pickMaterial}
+              style={({ pressed }) => ({
+                alignSelf: 'flex-start',
+                marginTop: 18,
+                backgroundColor: '#64748B',
+                borderColor: '#64748B',
+                borderWidth: 1,
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                opacity: busy === 'material'
+                  ? 0.55
+                  : pressed
+                    ? 0.85
+                    : 1,
+              })}
+            >
+              <Text
+                style={{
+                  color: '#ffffff',
+                  fontSize: 14,
+                  fontWeight: '800',
+                }}
+              >
+                {busy === 'material'
+                  ? 'Uploading...'
+                  : 'Upload PPT/PDF Material'}
+              </Text>
+            </Pressable>
+            <View
+              style={{
+                width: '100%',
+                marginTop: 14,
+                alignItems: 'flex-start',
+              }}
+            >
+              <Pressable
+                onPress={() => setBuilderStep(1)}
+                style={({ pressed }) => ({
+                  alignSelf: 'flex-start',
+                  backgroundColor: '#16A34A',
+                  borderColor: '#16A34A',
+                  borderWidth: 1,
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  opacity: pressed ? 0.85 : 1,
+                })}
+              >
+                <Text
+                  style={{
+                    color: '#ffffff',
+                    fontSize: 14,
+                    fontWeight: '800',
+                  }}
+                >
+                  Next: Lesson Details →
+                </Text>
+              </Pressable>
+            </View>
           </SectionCard>
         )}
 

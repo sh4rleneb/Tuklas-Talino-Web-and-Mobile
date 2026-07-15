@@ -1093,6 +1093,27 @@ const stepScrollRef = useRef(null);
     return true;
   }
 
+  // FIX_MOBILE_PAGSUSULIT_FLOW
+  const isPagsusulitActivity = activity => {
+    const type = String(
+      activity?.type ||
+        activity?.activityType ||
+        activity?.kind ||
+        ''
+    ).toLowerCase();
+
+    return (
+      type === 'mcq' ||
+      type === 'quiz' ||
+      type.includes('quiz') ||
+      type.includes('choice') ||
+      type.includes('question')
+    );
+  };
+
+  const isQuestionCorrect = question =>
+    mcqAnswers[question?.id]?.correct === true;
+
   const getGameMeta = activity => {
     const type = String(activity?.type || activity?.activityType || activity?.kind || '').toLowerCase();
 
@@ -1429,7 +1450,7 @@ const stepScrollRef = useRef(null);
 
     if (
       currentStep?.type === 'activity' &&
-      currentActivity?.type === 'mcq'
+      isPagsusulitActivity(currentActivity)
     ) {
       const quizQuestions = buildMissionQuestionPool(currentActivity, lesson, MISSION_QUESTION_POOL_LIMIT, `${currentMissionAttemptKey}:attempt:${Math.max(1, currentMissionAttemptCount)}`);
 
@@ -1437,7 +1458,7 @@ const stepScrollRef = useRef(null);
         quizQuestions.length > 0 &&
         quizQuestions.every(
           (question) =>
-            Boolean(mcqAnswers[question.id]?.selectedOptionId)
+            isQuestionCorrect(question)
         );
 
       if (!quizAnswered) {
@@ -1480,7 +1501,7 @@ const stepScrollRef = useRef(null);
     if (
       answerQuestionLockRef.current ||
       submitting ||
-      Boolean(mcqAnswers[question.id]?.selectedOptionId)
+      mcqAnswers[question.id]?.correct === true
     ) {
       return;
     }
@@ -1516,7 +1537,7 @@ const stepScrollRef = useRef(null);
         visibleQuestions.length > 0 &&
         visibleQuestions.every(
           (visibleQuestion) =>
-            Boolean(nextAnswers[visibleQuestion.id]?.selectedOptionId)
+            nextAnswers[visibleQuestion.id]?.correct === true
         );
 
       if (quizAnswered) {
@@ -1587,7 +1608,7 @@ const stepScrollRef = useRef(null);
     }
   }
 
-  async function submitWriting(answerOverride = null) {
+  async function submitWriting(answerOverride = null, options = {}) {
     // ACTUAL WRITING WORD GAME: submission feedback
     const task = currentActivity?.writingTask;
 
@@ -1652,6 +1673,10 @@ const stepScrollRef = useRef(null);
       });
 
       await saveNextStep('writing');
+
+      if (options?.finishAfter) {
+        await finishLesson({ force: true });
+      }
     } catch (err) {
       setActivityNotice({
         type: 'error',
@@ -1697,12 +1722,66 @@ const stepScrollRef = useRef(null);
           : '🎤 Matagumpay na naitala ang pagsubok sa pagbigkas.'
       );
       await saveNextStep('speech');
+
+      // AUTO_ADVANCE_SPEECH_HAKBANG
+      if (typeof advance === 'function') {
+        advance('speech');
+      }
     } catch (err) {
       setSpeechStatus('Hindi maitala ang iyong pagbigkas. Pakisubukan muli.');
     } finally {
       setSubmitting(false);
     }
   }
+
+
+  // RESYNC_EXISTING_LESSON_HAKBANG
+  // Some already-created lessons were saved before speech auto-advance existed.
+  // When those lessons open at the old speech step, move the visible Hakbang forward.
+  React.useEffect(() => {
+    const activityType = String(
+      currentActivity?.type ||
+        currentActivity?.activityType ||
+        currentActivity?.kind ||
+        ''
+    ).toLowerCase();
+
+    const speechLooksSubmitted =
+      activityType.includes('speech') ||
+      activityType.includes('speak') ||
+      activityType.includes('oral') ||
+      activityType.includes('voice') ||
+      activityType.includes('record');
+
+    const speechDone =
+      speechLooksSubmitted &&
+      (
+        Boolean(speechStatus) ||
+        Boolean(speechTranscript) ||
+        String(activityNotice?.type || '').toLowerCase() === 'success'
+      );
+
+    if (
+      !completed &&
+      !submitting &&
+      speechDone &&
+      Number(step || 1) < Number(totalSteps || 1)
+    ) {
+      saveNextStep('speech');
+      advance('speech');
+    }
+  }, [
+    activityNotice?.type,
+    completed,
+    currentActivity?.activityType,
+    currentActivity?.kind,
+    currentActivity?.type,
+    speechStatus,
+    speechTranscript,
+    step,
+    submitting,
+    totalSteps,
+  ]);
 
   function goToPreviousStep() {
     if (submitting || completed) return;
@@ -1711,8 +1790,8 @@ const stepScrollRef = useRef(null);
     setStep((current) => Math.max(1, Number(current || 1) - 1));
   }
 
-  async function finishLesson() {
-    if (submitting) return;
+  async function finishLesson(options = {}) {
+    if (submitting && !options?.force) return;
     setSubmitting(true);
     try {
       const data = await api(`/lessons/${lessonId}/complete`, {
@@ -1967,6 +2046,26 @@ const stepScrollRef = useRef(null);
   }
 
   function renderActivity() {
+    if (currentStep?.type === 'finish') {
+      return (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>✅ Tapusin ang Aralin</Text>
+          <Text style={styles.body}>
+            Kunin ang iyong Bituin para matapos ang aralin.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.primaryButton, submitting && styles.disabledButton]}
+            onPress={() => finishLesson({ force: true })}
+            disabled={submitting}
+          >
+            <Text style={styles.primaryText}>
+              {submitting ? 'Kinukuha...' : '⭐ Kunin ang Bituin'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
 
     if (currentStep?.type === 'overview') {
       return (
@@ -2419,7 +2518,7 @@ const stepScrollRef = useRef(null);
                     renderJuniorVisualReadCard(aralinDisplayText, lesson)
                   ) : (
                     <ReadingPassageCard
-                    title={lesson.title}
+                    title={lesson?.title}
                     passage={aralinDisplayText}
                   />
                   )
@@ -2471,35 +2570,35 @@ const stepScrollRef = useRef(null);
         );
       }
 
-    if (currentStep?.type === 'activity' && currentActivity?.type === 'mcq')
+    if (currentStep?.type === 'activity' && isPagsusulitActivity(currentActivity))
  {
             const questions = buildMissionQuestionPool(currentActivity, lesson, MISSION_QUESTION_POOL_LIMIT, `${currentMissionAttemptKey}:attempt:${Math.max(1, currentMissionAttemptCount)}`);
       const allAnswered =
         questions.length > 0 &&
         questions.every(
           (question) =>
-            Boolean(mcqAnswers[question.id]?.selectedOptionId)
+            isQuestionCorrect(question)
         );
       return (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🧠 {currentActivity.title}</Text>
+          <Text style={styles.cardTitle}>🧠 {currentActivity?.title || 'Gawain'}</Text>
           {littleLearnerGame ? null : (
             <ActivityGuideCard
-              activity={currentActivity}
+              activity={currentActivity || {}}
               littleLearnerGame={littleLearnerGame}
             />
           )}
 
           {!littleLearnerGame && (
             <ActivityVisualCard
-              activity={currentActivity}
+              activity={currentActivity || {}}
               lesson={lesson}
             />
           )}
 
           {littleLearnerGame ? null : (
             <ReadingPassageCard
-              activity={currentActivity}
+              activity={currentActivity || {}}
               lesson={lesson}
             />
           )}
@@ -2761,11 +2860,11 @@ const stepScrollRef = useRef(null);
             {!littleLearnerGame ? (
               <>
                 <Text style={styles.cardTitle}>
-                  ✍️ {currentActivity.title}
+                  ✍️ {currentActivity?.title}
                 </Text>
 
                 <ActivityGuideCard
-                  activity={currentActivity}
+                  activity={currentActivity || {}}
                   littleLearnerGame={littleLearnerGame}
                 />
 
@@ -2777,7 +2876,7 @@ const stepScrollRef = useRef(null);
             ) : null}
 
             <ActivityVisualCard
-              activity={currentActivity}
+              activity={currentActivity || {}}
               lesson={lesson}
             />
 
@@ -2841,9 +2940,9 @@ const stepScrollRef = useRef(null);
       const fallbackSource = String(
         directAnswer ||
         task.prompt ||
-        currentActivity.prompt ||
-        currentActivity.content ||
-        currentActivity.instructions ||
+        currentActivity?.prompt ||
+        currentActivity?.content ||
+        currentActivity?.instructions ||
         ''
       )
         .replace(/[.,!?;:"“”()[\]{}]/g, '')
@@ -2857,9 +2956,9 @@ const stepScrollRef = useRef(null);
 
       const activityKey = String(
         task.id ||
-        currentActivity.id ||
-        currentActivity.activityId ||
-        currentActivity.title ||
+        currentActivity?.id ||
+        currentActivity?.activityId ||
+        currentActivity?.title ||
         step
       );
 
@@ -2876,7 +2975,7 @@ const stepScrollRef = useRef(null);
        */
       const numericSeed = Number(
         task.id ||
-        currentActivity.id ||
+        currentActivity?.id ||
         0
       );
 
@@ -3028,9 +3127,9 @@ const stepScrollRef = useRef(null);
       };
 
       const promptText = String(
-        currentActivity.instructions ||
+        currentActivity?.instructions ||
         task.prompt ||
-        currentActivity.prompt ||
+        currentActivity?.prompt ||
         'I-tap ang mga salita sa tamang pagkakasunod-sunod.'
       ).trim();
 
@@ -3070,11 +3169,11 @@ const stepScrollRef = useRef(null);
           {!littleLearnerGame ? (
             <>
               <Text style={styles.cardTitle}>
-                ✍️ {currentActivity.title}
+                ✍️ {currentActivity?.title}
               </Text>
 
               <ActivityGuideCard
-                activity={currentActivity}
+                activity={currentActivity || {}}
                 littleLearnerGame={littleLearnerGame}
               />
 
@@ -3086,7 +3185,7 @@ const stepScrollRef = useRef(null);
           ) : null}
 
           <ActivityVisualCard
-            activity={currentActivity}
+            activity={currentActivity || {}}
             lesson={lesson}
           />
 
@@ -3430,7 +3529,9 @@ const stepScrollRef = useRef(null);
               submitting
             }
             onPress={() =>
-              submitWriting(builtAnswer)
+              submitWriting(builtAnswer, {
+                finishAfter: true,
+              })
             }
             activeOpacity={0.86}
           >
@@ -3482,16 +3583,16 @@ const stepScrollRef = useRef(null);
 
           {!littleLearnerGame && (
             <Text style={styles.cardTitle}>
-              🎤 {currentActivity.title}
+              🎤 {currentActivity?.title}
             </Text>
           )}
 
           {/* Target text — always shown for all grades (matches web SpeechActivity) */}
           {(() => {
             const target =
-              currentActivity.speechTask?.targetText ||
-              currentActivity.targetText ||
-              currentActivity.instructions ||
+              currentActivity?.speechTask?.targetText ||
+              currentActivity?.targetText ||
+              currentActivity?.instructions ||
               '';
             if (!target) return null;
             return littleLearnerGame ? (
@@ -3563,12 +3664,12 @@ const stepScrollRef = useRef(null);
           })()}
           {littleLearnerGame ? null : (
           <ActivityGuideCard
-            activity={currentActivity}
+            activity={currentActivity || {}}
             littleLearnerGame={littleLearnerGame}
           />
         )}
           {<ActivityVisualCard
-            activity={currentActivity}
+            activity={currentActivity || {}}
             lesson={lesson}
           />}
           <View
@@ -3588,8 +3689,8 @@ const stepScrollRef = useRef(null);
               label="Pakinggan"
               onPress={() =>
                 speakText(
-                  currentActivity.speechTask?.targetText ||
-                  currentActivity.instructions ||
+                  currentActivity?.speechTask?.targetText ||
+                  currentActivity?.instructions ||
                   ''
                 )
               }
@@ -3695,22 +3796,22 @@ const stepScrollRef = useRef(null);
           {!littleLearnerGame && (
             <>
               <Text style={styles.cardTitle}>
-                📖 {currentActivity.title}
+                📖 {currentActivity?.title}
               </Text>
 
               <Text style={styles.body}>
-                {currentActivity.instructions}
+                {currentActivity?.instructions}
               </Text>
 
               <ActivityGuideCard
-                activity={currentActivity}
+                activity={currentActivity || {}}
                 littleLearnerGame={littleLearnerGame}
               />
             </>
           )}
 
           <ActivityVisualCard
-            activity={currentActivity}
+            activity={currentActivity || {}}
             lesson={lesson}
           />
 
@@ -3764,10 +3865,10 @@ const stepScrollRef = useRef(null);
 
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{currentActivity.title || 'Gawain sa Aralin'}</Text>
-        <Text style={styles.body}>{currentActivity.instructions || currentActivity?.dataJson?.content || 'Basahin muna ang gawaing ito bago magpatuloy.'}</Text>
+        <Text style={styles.cardTitle}>{currentActivity?.title || 'Gawain sa Aralin'}</Text>
+        <Text style={styles.body}>{currentActivity?.instructions || currentActivity?.dataJson?.content || 'Basahin muna ang gawaing ito bago magpatuloy.'}</Text>
         <ActivityGuideCard
-            activity={currentActivity}
+            activity={currentActivity || {}}
             littleLearnerGame={littleLearnerGame}
           />
         {littleLearnerGame && vocabulary.length > 0 ? (
@@ -3991,7 +4092,7 @@ const stepScrollRef = useRef(null);
         ) : null}
         <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => advance(currentActivity.type || 'activity')}
+          onPress={() => advance(currentActivity?.type || currentStep?.type || 'activity')}
           disabled={submitting}
         >
           <Text style={styles.primaryText}>Magpatuloy</Text>
@@ -4051,7 +4152,7 @@ const stepScrollRef = useRef(null);
           </View>
         </View>
 
-        <Text style={styles.title}>📖 {lesson.title}</Text>
+        <Text style={styles.title}>📖 {lesson?.title || 'Aralin'}</Text>
         <Text style={styles.stepText}>⚡ +{lesson.xpReward || 0} XP</Text>
 
         {(littleLearnerGame || isUpperGradeLesson) ? (

@@ -6,27 +6,42 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "GRADLE_WORKERS_MAX": "4"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "GRADLE_WORKERS_MAX": "4"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "GRADLE_WORKERS_MAX": "4"
+      }
     },
     "apk-preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "GRADLE_WORKERS_MAX": "4"
       }
     },
     "view": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "GRADLE_WORKERS_MAX": "4"
       }
     }
   },

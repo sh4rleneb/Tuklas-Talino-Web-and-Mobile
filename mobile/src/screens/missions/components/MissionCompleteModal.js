@@ -17,9 +17,15 @@ export default function MissionCompleteModal({
   badge,
   onReplay,
   onBack,
+  primaryLabel,
+  primaryAction,
 }) {
   const starText = String(stars || '').trim();
   const displayTitle = cleanMissionTitle(title);
+  const handlePrimaryPress =
+    primaryAction === 'back'
+      ? onBack
+      : onReplay;
 
   return (
     <View style={styles.wrap}>
@@ -86,10 +92,10 @@ export default function MissionCompleteModal({
 
         <TouchableOpacity
           style={styles.button}
-          onPress={onReplay}
+          onPress={handlePrimaryPress}
           activeOpacity={0.86}
         >
-          <Text style={styles.buttonText}>↻ Maglaro Muli</Text>
+          <Text style={styles.buttonText}>{primaryLabel || '↻ Maglaro Muli'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

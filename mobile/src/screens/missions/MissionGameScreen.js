@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { api } from '../../api/client';
 
@@ -27,7 +28,102 @@ import StoryQuestGame from './games/StoryQuestGame';
 import FillInTheBlankGame from './games/FillInTheBlankGame';
 
 
-const MAX_MISSION_ATTEMPTS = 2;
+const MAX_MISSION_ATTEMPTS = 5;
+const MISSION_ATTEMPT_STORAGE_KEY = 'tuklas_mobile_misyon_attempts_v1';
+
+const TAGALOG_MISSION_TITLES = Object.freeze({
+  'word-match': 'Pagtutugma ng Salita',
+  'letter-pop': 'Pagpili ng Titik',
+  'picture-guess': 'Hulaan ang Larawan',
+  'sentence-builder': 'Pagbuo ng Pangungusap',
+  'story-quest': 'Pag-unawa sa Kuwento',
+  'sound-and-say': 'Pakikinig at Pagbigkas',
+  'fill-in-the-blank': 'Punan ang Patlang',
+});
+
+const TAGALOG_MISSION_TITLES_BY_ENGLISH = Object.freeze({
+  'word match': 'Pagtutugma ng Salita',
+  'letter pop': 'Pagpili ng Titik',
+  'picture guess': 'Hulaan ang Larawan',
+  'sentence builder': 'Pagbuo ng Pangungusap',
+  'story quest': 'Pag-unawa sa Kuwento',
+  'sound and say': 'Pakikinig at Pagbigkas',
+  'fill in the blank': 'Punan ang Patlang',
+  'fill-in-the-blank': 'Punan ang Patlang',
+});
+
+function missionAttemptStorageKeys({
+  missionApiId,
+  missionId,
+  gameId,
+} = {}) {
+  return [
+    missionApiId,
+    missionId,
+    gameId,
+  ]
+    .filter(Boolean)
+    .map(String);
+}
+
+async function persistMissionAttemptUpdate(update = {}) {
+  try {
+    const raw = await AsyncStorage.getItem(MISSION_ATTEMPT_STORAGE_KEY);
+    const previous = raw ? JSON.parse(raw) : {};
+    const keys = missionAttemptStorageKeys(update);
+    const next = {
+      ...previous,
+    };
+
+    keys.forEach((key) => {
+      const previousAttempt = Number(next[key]?.attemptNo || 0);
+
+      next[key] = {
+        attemptNo: Math.max(
+          previousAttempt,
+          Number(update.attemptNo || 0)
+        ),
+        maxAttempts: Math.max(
+          MAX_MISSION_ATTEMPTS,
+          Number(update.maxAttempts || MAX_MISSION_ATTEMPTS)
+        ),
+      };
+    });
+
+    await AsyncStorage.setItem(
+      MISSION_ATTEMPT_STORAGE_KEY,
+      JSON.stringify(next)
+    );
+  } catch (error) {
+    // Best-effort only. Route params still update the visible screen.
+  }
+}
+
+function getTagalogMissionTitle(
+  missionId,
+  fallbackTitle = ''
+) {
+  const id = String(missionId || '')
+    .trim()
+    .toLowerCase();
+
+  const fallback = String(fallbackTitle || '')
+    .trim();
+
+  const normalizedFallback = fallback
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+
+  return (
+    TAGALOG_MISSION_TITLES[id] ||
+    TAGALOG_MISSION_TITLES_BY_ENGLISH[
+      normalizedFallback
+    ] ||
+    fallback ||
+    'Misyon'
+  );
+}
 
 const SOUND_AND_SAY_LEVELS = {
   1: {
@@ -85,6 +181,322 @@ function soundAndSayLevelForGrade(gradeLevel) {
   return SOUND_AND_SAY_LEVELS[grade] || SOUND_AND_SAY_LEVELS[1];
 }
 
+const MISSION_QUESTION_POOLS = Object.freeze({
+  'word-match': [
+    {
+      sample: 'araw ↔ sun',
+      prompt: 'Itugma ang salita: araw',
+      options: ['sun', 'moon', 'rain'],
+      correct: 'sun',
+    },
+    {
+      sample: 'bahay ↔ house',
+      prompt: 'Itugma ang salita: bahay',
+      options: ['tree', 'house', 'river'],
+      correct: 'house',
+    },
+    {
+      sample: 'isda ↔ fish',
+      prompt: 'Itugma ang salita: isda',
+      options: ['bird', 'fish', 'cat'],
+      correct: 'fish',
+    },
+  ],
+
+  'letter-pop': [
+    {
+      sample: 'pu + ___ = 🌳',
+      prompt: 'pu + ___ = 🌳',
+      prefix: 'pu',
+      resultEmoji: '🌳',
+      resultWord: 'puno',
+      clue: 'Halamang may katawan, sanga, at dahon.',
+      options: ['no', 'la', 'sa'],
+      correct: 'no',
+      instruction: 'Tap the balloon na bubuo sa salita. Kapag tama, pop!',
+    },
+    {
+      sample: 'ba + ___ = 👧',
+      prompt: 'ba + ___ = 👧',
+      prefix: 'ba',
+      resultEmoji: '👧',
+      resultWord: 'bata',
+      clue: 'Munting tao na nag-aaral at naglalaro.',
+      options: ['ta', 'ka', 'ma'],
+      correct: 'ta',
+      instruction: 'Tap the balloon na bubuo sa salita. Kapag tama, pop!',
+    },
+    {
+      sample: 'a + ___ = 🐶',
+      prompt: 'a + ___ = 🐶',
+      prefix: 'a',
+      resultEmoji: '🐶',
+      resultWord: 'aso',
+      clue: 'Hayop na tumatahol at karaniwang alaga sa bahay.',
+      options: ['so', 'no', 'to'],
+      correct: 'so',
+      instruction: 'Tap the balloon na bubuo sa salita. Kapag tama, pop!',
+    },
+  ],
+
+  'picture-guess': [
+    {
+      sample: '🐱 → pusa',
+      prompt: 'Ano ang nasa larawan? 🐱',
+      imageEmoji: '🐱',
+      options: ['pusa', 'aso', 'ibon'],
+      correct: 'pusa',
+    },
+    {
+      sample: '🐶 → aso',
+      prompt: 'Ano ang nasa larawan? 🐶',
+      imageEmoji: '🐶',
+      options: ['isda', 'aso', 'pusa'],
+      correct: 'aso',
+    },
+    {
+      sample: '🐟 → isda',
+      prompt: 'Ano ang nasa larawan? 🐟',
+      imageEmoji: '🐟',
+      options: ['ibon', 'isda', 'baka'],
+      correct: 'isda',
+    },
+  ],
+
+  'sentence-builder': [
+    {
+      sample: 'Ako ay bata.',
+      prompt: 'Buuin ang pangungusap: Ako ay bata.',
+      options: ['Ako', 'ay', 'bata'],
+      choices: ['Ako', 'ay', 'bata'],
+      correct: 'Ako ay bata',
+      answer: 'Ako ay bata',
+    },
+    {
+      sample: 'Si Ana ay masaya.',
+      prompt: 'Buuin ang pangungusap: Si Ana ay masaya.',
+      options: ['Si', 'Ana', 'ay', 'masaya'],
+      choices: ['Si', 'Ana', 'ay', 'masaya'],
+      correct: 'Si Ana ay masaya',
+      answer: 'Si Ana ay masaya',
+    },
+    {
+      sample: 'May bola si Ben.',
+      prompt: 'Buuin ang pangungusap: May bola si Ben.',
+      options: ['May', 'bola', 'si', 'Ben'],
+      choices: ['May', 'bola', 'si', 'Ben'],
+      correct: 'May bola si Ben',
+      answer: 'May bola si Ben',
+    },
+  ],
+
+  'story-quest': [
+    {
+      sample: 'Si Lito ay nagbasa ng aklat.',
+      prompt: 'Ano ang ginawa ni Lito?',
+      story: 'Si Lito ay nagbasa ng aklat sa silid.',
+      options: ['Naglaro', 'Nagbasa', 'Kumain'],
+      correct: 'Nagbasa',
+    },
+    {
+      sample: 'Si Maya ay nagtanim ng puno.',
+      prompt: 'Ano ang itinanim ni Maya?',
+      story: 'Si Maya ay nagtanim ng puno sa bakuran.',
+      options: ['Bulaklak', 'Puno', 'Gulay'],
+      correct: 'Puno',
+    },
+    {
+      sample: 'Uminom ng tubig si Nena.',
+      prompt: 'Ano ang ininom ni Nena?',
+      story: 'Pagkatapos maglaro, uminom ng tubig si Nena.',
+      options: ['Gatas', 'Tubig', 'Katas'],
+      correct: 'Tubig',
+    },
+  ],
+
+  'sound-and-say': [
+    {
+      sample: 'Bahay',
+      prompt: 'Pakinggan at bigkasin: Bahay',
+      targetText: 'Bahay',
+      phrase: 'Bahay',
+      correct: 'Bahay',
+    },
+    {
+      sample: 'Paaralan',
+      prompt: 'Pakinggan at bigkasin: Paaralan',
+      targetText: 'Paaralan',
+      phrase: 'Paaralan',
+      correct: 'Paaralan',
+    },
+    {
+      sample: 'Magandang umaga',
+      prompt: 'Pakinggan at bigkasin: Magandang umaga',
+      targetText: 'Magandang umaga',
+      phrase: 'Magandang umaga',
+      correct: 'Magandang umaga',
+    },
+  ],
+
+  'fill-in-the-blank': [
+    {
+      sample: 'Ang kulay ng araw ay dilaw.',
+      prompt: 'Ang kulay ng araw ay ___.',
+      options: ['dilaw', 'itim', 'asul'],
+      correct: 'dilaw',
+      answer: 'dilaw',
+    },
+    {
+      sample: 'Ang dahon ay berde.',
+      prompt: 'Ang dahon ay ___.',
+      options: ['pula', 'berde', 'puti'],
+      correct: 'berde',
+      answer: 'berde',
+    },
+    {
+      sample: 'Ang tubig ay malinaw.',
+      prompt: 'Ang tubig ay ___.',
+      options: ['malinaw', 'maingay', 'mainit'],
+      correct: 'malinaw',
+      answer: 'malinaw',
+    },
+  ],
+});
+
+function normalizeMissionQuestionKey(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, '-')
+    .replace(/\s+/g, '-');
+}
+
+function seededMissionRandom(value = '') {
+  const text = String(value || '');
+  let hash = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+
+  const raw = Math.sin(hash || 1) * 10000;
+  return raw - Math.floor(raw);
+}
+
+function getMissionAttemptNoForQuestion(source = {}) {
+  const current = Number(
+    source?.currentAttemptNo ??
+    source?.currentAttempt ??
+    source?.nextAttemptNo ??
+    0
+  );
+
+  if (Number.isFinite(current) && current > 0) {
+    return Math.max(
+      1,
+      Math.min(MAX_MISSION_ATTEMPTS, current)
+    );
+  }
+
+  const used = Number(
+    source?.attemptCount ??
+    source?.attemptsUsed ??
+    source?.attemptNo ??
+    source?.missionAttemptCount ??
+    source?.latestAttempt?.attemptNo ??
+    0
+  );
+
+  return Math.max(
+    1,
+    Math.min(
+      MAX_MISSION_ATTEMPTS,
+      Number.isFinite(used) ? used + 1 : 1
+    )
+  );
+}
+
+function buildMissionQuestionSetForAttempt(
+  missionId,
+  attemptNo = 1,
+  sessionSeed = '',
+  limit = 3
+) {
+  const key = normalizeMissionQuestionKey(missionId);
+  const pool = MISSION_QUESTION_POOLS[key] || [];
+
+  if (!pool.length) {
+    return [];
+  }
+
+  const safeAttempt = Math.max(
+    1,
+    Math.min(MAX_MISSION_ATTEMPTS, Number(attemptNo) || 1)
+  );
+
+  const shuffled = pool
+    .map((question, index) => ({
+      question,
+      sort: seededMissionRandom(
+        `${key}:${sessionSeed}:pool-order:${index}`
+      ),
+    }))
+    .sort((a, b) => a.sort - b.sort)
+    .map((item) => item.question);
+
+  const offset = (safeAttempt - 1) % shuffled.length;
+  const rotated = [
+    ...shuffled.slice(offset),
+    ...shuffled.slice(0, offset),
+  ];
+
+  return rotated
+    .slice(0, Math.min(limit, rotated.length))
+    .map((question, index) => ({
+      ...question,
+      id:
+        question.id ||
+        `${key}-attempt-${safeAttempt}-question-${index + 1}`,
+      questionNo: index + 1,
+      questionSetAttemptNo: safeAttempt,
+    }));
+}
+
+function pickMissionQuestionForAttempt(
+  missionId,
+  attemptNo = 1,
+  sessionSeed = ''
+) {
+  const key = normalizeMissionQuestionKey(missionId);
+  const attemptQuestions = buildMissionQuestionSetForAttempt(
+    key,
+    attemptNo,
+    sessionSeed,
+    3
+  );
+
+  if (!attemptQuestions.length) {
+    return {};
+  }
+
+  const safeAttempt = Math.max(
+    1,
+    Math.min(MAX_MISSION_ATTEMPTS, Number(attemptNo) || 1)
+  );
+
+  const firstQuestion = attemptQuestions[0];
+
+  return {
+    ...firstQuestion,
+    questionPool: attemptQuestions,
+    questions: attemptQuestions,
+    attemptQuestions,
+    questionPoolSize: attemptQuestions.length,
+    questionPoolAttemptNo: safeAttempt,
+  };
+}
+
 const DEMOS = {
   'word-match': {
     id: 'word-match',
@@ -106,18 +518,26 @@ const DEMOS = {
     id: 'letter-pop',
     module: 'Pagbasa',
     title: 'Pagpili ng Titik',
-    sample: 'ba + ___ = bata',
-    prompt: 'ba + ___ = bata',
-    options: ['ta', 'sa', 'la'],
-    correct: 'ta',
+    sample: 'pu + ___ = 🌳',
+    prompt: 'pu + ___ = 🌳',
+    options: ['no', 'la', 'sa'],
+    correct: 'no',
     xp: 12,
     icon: '🎈',
-  },
+    baseStatus: 'Handa na',
+    short: 'Piliin ang pantig na bubuo sa salita!',
+    missionLabel: 'Misyong Pantig',
+    prefix: 'pu',
+    resultEmoji: '🌳',
+    resultWord: 'puno',
+    clue: 'Halamang may katawan, sanga, at dahon.',
+    instruction: 'Tap the balloon na bubuo sa salita. Kapag tama, pop!',
+},
 
   'picture-guess': {
     id: 'picture-guess',
     module: 'Bokabularyo',
-    title: 'Paghula sa Larawan',
+    title: 'Hulaan ang Larawan',
     sample: 'larawan ng pusa → pusa',
     prompt: 'larawan ng pusa → pusa',
     options: ['pusa', 'aso', 'ibon'],
@@ -169,11 +589,112 @@ const DEMOS = {
 
 export default function MissionGameScreen({ navigation, route }) {
   const missionId = route?.params?.missionId;
+  const missionApiId = route?.params?.missionApiId || missionId;
+  const routeMission = route?.params?.mission || {};
   const gradeLevel = Number(route?.params?.gradeLevel ?? 1);
+  const sessionQuestionSeed = useMemo(
+    () => `${Date.now()}-${Math.random()}`,
+    [missionId, missionApiId]
+  );
+
+  const initialMissionAttemptNo = useMemo(
+    () => getMissionAttemptNoForQuestion(routeMission),
+    [routeMission]
+  );
+
+  const [missionAttemptNo, setMissionAttemptNo] = useState(initialMissionAttemptNo);
+
+  useEffect(() => {
+    setMissionAttemptNo(initialMissionAttemptNo);
+  }, [initialMissionAttemptNo, missionId, missionApiId]);
 
   const baseMission = useMemo(
-    () => DEMOS[missionId] || DEMOS['word-match'],
-    [missionId]
+    () => {
+      const fallback = DEMOS[missionId] || DEMOS['word-match'];
+      const attemptNo = Math.max(
+        1,
+        Math.min(MAX_MISSION_ATTEMPTS, missionAttemptNo)
+      );
+      const randomQuestion = pickMissionQuestionForAttempt(
+        missionId || fallback.id,
+        attemptNo,
+        sessionQuestionSeed
+      );
+
+      return {
+        ...fallback,
+        ...routeMission,
+        ...randomQuestion,
+        id: missionId || fallback.id,
+        missionId: missionApiId,
+        xp: Number(routeMission.xpReward ?? routeMission.xp ?? fallback.xp ?? 0),
+        title: getTagalogMissionTitle(missionId, fallback.title || routeMission.title),
+        module: routeMission.module || fallback.module,
+        icon: routeMission.icon || fallback.icon,
+        sample: randomQuestion.sample || routeMission.sample || fallback.sample,
+        prompt: randomQuestion.prompt || routeMission.prompt || fallback.prompt,
+        options: randomQuestion.options || routeMission.options || fallback.options,
+        correct: randomQuestion.correct || routeMission.correct || fallback.correct,
+        answer:
+          randomQuestion.answer ??
+          routeMission.answer ??
+          fallback.answer ??
+          randomQuestion.correct ??
+          routeMission.correct ??
+          fallback.correct,
+        choices:
+          randomQuestion.choices ||
+          routeMission.choices ||
+          fallback.choices ||
+          randomQuestion.options ||
+          routeMission.options ||
+          fallback.options,
+        prefix: randomQuestion.prefix || routeMission.prefix || fallback.prefix,
+        resultEmoji:
+          randomQuestion.resultEmoji ||
+          routeMission.resultEmoji ||
+          fallback.resultEmoji,
+        resultWord:
+          randomQuestion.resultWord ||
+          routeMission.resultWord ||
+          fallback.resultWord,
+        clue: randomQuestion.clue || routeMission.clue || fallback.clue,
+        story: randomQuestion.story || routeMission.story || fallback.story,
+        imageEmoji:
+          randomQuestion.imageEmoji ||
+          routeMission.imageEmoji ||
+          fallback.imageEmoji,
+        targetText:
+          randomQuestion.targetText ||
+          routeMission.targetText ||
+          fallback.targetText,
+        phrase: randomQuestion.phrase || routeMission.phrase || fallback.phrase,
+        instruction:
+          randomQuestion.instruction ||
+          routeMission.instruction ||
+          fallback.instruction,
+        questionPool:
+          randomQuestion.questionPool ||
+          randomQuestion.questions ||
+          [],
+        questions:
+          randomQuestion.questions ||
+          randomQuestion.questionPool ||
+          [],
+        attemptQuestions:
+          randomQuestion.attemptQuestions ||
+          randomQuestion.questions ||
+          randomQuestion.questionPool ||
+          [],
+        questionPoolSize:
+          randomQuestion.questionPoolSize ||
+          randomQuestion.questionPool?.length ||
+          randomQuestion.questions?.length ||
+          0,
+        questionPoolAttemptNo: randomQuestion.questionPoolAttemptNo || attemptNo,
+      };
+    },
+    [missionId, missionApiId, routeMission, sessionQuestionSeed, missionAttemptNo]
   );
 
   const mission = useMemo(() => {
@@ -197,8 +718,8 @@ export default function MissionGameScreen({ navigation, route }) {
 
   const [selected, setSelected] = useState(null);
   const [completed, setCompleted] = useState(false);
+  const [completionResult, setCompletionResult] = useState(null);
   const [attempts, setAttempts] = useState(1);
-  const [missionAttemptNo, setMissionAttemptNo] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [badgePopup, setBadgePopup] = useState(null);
   const recordingRef = useRef(null);
@@ -351,7 +872,7 @@ export default function MissionGameScreen({ navigation, route }) {
     if (!recordingUri) {
       Alert.alert(
         'Sound and Say',
-        'Please record your voice before completing this mission.'
+        'I-record muna ang iyong boses bago tapusin ang misyong ito.'
       );
       return;
     }
@@ -369,16 +890,19 @@ export default function MissionGameScreen({ navigation, route }) {
 
         void 0;
 
-        const data = await api(`/missions/${missionId}/complete`, {
+        const data = await api(`/missions/${missionApiId}/complete`, {
           method: 'POST',
           body: {
             challengeId: `attempt-${missionAttemptNo}-${Date.now()}`,
-            challengeTitle: `Pagsubok ${missionAttemptNo} of ${MAX_MISSION_ATTEMPTS}`,
+            challengeTitle: `Pagsubok ${missionAttemptNo} sa ${MAX_MISSION_ATTEMPTS}`,
             attemptNo: missionAttemptNo,
+            claimBituin: missionAttemptNo >= MAX_MISSION_ATTEMPTS,
           },
         });
 
         void 0;
+
+        setCompletionResult(data);
 
         if (Array.isArray(data?.newBadges) && data.newBadges.length) {
           setBadgePopup(data.newBadges[0]);
@@ -387,6 +911,14 @@ export default function MissionGameScreen({ navigation, route }) {
             setBadgePopup(null);
           }, 5500);
         }
+
+        await persistMissionAttemptUpdate({
+          missionApiId,
+          missionId,
+          gameId: mission.id,
+          attemptNo: missionAttemptNo,
+          maxAttempts: MAX_MISSION_ATTEMPTS,
+        });
 
         setCompleted(true);
       } catch (err) {
@@ -448,7 +980,17 @@ export default function MissionGameScreen({ navigation, route }) {
           stars={stars}
           attempts={attempts}
           achievement={achievement}
-          badge={badgePopup}
+          badge={completionResult?.bituinBadge || completionResult?.newBadges?.[0] || badgePopup}
+          primaryLabel={
+            missionAttemptNo >= MAX_MISSION_ATTEMPTS
+              ? '⭐ Kunin ang Bituin'
+              : '↻ Maglaro Muli'
+          }
+          primaryAction={
+            missionAttemptNo >= MAX_MISSION_ATTEMPTS
+              ? 'back'
+              : 'replay'
+          }
           onReplay={() => {
             if (missionAttemptNo >= MAX_MISSION_ATTEMPTS) {
               showMissionNotice(
@@ -459,6 +1001,7 @@ export default function MissionGameScreen({ navigation, route }) {
             }
 
             setSelected(null);
+            setCompletionResult(null);
             setCompleted(false);
             setAttempts(1);
             setMissionAttemptNo((value) => Math.min(value + 1, MAX_MISSION_ATTEMPTS));
@@ -471,6 +1014,15 @@ export default function MissionGameScreen({ navigation, route }) {
               routes: [
                 {
                   name: 'MissionHome',
+                  params: {
+                    missionAttemptUpdate: {
+                      missionApiId,
+                      missionId,
+                      gameId: mission.id,
+                      attemptNo: missionAttemptNo,
+                      maxAttempts: MAX_MISSION_ATTEMPTS,
+                    },
+                  },
                 },
               ],
             });
@@ -491,9 +1043,13 @@ export default function MissionGameScreen({ navigation, route }) {
       >
 
         <MissionHeader
-          icon="🎮"
-          title={mission.title}
-          subtitle={`Pagsubok ${missionAttemptNo}/${MAX_MISSION_ATTEMPTS} • Tapusin ang gawain upang makakuha ng XP.`}
+          title={getTagalogMissionTitle(missionId, mission.title)}
+          subtitle={
+            missionId === 'letter-pop'
+              ? `${mission.module} misyon • Pagsubok ${missionAttemptNo} sa ${MAX_MISSION_ATTEMPTS} • +${mission.xp} preview ng XP • ${mission.baseStatus || 'Handa na'}`
+              : `${mission.module} • Pagsubok ${missionAttemptNo} sa ${MAX_MISSION_ATTEMPTS} • +${mission.xp} XP`
+          }
+          icon={mission.icon}
         />
 
         {missionId === 'word-match' && (
@@ -635,7 +1191,7 @@ export default function MissionGameScreen({ navigation, route }) {
               activeOpacity={0.85}
             >
               <Text style={styles.soundButtonText}>
-                {submitting ? 'Sine-save...' : 'Tapusin ang Gawain'}
+                {submitting ? 'Sine-save...' : '⭐ Kunin ang Bituin'}
               </Text>
             </TouchableOpacity>
           </View>
