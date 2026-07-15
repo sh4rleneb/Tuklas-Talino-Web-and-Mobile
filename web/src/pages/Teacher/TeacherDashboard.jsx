@@ -187,6 +187,62 @@ export default function TeacherDashboard({
   const [studentAccountError, setStudentAccountError] = useState('');
   const [studentAccountResult, setStudentAccountResult] = useState(null);
 
+  const lessons = data.lessons || [];
+  const groups = data.groups || [];
+  const students = data.students || [];
+  const assignedClasses = data.assignedClasses || [];
+
+  const teacherAssignedGrades = [
+    ...new Set(
+      assignedClasses
+        .map(item => Number(item.gradeLevel))
+        .filter(Boolean)
+    )
+  ].sort((a, b) => a - b);
+
+  const teacherAssignedSections = assignedClasses
+    .filter(item => Number(item.gradeLevel) === Number(studentAccountForm.gradeLevel))
+    .map(item => item.section)
+    .filter(Boolean);
+
+
+
+
+
+  useEffect(() => {
+    if (!teacherAssignedGrades.length) return;
+
+    const currentGrade = Number(studentAccountForm.gradeLevel);
+
+    if (!teacherAssignedGrades.includes(currentGrade)) {
+      setStudentAccountForm(form => ({
+        ...form,
+        gradeLevel: String(teacherAssignedGrades[0]),
+        section: ''
+      }));
+      return;
+    }
+
+    const sections = assignedClasses
+      .filter(item => Number(item.gradeLevel) === currentGrade)
+      .map(item => item.section)
+      .filter(Boolean);
+
+    if (
+      sections.length &&
+      !sections.includes(studentAccountForm.section)
+    ) {
+      setStudentAccountForm(form => ({
+        ...form,
+        section: sections[0]
+      }));
+    }
+  }, [
+    assignedClasses,
+    studentAccountForm.gradeLevel,
+    studentAccountForm.section
+  ]);
+
   async function handleCreateStudentAccount(event) {
     event.preventDefault();
     const name = String(studentAccountForm.name || '').replace(/\s+/g, ' ').trim();
@@ -234,11 +290,6 @@ export default function TeacherDashboard({
     }
   }
 
-  const lessons = data.lessons || [];
-  const groups = data.groups || [];
-  const students = data.students || [];
-  const assignedClasses = data.assignedClasses || [];
-
   const groupClassOptionMap = new Map();
 
   asArray(assignedClasses).forEach((item) => {
@@ -264,7 +315,8 @@ export default function TeacherDashboard({
   const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
   const pendingGroupChecks = data.pendingGroupChecks || { summary: {}, rows: [] };
   const teacherReviews = data.teacherReviews || { summary: {}, writing: [], speech: [] };
-  const pendingGroupRows = asArray(pendingGroupChecks.rows).filter(row => Number(row.gradeLevel || 0) >= 3);
+  const [speechSummaryVisibleCount, setSpeechSummaryVisibleCount] = useState(8);
+  const pendingGroupRows = asArray(pendingGroupChecks.rows);
   const writingReviewRows = asArray(teacherReviews.writing);
   const pendingWritingReviewRows = writingReviewRows.filter(item =>
     String(item.reviewStatus || 'pending').toLowerCase() === 'pending' &&
@@ -274,7 +326,39 @@ export default function TeacherDashboard({
   const gradedWritingReviewRows = writingReviewRows
     .filter(item => String(item.reviewStatus || '').toLowerCase() === 'graded')
     .slice(0, 8);
-  const speechReviewRows = asArray(teacherReviews.speech).slice(0, 12);
+  const speechReviewRows = asArray(teacherReviews.speech);
+
+  const isSpeechAttemptReviewed = (item = {}) => {
+    const status = String(
+      item.reviewStatus ||
+      item.status ||
+      'pending'
+    ).toLowerCase();
+
+    return (
+      Boolean(item.reviewedAt) ||
+      [
+        'reviewed',
+        'graded',
+        'approved',
+        'auto_reviewed'
+      ].includes(status)
+    );
+  };
+
+  const pendingSpeechReviewRows = speechReviewRows
+    .filter(item => !isSpeechAttemptReviewed(item))
+    .slice(0, 12);
+
+  const allSpeechReviewSummaryRows = speechReviewRows
+    .filter(item => isSpeechAttemptReviewed(item));
+
+  const speechReviewSummaryRows = allSpeechReviewSummaryRows
+    .slice(0, speechSummaryVisibleCount);
+
+  const hasMoreSpeechSummaries =
+    speechReviewSummaryRows.length <
+    allSpeechReviewSummaryRows.length;
   const groupProgressRows = buildGroupProgressRows(groups);
   const teacherName = user?.displayName || 'Teacher 1';
 
@@ -322,14 +406,6 @@ export default function TeacherDashboard({
     for (const group of groupList || []) {
       const members = group.members || group.Members || [];
       const tasks = group.tasks || group.Tasks || [];
-      const memberGradeLevels = members
-        .map(member => Number((member.Student || member.student || member)?.gradeLevel || 0))
-        .filter(Boolean);
-
-      if (memberGradeLevels.length && memberGradeLevels.every(level => level <= 2)) {
-        continue;
-      }
-
       for (const task of tasks) {
         const completions = task.completions || task.Completions || [];
 
@@ -434,7 +510,7 @@ export default function TeacherDashboard({
     return item.id || item.attemptId || item.speechAttemptId || item.submissionId || null;
   }
 
-  function handleSaveSpeechReview(item) {
+  function handleSaveWritingGrade(item) {
     const attemptId = getSpeechReviewAttemptId(item);
 
     if (!attemptId || !reviewSpeechAttempt) return;
@@ -1443,49 +1519,52 @@ export default function TeacherDashboard({
                             {item.content || 'No answer submitted.'}
                           </div>
                         </div>
+                          <>
+                            <label className="g46-ref-muted" htmlFor={scoreInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
+                              Writing Score
+                              <select
+                                id={scoreInputId}
+                                className="input-field"
+                                defaultValue={item.score || ''}
+                                style={{ width: '100%', minHeight: 46 }}
+                              >
+                                <option value="">Select score from 1 to 10</option>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(score => (
+                                  <option key={score} value={score}>{score}/10 → +{score} XP</option>
+                                ))}
+                              </select>
+                            </label>
 
-                        <label className="g46-ref-muted" htmlFor={scoreInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
-                          Score
-                          <select
-                            id={scoreInputId}
-                            className="input-field"
-                            defaultValue=""
-                            style={{ width: '100%', minHeight: 46 }}
-                          >
-                            <option value="">Select score from 1 to 10</option>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(score => (
-                              <option key={score} value={score}>{score}/10 → +{score} XP</option>
-                            ))}
-                          </select>
-                        </label>
+                            <label className="g46-ref-muted" htmlFor={feedbackInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
+                              Teacher Feedback
+                              <textarea
+                                id={feedbackInputId}
+                                className="input-field"
+                                defaultValue={item.teacherFeedback || item.feedback || ''}
+                                placeholder="Optional feedback for the student's writing submission."
+                                rows="3"
+                                style={{
+                                  width: '100%',
+                                  minHeight: 92,
+                                  resize: 'vertical',
+                                  fontSize: 15,
+                                  lineHeight: 1.45,
+                                  padding: '13px 15px'
+                                }}
+                              />
+                            </label>
 
-                        <label className="g46-ref-muted" htmlFor={feedbackInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
-                          Teacher Feedback
-                          <textarea
-                            id={feedbackInputId}
-                            className="input-field"
-                            placeholder="Optional feedback for the student. Do not include XP here; the system will show XP separately."
-                            rows="3"
-                            style={{
-                              width: '100%',
-                              minHeight: 92,
-                              resize: 'vertical',
-                              fontSize: 15,
-                              lineHeight: 1.45,
-                              padding: '13px 15px'
-                            }}
-                          />
-                        </label>
-
-                        <button
-                          type="button"
-                          className="lms-main-action full"
-                          style={{ marginTop: 12 }}
-                          disabled={isSaving}
-                          onClick={() => handleSaveWritingGrade(item)}
-                        >
-                          {isSaving ? 'Saving Grade...' : 'Save Grade'}
-                        </button>
+                            <button
+                              type="button"
+                              className="lms-main-action full"
+                              style={{ marginTop: 12 }}
+                              disabled={isSaving}
+                              onClick={() => handleSaveWritingGrade(item)}
+                            >
+                              {isSaving ? 'Saving Writing Grade...' : 'Save Writing Grade'}
+                            </button>
+                          </>
+                        )}
                       </div>
                     );
                   })}
@@ -1503,107 +1582,233 @@ export default function TeacherDashboard({
               <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
                 <div>
                   <div className="lms-section-label">Speech Review</div>
-                  <h3>Speech Attempts</h3>
-                  <p>View student speech attempts, transcript, target text, and recording if available.</p>
+                  <h3>Pending Speech Attempts</h3>
+                  <p>Listen, review the details, then assign a score and feedback.</p>
                 </div>
-                <span className="lms-mini-pill">🎙️ {speechReviewRows.length} attempts</span>
+
+                <span className="lms-mini-pill">
+                  🎙️ {pendingSpeechReviewRows.length} pending
+                </span>
               </div>
 
-              {speechReviewRows.length ? (
-                <div className="teacher-groups-grid">
-                  {speechReviewRows.map(item => {
-                    const attemptId = getSpeechReviewAttemptId(item);
-                    const scoreInputId = `speech-review-score-${attemptId}`;
-                    const feedbackInputId = `speech-review-feedback-${attemptId}`;
-                    const isSaving = Boolean(gradingSpeechIds[attemptId]);
-                    const alreadyScored = item.score === 0 || item.score;
+              {pendingSpeechReviewRows.length ? (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {pendingSpeechReviewRows.map(item => {
+                    const attemptId =
+                      getSpeechReviewAttemptId(item);
+
+                    const scoreInputId =
+                      `speech-review-score-${attemptId}`;
+
+                    const feedbackInputId =
+                      `speech-review-feedback-${attemptId}`;
+
+                    const isSaving =
+                      Boolean(gradingSpeechIds[attemptId]);
 
                     return (
-                      <div className="teacher-group-item" key={`speech-review-${attemptId || item.id}`}>
-                        {renderReviewIdentity(item, alreadyScored ? 'Reviewed Speech' : 'Needs Speech Score')}
-
-                        <div className="teacher-group-submission-evidence">
-                          <div>
-                            <span>Submitted Date</span>
-                            <strong>{formatReviewDate(item.submittedAt)}</strong>
-                          </div>
-
-                          <div>
-                            <span>Speech Score</span>
-                            <strong>{item.score ?? 'Not scored'}</strong>
-                          </div>
-                        </div>
-
-                        <div style={{ marginTop: 14 }}>
-                          <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Target Text</div>
-                          <div className="teacher-group-detail-section" style={{ minHeight: 'auto' }}>
-                            {item.task?.targetText || 'No target text available.'}
-                          </div>
-                        </div>
-
-                        <div style={{ marginTop: 14 }}>
-                          <div className="g46-ref-muted" style={{ fontWeight: 950, marginBottom: 6 }}>Student Transcript</div>
-                          <div className="teacher-group-detail-section" style={{ minHeight: 'auto', whiteSpace: 'pre-wrap' }}>
-                            {item.transcript || 'No transcript available.'}
-                          </div>
-                        </div>
-
-                        {item.audioUrl ? (
-                          <a
-                            className="teacher-file-link"
-                            href={item.audioUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ marginTop: 12, display: 'inline-flex' }}
-                          >
-                            ▶ Play Recording
-                          </a>
-                        ) : (
-                          <p className="g46-ref-muted" style={{ marginTop: 12 }}>No recording link available.</p>
+                      <div
+                        className="teacher-group-item"
+                        key={`speech-review-${attemptId || item.id}`}
+                        style={{
+                          padding: 16,
+                          display: 'grid',
+                          gap: 12
+                        }}
+                      >
+                        {renderReviewIdentity(
+                          item,
+                          'Needs Writing Score'
                         )}
 
-                        <label className="g46-ref-muted" htmlFor={scoreInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
-                          Speech Score
-                          <select
-                            id={scoreInputId}
-                            className="input-field"
-                            defaultValue={item.score || ''}
-                            style={{ width: '100%', minHeight: 46 }}
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 10,
+                            flexWrap: 'wrap'
+                          }}
+                        >
+                          <div
+                            className="g46-ref-muted"
+                            style={{ fontSize: 13 }}
                           >
-                            <option value="">Select score from 1 to 10</option>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(score => (
-                              <option key={score} value={score}>{score}/10 → +{score} XP</option>
-                            ))}
-                          </select>
-                        </label>
+                            Submitted{' '}
+                            <strong>
+                              {formatReviewDate(item.submittedAt)}
+                            </strong>
+                          </div>
 
-                        <label className="g46-ref-muted" htmlFor={feedbackInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
-                          Teacher Feedback
-                          <textarea
-                            id={feedbackInputId}
-                            className="input-field"
-                            defaultValue={item.teacherFeedback || item.feedback || ''}
-                            placeholder="Optional feedback for the student's speech attempt."
-                            rows="3"
+                          {item.audioUrl ? (
+                            <a
+                              className="teacher-file-link"
+                              href={item.audioUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              ▶ Play Recording
+                            </a>
+                          ) : (
+                            <span className="lms-mini-pill">
+                              Transcript only
+                            </span>
+                          )}
+                        </div>
+
+                        <details>
+                          <summary
+                            className="g46-ref-muted"
                             style={{
-                              width: '100%',
-                              minHeight: 92,
-                              resize: 'vertical',
-                              fontSize: 15,
-                              lineHeight: 1.45,
-                              padding: '13px 15px'
+                              cursor: 'pointer',
+                              fontWeight: 900,
+                              padding: '6px 0'
                             }}
-                          />
-                        </label>
+                          >
+                            View speech details
+                          </summary>
+
+                          <div
+                            style={{
+                              display: 'grid',
+                              gap: 10,
+                              marginTop: 8
+                            }}
+                          >
+                            <div>
+                              <div
+                                className="g46-ref-muted"
+                                style={{
+                                  fontWeight: 900,
+                                  marginBottom: 5
+                                }}
+                              >
+                                Target Text
+                              </div>
+
+                              <div
+                                className="teacher-group-detail-section"
+                                style={{ minHeight: 'auto' }}
+                              >
+                                {item.task?.targetText ||
+                                  'No target text available.'}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div
+                                className="g46-ref-muted"
+                                style={{
+                                  fontWeight: 900,
+                                  marginBottom: 5
+                                }}
+                              >
+                                Student Transcript
+                              </div>
+
+                              <div
+                                className="teacher-group-detail-section"
+                                style={{
+                                  minHeight: 'auto',
+                                  whiteSpace: 'pre-wrap'
+                                }}
+                              >
+                                {item.transcript ||
+                                  'No transcript available.'}
+                              </div>
+                            </div>
+                          </div>
+                        </details>
+
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns:
+                              'repeat(auto-fit, minmax(220px, 1fr))',
+                            gap: 12,
+                            alignItems: 'start'
+                          }}
+                        >
+                          <label
+                            className="g46-ref-muted"
+                            htmlFor={scoreInputId}
+                            style={{
+                              display: 'grid',
+                              gap: 7,
+                              fontWeight: 900
+                            }}
+                          >
+                            Writing Score
+
+                            <select
+                              id={scoreInputId}
+                              className="input-field"
+                              defaultValue={item.score || ''}
+                              style={{
+                                width: '100%',
+                                minHeight: 46
+                              }}
+                            >
+                              <option value="">
+                                Select score from 1 to 10
+                              </option>
+
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+                                .map(score => (
+                                  <option
+                                    key={score}
+                                    value={score}
+                                  >
+                                    {score}/10 → +{score} XP
+                                  </option>
+                                ))}
+                            </select>
+                          </label>
+
+                          <label
+                            className="g46-ref-muted"
+                            htmlFor={feedbackInputId}
+                            style={{
+                              display: 'grid',
+                              gap: 7,
+                              fontWeight: 900
+                            }}
+                          >
+                            Teacher Feedback
+
+                            <textarea
+                              id={feedbackInputId}
+                              className="input-field"
+                              defaultValue={
+                                item.teacherFeedback ||
+                                item.feedback ||
+                                ''
+                              }
+                              placeholder="Optional feedback for the student."
+                              rows="2"
+                              style={{
+                                width: '100%',
+                                minHeight: 72,
+                                resize: 'vertical',
+                                fontSize: 15,
+                                lineHeight: 1.45,
+                                padding: '11px 13px'
+                              }}
+                            />
+                          </label>
+                        </div>
 
                         <button
                           type="button"
                           className="lms-main-action full"
-                          style={{ marginTop: 12 }}
                           disabled={isSaving}
-                          onClick={() => handleSaveSpeechReview(item)}
+                          onClick={() =>
+                            handleSaveWritingGrade(item)
+                          }
                         >
-                          {isSaving ? 'Saving Speech Review...' : 'Save Speech Review'}
+                          {isSaving
+                            ? 'Saving Writing Grade...'
+                            : 'Save Writing Grade'}
                         </button>
                       </div>
                     );
@@ -1611,9 +1816,274 @@ export default function TeacherDashboard({
                 </div>
               ) : (
                 <div className="teacher-empty-panel">
-                  <div>🎙️</div>
-                  <strong>No speech attempts yet.</strong>
-                  <p>Speech attempts from assigned learners will appear here.</p>
+                  <div>✅</div>
+                  <strong>No pending speech reviews.</strong>
+                  <p>
+                    New mobile or audio submissions will appear here.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="teacher-tool-box" style={{ marginBottom: 18 }}>
+              <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
+                <div>
+                  <div className="lms-section-label">Speech Review Summary</div>
+                  <h3>Reviewed Attempts</h3>
+                  <p>Recent completed reviews. Open an attempt only when you need its full details.</p>
+                </div>
+
+                <span className="lms-mini-pill">
+                  ✅ {allSpeechReviewSummaryRows.length} reviewed
+                </span>
+              </div>
+
+              {allSpeechReviewSummaryRows.length ? (
+                <>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                  {speechReviewSummaryRows.map(item => {
+                    const attemptId = getSpeechReviewAttemptId(item);
+                    const numericScore = Number(item.score);
+
+                    const isAutomaticReview =
+                      numericScore > 10 ||
+                      (
+                        !item.reviewedByTeacherId &&
+                        !item.audioUrl
+                      );
+
+                    const scoreLabel = Number.isFinite(numericScore)
+                      ? isAutomaticReview
+                        ? `${numericScore}%`
+                        : `${numericScore}/10`
+                      : 'Not scored';
+
+                    const feedbackText = String(
+                      item.teacherFeedback ||
+                      item.feedback ||
+                      ''
+                    ).trim();
+
+                    const studentName =
+                      item.student?.name ||
+                      'Student';
+
+                    const lessonTitle =
+                      item.lesson?.title ||
+                      'Speech Activity';
+
+                    return (
+                      <div
+                        className="teacher-group-item"
+                        key={`speech-summary-${attemptId || item.id}`}
+                        style={{
+                          padding: 16,
+                          display: 'grid',
+                          gap: 10
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: 12,
+                            flexWrap: 'wrap'
+                          }}
+                        >
+                          <div>
+                            <strong style={{ fontSize: 17 }}>
+                              {studentName}
+                            </strong>
+
+                            <div
+                              className="g46-ref-muted"
+                              style={{ marginTop: 3 }}
+                            >
+                              {lessonTitle}
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: 7,
+                              flexWrap: 'wrap'
+                            }}
+                          >
+                            <span className="lms-mini-pill">
+                              {scoreLabel}
+                            </span>
+
+                            <span className="lms-mini-pill">
+                              {isAutomaticReview
+                                ? 'Automatic'
+                                : 'Teacher Reviewed'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div
+                          className="g46-ref-muted"
+                          style={{ fontSize: 13 }}
+                        >
+                          Reviewed{' '}
+                          {formatReviewDate(
+                            item.reviewedAt ||
+                            item.submittedAt
+                          )}
+                        </div>
+
+                        {feedbackText ? (
+                          <div
+                            style={{
+                              lineHeight: 1.45,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <strong>Feedback:</strong>{' '}
+                            {feedbackText}
+                          </div>
+                        ) : null}
+
+                        <details>
+                          <summary
+                            className="g46-ref-muted"
+                            style={{
+                              cursor: 'pointer',
+                              fontWeight: 900,
+                              padding: '6px 0'
+                            }}
+                          >
+                            View details
+                          </summary>
+
+                          <div
+                            style={{
+                              display: 'grid',
+                              gap: 12,
+                              marginTop: 10
+                            }}
+                          >
+                            <div>
+                              <div
+                                className="g46-ref-muted"
+                                style={{ fontWeight: 900 }}
+                              >
+                                Target Text
+                              </div>
+
+                              <div
+                                className="teacher-group-detail-section"
+                                style={{
+                                  minHeight: 'auto',
+                                  marginTop: 5
+                                }}
+                              >
+                                {item.task?.targetText ||
+                                  'No target text available.'}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div
+                                className="g46-ref-muted"
+                                style={{ fontWeight: 900 }}
+                              >
+                                Student Transcript
+                              </div>
+
+                              <div
+                                className="teacher-group-detail-section"
+                                style={{
+                                  minHeight: 'auto',
+                                  marginTop: 5,
+                                  whiteSpace: 'pre-wrap'
+                                }}
+                              >
+                                {item.transcript ||
+                                  'No transcript available.'}
+                              </div>
+                            </div>
+
+                            {item.audioUrl ? (
+                              <a
+                                className="teacher-file-link"
+                                href={item.audioUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                ▶ Play Recording
+                              </a>
+                            ) : null}
+                          </div>
+                        </details>
+                      </div>
+                    );
+                  })}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 14,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 10,
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <span
+                      className="g46-ref-muted"
+                      style={{ fontSize: 13, fontWeight: 800 }}
+                    >
+                      Showing {speechReviewSummaryRows.length} of{' '}
+                      {allSpeechReviewSummaryRows.length}
+                    </span>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 8,
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      {hasMoreSpeechSummaries ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() =>
+                            setSpeechSummaryVisibleCount(
+                              current => current + 8
+                            )
+                          }
+                        >
+                          Load 8 More
+                        </button>
+                      ) : null}
+
+                      {speechSummaryVisibleCount > 8 ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() =>
+                            setSpeechSummaryVisibleCount(8)
+                          }
+                        >
+                          Show Less
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="teacher-empty-panel">
+                  <div>✅</div>
+                  <strong>No reviewed speech attempts yet.</strong>
+                  <p>Completed reviews will appear here.</p>
                 </div>
               )}
             </div>
@@ -1992,7 +2462,7 @@ export default function TeacherDashboard({
 
                     <div className="teacher-two-fields">
                       <div style={{display:'grid',gap:6}}>
-                        <label htmlFor="t-task-deadline" style={{fontWeight:800,fontSize:13,color:'#475569'}}>Deadline</label>
+                        <label htmlFor="t-task-deadline" style={{fontWeight:800,fontSize:13,color:'#475569'}}>⏰ Takdang petsa at oras</label>
                         <input className="input-field" id="t-task-deadline" type="datetime-local" min={new Date(Date.now() + 8 * 60 * 60 * 1000 + 61 * 60 * 1000).toISOString().slice(0, 16)} step="60" required />
                       </div>
                       <div style={{display:'grid',gap:6}}>
@@ -2337,6 +2807,15 @@ export default function TeacherDashboard({
                       </div>
                     </div>
 
+                    {(() => {
+                      const availableSections = [...new Set(
+                        assignedClasses
+                          .filter(item => Number(item.gradeLevel) === Number(studentAccountForm.gradeLevel))
+                          .map(item => item.section)
+                          .filter(Boolean)
+                      )];
+
+                      return (
                     <form onSubmit={handleCreateStudentAccount}>
                       <div className="teacher-two-fields">
                         <input
@@ -2350,29 +2829,35 @@ export default function TeacherDashboard({
                           value={studentAccountForm.gradeLevel}
                           onChange={(event) => setStudentAccountForm(form => ({ ...form, gradeLevel: event.target.value }))}
                         >
-                          {[1, 2, 3, 4, 5, 6].map(grade => (
-                            <option key={grade} value={grade}>Grade {grade}</option>
+                          {teacherAssignedGrades.map(grade => (
+                            <option key={grade} value={grade}>
+                              Grade {grade}
+                            </option>
                           ))}
                         </select>
                       </div>
 
-                      <input
+                      <select
                         className="input-field"
                         value={studentAccountForm.section}
-                        onChange={(event) => setStudentAccountForm(form => ({ ...form, section: event.target.value }))}
-                        placeholder="Section name"
-                        list="teacher-student-section-list"
+                        onChange={(event) =>
+                          setStudentAccountForm(form => ({
+                            ...form,
+                            section: event.target.value
+                          }))
+                        }
                         style={{ marginTop: 10 }}
-                      />
-
-                      <datalist id="teacher-student-section-list">
-                        {[...new Set([
-                          ...assignedClasses.map(item => item.section),
-                          ...students.map(student => student.section)
-                        ].filter(Boolean))].map(section => (
-                          <option key={section} value={section} />
-                        ))}
-                      </datalist>
+                      >
+                        {availableSections.length ? (
+                          availableSections.map(section => (
+                            <option key={section} value={section}>
+                              {section}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="" disabled>No assigned sections available</option>
+                        )}
+                      </select>
 
                       {studentAccountError && (
                         <p style={{ color: '#dc2626', fontWeight: 800, margin: '10px 0 0' }}>
@@ -2399,6 +2884,8 @@ export default function TeacherDashboard({
                         {studentAccountBusy ? 'Creating...' : 'Create Student Account'}
                       </button>
                     </form>
+                      );
+                    })()}
                   </div>
 
                   {rows.length ? rows.map(row => (
@@ -3271,16 +3758,16 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const isAllowed = /\.(ppt|pptx|pdf)$/i.test(file.name || '');
+    const isAllowed = /\.(ppt|pptx|pdf|docx)$/i.test(file.name || '');
 
     if (!isAllowed) {
       setLessonPlanFilePreview('');
       setLessonPlanFileStatus(
         lessonPlanFile
           ? 'Unsupported file type. The existing lesson material was kept.'
-          : 'Please upload a PPT, PPTX, or PDF lesson material.'
+          : 'Please upload a PDF, DOCX, PPT, or PPTX lesson material.'
       );
-      setAiDraftNotice('Unsupported file type. Use PPT, PPTX, or PDF only.');
+      setAiDraftNotice('Unsupported file type. Use PDF, DOCX, PPT, or PPTX only.');
       event.target.value = '';
       return;
     }
@@ -3308,7 +3795,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       }));
 
       setLessonPlanFilePreview('');
-      setLessonPlanFileStatus('Material uploaded. Students will see this as Material inside the lesson after you publish.');
+      setLessonPlanFileStatus('Lesson Material uploaded successfully.');
       setAiDraftNotice('');
     } catch (err) {
       setLessonPlanFilePreview('');
@@ -3334,6 +3821,9 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
   }
 
   function cleanActivities() {
+    console.group('=== cleanActivities ===');
+    console.log('Raw activities:', activities);
+
     return activities
       .map(activity => {
         if (activity.type === 'mcq') {
@@ -3359,7 +3849,10 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             })
             .filter(Boolean);
 
-          if (!questions.length) return null;
+          if (!questions.length) {
+            console.warn('Dropped MCQ:', activity);
+            return null;
+          }
 
           return {
             type: 'mcq',
@@ -3382,7 +3875,10 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
               .filter(Boolean);
             const correctAnswer = String(activity.correctAnswer || '').trim();
 
-            if (!template || !correctAnswer) return null;
+            if (!template || !correctAnswer) {
+              console.warn('Dropped Complete Sentence:', activity);
+              return null;
+            }
 
             return {
               type: 'writing',
@@ -3644,14 +4140,37 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       return;
     }
 
+    const hasExistingMaterial =
+      Boolean(lessonPlanFile?.fileUrl) ||
+      (
+        Boolean(
+          editingLesson?.activities?.some(
+            activity => activity.type === 'material'
+          )
+        ) &&
+        lessonPlanFile !== null
+      );
+
+    if (!hasExistingMaterial) {
+      setLessonPlanFileStatus('Lesson Material is required.');
+      setAiDraftNotice('Please upload a Lesson Material.');
+      setBuilderTab('source');
+
+      window.alert(
+        'Please upload a Lesson Material before saving this lesson.'
+      );
+
+      return;
+    }
+
     const preparedActivities = cleanActivities();
 
     if (lessonPlanFile?.fileUrl) {
       preparedActivities.unshift({
         id: lessonPlanFile.activityId || undefined,
         type: 'material',
-        title: 'Lesson Slides',
-        instructions: 'Open the attached lesson material before answering the activities.',
+        title: 'Lesson Material',
+        instructions: 'Open the lesson material before answering the activities.',
         fileName: lessonPlanFile.fileName || lessonPlanFile.name,
         fileUrl: lessonPlanFile.fileUrl,
         fileType: lessonPlanFile.fileType || lessonPlanFile.type,
@@ -3659,6 +4178,15 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
         size: Number(lessonPlanFile.rawSize || 0) || null
       });
     }
+
+    console.log('Prepared activities:', preparedActivities);
+    console.table(
+      preparedActivities.map(activity => ({
+        type: activity.type,
+        title: activity.title
+      }))
+    );
+    console.groupEnd();
 
     const hasQuiz = preparedActivities.some(activity => activity.type === 'mcq');
     const hasWritingActivity = preparedActivities.some(activity => activity.type === 'writing');
@@ -3687,18 +4215,32 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       activities: preparedActivities
     };
 
-    if (editingLesson?.id) {
-      await api(`/lessons/${editingLesson.id}`, {
-        method: 'PATCH',
-        body: {
-          ...payload,
-          status: editingLesson.status || 'draft'
-        }
-      });
-      setAiDraftNotice(editingLesson.status === 'published' ? 'Published lesson updated successfully.' : 'Draft lesson updated successfully.');
-    } else {
-      await createLesson(payload);
-      setAiDraftNotice('Lesson published successfully.');
+    try {
+      if (editingLesson?.id) {
+        await api(`/lessons/${editingLesson.id}`, {
+          method: 'PATCH',
+          body: {
+            ...payload,
+            status: editingLesson.status || 'draft'
+          }
+        });
+
+        setAiDraftNotice('Lesson updated successfully.');
+      } else {
+        await createLesson(payload);
+        setAiDraftNotice('Lesson published successfully.');
+      }
+    } catch (err) {
+      const message =
+        err?.message || 'Unable to save lesson.';
+
+      console.error('Lesson save failed:', err);
+
+      setLessonPlanFileStatus(message);
+      setAiDraftNotice(message);
+
+      window.alert(message);
+      return;
     }
 
     setEditingLesson(null);
@@ -4128,22 +4670,22 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
             <div className="teacher-design-heading">
               <div className="teacher-design-step">FILE</div>
               <div>
-                <h2>Optional Lesson Material</h2>
+                <h2>Lesson Material</h2>
 
               </div>
             </div>
 
             <div className="teacher-field">
-              <label>Upload PPT/PDF Material</label>
+              <label>Lesson Material</label>
               <input
                 id="teacher-lesson-plan-file"
                 className="input-field"
                 type="file"
-                accept=".ppt,.pptx,.pdf"
+                accept=".pdf,.docx,.ppt,.pptx"
                 onChange={handleLessonPlanFileUpload}
               />
               <small style={{ color: '#6d7b73', fontWeight: 750, marginTop: 6 }}>
-                Accepted files: PPT, PPTX, or PDF. PDFs can preview inside the student lesson. PPT/PPTX files open as slides or download.
+                Accepted: PDF, DOCX, PPT, or PPTX.
               </small>
             </div>
 
@@ -4181,7 +4723,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
               <div>
                 <h2>Lesson Information</h2>
-                <p>Provide the basic details for your lesson.</p>
+                
               </div>
             </div>
 
@@ -4256,11 +4798,11 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
             {lessonPlanFile ? (
               <div className="muted" style={{ marginBottom: 12 }}>
-                You uploaded a material. Add a short Objective, Background, and Lesson summary so students still have readable lesson cards.
+                Material uploaded. Add the Objective, Background, and Lesson Summary.
               </div>
             ) : (
               <div className="muted" style={{ marginBottom: 12 }}>
-                No uploaded material yet. Fill in the Lesson content manually.
+                
               </div>
             )}
 
@@ -4582,9 +5124,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       <div className="lms-bottom-action-bar">
         {builderTab === 'source' && (
           <>
-            <button className="lms-action-secondary" type="button">
-              📋 Save Draft
-            </button>
             <button className="lms-action-primary" type="button" onClick={() => setBuilderTab('details')}>
               Next: Lesson Details →
             </button>
