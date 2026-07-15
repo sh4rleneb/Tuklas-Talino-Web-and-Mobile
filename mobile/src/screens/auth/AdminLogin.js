@@ -123,6 +123,7 @@ function handleIdentifierChange(value) {
         <View style={styles.topBar}>
 
                     <BumalikButton
+                      tone="violet"
             onPress={() =>
               navigation.goBack()
             }
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#22C55E',
+    color: '#7C3AED',
   },
 
   card: {

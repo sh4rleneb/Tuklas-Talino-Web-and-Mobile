@@ -24,7 +24,6 @@ const MOBILE_MISSION_TYPE_FALLBACKS = [
   'picture-guess',
   'sentence-builder',
   'story-quest',
-  'fill-in-the-blank',
 ];
 
 const TAGALOG_MISSION_TITLES = Object.freeze({
@@ -34,7 +33,6 @@ const TAGALOG_MISSION_TITLES = Object.freeze({
   'sentence-builder': 'Pagbuo ng Pangungusap',
   'story-quest': 'Pag-unawa sa Kuwento',
   'sound-and-say': 'Pakikinig at Pagbigkas',
-  'fill-in-the-blank': 'Punan ang Patlang',
 });
 
 const TAGALOG_MISSION_TITLES_BY_ENGLISH = Object.freeze({
@@ -44,8 +42,6 @@ const TAGALOG_MISSION_TITLES_BY_ENGLISH = Object.freeze({
   'sentence builder': 'Pagbuo ng Pangungusap',
   'story quest': 'Pag-unawa sa Kuwento',
   'sound and say': 'Pakikinig at Pagbigkas',
-  'fill in the blank': 'Punan ang Patlang',
-  'fill-in-the-blank': 'Punan ang Patlang',
 });
 
 function getTagalogMissionTitle(
@@ -166,7 +162,7 @@ const MISSION_GAMES = normalizeMissionCatalog([
     xp: 12,
     baseStatus: 'Handa na',
     short: 'Hulaan ang larawan!',
-    instruction: 'Pagmasdan ang picture card, pagkatapos piliin ang salitang tumutukoy dito.',
+    instruction: 'Pagmasdan ang larawan, pagkatapos piliin ang salitang tumutukoy dito.',
     sample: 'larawan ng pusa → pusa',
     reward: 'Vocabulary confidence',
     tone: 'mint'
@@ -201,7 +197,7 @@ const MISSION_GAMES = normalizeMissionCatalog([
     id: 'sound-and-say',
     title: 'Pakikinig at Pagbigkas',
     icon: '🎙️',
-    module: 'Oral Comm',
+    module: 'Komunikasyong Pagsasalita',
     xp: 15,
     baseStatus: 'Handa na',
     short: 'Magsanay bumigkas ng salitang Filipino o maikling parirala.',
@@ -261,6 +257,84 @@ const TONES = {
 function getTone(tone) {
   return TONES[tone] || TONES.mint;
 }
+
+function normalizeGradeLevel(value) {
+  const match = String(value ?? '').match(/\d+/);
+  return match ? Number(match[0]) : 0;
+}
+
+function getMissionScreenGradeLevel(source = {}) {
+  return normalizeGradeLevel(
+    source.gradeLevel ??
+    source.grade ??
+    source.student?.gradeLevel ??
+    source.student?.grade ??
+    source.profile?.gradeLevel ??
+    source.profile?.grade ??
+    source.routeGradeLevel ??
+    source.routeGrade
+  );
+}
+
+function shouldHideMissionForGrade(mission = {}, gradeLevel = 0) {
+  const missionKey = String(
+    mission.id ||
+    mission.missionId ||
+    mission.gameId ||
+    mission.key ||
+    ''
+  ).toLowerCase();
+
+  const title = String(mission.title || mission.name || '').toLowerCase();
+  const moduleName = String(mission.module || mission.category || '').toLowerCase();
+
+  const isOralCommMission =
+    missionKey === 'sound-and-say' ||
+    missionKey === 'oral-comm' ||
+    title.includes('pakikinig at pagbigkas') ||
+    moduleName.includes('oral comm') ||
+    moduleName.includes('komunikasyong pagsasalita') ||
+    moduleName.includes('pakikinig');
+
+  const isEarlyGradeOnlyMission =
+    missionKey === 'letter-pop' ||
+    title.includes('pagpili ng titik') ||
+    title.includes('pantig');
+
+  return (
+    gradeLevel >= 3 &&
+    gradeLevel <= 6 &&
+    (isOralCommMission || isEarlyGradeOnlyMission)
+  );
+}
+
+function missionDifficultyForGrade(gradeLevel = 1) {
+  const grade = Math.max(1, Math.min(6, normalizeGradeLevel(gradeLevel) || 1));
+
+  return {
+    gradeLevel: grade,
+    grade,
+    difficulty: `Baitang ${grade}`,
+    gradeLabel: `Baitang ${grade}`,
+    gradeBadge: `G${grade}`,
+  };
+}
+
+function getMissionCatalogForGrade(gradeLevel = 1) {
+  const grade = Math.max(1, Math.min(6, normalizeGradeLevel(gradeLevel) || 1));
+  const gradeMeta = missionDifficultyForGrade(grade);
+
+  return MISSION_GAMES
+    .filter((mission) => !shouldHideMissionForGrade(mission, grade))
+    .map((mission) => ({
+      ...mission,
+      ...gradeMeta,
+      targetGradeLevel: grade,
+      minGradeLevel: grade,
+      maxGradeLevel: grade,
+    }));
+}
+
 
 async function readStoredMissionAttempts() {
   try {
@@ -453,10 +527,11 @@ function getMissionProgress(mission = {}) {
   );
 }
 
-function buildMergedMissions(backendMissions = []) {
+function buildMergedMissions(backendMissions = [], gradeLevel = 1) {
   const backendRows = Array.isArray(backendMissions) ? backendMissions : [];
+  const gradeMeta = missionDifficultyForGrade(gradeLevel);
 
-  return MISSION_GAMES.map((mission) => {
+  return getMissionCatalogForGrade(gradeLevel).map((mission) => {
     const backend = backendRows.find((item) => {
       const backendKey = String(item.missionId || item.id || item.key || '');
       const localKeys = [
@@ -580,7 +655,14 @@ function buildMergedMissions(backendMissions = []) {
 }
 
 export default function MissionScreen({ navigation, route }) {
-  const [missions, setMissions] = useState(MISSION_GAMES);
+  const currentGradeLevel = getMissionScreenGradeLevel({
+    routeGradeLevel: route?.params?.gradeLevel,
+    routeGrade: route?.params?.grade,
+    student: route?.params?.student,
+    profile: route?.params?.profile,
+  });
+
+  const [missions, setMissions] = useState([]);
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState(null);
@@ -589,7 +671,7 @@ export default function MissionScreen({ navigation, route }) {
   const [missionAttemptOverrides, setMissionAttemptOverrides] = useState({});
   const missionAttemptOverridesRef = useRef({});
 
-  const gradeLevel = Number(student?.gradeLevel || 1);
+  const gradeLevel = Number(student?.gradeLevel || currentGradeLevel || 1);
   const isEarlyGrade = gradeLevel <= 2;
 
   const completedCount = useMemo(
@@ -622,10 +704,19 @@ export default function MissionScreen({ navigation, route }) {
 
   const buildMissionsWithAttemptOverrides = useCallback((
     backendMissions = [],
-    overrides = {}
+    overrides = {},
+    targetGradeLevel = gradeLevel
   ) => {
+    const safeGradeLevel = normalizeGradeLevel(
+      targetGradeLevel ||
+      gradeLevel ||
+      currentGradeLevel ||
+      1
+    );
+
     const merged = buildMergedMissions(
-      Array.isArray(backendMissions) ? backendMissions : []
+      Array.isArray(backendMissions) ? backendMissions : [],
+      safeGradeLevel
     );
 
     return merged.map((mission = {}) => {
@@ -645,7 +736,7 @@ export default function MissionScreen({ navigation, route }) {
         .find(Boolean);
 
       if (!override) {
-        return mission;
+        return { ...mission, ...gradeMeta };
       }
 
       const maxAttempts = Math.max(
@@ -713,13 +804,31 @@ export default function MissionScreen({ navigation, route }) {
 
     try {
       const dashboard = await api('/dashboard');
-      const merged = buildMissionsWithAttemptOverrides(dashboard.missions || [], combinedOverrides);
+      const dashboardGradeLevel = normalizeGradeLevel(
+        dashboard?.student?.gradeLevel ??
+        dashboard?.student?.grade ??
+        gradeLevel ??
+        currentGradeLevel ??
+        1
+      );
+
+      const merged = buildMissionsWithAttemptOverrides(
+        dashboard.missions || [],
+        combinedOverrides,
+        dashboardGradeLevel
+      );
       syncMissionAttemptOverrides(combinedOverrides);
 
       setMissions(merged);
       setStudent(dashboard.student || null);
     } catch (err) {
-      setMissions(buildMissionsWithAttemptOverrides([], combinedOverrides));
+      setMissions(
+        buildMissionsWithAttemptOverrides(
+          [],
+          combinedOverrides,
+          gradeLevel
+        )
+      );
       syncMissionAttemptOverrides(combinedOverrides);
       setError('Hindi makuha ang mga misyon. Pakisubukan muli.');
     } finally {
@@ -818,6 +927,9 @@ export default function MissionScreen({ navigation, route }) {
   }
 
   if (selectedMission) {
+    const selectedExhaustedAttempts =
+      hasUsedAllMissionAttempts(selectedMission) && !isClaimable(selectedMission);
+
     const tone = getTone(selectedMission.tone);
     const state = missionState(selectedMission);
     const completed = isCompleted(selectedMission);
@@ -876,7 +988,7 @@ export default function MissionScreen({ navigation, route }) {
 
               <View style={styles.playMetaPill}>
                 <Text style={[styles.playMetaValue, { color: tone.strong }]}>
-                  G{gradeLevel}
+                  G{selectedMission.gradeLevel || gradeLevel}
                 </Text>
                 <Text style={styles.playMetaLabel}>Baitang</Text>
               </View>
@@ -932,8 +1044,9 @@ export default function MissionScreen({ navigation, route }) {
                 },
               ]}
               activeOpacity={0.85}
-              disabled={submitting || completed}
+              disabled={submitting || completed || selectedExhaustedAttempts}
               onPress={() => {
+                if (selectedExhaustedAttempts) return;
                   if (claimable) {
                     claimMission(selectedMission);
                     return;
@@ -949,7 +1062,7 @@ export default function MissionScreen({ navigation, route }) {
                     missionId: selectedMission.gameId || selectedMission.id,
                     missionApiId: getMissionKey(selectedMission),
                     mission: selectedMission,
-                    gradeLevel,
+                    gradeLevel: selectedMission.gradeLevel || gradeLevel,
                   });
                 }}
             >
@@ -960,6 +1073,8 @@ export default function MissionScreen({ navigation, route }) {
                     ? '✓ Natapos'
                     : claimable
                       ? 'Kunin ang Bituin'
+                      : selectedExhaustedAttempts
+                      ? '✓ Natapos na'
                       : 'Simulan ang Misyon'}
               </Text>
             </TouchableOpacity>
@@ -984,7 +1099,7 @@ export default function MissionScreen({ navigation, route }) {
                 Maglaro, magsanay, at kumita ng XP!
               </Text>
               <Text style={styles.heroSubtitle}>
-                Piliin ang misyon para sa Pagbasa, Bokabularyo, Panitikan, Oral Comm, at Pagsulat.
+                {isEarlyGrade ? 'Piliin ang misyon para sa Pagbasa, Bokabularyo, Panitikan, Komunikasyong Pagsasalita, at Pagsulat.' : 'Piliin ang misyon para sa Pagbasa, Bokabularyo, Panitikan, at Pagsulat.'}
               </Text>
             </View>
 
@@ -1032,6 +1147,10 @@ export default function MissionScreen({ navigation, route }) {
         {!loading && missions.map((mission) => {
           const tone = getTone(mission.tone);
           const completed = isCompleted(mission);
+
+          const attemptsFinished = hasUsedAllMissionAttempts(mission);
+
+          const exhaustedAttempts = attemptsFinished && !isClaimable(mission);
           const claimable = isClaimable(mission);
           const progress = getMissionProgress(mission);
 

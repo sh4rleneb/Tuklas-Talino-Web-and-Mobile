@@ -123,6 +123,7 @@ function handleIdentifierChange(value) {
         <View style={styles.topBar}>
 
                     <BumalikButton
+                      tone="blue"
             onPress={() =>
               navigation.goBack()
             }
@@ -221,7 +222,7 @@ function handleIdentifierChange(value) {
                     : 'eye-off'
                 }
                 size={22}
-                color="#16A34A"
+                color="#1D4ED8"
               />
 
             </TouchableOpacity>
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EFF6FF',
   },
 
   topBar: {
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
 
   homeButton: {
     borderWidth: 2,
-    borderColor: '#22C55E',
+    borderColor: '#2563EB',
 
     paddingHorizontal: 18,
     paddingVertical: 8,
@@ -284,7 +285,7 @@ const styles = StyleSheet.create({
   },
 
   homeText: {
-    color: '#16A34A',
+    color: '#1D4ED8',
 
     fontFamily: 'Fredoka_600SemiBold',
   },
@@ -294,7 +295,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#16A34A',
+    color: '#1D4ED8',
   },
 
   card: {
@@ -319,7 +320,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 100,
 
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#EFF6FF',
 
     justifyContent: 'center',
     alignItems: 'center',
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#16A34A',
+    color: '#1D4ED8',
   },
 
   sub: {
@@ -359,11 +360,11 @@ const styles = StyleSheet.create({
   },
 
   label: {
+    color: '#2563EB',
     fontSize: 18,
 
     fontFamily: 'Fredoka_600SemiBold',
 
-    color: '#166534',
 
     marginBottom: 12,
   },
@@ -373,7 +374,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
 
     borderWidth: 2,
-    borderColor: '#A7F3D0',
+    borderColor: '#93C5FD',
 
     borderRadius: 24,
 
@@ -385,6 +386,7 @@ const styles = StyleSheet.create({
   },
 
   icon: {
+    color: '#2563EB',
     fontSize: 18,
     marginRight: 10,
   },
@@ -403,7 +405,7 @@ const styles = StyleSheet.create({
 
   passwordContainer: {
     borderWidth: 2,
-    borderColor: '#A7F3D0',
+    borderColor: '#93C5FD',
 
     borderRadius: 24,
 
@@ -428,7 +430,9 @@ const styles = StyleSheet.create({
   },
 
   loginButton: {
-    backgroundColor: '#22C55E',
+    backgroundColor: '#2563EB',
+    borderColor: '#1D4ED8',
+    shadowColor: '#2563EB',
 
     paddingVertical: 20,
 
@@ -440,7 +444,7 @@ const styles = StyleSheet.create({
   },
 
   loginButtonText: {
-    color: '#FFF',
+    color: '#FFFFFF',
 
     fontSize: 21,
 
@@ -457,7 +461,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#16A34A',
+    backgroundColor: '#1D4ED8',
     alignItems: 'center',
     justifyContent: 'center',
   },

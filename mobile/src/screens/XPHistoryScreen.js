@@ -300,7 +300,7 @@ export default function XPHistoryScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.page, styles.bottomTabSpacer]} showsVerticalScrollIndicator={false}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backText}>← Bumalik sa Aking Impormasyon</Text>
         </TouchableOpacity>
@@ -451,4 +451,8 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 6,
   },
+  bottomTabSpacer: {
+    paddingBottom: 180,
+  },
+
 });

@@ -98,6 +98,7 @@ function Button({ children, onPress, tone = 'dark', disabled = false }) {
 
 export default function AdminHome({ navigation }) {
   const [section, setSection] = useState('overview');
+  const [studentSearch, setStudentSearch] = useState('');
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [vaultVisible, setVaultVisible] = useState(false);
   const [vaultUser, setVaultUser] = useState(null);

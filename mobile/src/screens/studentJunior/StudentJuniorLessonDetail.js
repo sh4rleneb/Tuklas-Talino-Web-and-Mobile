@@ -788,68 +788,79 @@ const stepScrollRef = useRef(null);
   );
 
   const missionSteps = useMemo(() => {
-    const materialActivities = activities.filter((activity) => {
+    const isMaterialActivity = (activity = {}) => {
       const type = String(activity?.type || '').toLowerCase();
-      return type === 'material' || type === 'infographic';
-    });
+      const title = String(activity?.title || '').toLowerCase();
 
-    const learningActivities = activities.filter((activity) => {
-      const type = String(activity?.type || '').toLowerCase();
-      if (type === 'material' || type === 'infographic') return false;
-      return isUpperGradeLesson || ['mcq', 'writing', 'speech'].includes(type);
-    });
+      return (
+        type === 'material' ||
+        type === 'lesson_material' ||
+        type === 'lesson-material' ||
+        type === 'reading' ||
+        type === 'read' ||
+        type === 'infographic' ||
+        title.includes('lesson material') ||
+        title.includes('material') ||
+        title.includes('aralin')
+      );
+    };
 
-    if (isUpperGradeLesson) {
-      return [
-        {
-          type: 'overview',
-          title: 'Buod ng Aralin',
-        },
-        ...materialActivities.map(activity => ({
-          type: 'activity',
-          activity,
-        })),
-        {
-          type: 'read',
-          title: 'Basahin ang Aralin',
-        },
-        ...learningActivities.map(activity => ({
-          type: 'activity',
-          activity,
-        })),
-        {
-          type: 'finish',
-          title: 'Tapusin ang Aralin',
-        },
-      ];
-    }
+    const materialActivities = activities.filter(isMaterialActivity);
+    const learningActivities = activities.filter(
+      (activity) => !isMaterialActivity(activity)
+    );
 
-    return [
-      {
+    const steps = [];
+
+    if (!isUpperGradeLesson) {
+      steps.push({
         type: 'listen',
-        title: 'Layunin',
-      },
-      {
+        title: 'Pakinggan ang Layunin',
+      });
+
+      steps.push({
         type: 'know',
         title: 'Alamin',
-      },
-      ...materialActivities.map(activity => ({
-        type: 'activity',
-        activity,
-      })),
-      {
+      });
+    }
+
+    if (materialActivities.length) {
+      materialActivities.forEach((activity, index) => {
+        steps.push({
+          type: 'read',
+          title:
+            activity?.title ||
+            (index === 0 ? 'Basahin ang Aralin' : `Basahin ang Aralin ${index + 1}`),
+          activity,
+          activityIndex: activities.indexOf(activity),
+        });
+      });
+    } else {
+      steps.push({
         type: 'read',
-        title: 'Aralin',
-      },
-      ...learningActivities.map(activity => ({
+        title: 'Basahin ang Aralin',
+      });
+    }
+
+    learningActivities.forEach((activity, index) => {
+      steps.push({
         type: 'activity',
+        title:
+          activity?.title ||
+          activity?.name ||
+          activity?.activityTitle ||
+          `Gawain ${index + 1}`,
         activity,
-      })),
-      {
-        type: 'finish',
-        title: 'Tapos',
-      },
-    ];
+        activityIndex: activities.indexOf(activity),
+      });
+    });
+
+    steps.push({
+      type: 'finish',
+      title: 'Tapusin ang Aralin',
+    });
+
+    return steps;
   }, [activities, isUpperGradeLesson]);
 
   const totalSteps = missionSteps.length;
@@ -1725,8 +1736,7 @@ const stepScrollRef = useRef(null);
 
       // AUTO_ADVANCE_SPEECH_HAKBANG
       if (typeof advance === 'function') {
-        advance('speech');
-      }
+}
     } catch (err) {
       setSpeechStatus('Hindi maitala ang iyong pagbigkas. Pakisubukan muli.');
     } finally {
@@ -1736,52 +1746,8 @@ const stepScrollRef = useRef(null);
 
 
   // RESYNC_EXISTING_LESSON_HAKBANG
-  // Some already-created lessons were saved before speech auto-advance existed.
-  // When those lessons open at the old speech step, move the visible Hakbang forward.
-  React.useEffect(() => {
-    const activityType = String(
-      currentActivity?.type ||
-        currentActivity?.activityType ||
-        currentActivity?.kind ||
-        ''
-    ).toLowerCase();
-
-    const speechLooksSubmitted =
-      activityType.includes('speech') ||
-      activityType.includes('speak') ||
-      activityType.includes('oral') ||
-      activityType.includes('voice') ||
-      activityType.includes('record');
-
-    const speechDone =
-      speechLooksSubmitted &&
-      (
-        Boolean(speechStatus) ||
-        Boolean(speechTranscript) ||
-        String(activityNotice?.type || '').toLowerCase() === 'success'
-      );
-
-    if (
-      !completed &&
-      !submitting &&
-      speechDone &&
-      Number(step || 1) < Number(totalSteps || 1)
-    ) {
-      saveNextStep('speech');
-      advance('speech');
-    }
-  }, [
-    activityNotice?.type,
-    completed,
-    currentActivity?.activityType,
-    currentActivity?.kind,
-    currentActivity?.type,
-    speechStatus,
-    speechTranscript,
-    step,
-    submitting,
-    totalSteps,
-  ]);
+  // Do not auto-advance from Bigkas/speech.
+  // Learners must stay on the current activity until they press the visible action button.
 
   function goToPreviousStep() {
     if (submitting || completed) return;
@@ -3530,7 +3496,7 @@ const stepScrollRef = useRef(null);
             }
             onPress={() =>
               submitWriting(builtAnswer, {
-                finishAfter: true,
+                finishAfter: false,
               })
             }
             activeOpacity={0.86}

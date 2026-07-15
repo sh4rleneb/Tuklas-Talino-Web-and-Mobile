@@ -89,11 +89,77 @@ function isVisibleGroupRecord(item) {
 
 
 function localizeBadgeDescription(description) {
-  const value = description || 'Nakuha sa matagumpay na pagtatapos ng isang gawain.';
+  const value = String(
+    description || 'Nakuha sa matagumpay na pagtatapos ng isang gawain.'
+  )
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  return String(value)
+  if (!value) {
+    return 'Ipagpatuloy ang pag-aaral upang makakuha ng gantimpala.';
+  }
+
+  const normalized = value.toLowerCase();
+
+  const exact = {
+    'natapos ang unang lesson.': 'Natapos ang unang aralin.',
+    'natapos ang unang lesson': 'Natapos ang unang aralin.',
+    'makatapos ng 3 lessons.': 'Makatapos ng 3 aralin.',
+    'makatapos ng 3 lessons': 'Makatapos ng 3 aralin.',
+    'complete 3 punan ang patlang or writing activities.':
+      'Makatapos ng 3 gawaing Punan ang Patlang o Pagsulat.',
+    'complete 3 punan ang patlang or writing activities':
+      'Makatapos ng 3 gawaing Punan ang Patlang o Pagsulat.',
+    'magsumite ng 3 magkakaibang speech activities.':
+      'Magsumite ng 3 magkakaibang gawaing Pagbigkas.',
+    'magsumite ng 3 magkakaibang speech activities':
+      'Magsumite ng 3 magkakaibang gawaing Pagbigkas.',
+    'makatapos ng 1 approved group task.':
+      'Makatapos ng 1 naaprubahang gawaing pangkat.',
+    'makatapos ng 1 approved group task':
+      'Makatapos ng 1 naaprubahang gawaing pangkat.',
+    'complete your first lesson.':
+      'Tapusin ang iyong unang aralin.',
+    'complete your first lesson':
+      'Tapusin ang iyong unang aralin.',
+    'complete 5 lessons.':
+      'Tapusin ang 5 aralin.',
+    'complete 5 lessons':
+      'Tapusin ang 5 aralin.',
+    'earn your first xp.':
+      'Makakuha ng iyong unang XP.',
+    'earn your first xp':
+      'Makakuha ng iyong unang XP.',
+  };
+
+  if (exact[normalized]) {
+    return exact[normalized];
+  }
+
+  return value
+    .replace(/Complete 3 Punan ang Patlang or writing activities\.?/gi, 'Makatapos ng 3 gawaing Punan ang Patlang o Pagsulat.')
+    .replace(/Natapos ang unang lesson\.?/gi, 'Natapos ang unang aralin.')
+    .replace(/Makatapos ng 3 lessons\.?/gi, 'Makatapos ng 3 aralin.')
+    .replace(/Magsumite ng 3 magkakaibang speech activities\.?/gi, 'Magsumite ng 3 magkakaibang gawaing Pagbigkas.')
+    .replace(/Makatapos ng 1 approved group task\.?/gi, 'Makatapos ng 1 naaprubahang gawaing pangkat.')
+    .replace(/\bComplete\b/gi, 'Tapusin')
+    .replace(/\bCompleted\b/gi, 'Natapos')
+    .replace(/\bEarn\b/gi, 'Makakuha ng')
+    .replace(/\bFinish\b/gi, 'Tapusin')
+    .replace(/\bAward\b/gi, 'Gantimpala')
+    .replace(/\bbadge\b/gi, 'gantimpala')
     .replace(/\blessons\b/gi, 'mga aralin')
-    .replace(/\blesson\b/gi, 'aralin');
+    .replace(/\blesson\b/gi, 'aralin')
+    .replace(/\bactivities\b/gi, 'mga gawain')
+    .replace(/\bactivity\b/gi, 'gawain')
+    .replace(/\bmissions\b/gi, 'mga misyon')
+    .replace(/\bmission\b/gi, 'misyon')
+    .replace(/\bwriting\b/gi, 'pagsulat')
+    .replace(/\bspeech\b/gi, 'pagbigkas')
+    .replace(/\bquiz\b/gi, 'pagsusulit')
+    .replace(/\bquizzes\b/gi, 'mga pagsusulit')
+    .replace(/\bapproved group task\b/gi, 'naaprubahang gawaing pangkat');
 }
 
 function getVisibleGroups(rawGroups = []) {

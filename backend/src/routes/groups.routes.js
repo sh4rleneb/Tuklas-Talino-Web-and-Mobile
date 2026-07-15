@@ -17,6 +17,7 @@ import {
   GroupTaskCompletion,
   Student,
   Notification,
+  TeacherAssignment,
 } from '../models/index.js';
 
 import { awardXp, awardThresholdBadges } from '../services/progress.service.js';
@@ -90,8 +91,41 @@ const groupTaskUpload = multer({
 router.use(authenticate);
 router.use(requirePasswordChanged);
 
-function teacherOwnsGroup(req, group) {
-  return req.role !== 'teacher' || Number(group?.createdByTeacherId) === Number(req.teacher?.id);
+
+async function getTeacherAssignments(req) {
+  if (req.role === 'admin') return null;
+  if (!req.teacher?.id) return [];
+
+  return TeacherAssignment.findAll({
+    where: {
+      teacherId: req.teacher.id,
+      status: 'active'
+    },
+    order: [
+      ['gradeLevel', 'ASC'],
+      ['section', 'ASC']
+    ]
+  });
+}
+
+
+async function teacherOwnsGroup(req, group) {
+  if (req.role !== 'teacher') {
+    return true;
+  }
+
+  const assignments = await getTeacherAssignments(req);
+
+  if (assignments === null) {
+    return true;
+  }
+
+  return assignments.some(
+    assignment =>
+      Number(assignment.gradeLevel) === Number(group?.gradeLevel) &&
+      String(assignment.section || '').trim() ===
+      String(group?.section || '').trim()
+  );
 }
 
 function validGradeLevel(value) {
@@ -245,7 +279,7 @@ router.patch('/:id', requireRole('teacher', 'admin'), async (req, res, next) => 
       return res.status(404).json({ message: 'Group not found.' });
     }
 
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({ message: 'You can only manage your own groups.' });
     }
 
@@ -320,7 +354,7 @@ router.delete('/:id', requireRole('teacher', 'admin'), async (req, res, next) =>
       return res.status(404).json({ message: 'Group not found.' });
     }
 
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({ message: 'You can only manage your own groups.' });
     }
 
@@ -351,7 +385,7 @@ router.post('/:id/members/bulk', requireRole('teacher', 'admin'), async (req, re
       });
     }
 
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({
         message: 'You can only manage your own groups.'
       });
@@ -694,7 +728,7 @@ router.post('/:id/members', requireRole('teacher', 'admin'), async (req, res, ne
       return res.status(404).json({ message: 'Group not found.' });
     }
 
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({ message: 'You can only manage your own groups.' });
     }
 
@@ -835,7 +869,7 @@ router.post('/:id/members/:studentId/leader', requireRole('teacher', 'admin'), a
       return res.status(404).json({ message: 'Group not found.' });
     }
 
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({ message: 'You can only manage your own groups.' });
     }
 
@@ -909,7 +943,7 @@ router.delete(
         });
       }
 
-      if (!teacherOwnsGroup(req, group)) {
+      if (!(await teacherOwnsGroup(req, group))) {
         return res.status(403).json({
           message: 'You can only manage your own groups.'
         });
@@ -1021,7 +1055,7 @@ router.post('/:id/tasks', requireRole('teacher', 'admin'), async (req, res, next
       });
     }
 
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({
         message: 'You can only manage your own groups.'
       });
@@ -1070,7 +1104,7 @@ router.delete('/tasks/:taskId', requireRole('teacher', 'admin'), async (req, res
       });
     }
 
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({
         message: 'You can only manage your own groups.'
       });
@@ -1321,7 +1355,7 @@ router.post('/tasks/:taskId/completions/:studentId/approve', requireRole('teache
     }
 
     const group = await Group.findByPk(task.groupId);
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({ message: 'You can only review your own groups.' });
     }
 
@@ -1496,7 +1530,7 @@ router.post('/tasks/:taskId/completions/:studentId/return', requireRole('teacher
     }
 
     const group = await Group.findByPk(task.groupId);
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({ message: 'You can only review your own groups.' });
     }
 
@@ -1562,7 +1596,7 @@ router.get('/:id/progress', requireRole('teacher', 'admin'), async (req, res, ne
       });
     }
 
-    if (!teacherOwnsGroup(req, group)) {
+    if (!(await teacherOwnsGroup(req, group))) {
       return res.status(403).json({
         message: 'You can only view your own groups.'
       });

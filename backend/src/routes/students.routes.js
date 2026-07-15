@@ -81,7 +81,7 @@ const CORE_BADGE_DEFINITIONS = [
   {
     code: 'first_lesson',
     name: 'Unang Hakbang',
-    description: 'Natapos ang unang lesson.',
+    description: 'Natapos ang unang aralin.',
     icon: '🌱',
     xpThreshold: null,
     target: 1,
@@ -90,7 +90,7 @@ const CORE_BADGE_DEFINITIONS = [
   {
     code: 'reader_3',
     name: 'Batang Mambabasa',
-    description: 'Makatapos ng 3 lessons.',
+    description: 'Makatapos ng 3 aralin.',
     icon: '📖',
     xpThreshold: null,
     target: 3,
@@ -108,7 +108,7 @@ const CORE_BADGE_DEFINITIONS = [
   {
     code: 'writing_3',
     name: 'Bituin sa Pagsagot',
-    description: 'Complete 3 Punan ang Patlang or writing activities.',
+    description: 'Makatapos ng 3 gawaing Punan ang Patlang o Pagsulat.',
     icon: '✍️',
     xpThreshold: null,
     target: 3,
@@ -117,7 +117,7 @@ const CORE_BADGE_DEFINITIONS = [
   {
     code: 'speech_3',
     name: 'Boses Bituin',
-    description: 'Magsumite ng 3 magkakaibang speech activities.',
+    description: 'Magsumite ng 3 magkakaibang gawaing Pagbigkas.',
     icon: '🎤',
     xpThreshold: null,
     target: 3,
@@ -126,7 +126,7 @@ const CORE_BADGE_DEFINITIONS = [
   {
     code: 'group_1',
     name: 'Kaagapay sa Gawain',
-    description: 'Makatapos ng 1 approved group task.',
+    description: 'Makatapos ng 1 naaprubahang gawaing pangkat.',
     icon: '🤝',
     xpThreshold: null,
     target: 1,
@@ -793,6 +793,45 @@ router.post(
             'You can only create student accounts for your assigned grade and section.'
         });
       }
+    }
+
+    const normalizedStudentName = String(body.name || '')
+      .normalize('NFKC')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+    const existingStudentsWithSameName =
+      await Student.findAll({
+        attributes: ['id', 'name', 'gradeLevel', 'section', 'deletedAt'],
+        paranoid: false,
+      });
+
+    const activeDuplicateStudent =
+      existingStudentsWithSameName.find((student) => {
+        const studentName = String(student.name || '')
+          .normalize('NFKC')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase();
+
+        return (
+          studentName === normalizedStudentName &&
+          !student.deletedAt
+        );
+      });
+
+    if (activeDuplicateStudent) {
+      return res.status(409).json({
+        message: 'A student account with this name already exists.',
+        duplicate: {
+          accountType: 'student',
+          id: activeDuplicateStudent.id,
+          name: activeDuplicateStudent.name,
+          gradeLevel: activeDuplicateStudent.gradeLevel,
+          section: activeDuplicateStudent.section,
+        },
+      });
     }
 
     const duplicateAccount =

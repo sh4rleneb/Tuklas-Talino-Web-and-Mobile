@@ -12,6 +12,7 @@ export default function BumalikButton({
   textStyle,
   label = '← Bumalik',
   accessibilityLabel = 'Bumalik',
+  tone = 'green',
 }) {
   return (
     <TouchableOpacity
@@ -22,11 +23,13 @@ export default function BumalikButton({
       onPress={onPress}
       style={[
         styles.button,
+        tone === 'blue' && styles.blueButton,
+        tone === 'violet' && styles.violetButton,
         style,
         disabled && styles.disabled,
       ]}
     >
-      <Text style={[styles.text, textStyle]}>
+      <Text style={[styles.text, tone === 'blue' && styles.blueText, tone === 'violet' && styles.violetText, textStyle]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -65,4 +68,22 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.6,
   },
+  blueButton: {
+    borderColor: '#60A5FA',
+    shadowColor: '#2563EB',
+  },
+  blueText: {
+    color: '#2563EB',
+  },
+
+
+  violetButton: {
+    borderColor: '#C4B5FD',
+    shadowColor: '#7C3AED',
+  },
+
+  violetText: {
+    color: '#7C3AED',
+  },
+
 });

@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const DEFAULT_SENTENCE_QUESTIONS = [
   {
@@ -138,6 +139,14 @@ function SentenceBuilderGame({
   onSubmit,
   onBack,
 }) {
+  const navigation = useNavigation();
+
+  const handleBackToMissions = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    }
+  };
+
   const questions = useMemo(
     () => getSentenceQuestions(mission),
     [mission]
@@ -276,7 +285,6 @@ function SentenceBuilderGame({
                   styles.slot,
                   selected && styles.slotFilled,
                 ]}
-                onPress={() => selected && handleSlotPress(selected.id)}
               >
                 <Text
                   style={[
@@ -346,6 +354,7 @@ function SentenceBuilderGame({
         <TouchableOpacity
           activeOpacity={0.9}
           style={styles.backButton}
+          onPress={handleBackToMissions}
           onPress={onBack}
         >
           <Text style={styles.backButtonText}>← Bumalik sa mga Misyon</Text>
@@ -527,36 +536,34 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   clearButton: {
-    backgroundColor: '#B9C1CC',
-    shadowColor: '#6C7480',
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    elevation: 2,
+    backgroundColor: '#F97316',
+    borderWidth: 2,
+    borderColor: '#EA580C',
+    shadowColor: '#F97316',
+    shadowOpacity: 0.32,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 7,
   },
   clearButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
     fontWeight: '900',
+    fontSize: 14,
   },
   checkButton: {
-    backgroundColor: '#74D79E',
-    shadowColor: '#43AA70',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    elevation: 3,
+    backgroundColor: '#22C55E',
+    borderWidth: 2,
+    borderColor: '#16A34A',
+    shadowColor: '#22C55E',
+    shadowOpacity: 0.32,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 7,
   },
   checkButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
     fontWeight: '900',
+    fontSize: 14,
   },
   disabledButton: {
     opacity: 0.7,
@@ -574,26 +581,27 @@ const styles = StyleSheet.create({
     color: '#159A55',
   },
   backButton: {
-    alignSelf: 'flex-start',
-    borderWidth: 2,
-    borderColor: '#9EEBB8',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+
+    marginTop: 24,
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#8EDFAE',
-    shadowOpacity: 0.22,
-    shadowRadius: 4,
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    elevation: 2,
+    borderWidth: 2,
+    borderColor: '#22C55E',
+    shadowColor: '#16A34A',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   backButtonText: {
-    color: '#20A15C',
-    fontSize: 14,
+
+    color: '#16A34A',
     fontWeight: '900',
+    fontSize: 16,
   },
 });
 

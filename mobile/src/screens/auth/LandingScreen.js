@@ -527,9 +527,11 @@ const styles = StyleSheet.create({
   },
 
   teacherCard: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#60A5FA',
+    shadowColor: '#2563EB',
     width: '100%',
 
-    backgroundColor: '#EFF6FF',
 
     borderRadius: 30,
 
@@ -537,7 +539,6 @@ const styles = StyleSheet.create({
 
     alignItems: 'center',
 
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -550,9 +551,11 @@ const styles = StyleSheet.create({
   },
 
   adminCard: {
+    backgroundColor: '#F5F3FF',
+    borderColor: '#A78BFA',
+    shadowColor: '#7C3AED',
     width: '100%',
 
-    backgroundColor: '#FAF5FF',
 
     borderRadius: 30,
 
@@ -560,7 +563,6 @@ const styles = StyleSheet.create({
 
     alignItems: 'center',
 
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -590,19 +592,19 @@ const styles = StyleSheet.create({
   },
 
   teacherTitle: {
+    color: '#2563EB',
     fontSize: 38,
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#2563EB',
   },
 
   adminTitle: {
+    color: '#7C3AED',
     fontSize: 38,
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#9333EA',
   },
 
   cardDescription: {
@@ -642,6 +644,8 @@ const styles = StyleSheet.create({
 
   teacherButton: {
     backgroundColor: '#2563EB',
+    borderColor: '#1D4ED8',
+    shadowColor: '#2563EB',
 
     width: '92%',
     alignSelf: 'center',
@@ -656,7 +660,9 @@ const styles = StyleSheet.create({
   },
 
   adminButton: {
-    backgroundColor: '#9333EA',
+    backgroundColor: '#7C3AED',
+    borderColor: '#6D28D9',
+    shadowColor: '#7C3AED',
 
     width: '92%',
     alignSelf: 'center',

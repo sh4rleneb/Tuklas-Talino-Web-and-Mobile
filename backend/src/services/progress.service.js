@@ -30,7 +30,7 @@ export const CORE_BADGE_DEFINITIONS = [
   {
     code: 'first_lesson',
     name: 'Unang Hakbang',
-    description: 'Natapos ang unang lesson.',
+    description: 'Natapos ang unang aralin.',
     icon: '🌱',
     xpThreshold: null,
     metric: 'completedLessons',
@@ -39,7 +39,7 @@ export const CORE_BADGE_DEFINITIONS = [
   {
     code: 'reader_3',
     name: 'Batang Mambabasa',
-    description: 'Makatapos ng 3 lessons.',
+    description: 'Makatapos ng 3 aralin.',
     icon: '📖',
     xpThreshold: null,
     metric: 'completedLessons',
@@ -57,7 +57,7 @@ export const CORE_BADGE_DEFINITIONS = [
   {
     code: 'writing_3',
     name: 'Bituin sa Pagsagot',
-    description: 'Complete 3 Punan ang Patlang or writing activities.',
+    description: 'Makatapos ng 3 gawaing Punan ang Patlang o Pagsulat.',
     icon: '✍️',
     xpThreshold: null,
     metric: 'writingSubmissions',
@@ -66,7 +66,7 @@ export const CORE_BADGE_DEFINITIONS = [
   {
     code: 'speech_3',
     name: 'Boses Bituin',
-    description: 'Magsumite ng 3 magkakaibang speech activities.',
+    description: 'Magsumite ng 3 magkakaibang gawaing Pagbigkas.',
     icon: '🎤',
     xpThreshold: null,
     metric: 'speechAttempts',
@@ -75,7 +75,7 @@ export const CORE_BADGE_DEFINITIONS = [
   {
     code: 'group_1',
     name: 'Kaagapay sa Gawain',
-    description: 'Makatapos ng 1 approved group task.',
+    description: 'Makatapos ng 1 naaprubahang gawaing pangkat.',
     icon: '🤝',
     xpThreshold: null,
     metric: 'approvedGroupTasks',
@@ -272,7 +272,7 @@ function normalizeBadgeResponse(badge = {}) {
       ...plain,
       code: 'writing_3',
       name: 'Bituin sa Pagsagot',
-      description: 'Complete 3 Punan ang Patlang or writing activities.',
+      description: 'Makatapos ng 3 gawaing Punan ang Patlang o Pagsulat.',
       icon: plain?.icon || '✍️'
     };
   }
@@ -282,7 +282,7 @@ function normalizeBadgeResponse(badge = {}) {
       ...plain,
       code: 'reader_3',
       name: 'Batang Mambabasa',
-      description: 'Makatapos ng 3 lessons.',
+      description: 'Makatapos ng 3 aralin.',
       icon: plain?.icon || '📖'
     };
   }

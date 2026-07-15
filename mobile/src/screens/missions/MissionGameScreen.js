@@ -417,14 +417,179 @@ function getMissionAttemptNoForQuestion(source = {}) {
   );
 }
 
+
+const GRADE_MISSION_QUESTION_POOLS = Object.freeze({
+  1: {
+    'word-match': [
+      { sample: 'aso ↔ dog', prompt: 'Itugma ang salita: aso', options: ['dog', 'cat', 'fish'], correct: 'dog' },
+      { sample: 'bahay ↔ house', prompt: 'Itugma ang salita: bahay', options: ['tree', 'house', 'river'], correct: 'house' },
+      { sample: 'araw ↔ sun', prompt: 'Itugma ang salita: araw', options: ['moon', 'sun', 'rain'], correct: 'sun' },
+    ],
+    'letter-pop': [
+      { sample: 'pu + ___ = puno', prompt: 'pu + ___ = 🌳', prefix: 'pu', resultEmoji: '🌳', resultWord: 'puno', clue: 'Halamang may katawan, sanga, at dahon.', options: ['no', 'la', 'sa'], correct: 'no', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+      { sample: 'ba + ___ = bata', prompt: 'ba + ___ = 👧', prefix: 'ba', resultEmoji: '👧', resultWord: 'bata', clue: 'Munting tao na nag-aaral at naglalaro.', options: ['ta', 'ka', 'ma'], correct: 'ta', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+      { sample: 'a + ___ = aso', prompt: 'a + ___ = 🐶', prefix: 'a', resultEmoji: '🐶', resultWord: 'aso', clue: 'Hayop na tumatahol.', options: ['so', 'no', 'to'], correct: 'so', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+    ],
+    'picture-guess': [
+      { sample: '🐱 → pusa', prompt: 'Ano ang nasa larawan? 🐱', imageEmoji: '🐱', options: ['pusa', 'aso', 'ibon'], correct: 'pusa' },
+      { sample: '🐶 → aso', prompt: 'Ano ang nasa larawan? 🐶', imageEmoji: '🐶', options: ['isda', 'aso', 'pusa'], correct: 'aso' },
+      { sample: '🐟 → isda', prompt: 'Ano ang nasa larawan? 🐟', imageEmoji: '🐟', options: ['ibon', 'isda', 'baka'], correct: 'isda' },
+    ],
+    'sentence-builder': [
+      { sample: 'Ako ay bata.', prompt: 'Buuin ang pangungusap: Ako ay bata.', options: ['Ako', 'ay', 'bata'], choices: ['Ako', 'ay', 'bata'], correct: 'Ako ay bata', answer: 'Ako ay bata' },
+      { sample: 'Si Ana ay masaya.', prompt: 'Buuin ang pangungusap: Si Ana ay masaya.', options: ['Si', 'Ana', 'ay', 'masaya'], choices: ['Si', 'Ana', 'ay', 'masaya'], correct: 'Si Ana ay masaya', answer: 'Si Ana ay masaya' },
+      { sample: 'May bola si Ben.', prompt: 'Buuin ang pangungusap: May bola si Ben.', options: ['May', 'bola', 'si', 'Ben'], choices: ['May', 'bola', 'si', 'Ben'], correct: 'May bola si Ben', answer: 'May bola si Ben' },
+    ],
+    'story-quest': [
+      { sample: 'Si Lito ay nagbasa.', prompt: 'Ano ang ginawa ni Lito?', story: 'Si Lito ay nagbasa ng aklat sa silid.', options: ['Naglaro', 'Nagbasa', 'Kumain'], correct: 'Nagbasa' },
+      { sample: 'Si Maya ay nagtanim.', prompt: 'Ano ang itinanim ni Maya?', story: 'Si Maya ay nagtanim ng puno sa bakuran.', options: ['Bulaklak', 'Puno', 'Gulay'], correct: 'Puno' },
+      { sample: 'Uminom si Nena.', prompt: 'Ano ang ininom ni Nena?', story: 'Pagkatapos maglaro, uminom ng tubig si Nena.', options: ['Gatas', 'Tubig', 'Katas'], correct: 'Tubig' },
+    ],
+  },
+
+  2: {
+    'word-match': [
+      { sample: 'masaya ↔ happy', prompt: 'Itugma ang salita: masaya', options: ['sad', 'happy', 'angry'], correct: 'happy' },
+      { sample: 'mabilis ↔ fast', prompt: 'Itugma ang salita: mabilis', options: ['slow', 'fast', 'quiet'], correct: 'fast' },
+      { sample: 'malinis ↔ clean', prompt: 'Itugma ang salita: malinis', options: ['clean', 'dirty', 'small'], correct: 'clean' },
+    ],
+    'letter-pop': [
+      { sample: 'ma + ___ = malaki', prompt: 'ma + ___ = malaki', prefix: 'ma', resultEmoji: '📏', resultWord: 'malaki', clue: 'Hindi maliit.', options: ['laki', 'saya', 'linis'], correct: 'laki', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+      { sample: 'ma + ___ = masaya', prompt: 'ma + ___ = masaya', prefix: 'ma', resultEmoji: '😊', resultWord: 'masaya', clue: 'Nakakaramdam ng tuwa.', options: ['saya', 'laki', 'ganda'], correct: 'saya', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+      { sample: 'ma + ___ = mabait', prompt: 'ma + ___ = mabait', prefix: 'ma', resultEmoji: '🤝', resultWord: 'mabait', clue: 'Magalang at tumutulong.', options: ['bait', 'bilis', 'tamis'], correct: 'bait', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+    ],
+    'picture-guess': [
+      { sample: '📚 → aklat', prompt: 'Ano ang nasa larawan? 📚', imageEmoji: '📚', options: ['aklat', 'lapis', 'bag'], correct: 'aklat' },
+      { sample: '✏️ → lapis', prompt: 'Ano ang nasa larawan? ✏️', imageEmoji: '✏️', options: ['papel', 'lapis', 'aklat'], correct: 'lapis' },
+      { sample: '🎒 → bag', prompt: 'Ano ang nasa larawan? 🎒', imageEmoji: '🎒', options: ['mesa', 'bag', 'upuan'], correct: 'bag' },
+    ],
+    'sentence-builder': [
+      { sample: 'Ang bata ay nagbabasa.', prompt: 'Buuin ang pangungusap: Ang bata ay nagbabasa.', options: ['Ang', 'bata', 'ay', 'nagbabasa'], choices: ['Ang', 'bata', 'ay', 'nagbabasa'], correct: 'Ang bata ay nagbabasa', answer: 'Ang bata ay nagbabasa' },
+      { sample: 'Masaya ang aking pamilya.', prompt: 'Buuin ang pangungusap: Masaya ang aking pamilya.', options: ['Masaya', 'ang', 'aking', 'pamilya'], choices: ['Masaya', 'ang', 'aking', 'pamilya'], correct: 'Masaya ang aking pamilya', answer: 'Masaya ang aking pamilya' },
+      { sample: 'Naglalaro kami sa parke.', prompt: 'Buuin ang pangungusap: Naglalaro kami sa parke.', options: ['Naglalaro', 'kami', 'sa', 'parke'], choices: ['Naglalaro', 'kami', 'sa', 'parke'], correct: 'Naglalaro kami sa parke', answer: 'Naglalaro kami sa parke' },
+    ],
+    'story-quest': [
+      { sample: 'Naglinis si Rosa.', prompt: 'Bakit naglinis si Rosa?', story: 'Naglinis si Rosa ng silid upang maging maayos ito.', options: ['Para maging maayos', 'Para maglaro', 'Para matulog'], correct: 'Para maging maayos' },
+      { sample: 'Nagtanim ang magkaklase.', prompt: 'Ano ang itinanim nila?', story: 'Nagtanim ng gulay ang magkaklase sa hardin.', options: ['Gulay', 'Laruan', 'Bato'], correct: 'Gulay' },
+      { sample: 'Maaga pumasok si Leo.', prompt: 'Kailan pumasok si Leo?', story: 'Maagang pumasok si Leo upang hindi mahuli sa klase.', options: ['Maaga', 'Gabi', 'Tanghali'], correct: 'Maaga' },
+    ],
+  },
+
+  3: {
+    'word-match': [
+      { sample: 'masipag ↔ diligent', prompt: 'Itugma ang salita: masipag', options: ['diligent', 'lazy', 'noisy'], correct: 'diligent' },
+      { sample: 'matapat ↔ honest', prompt: 'Itugma ang salita: matapat', options: ['honest', 'afraid', 'wide'], correct: 'honest' },
+      { sample: 'maingat ↔ careful', prompt: 'Itugma ang salita: maingat', options: ['careful', 'careless', 'fast'], correct: 'careful' },
+    ],
+    'picture-guess': [
+      { sample: '🌾 → palayan', prompt: 'Ano ang ipinapakita ng larawan? 🌾', imageEmoji: '🌾', options: ['palayan', 'dagat', 'bundok'], correct: 'palayan' },
+      { sample: '🏞️ → ilog', prompt: 'Ano ang anyong tubig na ito? 🏞️', imageEmoji: '🏞️', options: ['ilog', 'kalsada', 'paaralan'], correct: 'ilog' },
+      { sample: '🏫 → paaralan', prompt: 'Ano ang gusaling ito? 🏫', imageEmoji: '🏫', options: ['paaralan', 'palengke', 'ospital'], correct: 'paaralan' },
+    ],
+    'sentence-builder': [
+      { sample: 'Nag-aaral nang mabuti ang mga bata.', prompt: 'Buuin ang pangungusap.', options: ['Nag-aaral', 'nang', 'mabuti', 'ang', 'mga', 'bata'], choices: ['Nag-aaral', 'nang', 'mabuti', 'ang', 'mga', 'bata'], correct: 'Nag-aaral nang mabuti ang mga bata', answer: 'Nag-aaral nang mabuti ang mga bata' },
+      { sample: 'Tumutulong kami sa paglilinis ng silid.', prompt: 'Buuin ang pangungusap.', options: ['Tumutulong', 'kami', 'sa', 'paglilinis', 'ng', 'silid'], choices: ['Tumutulong', 'kami', 'sa', 'paglilinis', 'ng', 'silid'], correct: 'Tumutulong kami sa paglilinis ng silid', answer: 'Tumutulong kami sa paglilinis ng silid' },
+      { sample: 'Binasa ni Lara ang maikling kuwento.', prompt: 'Buuin ang pangungusap.', options: ['Binasa', 'ni', 'Lara', 'ang', 'maikling', 'kuwento'], choices: ['Binasa', 'ni', 'Lara', 'ang', 'maikling', 'kuwento'], correct: 'Binasa ni Lara ang maikling kuwento', answer: 'Binasa ni Lara ang maikling kuwento' },
+    ],
+    'story-quest': [
+      { sample: 'Nagtipid ng tubig.', prompt: 'Ano ang aral ng kuwento?', story: 'Isinara ni Mila ang gripo matapos gamitin upang hindi masayang ang tubig.', options: ['Magtipid ng tubig', 'Maglaro sa ulan', 'Iwanang bukas ang gripo'], correct: 'Magtipid ng tubig' },
+      { sample: 'Tumulong sa kaklase.', prompt: 'Ano ang ginawa ni Jun?', story: 'Tinulungan ni Jun ang kaklase niyang nahulog ang mga aklat.', options: ['Tumulong', 'Tumakbo', 'Nagtago'], correct: 'Tumulong' },
+      { sample: 'Nagbasa bago matulog.', prompt: 'Kailan nagbasa si Ana?', story: 'Bago matulog, nagbasa si Ana ng alamat.', options: ['Bago matulog', 'Habang kumakain', 'Pagkatapos maligo'], correct: 'Bago matulog' },
+    ],
+  },
+
+  4: {
+    'word-match': [
+      { sample: 'pagkakaisa ↔ unity', prompt: 'Itugma ang salita: pagkakaisa', options: ['unity', 'argument', 'silence'], correct: 'unity' },
+      { sample: 'pananagutan ↔ responsibility', prompt: 'Itugma ang salita: pananagutan', options: ['responsibility', 'reward', 'mistake'], correct: 'responsibility' },
+      { sample: 'paggalang ↔ respect', prompt: 'Itugma ang salita: paggalang', options: ['respect', 'fear', 'noise'], correct: 'respect' },
+    ],
+    'picture-guess': [
+      { sample: '♻️ → pagre-recycle', prompt: 'Anong gawain ang ipinapakita? ♻️', imageEmoji: '♻️', options: ['pagre-recycle', 'pagtatapon', 'pagputol'], correct: 'pagre-recycle' },
+      { sample: '🧹 → paglilinis', prompt: 'Anong gawain ang ipinapakita? 🧹', imageEmoji: '🧹', options: ['pagluluto', 'paglilinis', 'pagsasayaw'], correct: 'paglilinis' },
+      { sample: '🤝 → pagtutulungan', prompt: 'Anong pagpapahalaga ang ipinapakita? 🤝', imageEmoji: '🤝', options: ['pagtutulungan', 'pag-iisa', 'pag-aaway'], correct: 'pagtutulungan' },
+    ],
+    'sentence-builder': [
+      { sample: 'Ang bawat mamamayan ay may pananagutan sa komunidad.', prompt: 'Buuin ang pangungusap.', options: ['Ang', 'bawat', 'mamamayan', 'ay', 'may', 'pananagutan', 'sa', 'komunidad'], choices: ['Ang', 'bawat', 'mamamayan', 'ay', 'may', 'pananagutan', 'sa', 'komunidad'], correct: 'Ang bawat mamamayan ay may pananagutan sa komunidad', answer: 'Ang bawat mamamayan ay may pananagutan sa komunidad' },
+      { sample: 'Mahalaga ang pagkakaisa sa panahon ng sakuna.', prompt: 'Buuin ang pangungusap.', options: ['Mahalaga', 'ang', 'pagkakaisa', 'sa', 'panahon', 'ng', 'sakuna'], choices: ['Mahalaga', 'ang', 'pagkakaisa', 'sa', 'panahon', 'ng', 'sakuna'], correct: 'Mahalaga ang pagkakaisa sa panahon ng sakuna', answer: 'Mahalaga ang pagkakaisa sa panahon ng sakuna' },
+      { sample: 'Iginagalang natin ang karapatan ng kapwa.', prompt: 'Buuin ang pangungusap.', options: ['Iginagalang', 'natin', 'ang', 'karapatan', 'ng', 'kapwa'], choices: ['Iginagalang', 'natin', 'ang', 'karapatan', 'ng', 'kapwa'], correct: 'Iginagalang natin ang karapatan ng kapwa', answer: 'Iginagalang natin ang karapatan ng kapwa' },
+    ],
+    'story-quest': [
+      { sample: 'Bayanihan sa barangay.', prompt: 'Ano ang ipinakita ng mga tao?', story: 'Nagtulungan ang mga tao sa barangay upang linisin ang kanal bago dumating ang malakas na ulan.', options: ['Bayanihan', 'Katamaran', 'Pag-iwas'], correct: 'Bayanihan' },
+      { sample: 'Paggalang sa matanda.', prompt: 'Anong pagpapahalaga ang ipinakita?', story: 'Tumayo si Carlo upang paupuin ang matandang pasahero sa jeep.', options: ['Paggalang', 'Pagmamataas', 'Pagkalimot'], correct: 'Paggalang' },
+      { sample: 'Pananagutan sa gawain.', prompt: 'Bakit bumalik si Lea?', story: 'Bumalik si Lea sa silid upang ayusin ang mga ginamit niyang kagamitan.', options: ['May pananagutan siya', 'Nagalit siya', 'Naglaro siya'], correct: 'May pananagutan siya' },
+    ],
+  },
+
+  5: {
+    'word-match': [
+      { sample: 'paninindigan ↔ conviction', prompt: 'Itugma ang salita: paninindigan', options: ['conviction', 'confusion', 'celebration'], correct: 'conviction' },
+      { sample: 'mapanuri ↔ critical', prompt: 'Itugma ang salita: mapanuri', options: ['critical', 'careless', 'ordinary'], correct: 'critical' },
+      { sample: 'makabuluhan ↔ meaningful', prompt: 'Itugma ang salita: makabuluhan', options: ['meaningful', 'temporary', 'silent'], correct: 'meaningful' },
+    ],
+    'picture-guess': [
+      { sample: '📰 → balita', prompt: 'Anong uri ng teksto ang ipinapakita? 📰', imageEmoji: '📰', options: ['balita', 'alamat', 'tula'], correct: 'balita' },
+      { sample: '📢 → patalastas', prompt: 'Ano ang ipinapakita ng larawan? 📢', imageEmoji: '📢', options: ['patalastas', 'liham', 'talaarawan'], correct: 'patalastas' },
+      { sample: '📊 → datos', prompt: 'Ano ang ipinapakita ng larawan? 📊', imageEmoji: '📊', options: ['datos', 'laruan', 'awit'], correct: 'datos' },
+    ],
+    'sentence-builder': [
+      { sample: 'Sinuri ng mag-aaral ang mahahalagang detalye sa balita.', prompt: 'Buuin ang pangungusap.', options: ['Sinuri', 'ng', 'mag-aaral', 'ang', 'mahahalagang', 'detalye', 'sa', 'balita'], choices: ['Sinuri', 'ng', 'mag-aaral', 'ang', 'mahahalagang', 'detalye', 'sa', 'balita'], correct: 'Sinuri ng mag-aaral ang mahahalagang detalye sa balita', answer: 'Sinuri ng mag-aaral ang mahahalagang detalye sa balita' },
+      { sample: 'May paninindigan ang batang marunong mangatwiran.', prompt: 'Buuin ang pangungusap.', options: ['May', 'paninindigan', 'ang', 'batang', 'marunong', 'mangatwiran'], choices: ['May', 'paninindigan', 'ang', 'batang', 'marunong', 'mangatwiran'], correct: 'May paninindigan ang batang marunong mangatwiran', answer: 'May paninindigan ang batang marunong mangatwiran' },
+      { sample: 'Makabuluhan ang tekstong nagbibigay ng wastong impormasyon.', prompt: 'Buuin ang pangungusap.', options: ['Makabuluhan', 'ang', 'tekstong', 'nagbibigay', 'ng', 'wastong', 'impormasyon'], choices: ['Makabuluhan', 'ang', 'tekstong', 'nagbibigay', 'ng', 'wastong', 'impormasyon'], correct: 'Makabuluhan ang tekstong nagbibigay ng wastong impormasyon', answer: 'Makabuluhan ang tekstong nagbibigay ng wastong impormasyon' },
+    ],
+    'story-quest': [
+      { sample: 'Pagsusuri ng balita.', prompt: 'Ano ang dapat gawin bago maniwala sa balita?', story: 'Binasa ni Marco ang balita at inalam muna kung mapagkakatiwalaan ang pinagmulan nito.', options: ['Suriin ang pinagmulan', 'Ibahagi agad', 'Balewalain lahat'], correct: 'Suriin ang pinagmulan' },
+      { sample: 'Patalastas.', prompt: 'Ano ang layunin ng patalastas?', story: 'Gumamit ang patalastas ng makukulay na larawan upang hikayatin ang mga mamimili.', options: ['Manghikayat', 'Magtago ng impormasyon', 'Magbigay ng pagsusulit'], correct: 'Manghikayat' },
+      { sample: 'Opinyon at katotohanan.', prompt: 'Alin ang dapat paghiwalayin sa pagbasa?', story: 'Ipinaliwanag ng guro na mahalagang pag-iba-ibahin ang katotohanan at opinyon sa teksto.', options: ['Katotohanan at opinyon', 'Pamagat at kulay', 'Papel at lapis'], correct: 'Katotohanan at opinyon' },
+    ],
+  },
+
+  6: {
+    'word-match': [
+      { sample: 'pananaw ↔ perspective', prompt: 'Itugma ang salita: pananaw', options: ['perspective', 'prediction', 'permission'], correct: 'perspective' },
+      { sample: 'implikasyon ↔ implication', prompt: 'Itugma ang salita: implikasyon', options: ['implication', 'instruction', 'imitation'], correct: 'implication' },
+      { sample: 'pangangatwiran ↔ reasoning', prompt: 'Itugma ang salita: pangangatwiran', options: ['reasoning', 'guessing', 'drawing'], correct: 'reasoning' },
+    ],
+    'picture-guess': [
+      { sample: '⚖️ → katarungan', prompt: 'Anong konsepto ang ipinapakita? ⚖️', imageEmoji: '⚖️', options: ['katarungan', 'kasiyahan', 'katahimikan'], correct: 'katarungan' },
+      { sample: '🗣️ → talakayan', prompt: 'Anong gawain ang ipinapakita? 🗣️', imageEmoji: '🗣️', options: ['talakayan', 'pagtulog', 'pagpipinta'], correct: 'talakayan' },
+      { sample: '🧠 → pagsusuri', prompt: 'Anong kasanayan ang ipinapakita? 🧠', imageEmoji: '🧠', options: ['pagsusuri', 'paghula', 'pagtakbo'], correct: 'pagsusuri' },
+    ],
+    'sentence-builder': [
+      { sample: 'Mahusay na ipinahayag ng pangkat ang kanilang pananaw.', prompt: 'Buuin ang pangungusap.', options: ['Mahusay', 'na', 'ipinahayag', 'ng', 'pangkat', 'ang', 'kanilang', 'pananaw'], choices: ['Mahusay', 'na', 'ipinahayag', 'ng', 'pangkat', 'ang', 'kanilang', 'pananaw'], correct: 'Mahusay na ipinahayag ng pangkat ang kanilang pananaw', answer: 'Mahusay na ipinahayag ng pangkat ang kanilang pananaw' },
+      { sample: 'Mahalagang ipaliwanag ang ebidensiya sa bawat pangangatwiran.', prompt: 'Buuin ang pangungusap.', options: ['Mahalagang', 'ipaliwanag', 'ang', 'ebidensiya', 'sa', 'bawat', 'pangangatwiran'], choices: ['Mahalagang', 'ipaliwanag', 'ang', 'ebidensiya', 'sa', 'bawat', 'pangangatwiran'], correct: 'Mahalagang ipaliwanag ang ebidensiya sa bawat pangangatwiran', answer: 'Mahalagang ipaliwanag ang ebidensiya sa bawat pangangatwiran' },
+      { sample: 'May implikasyon sa lipunan ang maling impormasyon.', prompt: 'Buuin ang pangungusap.', options: ['May', 'implikasyon', 'sa', 'lipunan', 'ang', 'maling', 'impormasyon'], choices: ['May', 'implikasyon', 'sa', 'lipunan', 'ang', 'maling', 'impormasyon'], correct: 'May implikasyon sa lipunan ang maling impormasyon', answer: 'May implikasyon sa lipunan ang maling impormasyon' },
+    ],
+    'story-quest': [
+      { sample: 'Pananaw ng tauhan.', prompt: 'Ano ang kailangang unawain sa teksto?', story: 'Sa talakayan, inihambing ng mga mag-aaral ang magkaibang pananaw ng dalawang tauhan.', options: ['Pananaw ng tauhan', 'Kulay ng papel', 'Bilang ng pahina'], correct: 'Pananaw ng tauhan' },
+      { sample: 'Ebidensiya sa argumento.', prompt: 'Ano ang nagpapalakas sa pangangatwiran?', story: 'Gumamit si Nia ng datos at halimbawa upang patunayan ang kaniyang sagot.', options: ['Ebidensiya', 'Hula', 'Palakasan ng boses'], correct: 'Ebidensiya' },
+      { sample: 'Implikasyon ng impormasyon.', prompt: 'Ano ang dapat isipin matapos basahin?', story: 'Matapos basahin ang artikulo, tinalakay ng klase ang maaaring epekto nito sa komunidad.', options: ['Implikasyon', 'Petsa lamang', 'Larawan lamang'], correct: 'Implikasyon' },
+    ],
+  },
+});
+
+function getMissionQuestionPoolForGrade(missionId, gradeLevel = 1) {
+  const key = normalizeMissionQuestionKey(missionId);
+  const grade = Math.max(1, Math.min(6, Number(String(gradeLevel).match(/\d+/)?.[0] || 1)));
+  const gradePool = GRADE_MISSION_QUESTION_POOLS[grade]?.[key];
+
+  if (Array.isArray(gradePool) && gradePool.length) {
+    return gradePool;
+  }
+
+  return MISSION_QUESTION_POOLS[key] || [];
+}
+
+
 function buildMissionQuestionSetForAttempt(
   missionId,
   attemptNo = 1,
   sessionSeed = '',
-  limit = 3
+  limit = 3,
+  gradeLevel = 1
 ) {
   const key = normalizeMissionQuestionKey(missionId);
-  const pool = MISSION_QUESTION_POOLS[key] || [];
+  const pool = getMissionQuestionPoolForGrade(key, gradeLevel);
 
   if (!pool.length) {
     return [];
@@ -466,14 +631,16 @@ function buildMissionQuestionSetForAttempt(
 function pickMissionQuestionForAttempt(
   missionId,
   attemptNo = 1,
-  sessionSeed = ''
+  sessionSeed = '',
+  gradeLevel = 1
 ) {
   const key = normalizeMissionQuestionKey(missionId);
   const attemptQuestions = buildMissionQuestionSetForAttempt(
     key,
     attemptNo,
     sessionSeed,
-    3
+    3,
+    gradeLevel
   );
 
   if (!attemptQuestions.length) {
@@ -590,6 +757,31 @@ const DEMOS = {
 export default function MissionGameScreen({ navigation, route }) {
   const missionId = route?.params?.missionId;
   const missionApiId = route?.params?.missionApiId || missionId;
+
+  const exitWhenMissionAttemptsRunOut = (completionData = {}) => {
+    const attemptsUsed = Number(
+      completionData.attemptsUsed ??
+      completionData.attemptNo ??
+      missionAttemptNo
+    );
+
+    const attemptLimit = Number(
+      completionData.maxAttempts ??
+      MAX_MISSION_ATTEMPTS ??
+      5
+    );
+
+    if (
+      Number.isFinite(attemptsUsed) &&
+      Number.isFinite(attemptLimit) &&
+      attemptsUsed >= attemptLimit
+    ) {
+      navigation.goBack();
+      return true;
+    }
+
+    return false;
+  };
   const routeMission = route?.params?.mission || {};
   const gradeLevel = Number(route?.params?.gradeLevel ?? 1);
   const sessionQuestionSeed = useMemo(
@@ -618,7 +810,8 @@ export default function MissionGameScreen({ navigation, route }) {
       const randomQuestion = pickMissionQuestionForAttempt(
         missionId || fallback.id,
         attemptNo,
-        sessionQuestionSeed
+        sessionQuestionSeed,
+        gradeLevel
       );
 
       return {
@@ -694,7 +887,7 @@ export default function MissionGameScreen({ navigation, route }) {
         questionPoolAttemptNo: randomQuestion.questionPoolAttemptNo || attemptNo,
       };
     },
-    [missionId, missionApiId, routeMission, sessionQuestionSeed, missionAttemptNo]
+    [missionId, missionApiId, routeMission, sessionQuestionSeed, missionAttemptNo, gradeLevel]
   );
 
   const mission = useMemo(() => {
@@ -724,6 +917,7 @@ export default function MissionGameScreen({ navigation, route }) {
   const [badgePopup, setBadgePopup] = useState(null);
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
+  const recordingBusyRef = useRef(false);
   const [recording, setRecording] = useState(false);
   const [recordingUri, setRecordingUri] = useState('');
   const [soundStatus, setSoundStatus] = useState('');
@@ -737,8 +931,8 @@ export default function MissionGameScreen({ navigation, route }) {
   const achievement =
     attempts <= 1
       ? {
-          title: '🏅 Mahusay na Manlalaro',
-          message: 'Nasagot nang tama sa unang pagsubok!',
+          title: '',
+          message: '',
         }
       : attempts === 2
       ? {
@@ -773,10 +967,41 @@ export default function MissionGameScreen({ navigation, route }) {
     });
   };
 
+  const cleanupSoundAndSayRecording = async () => {
+    const activeRecording = recordingRef.current;
+
+    recordingRef.current = null;
+    setRecording(false);
+
+    if (!activeRecording) {
+      return;
+    }
+
+    try {
+      await activeRecording.stopAndUnloadAsync();
+    } catch (err) {
+      try {
+        await activeRecording._cleanupForUnloadedRecorder?.();
+      } catch (cleanupErr) {
+        // Best-effort cleanup only.
+      }
+    }
+  };
+
   const startSoundAndSayRecording = async () => {
+    if (recordingBusyRef.current) {
+      return;
+    }
+
+    recordingBusyRef.current = true;
+
     try {
       await soundRef.current?.unloadAsync?.();
       soundRef.current = null;
+
+      await cleanupSoundAndSayRecording();
+      setRecordingUri('');
+      setSoundStatus('');
 
       const permission = await Audio.requestPermissionsAsync();
 
@@ -799,19 +1024,26 @@ export default function MissionGameScreen({ navigation, route }) {
 
       recordingRef.current = result.recording;
       setRecording(true);
-      setRecordingUri('');
       setSoundStatus('Nagre-record... magsalita nang malinaw.');
     } catch (err) {
-      setRecording(false);
+      await cleanupSoundAndSayRecording();
       setSoundStatus('');
       Alert.alert(
         'May Problema sa Pagre-record',
         err.message || 'Hindi masimulan ang pagre-record.'
       );
+    } finally {
+      recordingBusyRef.current = false;
     }
   };
 
   const stopSoundAndSayRecording = async () => {
+    if (recordingBusyRef.current) {
+      return;
+    }
+
+    recordingBusyRef.current = true;
+
     try {
       const activeRecording = recordingRef.current;
 
@@ -827,6 +1059,11 @@ export default function MissionGameScreen({ navigation, route }) {
       setRecording(false);
       setRecordingUri(uri || '');
       setSoundStatus(uri ? 'Naitala na ang iyong boses. Maaari mo itong pakinggan o tapusin ang misyon.' : '');
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
     } catch (err) {
       recordingRef.current = null;
       setRecording(false);
@@ -834,6 +1071,8 @@ export default function MissionGameScreen({ navigation, route }) {
         'May Problema sa Pagre-record',
         err.message || 'Hindi matapos ang pagre-record.'
       );
+    } finally {
+      recordingBusyRef.current = false;
     }
   };
 
@@ -862,6 +1101,7 @@ export default function MissionGameScreen({ navigation, route }) {
   };
 
   const clearSoundAndSayRecording = async () => {
+    await cleanupSoundAndSayRecording();
     await soundRef.current?.unloadAsync?.();
     soundRef.current = null;
     setRecordingUri('');
@@ -919,6 +1159,10 @@ export default function MissionGameScreen({ navigation, route }) {
           attemptNo: missionAttemptNo,
           maxAttempts: MAX_MISSION_ATTEMPTS,
         });
+
+        if (exitWhenMissionAttemptsRunOut(data)) {
+          return;
+        }
 
         setCompleted(true);
       } catch (err) {
@@ -1041,6 +1285,14 @@ export default function MissionGameScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+
+        <TouchableOpacity
+          style={styles.missionBackButton}
+          activeOpacity={0.85}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.missionBackButtonText}>← Bumalik</Text>
+        </TouchableOpacity>
 
         <MissionHeader
           title={getTagalogMissionTitle(missionId, mission.title)}
@@ -1208,7 +1460,7 @@ const styles = StyleSheet.create({
     content: {
     flexGrow: 1,
     padding: 20,
-    paddingBottom: 170,
+    paddingBottom: 220,
   },
   title: { fontSize: 24, fontWeight: '900', marginBottom: 16 },
   soundCard: {
@@ -1420,4 +1672,42 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 16,
   },
+  missionBackButton: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 2,
+    borderColor: '#4ADE80',
+    shadowColor: '#22C55E',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    alignSelf: 'flex-start',
+    marginHorizontal: 18,
+    marginTop: 12,
+    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15, 23, 42, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.12)',
+  },
+  missionBackButtonText: {
+    color: '#16A34A',
+    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+
+  disabledActionButton: {
+    backgroundColor: '#D1D5DB',
+    borderColor: '#9CA3AF',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  disabledActionButtonText: {
+    color: '#F9FAFB',
+  },
+
 });
