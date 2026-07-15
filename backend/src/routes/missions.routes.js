@@ -5,7 +5,7 @@ import {
   requirePermission,
   requirePasswordChanged
 } from '../middleware/auth.js';
-import { CompletedLesson, MissionCompletion, Student } from '../models/index.js';
+import { Badge, CompletedLesson, MissionCompletion, Student, StudentBadge } from '../models/index.js';
 import { awardXp, calculateLevel, nextLevelXp } from '../services/progress.service.js';
 
 const router = Router();
@@ -58,6 +58,122 @@ const MISSION_CATALOG = {
 };
 
 const MAX_MISSION_ATTEMPTS = 5;
+
+const MISSION_BITUIN_BADGE_DEFINITIONS = {
+  default: {
+    code: 'writing_3',
+    name: 'Bituin sa Pagsagot',
+    description: 'Nakuha sa pagtatapos ng misyon at pagkolekta ng bituin.',
+    icon: '⭐',
+    xpThreshold: null
+  },
+  'sound-and-say': {
+    code: 'speech_3',
+    name: 'Boses Bituin',
+    description: 'Nakuha sa pagtatapos ng misyon sa pakikinig at pagbigkas.',
+    icon: '🎙️',
+    xpThreshold: null
+  },
+  'sentence-builder': {
+    code: 'writing_3',
+    name: 'Bituin sa Pagsagot',
+    description: 'Nakuha sa pagtatapos ng misyon sa pagbuo ng pangungusap.',
+    icon: '⭐',
+    xpThreshold: null
+  }
+};
+
+function missionBituinDefinition(missionId) {
+  return MISSION_BITUIN_BADGE_DEFINITIONS[missionId] ||
+    MISSION_BITUIN_BADGE_DEFINITIONS.default;
+}
+
+function plainMissionBadgeResponse(badge = {}) {
+  const plain = badge?.toJSON ? badge.toJSON() : badge;
+
+  return {
+    id: plain.id,
+    code: plain.code,
+    slug: plain.code,
+    name: plain.name,
+    title: plain.name,
+    description: plain.description,
+    icon: plain.icon || '⭐',
+    xpThreshold: plain.xpThreshold ?? plain.xp_threshold ?? null
+  };
+}
+
+function uniqueMissionBadges(badges = []) {
+  const seen = new Set();
+
+  return badges
+    .filter(Boolean)
+    .map(plainMissionBadgeResponse)
+    .filter((badge) => {
+      const key = String(badge.code || badge.name || badge.id || '')
+        .trim()
+        .toLowerCase();
+
+      if (!key || seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+}
+
+async function awardMissionBituinBadge(studentId, missionId) {
+  const definition = missionBituinDefinition(missionId);
+
+  const [badge] = await Badge.findOrCreate({
+    where: {
+      code: definition.code
+    },
+    defaults: {
+      code: definition.code,
+      name: definition.name,
+      description: definition.description,
+      icon: definition.icon,
+      xpThreshold: definition.xpThreshold
+    }
+  });
+
+  let changed = false;
+
+  for (const field of ['name', 'description', 'icon', 'xpThreshold']) {
+    if (
+      definition[field] !== undefined &&
+      badge[field] !== definition[field]
+    ) {
+      badge[field] = definition[field];
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    await badge.save();
+  }
+
+  const existing = await StudentBadge.findOne({
+    where: {
+      studentId,
+      badgeId: badge.id
+    }
+  });
+
+  if (existing) {
+    return null;
+  }
+
+  await StudentBadge.create({
+    studentId,
+    badgeId: badge.id
+  });
+
+  return plainMissionBadgeResponse(badge);
+}
+
 
 function missionAttemptCompletions(completions, missionId) {
   return completions.filter((completion) => {
@@ -234,7 +350,37 @@ async function completeMission(req, res, next, options = {}) {
 
     void 0;
 
-    const newBadges = updatedStudent?.getDataValue?.('newBadges') || updatedStudent?.newBadges || [];
+    const attemptsUsed = created
+      ? existingMissionAttempts + 1
+      : existingMissionAttempts;
+
+    const requestAttemptNo = Number(req.body?.attemptNo || 0);
+    const currentAttemptNo = Math.max(
+      attemptsUsed,
+      Number.isFinite(requestAttemptNo) ? requestAttemptNo : 0
+    );
+
+    const shouldClaimBituin =
+      created &&
+      (
+        req.body?.claimBituin === true ||
+        req.body?.claimBituin === 'true' ||
+        currentAttemptNo >= maxAttempts
+      );
+
+    const thresholdBadges =
+      updatedStudent?.getDataValue?.('newBadges') ||
+      updatedStudent?.newBadges ||
+      [];
+
+    const bituinBadge = shouldClaimBituin
+      ? await awardMissionBituinBadge(student.id, missionId)
+      : null;
+
+    const newBadges = uniqueMissionBadges([
+      ...thresholdBadges,
+      bituinBadge
+    ]);
 
     res.json({
       missionId,
@@ -247,9 +393,16 @@ async function completeMission(req, res, next, options = {}) {
       totalXp: freshStudent?.xp || 0,
       level: calculateLevel(freshStudent?.xp || 0),
       nextLevelXp: nextLevelXp(freshStudent?.xp || 0),
+      attemptNo: currentAttemptNo || attemptsUsed,
+      attemptsUsed,
+      maxAttempts,
+      bituinClaimed: Boolean(bituinBadge),
+      bituinBadge,
       newBadges,
       message: created
-        ? `Mission complete! +${xpAwarded} XP added.`
+        ? shouldClaimBituin
+          ? `Mission complete! +${xpAwarded} XP added and bituin badge checked.`
+          : `Mission complete! +${xpAwarded} XP added.`
         : 'Mission already completed. XP was already awarded before.'
     });
   } catch (err) {

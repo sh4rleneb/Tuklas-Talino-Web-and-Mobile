@@ -1093,13 +1093,69 @@ router.delete('/tasks/:taskId', requireRole('teacher', 'admin'), async (req, res
   }
 });
 
-router.post('/tasks/:taskId/complete', requireRole('student'), groupTaskUpload.single('submissionFile'), async (req, res, next) => {
+async function requireOpenGroupTaskDeadline(req, res, next) {
+  try {
+    const task = await GroupTask.findByPk(
+      req.params.taskId
+    );
+
+    if (!task) {
+      return res.status(404).json({
+        message: 'Task not found.'
+      });
+    }
+
+    const deadlineMs = task.dueAt
+      ? new Date(task.dueAt).getTime()
+      : null;
+
+    if (
+      Number.isFinite(deadlineMs) &&
+      Date.now() >= deadlineMs
+    ) {
+      return res.status(422).json({
+        code: 'GROUP_TASK_DEADLINE_PASSED',
+        message:
+          'The deadline for this group task has passed. Late submissions are no longer accepted.',
+        dueAt:
+          new Date(deadlineMs).toISOString(),
+      });
+    }
+
+    req.groupTask = task;
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
+
+router.post('/tasks/:taskId/complete', requireRole('student'), requireOpenGroupTaskDeadline, groupTaskUpload.single('submissionFile'), async (req, res, next) => {
   try {
     assertSafeContentPayload(req.body, 'group task submission');
-    const task = await GroupTask.findByPk(req.params.taskId);
+    const task =
+      req.groupTask ||
+      await GroupTask.findByPk(
+        req.params.taskId
+      );
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found.' });
+    }
+
+    const deadlineMs = task.dueAt
+      ? new Date(task.dueAt).getTime()
+      : null;
+
+    if (
+      Number.isFinite(deadlineMs) &&
+      Date.now() >= deadlineMs
+    ) {
+      return res.status(422).json({
+        code: 'GROUP_TASK_DEADLINE_PASSED',
+        message:
+          'The deadline for this group task has passed. Late submissions are no longer accepted.',
+        dueAt: new Date(deadlineMs).toISOString(),
+      });
     }
 
     const leaderMembership = await GroupMember.findOne({

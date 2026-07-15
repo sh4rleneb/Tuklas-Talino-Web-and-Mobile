@@ -742,13 +742,58 @@ router.get('/', requireRole('admin', 'teacher'), async (req, res, next) => {
 
 router.post(
   '/',
-  requireRole('admin'),
-  adminAccountCreationLimiter,
-  requireRecentAdminPassword,
+  requireRole('admin', 'teacher'),
+  (req, res, next) =>
+    req.role === 'admin'
+      ? adminAccountCreationLimiter(req, res, next)
+      : next(),
+  (req, res, next) =>
+    req.role === 'admin'
+      ? requireRecentAdminPassword(req, res, next)
+      : next(),
   async (req, res, next) => {
   try {
     const body = validate(studentSchema, req.body);
     assertSafeContentPayload({ name: body.name, section: body.section }, 'student account');
+
+    if (req.role === 'teacher') {
+      const assignments = await getTeacherAssignments(req);
+
+      const requestedGrade = Number(body.gradeLevel);
+      const requestedSection = String(body.section || '')
+        .normalize('NFKC')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+      const allowedAssignment = assignments.some((assignment) => {
+        const assignmentGrade = Number(
+          assignment.gradeLevel ??
+          assignment.grade_level ??
+          assignment.grade
+        );
+
+        const assignmentSection = String(
+          assignment.section || ''
+        )
+          .normalize('NFKC')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase();
+
+        return (
+          assignmentGrade === requestedGrade &&
+          assignmentSection === requestedSection
+        );
+      });
+
+      if (!allowedAssignment) {
+        return res.status(403).json({
+          message:
+            'You can only create student accounts for your assigned grade and section.'
+        });
+      }
+    }
 
     const duplicateAccount =
       await findDuplicateAccount({

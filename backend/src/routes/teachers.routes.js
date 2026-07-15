@@ -1844,6 +1844,25 @@ router.patch(
         });
       }
 
+      const existingReviewStatus =
+        String(attempt.reviewStatus || '')
+          .toLowerCase();
+
+      if (
+        attempt.reviewedAt ||
+        [
+          'reviewed',
+          'graded',
+          'approved',
+          'auto_reviewed'
+        ].includes(existingReviewStatus)
+      ) {
+        return res.status(409).json({
+          message:
+            'This speech attempt has already been reviewed.'
+        });
+      }
+
       const reviewedAt = new Date();
 
       await attempt.update({
@@ -1860,6 +1879,31 @@ router.patch(
           req.teacher?.id || null,
       });
 
+      let xpAwarded = 0;
+      let xpAlreadyAwarded = false;
+
+      if (hasScore) {
+        const xpResult = await awardXp(
+          attempt.studentId,
+          score,
+          'speech',
+          attempt.taskId,
+          `Manual teacher speech review: ${score}/10`
+        );
+
+        xpAwarded = Number(
+          xpResult?.getDataValue?.('xpAwarded') ??
+          xpResult?.xpAwarded ??
+          0
+        );
+
+        xpAlreadyAwarded = Boolean(
+          xpResult?.getDataValue?.('xpAlreadyAwarded') ??
+          xpResult?.xpAlreadyAwarded ??
+          false
+        );
+      }
+
       const updatedAttempt =
         await SpeechAttempt.findByPk(
           attempt.id
@@ -1871,13 +1915,12 @@ router.patch(
         'speech_attempt',
         attempt.id,
         {
-          studentId:
-            attempt.studentId,
-          lessonId:
-            attempt.lessonId,
+          studentId: attempt.studentId,
+          lessonId: attempt.lessonId,
           score:
             updatedAttempt.score ??
             null,
+          xpAwarded,
           reviewStatus:
             normalizeSpeechReviewStatus(
               updatedAttempt
@@ -1906,7 +1949,16 @@ router.patch(
             updatedAttempt.reviewedByTeacherId ||
             null,
         },
+        xpAwarded,
+        xpAlreadyAwarded,
+        message:
+          xpAwarded > 0
+            ? `Speech review saved. Student earned +${xpAwarded} XP.`
+            : xpAlreadyAwarded
+              ? 'Speech review saved. This attempt already received XP when it was submitted.'
+              : 'Speech review saved. No additional XP was awarded.',
       });
+
     } catch (err) {
       return next(err);
     }

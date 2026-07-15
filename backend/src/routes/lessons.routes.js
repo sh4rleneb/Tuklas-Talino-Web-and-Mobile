@@ -285,6 +285,12 @@ const lessonMaterialAllowedMimes = new Map([
     new Set([
       'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     ])
+  ],
+  [
+    '.docx',
+    new Set([
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ])
   ]
 ]);
 
@@ -350,7 +356,7 @@ const lessonMaterialUpload = multer({
       lessonMaterialAllowedMimes.get(ext);
 
     if (!allowedMimes || !allowedMimes.has(mimeType)) {
-      cb(new Error('Only valid PPT, PPTX, or PDF lesson materials are allowed.'));
+      cb(new Error('Only PDF, DOCX, PPT, or PPTX lesson materials are allowed.'));
       return;
     }
 
@@ -1355,9 +1361,34 @@ router.patch('/:id/progress', requireRole('student'), async (req, res, next) => 
   }
 });
 
+
+function ensureLessonHasMaterial(activities = []) {
+  if (!Array.isArray(activities)) {
+    return false;
+  }
+
+  return activities.some(activity =>
+    activity &&
+    activity.type === 'material' &&
+    (
+      activity.fileUrl ||
+      activity.url ||
+      activity.fileName ||
+      activity.name
+    )
+  );
+}
+
 router.post('/', requireRole('admin', 'teacher'), async (req, res, next) => {
   try {
     const body = validate(lessonSchema, req.body);
+
+    if (!ensureLessonHasMaterial(body.activities)) {
+      return res.status(422).json({
+        message: 'Lesson Material is required.'
+      });
+    }
+
     assertSafeContentPayload(body, 'lesson content', { allowedTerms: getEducationalLessonAllowedTerms() });
     const {
       activities: validatedActivities = [],
@@ -1454,6 +1485,14 @@ router.patch('/:id', requireRole('admin', 'teacher'), async (req, res, next) => 
     await lesson.save({ transaction });
 
     if (Array.isArray(req.body.activities)) {
+      if (!ensureLessonHasMaterial(req.body.activities)) {
+        await transaction.rollback();
+
+        return res.status(422).json({
+          message: 'Lesson Material is required.'
+        });
+      }
+
       await syncLessonActivities(
         lesson,
         req.body.activities,
@@ -2355,94 +2394,439 @@ function firstUploadedLessonMaterial(req = {}) {
   );
 }
 
+function normalizeSpeechForScoring(value = '') {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[\p{P}\p{S}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function speechEditDistance(first = '', second = '') {
+  const left = String(first || '');
+  const right = String(second || '');
+
+  const rows = left.length + 1;
+  const columns = right.length + 1;
+  const matrix = Array.from(
+    { length: rows },
+    () => Array(columns).fill(0)
+  );
+
+  for (let row = 0; row < rows; row += 1) {
+    matrix[row][0] = row;
+  }
+
+  for (let column = 0; column < columns; column += 1) {
+    matrix[0][column] = column;
+  }
+
+  for (let row = 1; row < rows; row += 1) {
+    for (let column = 1; column < columns; column += 1) {
+      const substitutionCost =
+        left[row - 1] === right[column - 1] ? 0 : 1;
+
+      matrix[row][column] = Math.min(
+        matrix[row - 1][column] + 1,
+        matrix[row][column - 1] + 1,
+        matrix[row - 1][column - 1] + substitutionCost
+      );
+    }
+  }
+
+  return matrix[left.length][right.length];
+}
+
+function speechWordSimilarity(targetWord = '', spokenWord = '') {
+  if (targetWord === spokenWord) return 1;
+
+  const maximumLength = Math.max(
+    targetWord.length,
+    spokenWord.length
+  );
+
+  if (!maximumLength || maximumLength <= 2) return 0;
+
+  const similarity = Math.max(
+    0,
+    1 -
+      speechEditDistance(targetWord, spokenWord) /
+        maximumLength
+  );
+
+  if (similarity < 0.5) return 0;
+
+  if (
+    maximumLength <= 3 &&
+    targetWord[0] !== spokenWord[0]
+  ) {
+    return similarity * 0.4;
+  }
+
+  if (
+    targetWord[0] !== spokenWord[0] &&
+    similarity < 0.75
+  ) {
+    return similarity * 0.6;
+  }
+
+  return similarity;
+}
+
+function speechWordAlignmentScore(
+  targetWords = [],
+  spokenWords = []
+) {
+  const rows = targetWords.length + 1;
+  const columns = spokenWords.length + 1;
+
+  const matrix = Array.from(
+    { length: rows },
+    () => Array(columns).fill(0)
+  );
+
+  for (let row = 0; row < rows; row += 1) {
+    matrix[row][0] = row;
+  }
+
+  for (let column = 0; column < columns; column += 1) {
+    matrix[0][column] = column;
+  }
+
+  for (let row = 1; row < rows; row += 1) {
+    for (let column = 1; column < columns; column += 1) {
+      const similarity = speechWordSimilarity(
+        targetWords[row - 1],
+        spokenWords[column - 1]
+      );
+
+      matrix[row][column] = Math.min(
+        matrix[row - 1][column] + 1,
+        matrix[row][column - 1] + 1,
+        matrix[row - 1][column - 1] +
+          (1 - similarity)
+      );
+    }
+  }
+
+  const maximumWords = Math.max(
+    targetWords.length,
+    spokenWords.length
+  );
+
+  if (!maximumWords) return 0;
+
+  return Math.max(
+    0,
+    1 -
+      matrix[targetWords.length][spokenWords.length] /
+        maximumWords
+  );
+}
+
+function calculateSpeechScore(target = '', transcript = '') {
+  const cleanTarget =
+    normalizeSpeechForScoring(target);
+
+  const cleanTranscript =
+    normalizeSpeechForScoring(transcript);
+
+  if (!cleanTarget || !cleanTranscript) return 0;
+
+  const targetWords = cleanTarget.split(' ');
+  const spokenWords = cleanTranscript.split(' ');
+
+  if (
+    targetWords.length === 1 &&
+    spokenWords.length === 1
+  ) {
+    return Math.round(
+      speechWordSimilarity(
+        targetWords[0],
+        spokenWords[0]
+      ) * 100
+    );
+  }
+
+  const wordScore = speechWordAlignmentScore(
+    targetWords,
+    spokenWords
+  );
+
+  const characterLength = Math.max(
+    cleanTarget.length,
+    cleanTranscript.length
+  );
+
+  const characterScore = characterLength
+    ? Math.max(
+        0,
+        1 -
+          speechEditDistance(
+            cleanTarget,
+            cleanTranscript
+          ) /
+            characterLength
+      )
+    : 0;
+
+  let combinedScore =
+    wordScore * 0.85 +
+    characterScore * 0.15;
+
+  const exactWordMatches = targetWords.filter(
+    (word) => spokenWords.includes(word)
+  ).length;
+
+  if (
+    exactWordMatches === 0 &&
+    wordScore < 0.45
+  ) {
+    combinedScore *= 0.65;
+  }
+
+  return Math.max(
+    0,
+    Math.min(100, Math.round(combinedScore * 100))
+  );
+}
+
+function speechXpFromScore(score = 0) {
+  const percentage = Math.max(
+    0,
+    Math.min(100, Number(score || 0))
+  );
+
+  if (percentage < 40) return 0;
+  if (percentage < 50) return 1;
+  if (percentage < 60) return 3;
+  if (percentage < 70) return 5;
+  if (percentage < 80) return 7;
+  if (percentage < 90) return 8;
+  if (percentage < 100) return 9;
+
+  return 10;
+}
+
+function automaticSpeechFeedback(score = 0) {
+  if (score === 100) {
+    return 'Napakahusay! Eksaktong tumugma ang iyong pagbigkas sa target.';
+  }
+
+  if (score >= 90) {
+    return 'Napakahusay! Malinaw at halos eksakto ang iyong pagbigkas.';
+  }
+
+  if (score >= 80) {
+    return 'Mahusay! May kaunting bahagi lamang na maaaring linawin.';
+  }
+
+  if (score >= 70) {
+    return 'Magandang pagsubok. Ulitin ang ilang salita upang mas luminaw.';
+  }
+
+  if (score >= 60) {
+    return 'Malapit na. Pakinggan muli ang target at bigkasin nang mas mabagal.';
+  }
+
+  if (score >= 40) {
+    return 'May ilang tamang bahagi, ngunit kailangan pa ng pagsasanay.';
+  }
+
+  return 'Hindi pa sapat ang pagkakatugma. Pakinggan muli ang target at subukang muli.';
+}
+
+function isManualSpeechSubmission(
+  transcript = '',
+  audioUrl = ''
+) {
+  const normalized =
+    normalizeSpeechForScoring(transcript);
+
+  const placeholders = new Set([
+    '',
+    'voice recording submitted',
+    'audio recording submitted',
+    'voice submission',
+  ]);
+
+  return Boolean(audioUrl) &&
+    placeholders.has(normalized);
+}
+
 router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
   try {
-    const task = await SpeechTask.findByPk(req.body.taskId);
-    const activity = task ? await LessonActivity.findByPk(task.activityId) : null;
+    const task = await SpeechTask.findByPk(
+      req.body.taskId
+    );
 
-    if (!task || !activity || Number(activity.lessonId) !== Number(req.params.id)) {
+    const activity = task
+      ? await LessonActivity.findByPk(
+          task.activityId
+        )
+      : null;
+
+    if (
+      !task ||
+      !activity ||
+      Number(activity.lessonId) !==
+        Number(req.params.id)
+    ) {
       return res.status(404).json({
-        message: 'Speech task was not found in this lesson.'
+        message:
+          'Speech task was not found in this lesson.'
       });
     }
 
-    assertSafeText(req.body.transcript || '', 'speech transcript', {
-      allowedTerms: getEducationalLessonAllowedTerms(collectSpeechSafetyTargets(task, activity)),
-    });
+    const transcript = String(
+      req.body.transcript || ''
+    ).trim();
 
-    const beforeBadgeIds = await getStudentBadgeIds(req.student.id);
-    let attempt = await SpeechAttempt.findOne({
-      where: {
+    const audioUrl =
+      req.body.audioUrl || null;
+
+    if (transcript) {
+      assertSafeText(
+        transcript,
+        'speech transcript',
+        {
+          allowedTerms:
+            getEducationalLessonAllowedTerms(
+              collectSpeechSafetyTargets(
+                task,
+                activity
+              )
+            ),
+        }
+      );
+    }
+
+    const existingAttempt =
+      await SpeechAttempt.findOne({
+        where: {
+          studentId: req.student.id,
+          lessonId: req.params.id,
+          taskId: req.body.taskId,
+        },
+      });
+
+    if (existingAttempt) {
+      return res.status(200).json({
+        attempt: existingAttempt,
+        pendingReview:
+          String(
+            existingAttempt.reviewStatus || ''
+          ).toLowerCase() === 'pending',
+        xpAwarded: 0,
+        message:
+          'Naipasa na ang speech attempt na ito.'
+      });
+    }
+
+    const manualReview =
+      isManualSpeechSubmission(
+        transcript,
+        audioUrl
+      );
+
+    const score = manualReview
+      ? null
+      : calculateSpeechScore(
+          task.targetText || '',
+          transcript
+        );
+
+    const feedback = manualReview
+      ? null
+      : automaticSpeechFeedback(score);
+
+    const xpPossible = manualReview
+      ? 0
+      : speechXpFromScore(score);
+
+    const reviewedAt = manualReview
+      ? null
+      : new Date();
+
+    const beforeBadgeIds =
+      await getStudentBadgeIds(req.student.id);
+
+    const attempt =
+      await SpeechAttempt.create({
         studentId: req.student.id,
         lessonId: req.params.id,
         taskId: req.body.taskId,
-      },
-    });
-    const isNewSpeechAttempt = !attempt;
-    const attemptPayload = {
-      studentId: req.student.id,
-      lessonId: req.params.id,
-      taskId: req.body.taskId,
-      transcript: req.body.transcript || '',
-      audioUrl: req.body.audioUrl || null,
-      score: req.body.score || null,
-      submittedAt: new Date(),
-    };
-
-    if (attempt) {
-      await attempt.update(attemptPayload);
-    } else {
-      attempt = await SpeechAttempt.create(attemptPayload);
-    }
-
-    const existingSpeechXp = await XpLog.findOne({
-      where: {
-        studentId: req.student.id,
-        sourceType: 'speech',
-        sourceId: task.id,
-      },
-    });
+        transcript,
+        audioUrl,
+        score,
+        feedback,
+        reviewStatus:
+          manualReview
+            ? 'pending'
+            : 'reviewed',
+        reviewedAt,
+        reviewedByTeacherId: null,
+        submittedAt: new Date(),
+      });
 
     let xpAwarded = 0;
     let xpResult = null;
 
-    if (!existingSpeechXp) {
+    if (!manualReview && xpPossible > 0) {
       xpResult = await awardXp(
         req.student.id,
-        6,
+        xpPossible,
         'speech',
         task.id,
-        'Nakapagsumite ng pagsubok sa pagbigkas'
+        `Awtomatikong speech score: ${score}%`
       );
 
-      xpAwarded = 6;
+      xpAwarded = Number(
+        xpResult?.getDataValue?.('xpAwarded') ??
+        xpResult?.xpAwarded ??
+        xpPossible
+      );
     }
 
-    if (isNewSpeechAttempt) {
-      notifyTeacherAndLeaderboard({
-        type: 'speech_submission',
-        studentId: req.student.id,
-        studentName: req.student.name,
-        lessonId: Number(req.params.id),
-        attemptId: attempt.id,
-        xp: xpAwarded,
-        message: `${req.student.name} submitted a speech activity`,
-      });
-    }
+    notifyTeacherAndLeaderboard({
+      type: manualReview
+        ? 'speech_submission'
+        : 'speech_auto_scored',
+      studentId: req.student.id,
+      studentName: req.student.name,
+      lessonId: Number(req.params.id),
+      attemptId: attempt.id,
+      xp: xpAwarded,
+      message: manualReview
+        ? `${req.student.name} submitted a speech recording for review`
+        : `${req.student.name} earned ${score}% in a speech activity`,
+    });
 
-    await awardThresholdBadges(xpResult || req.student);
-    const newBadges = await getNewBadgeResponses(req.student.id, beforeBadgeIds);
+    await awardThresholdBadges(
+      xpResult || req.student
+    );
 
-    res.status(201).json({
+    const newBadges =
+      await getNewBadgeResponses(
+        req.student.id,
+        beforeBadgeIds
+      );
+
+    return res.status(201).json({
       attempt,
+      score,
+      feedback,
+      pendingReview: manualReview,
       xpAwarded,
       newBadges,
-      message: xpAwarded
-        ? 'Na-save ang pagsubok sa pagbigkas. +6 XP'
-        : 'Na-save ang pagsubok sa pagbigkas. Naibigay na ang XP para sa gawaing ito.'
+      message: manualReview
+        ? 'Naipasa ang recording. Hihintayin ang pagsusuri ng guro.'
+        : `Speech score: ${score}%. +${xpAwarded} XP`,
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });
 
