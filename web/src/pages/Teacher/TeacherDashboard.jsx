@@ -510,7 +510,7 @@ export default function TeacherDashboard({
     return item.id || item.attemptId || item.speechAttemptId || item.submissionId || null;
   }
 
-  function handleSaveWritingGrade(item) {
+  function handleSaveSpeechReview(item) {
     const attemptId = getSpeechReviewAttemptId(item);
 
     if (!attemptId || !reviewSpeechAttempt) return;
@@ -1489,8 +1489,42 @@ export default function TeacherDashboard({
                     const scoreInputId = `writing-review-score-${item.id}`;
                     const feedbackInputId = `writing-review-feedback-${item.id}`;
                     const isSaving = Boolean(gradingWritingIds[item.id]);
+                    const numericScore = Number(item.score);
+                    const isAutomaticReview =
+                    numericScore > 10 ||
+                    (
+                      !item.reviewedByTeacherId &&
+                      !item.audioUrl
+                    );
+                    const isReviewed =
+                    String(item.reviewStatus || '').toLowerCase() === 'reviewed';
+                    const scoreLabel =
+                    Number.isFinite(numericScore)
+                    ? (
+                      isAutomaticReview
+                      ? `${numericScore}%`
+                      : `${numericScore}/10`
+                    )
+                    : 'Not scored';
+
+                    const summaryXp =
+                    Number.isFinite(numericScore)
+                    ? Math.max(0, Math.min(10, numericScore))
+                    : 0;
+
+                    const feedbackText = String(
+
+                      item.teacherFeedback ||
+
+                      item.feedback ||
+
+                      ''
+
+                    ).trim();
+
 
                     return (
+
                       <div className="teacher-group-item" key={`writing-review-${item.id}`}>
                         {renderReviewIdentity(item, 'Pending Grade')}
 
@@ -1519,6 +1553,44 @@ export default function TeacherDashboard({
                             {item.content || 'No answer submitted.'}
                           </div>
                         </div>
+
+                        {isReviewed ? (
+                          <div
+                            className="teacher-group-detail-section"
+                            style={{
+                              marginTop: 14,
+                              minHeight: 'auto',
+                              display: 'grid',
+                              gap: 8
+                            }}
+                          >
+                            <strong>
+                              {isAutomaticReview
+                                ? 'Automatic Speech Summary'
+                                : 'Teacher Review Summary'}
+                            </strong>
+
+                            <div>
+                              Score: <b>{scoreLabel}</b>
+                            </div>
+
+                            <div>
+                              XP Earned: <b>+{summaryXp} XP</b>
+                            </div>
+
+                            {feedbackText ? (
+                              <div>
+                                Feedback: <b>{feedbackText}</b>
+                              </div>
+                            ) : null}
+
+                            {item.reviewedAt ? (
+                              <small className="g46-ref-muted">
+                                Reviewed {formatReviewDate(item.reviewedAt)}
+                              </small>
+                            ) : null}
+                          </div>
+                        ) : (
                           <>
                             <label className="g46-ref-muted" htmlFor={scoreInputId} style={{ display: 'grid', gap: 8, marginTop: 14, fontWeight: 900 }}>
                               Writing Score
@@ -1803,12 +1875,12 @@ export default function TeacherDashboard({
                           className="lms-main-action full"
                           disabled={isSaving}
                           onClick={() =>
-                            handleSaveWritingGrade(item)
+                            handleSaveSpeechReview(item)
                           }
                         >
                           {isSaving
-                            ? 'Saving Writing Grade...'
-                            : 'Save Writing Grade'}
+                            ? 'Saving Speech Grade...'
+                            : 'Save Speech Grade'}
                         </button>
                       </div>
                     );
@@ -3822,7 +3894,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
   function cleanActivities() {
     console.group('=== cleanActivities ===');
-    console.log('Raw activities:', activities);
 
     return activities
       .map(activity => {
@@ -4179,7 +4250,6 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
       });
     }
 
-    console.log('Prepared activities:', preparedActivities);
     console.table(
       preparedActivities.map(activity => ({
         type: activity.type,
@@ -4227,7 +4297,10 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
         setAiDraftNotice('Lesson updated successfully.');
       } else {
-        await createLesson(payload);
+        await createLesson({
+          ...payload,
+          status: 'published'
+        });
         setAiDraftNotice('Lesson published successfully.');
       }
     } catch (err) {
@@ -4723,7 +4796,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
 
               <div>
                 <h2>Lesson Information</h2>
-                
+
               </div>
             </div>
 
@@ -4802,7 +4875,7 @@ function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedCla
               </div>
             ) : (
               <div className="muted" style={{ marginBottom: 12 }}>
-                
+
               </div>
             )}
 

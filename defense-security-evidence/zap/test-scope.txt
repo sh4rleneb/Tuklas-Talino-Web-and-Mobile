@@ -1,0 +1,49 @@
+TUKLAS TALINO OWASP ZAP WEB SECURITY TEST
+
+Test date:
+July 15, 2026
+
+Authorization:
+Authorized security testing of the Tuklas Talino web application owned by the project team.
+
+Target URL:
+https://tuklastalino.com
+
+Backend API:
+https://tuklastalino.com/api
+
+Environment:
+Production
+
+Permitted testing:
+- Manual application exploration
+- Passive OWASP ZAP scanning
+- Manual authentication and authorization testing
+- Review of security headers
+
+Not permitted on production:
+- Automated Active Scan
+- Password attacks
+- Denial-of-service testing
+- Permanent deletion
+- Testing Aiven or third-party services
+
+Included:
+- Web frontend
+- Backend API
+- Student web functions
+- Teacher web functions
+- Controlled administrator testing
+
+Excluded:
+- Mobile application
+- Aiven management console
+- External services
+- Real student personal information
+
+Safety controls:
+- Aiven backup confirmed
+- Local SQL backup created
+- Dummy records use the ZAPTEST prefix
+- Passive scanning is performed first
+- Active scanning requires staging

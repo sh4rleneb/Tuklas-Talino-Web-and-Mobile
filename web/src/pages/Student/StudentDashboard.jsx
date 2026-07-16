@@ -238,14 +238,14 @@ export default function StudentDashboard() {
       <div className="stats-grid">
         <StatCard icon="⭐" label="XP" value={data.student.xp} tone="yellow" />
         <StatCard icon="🏆" label="Level" value={data.level} tone="blue" />
-        <StatCard icon="✅" label="Lessonsg Natapos" value={`${data.progress.completedLessons}/${data.progress.totalLessons}`} tone="green" />
+        <StatCard icon="✅" label="Mga Natapos na Aralin" value={`${data.progress.completedLessons}/${data.progress.totalLessons}`} tone="green" />
       </div>
 
-      <ProgressBar value={data.progress.percent} label="Pag-unlad sa Lessons" />
+      <ProgressBar value={data.progress.percent} label="Pag-unlad sa mga Aralin" />
 
       <div className="section-heading">
-        <h2>Mga Inirerekomendang Lessons</h2>
-        <Link to="/student/lessons" className="btn ghost">View all</Link>
+        <h2>Mga Inirerekomendang Aralin</h2>
+        <Link to="/student/lessons" className="btn ghost">Tingnan Lahat</Link>
       </div>
       <div className="lesson-grid">
         {data.lessons.slice(0, 6).map(lesson => (

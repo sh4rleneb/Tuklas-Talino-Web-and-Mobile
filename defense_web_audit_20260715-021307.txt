@@ -1,0 +1,579 @@
+============================================================
+TUKLAS TALINO DEFENSE WEB AUDIT
+Generated: Wed Jul 15 02:13:07 UTC 2026
+============================================================
+
+=== 1. REPOSITORY STATUS ===
+Branch: web-mobile-parity-qa
+ M backend/src/routes/groups.routes.js
+ M backend/src/routes/lessons.routes.js
+ M backend/src/routes/missions.routes.js
+ M backend/src/routes/students.routes.js
+ M backend/src/routes/teachers.routes.js
+ M mobile/android/gradle.properties
+ M mobile/app.json
+ M mobile/eas.json
+ M mobile/package-lock.json
+ M mobile/package.json
+ M mobile/src/components/LessonLibrary.js
+ M mobile/src/screens/GroupsScreen.js
+ M mobile/src/screens/MissionScreen.js
+ M mobile/src/screens/missions/MissionGameScreen.js
+ M mobile/src/screens/missions/components/MissionCompleteModal.js
+ M mobile/src/screens/missions/components/MissionHeader.js
+ M mobile/src/screens/missions/games/LetterPopGame.js
+ M mobile/src/screens/missions/games/SentenceBuilderGame.js
+ M mobile/src/screens/studentJunior/StudentJuniorLessonDetail.js
+ M mobile/src/screens/teacher/TeacherHome.js
+ M web/src/App.jsx
+ M web/src/pages/Teacher/TeacherDashboard.jsx
+?? defense_web_audit_20260715-021307.txt
+?? mobile/plugins/
+?? web/tuklas-talino-web@1.0.0
+?? web/vite
+
+mobile/src/screens/GroupsScreen.js:599: trailing whitespace.
++        
+web/src/App.jsx:9480: trailing whitespace.
++          
+web/src/App.jsx:14255: trailing whitespace.
++              
+web/src/App.jsx:16628: trailing whitespace.
++            
+web/src/App.jsx:17127: trailing whitespace.
++              
+web/src/App.jsx:17157: trailing whitespace.
++              
+web/src/App.jsx:17252: trailing whitespace.
++            
+web/src/App.jsx:17553: trailing whitespace.
++            
+web/src/pages/Teacher/TeacherDashboard.jsx:4764: trailing whitespace.
++                
+web/src/pages/Teacher/TeacherDashboard.jsx:4843: trailing whitespace.
++                
+
+=== 2. PANEL RECOMMENDATION CODE EVIDENCE ===
+
+------------------------------------------------------------
+A. Five-point Likert scale and TAM respondents
+------------------------------------------------------------
+[NO STATIC EVIDENCE FOUND]
+
+------------------------------------------------------------
+B. Language consistency and Filipino student UI
+------------------------------------------------------------
+[EVIDENCE FOUND]
+web/src/utils/studentHelpers.js:120:    hasContent: has('infographic') || has('vocabulary'),
+web/src/api/client.js:84:  headers.set('Content-Type', 'application/json');
+web/src/services/tts.service.js:21:      response?.audioContent || '';
+web/src/App.jsx:27:import TeacherDashboard from './pages/Teacher/TeacherDashboard';
+web/src/App.jsx:28:import AdminDashboard from './pages/Admin/AdminDashboard';
+web/src/App.jsx:218:  style.textContent = `
+web/src/App.jsx:562:      loadStudentDashboard()
+web/src/App.jsx:609:      loadTeacherDashboard()
+web/src/App.jsx:622:      loadAdminDashboard()
+web/src/App.jsx:956:  await loadStudentDashboard();
+web/src/App.jsx:961:  await loadTeacherDashboard();
+web/src/App.jsx:966:  await loadAdminDashboard();
+web/src/App.jsx:1012:      await loadStudentDashboard();
+web/src/App.jsx:1015:      await loadTeacherDashboard();
+web/src/App.jsx:1018:      await loadAdminDashboard();
+web/src/App.jsx:1024:  async function loadStudentDashboard() {
+web/src/App.jsx:1032:    await safeRun(async () => { await loadStudentDashboard(); });
+web/src/App.jsx:1227:        loadStudentDashboard().catch((error) => {
+web/src/App.jsx:1228:          console.warn('[TuklasTalino] Dashboard refresh after quiz failed:', error);
+web/src/App.jsx:1274:        await loadStudentDashboard();
+web/src/App.jsx:1325:        await loadStudentDashboard();
+web/src/App.jsx:1375:    await loadStudentDashboard();
+web/src/App.jsx:1427:    await loadStudentDashboard();
+web/src/App.jsx:1444:  async function loadTeacherDashboard() {
+
+------------------------------------------------------------
+C. Quiz word filtering and content-safety checks
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/routes/auth.routes.js:34:import { assertSafeContentPayload } from '../validators/contentSafety.js';
+backend/src/routes/auth.routes.js:727:    assertSafeContentPayload({ name, section }, 'student registration');
+backend/src/routes/auth.routes.js:847:      assertSafeContentPayload({ name: body.name, employeeCode: body.employeeCode }, 'teacher registration');
+backend/src/routes/lessons.routes.js:28:import { assertSafeContentPayload, assertSafeText, getEducationalLessonAllowedTerms } from '../validators/contentSafety.js';
+backend/src/routes/lessons.routes.js:1392:    assertSafeContentPayload(body, 'lesson content', { allowedTerms: getEducationalLessonAllowedTerms() });
+backend/src/routes/lessons.routes.js:1442:    assertSafeContentPayload(req.body, 'lesson update', { allowedTerms: getEducationalLessonAllowedTerms() });
+backend/src/routes/lessons.routes.js:2139:    assertSafeText(content, 'writing answer');
+backend/src/routes/lessons.routes.js:2691:      assertSafeText(
+backend/src/routes/admin.routes.js:4:import { assertSafeText } from '../validators/contentSafety.js';
+backend/src/routes/admin.routes.js:450:    assertSafeText(section, 'section');
+backend/src/routes/admin.routes.js:479:      assertSafeText(
+backend/src/routes/admin.routes.js:585:    assertSafeText(section, 'section');
+backend/src/routes/teachers.routes.js:49:  assertSafeContentPayload,
+backend/src/routes/teachers.routes.js:50:  assertSafeText
+backend/src/routes/teachers.routes.js:51:} from '../validators/contentSafety.js';
+backend/src/routes/teachers.routes.js:225:      assertSafeContentPayload(
+backend/src/routes/teachers.routes.js:714:      assertSafeContentPayload(
+backend/src/routes/teachers.routes.js:1496:      assertSafeText(
+backend/src/routes/teachers.routes.js:1787:      assertSafeText(
+backend/src/routes/groups.routes.js:26:import { assertSafeContentPayload, assertSafeText } from '../validators/contentSafety.js';
+backend/src/routes/groups.routes.js:195:    assertSafeText(req.body.name || '', 'group name');
+backend/src/routes/groups.routes.js:196:    assertSafeText(req.body.description || '', 'group description');
+backend/src/routes/groups.routes.js:215:    assertSafeText(section, 'group section');
+backend/src/routes/groups.routes.js:241:    assertSafeContentPayload(req.body, 'group update');
+
+------------------------------------------------------------
+D. Speech target text exception from vulgar-word blocking
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/models/index.js:215:  targetText: { type: DataTypes.TEXT, allowNull: false }
+backend/src/routes/lessons.routes.js:526:      targetText:
+backend/src/routes/lessons.routes.js:527:        activity.targetText ??
+backend/src/routes/lessons.routes.js:529:        activity.speechTask?.targetText ??
+backend/src/routes/lessons.routes.js:798:  const targetText =
+backend/src/routes/lessons.routes.js:799:    incomingActivity.targetText ??
+backend/src/routes/lessons.routes.js:801:    incomingActivity.speechTask?.targetText ??
+backend/src/routes/lessons.routes.js:803:    existingTask?.targetText ??
+backend/src/routes/lessons.routes.js:808:    existingTask.targetText = targetText;
+backend/src/routes/lessons.routes.js:817:    targetText,
+backend/src/routes/lessons.routes.js:2347:        value.targetText,
+backend/src/routes/lessons.routes.js:2365:    task.targetText,
+backend/src/routes/lessons.routes.js:2372:    activity.targetText,
+backend/src/routes/lessons.routes.js:2737:          task.targetText || '',
+backend/src/routes/teachers.routes.js:1409:                  targetText:
+backend/src/routes/teachers.routes.js:1410:                    task.targetText || '',
+backend/src/seed/seedData.js:728:      await SpeechTask.create({ activityId: speechActivity.id, targetText: body.speechTarget, promptJson: ['Basahin nang malinaw.', 'Ulitin kung kailangan.', 'I-save ang transcript.'] });
+backend/src/validators/common.js:50:  targetText: z.string().min(2, 'Speech activity needs target text.'),
+web/src/App.jsx:1887:          targetText: speechTarget
+web/src/App.jsx:10025:    if (activity.speechTask || activity.targetText) {
+web/src/App.jsx:12530:  const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
+web/src/components/teacher/TeacherStudentLessonPreview.jsx:315:        {activity.targetText || 'No speech text added yet.'}
+web/src/pages/Student/LessonDetailPage.jsx:84:          <p>Target: <strong>{speechTask.targetText}</strong></p>
+web/src/pages/Teacher/TeacherDashboard.jsx:1731:                                {item.task?.targetText ||
+
+------------------------------------------------------------
+E. Group-task calendar and deadline validation
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/models/index.js:336:  dueAt: { type: DataTypes.DATE, allowNull: true },
+backend/src/routes/lessons.routes.js:84:      deadline:
+backend/src/routes/lessons.routes.js:85:        activity.deadline ??
+backend/src/routes/lessons.routes.js:86:        raw.deadline ??
+backend/src/routes/lessons.routes.js:87:        raw.dueAt ??
+backend/src/routes/lessons.routes.js:90:      dueAt:
+backend/src/routes/lessons.routes.js:91:        activity.dueAt ??
+backend/src/routes/lessons.routes.js:92:        raw.dueAt ??
+backend/src/routes/lessons.routes.js:93:        raw.deadline ??
+backend/src/routes/lessons.routes.js:141:      ...(incoming.deadline || incoming.dueAt
+backend/src/routes/lessons.routes.js:142:        ? { deadline: incoming.deadline || incoming.dueAt }
+backend/src/routes/lessons.routes.js:420:    ...(activity.deadline || activity.dueAt
+backend/src/routes/lessons.routes.js:421:      ? { deadline: activity.deadline || activity.dueAt }
+backend/src/routes/groups.routes.js:966:    body.dueAt ??
+backend/src/routes/groups.routes.js:967:    body.deadline ??
+backend/src/routes/groups.routes.js:990:  const deadlineMs = Date.parse(rawValue);
+backend/src/routes/groups.routes.js:992:  if (!Number.isFinite(deadlineMs)) {
+backend/src/routes/groups.routes.js:999:    deadlineMs <
+backend/src/routes/groups.routes.js:1010:  return new Date(deadlineMs).toISOString();
+backend/src/routes/groups.routes.js:1032:    const dueAt = normalizeGroupTaskDueAt(req.body);
+backend/src/routes/groups.routes.js:1039:      dueAt,
+backend/src/routes/groups.routes.js:1096:async function requireOpenGroupTaskDeadline(req, res, next) {
+backend/src/routes/groups.routes.js:1108:    const deadlineMs = task.dueAt
+backend/src/routes/groups.routes.js:1109:      ? new Date(task.dueAt).getTime()
+
+------------------------------------------------------------
+F. Leaderboard filtering by grade
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/routes/index.js:90:        message: 'Student grade level is required for leaderboard.'
+mobile/src/screens/LeaderboardScreen.js:94:  }, [leaderboard, student?.gradeLevel, student?.grade_level]);
+mobile/src/screens/teacher/TeacherHome.js:1404:    const selectedGrade = Number(groupForm.gradeLevel || 0);
+mobile/src/screens/teacher/TeacherHome.js:1419:        if (!selectedGrade || !ruleGrade || ruleGrade === selectedGrade) {
+mobile/src/screens/teacher/TeacherHome.js:1428:      if (!selectedGrade || !studentGrade || studentGrade === selectedGrade) {
+mobile/src/screens/teacher/TeacherHome.js:1436:      if (!selectedGrade || !groupGrade || groupGrade === selectedGrade) {
+mobile/src/screens/teacher/TeacherHome.js:6077:    const selectedGrade = Number(
+mobile/src/screens/teacher/TeacherHome.js:6115:            return grade === selectedGrade;
+mobile/src/screens/teacher/TeacherHome.js:6480:                    Grade {selectedGrade || '-'}
+mobile/src/screens/teacher/TeacherHome.js:6503:              {selectedGrade || '-'}.
+mobile/src/screens/teacher/TeacherHome.js:6529:              {selectedGrade || '-'} are listed here.
+mobile/src/screens/teacher/TeacherHome.js:6585:                  Add Grade {selectedGrade || '-'} Section
+mobile/src/screens/teacher/TeacherHome.js:6593:                  {selectedGrade || '-'} assignment.
+
+------------------------------------------------------------
+G. Login messages and removal of default-password display
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/models/index.js:42:  mustChangePassword: {
+backend/src/routes/auth.routes.js:201:    mustChangePassword: user.mustChangePassword,
+backend/src/routes/auth.routes.js:678:    req.user.mustChangePassword = false;
+backend/src/routes/auth.routes.js:792:              mustChangePassword: false,
+backend/src/routes/auth.routes.js:893:              mustChangePassword: true,
+backend/src/routes/teachers.routes.js:176:  'mustChangePassword',
+backend/src/routes/teachers.routes.js:259:      const temporaryPin = generateTemporaryPin();
+backend/src/routes/teachers.routes.js:263:        temporaryPin,
+backend/src/routes/teachers.routes.js:276:              mustChangePassword: true,
+backend/src/routes/teachers.routes.js:309:        temporaryPin
+backend/src/routes/teachers.routes.js:786:      const temporaryPin =
+backend/src/routes/teachers.routes.js:787:        req.body.temporaryPin?.trim() ||
+backend/src/routes/teachers.routes.js:790:      if (!/^[2-9]{4}$/.test(temporaryPin)) {
+backend/src/routes/teachers.routes.js:798:        temporaryPin,
+backend/src/routes/teachers.routes.js:802:      teacher.User.mustChangePassword = true;
+backend/src/routes/teachers.routes.js:819:        temporaryPin
+backend/src/routes/students.routes.js:64:  'mustChangePassword',
+backend/src/routes/students.routes.js:822:    const temporaryPin = generateTemporaryPin();
+backend/src/routes/students.routes.js:825:      temporaryPin,
+backend/src/routes/students.routes.js:837:            mustChangePassword: true,
+backend/src/routes/students.routes.js:868:      temporaryPin
+backend/src/routes/students.routes.js:1460:    const temporaryPin = req.body.temporaryPin?.trim() || generateTemporaryPin();
+backend/src/routes/students.routes.js:1462:    if (!/^[2-9]{4}$/.test(temporaryPin)) {
+backend/src/routes/students.routes.js:1468:    student.User.passwordHash = await bcrypt.hash(temporaryPin, 12);
+
+------------------------------------------------------------
+H. Teacher-configured activity attempts
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/routes/lessons.routes.js:66:    row.maxAttempts ??
+backend/src/routes/lessons.routes.js:68:    data.maxAttempts ??
+backend/src/routes/lessons.routes.js:80:      maxAttempts:
+backend/src/routes/lessons.routes.js:81:        activity.maxAttempts ??
+backend/src/routes/lessons.routes.js:82:        raw.maxAttempts ??
+backend/src/routes/lessons.routes.js:140:      maxAttempts: normalizeQuizAttemptLimit(incoming.maxAttempts),
+backend/src/routes/lessons.routes.js:419:    maxAttempts: normalizeQuizAttemptLimit(activity.maxAttempts),
+backend/src/routes/lessons.routes.js:1806:    const maxAttempts = activityAttemptLimit(quizActivity);
+backend/src/routes/lessons.routes.js:2064:      maxAttempts > 0 &&
+backend/src/routes/lessons.routes.js:2065:      existingQuizAttempts.length >= maxAttempts
+backend/src/routes/lessons.routes.js:2068:        message: `You already used all ${maxAttempts} quiz attempts. Review your answers instead.`,
+backend/src/routes/lessons.routes.js:2069:        maxAttempts,
+backend/src/routes/lessons.routes.js:2122:      maxAttempts,
+backend/src/routes/missions.routes.js:189:function missionIsCompleted(completions, missionId, maxAttempts = MAX_MISSION_ATTEMPTS) {
+backend/src/routes/missions.routes.js:190:  return missionAttemptCount(completions, missionId) >= maxAttempts;
+backend/src/routes/missions.routes.js:288:    const maxAttempts = Number(mission.maxAttempts || MAX_MISSION_ATTEMPTS);
+backend/src/routes/missions.routes.js:291:    if (existingMissionAttempts >= maxAttempts) {
+backend/src/routes/missions.routes.js:293:        message: `You already used all ${maxAttempts} attempts for this mission.`,
+backend/src/routes/missions.routes.js:295:        maxAttempts,
+backend/src/routes/missions.routes.js:368:        currentAttemptNo >= maxAttempts
+backend/src/routes/missions.routes.js:398:      maxAttempts,
+web/src/App.jsx:718:        quiz?.maxAttempts ??
+web/src/App.jsx:720:        quiz?.activity?.maxAttempts ??
+web/src/App.jsx:721:        quiz?.dataJson?.maxAttempts ??
+
+------------------------------------------------------------
+I. Quiz preview and all-question rendering
+------------------------------------------------------------
+[EVIDENCE FOUND]
+web/src/App.jsx:4675:  return questions.slice(0, 25);
+web/src/App.jsx:4741:  const review = questions.map((question, index) => {
+web/src/App.jsx:8897:      const questions = asArray(activity.questions).slice(0, 1);
+web/src/App.jsx:9919:      const questions = asArray(activity.questions).slice(0, 1);
+web/src/App.jsx:11656:  const questions = allQuestions.slice(0, 1);
+web/src/App.jsx:11780:      {questions.map((q, qIndex) => (
+web/src/components/teacher/TeacherStudentLessonPreview.jsx:98:        <h3>Quiz Preview</h3>
+web/src/components/teacher/TeacherStudentLessonPreview.jsx:114:      <h3>Quiz Preview</h3>
+web/src/components/teacher/TeacherStudentLessonPreview.jsx:159:          {questions.map((question, questionIndex) => {
+web/src/pages/Teacher/TeacherDashboard.jsx:79:  return questions.slice(0, 25);
+web/src/pages/Teacher/TeacherDashboard.jsx:3604:      duplicate.questions = duplicate.questions.map(question => ({
+web/src/pages/Teacher/TeacherDashboard.jsx:3638:          questions: activity.questions.map(question =>
+web/src/pages/Teacher/TeacherDashboard.jsx:3655:          questions: activity.questions.map(question => {
+web/src/pages/Teacher/TeacherDashboard.jsx:5379:            {activity.questions.map((question, qIndex) => (
+mobile/src/screens/studentJunior/QuizScreen.js:147:  return questions.slice(0, 25);
+mobile/src/screens/studentJunior/QuizScreen.js:785:    const review = activeQuiz.questions.map((item, index) => {
+mobile/src/screens/teacher/TeacherHome.js:2155:          return activity.questions.map((question) => ({
+mobile/src/screens/teacher/TeacherHome.js:3084:                                {activity.questions.map((question, questionIndex) => (
+mobile/src/screens/missions/games/data/storyQuestData.js:16:      ? story.questions.map((question) => ({
+
+------------------------------------------------------------
+J. Edit Lesson sections: Layunin, Alamin, and lesson content
+------------------------------------------------------------
+[EVIDENCE FOUND]
+web/src/App.jsx:8140:    if (!cleanReason) return "Natapos mo ang isang layunin sa pag-aaral!";
+web/src/App.jsx:8306:                      <small className="g46-ref-badge-status">{badge.statusText || 'Natapos mo ang isang layunin sa pag-aaral!'}</small>
+web/src/App.jsx:8867:    const listenSections = ['layunin', 'panimula', 'aralin']
+web/src/App.jsx:9317:        { key: 'layunin', label: 'Layunin', icon: '🎯' },
+web/src/App.jsx:9746:    .replace(/\s*(Layunin|Alamin|Panimula|Aralin|Lesson|Lessons|Mga Aralin|Gawain|Mga salita|Mga Salita)\s*:\s*/g, '\n$1: ')
+web/src/App.jsx:9828:    { type: 'listen', icon: '👂', label: 'Layunin' },
+web/src/App.jsx:9829:    { type: 'know', icon: '💡', label: 'Alamin' },
+web/src/App.jsx:9964:      return 'Pakinggan muna ang layunin.';
+web/src/App.jsx:9968:      return 'Pakinggan muna ang alamin.';
+web/src/App.jsx:11138:                  <h3>Layunin</h3>
+web/src/App.jsx:11143:                {getStructuredLessonSectionText(kidPassage, 'layunin') || lesson?.title || 'Handa ka na bang matuto?'}
+web/src/App.jsx:11148:                  <button className="g12-mission-btn" onClick={() => markStepListened('listen', getStructuredLessonSectionText(kidPassage, 'layunin') || lesson?.title || 'Handa ka na bang matuto?')}>🔊 Pakinggan</button>
+web/src/App.jsx:11152:                  <button className="g12-mission-btn purple" onClick={goNext}>Alamin →</button>
+web/src/App.jsx:11163:                  <h3>Alamin</h3>
+web/src/App.jsx:12894:          ? 'Basahin ang salita at alamin ang kahulugan.'
+web/src/App.jsx:15585:                        <small>Layunin: {soundAndSayThreshold}% pataas</small>
+web/src/App.jsx:16871:  return 'Natapos mo ang isang layunin para mabuksan ang gantimpalang ito.';
+web/src/App.jsx:17061:              <p>Tapusin ang mga layuning ito para makakuha pa ng gantimpala.</p>
+web/src/App.jsx:17076:                    <p className="g12-badge-reason"><span>Layunin</span>{' '}{goal.howToUnlock}</p>
+web/src/App.jsx:17172:                    <p className="g46-badge-reason g46-locked-goal-text"><span>Layunin</span>{' '}{goal.howToUnlock}</p>
+web/src/components/student/StructuredLessonFlow.jsx:4:  layunin: { title: 'Layunin', icon: '🎯' },
+web/src/components/student/StructuredLessonFlow.jsx:5:  alamin: { title: 'Alamin', icon: '💡' },
+web/src/components/student/StructuredLessonFlow.jsx:26:  const pattern = /(Layunin|Alamin|Panimula|Aralin|Lesson|Lessons|Mga Aralin|Gawain)\s*:/gi;
+web/src/components/student/StructuredLessonFlow.jsx:168:      helper: 'Basahin ang akda at alamin ang mensahe.'
+
+------------------------------------------------------------
+K. Group members restricted to the same grade level
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/routes/index.js:85:    const studentGradeLevel = Number(req.student?.gradeLevel || 0);
+backend/src/routes/index.js:88:    if (!Number.isInteger(studentGradeLevel) || studentGradeLevel < 1 || studentGradeLevel > 6) {
+backend/src/routes/index.js:103:        gradeLevel: studentGradeLevel,
+backend/src/routes/index.js:123:      gradeLevel: studentGradeLevel,
+backend/src/routes/groups.routes.js:272:      const mismatchedMember = members.find(
+backend/src/routes/groups.routes.js:277:      if (mismatchedMember) {
+backend/src/routes/groups.routes.js:280:            'The group grade cannot be changed while it contains students from another grade.'
+backend/src/routes/groups.routes.js:471:          let groupGrade =
+backend/src/routes/groups.routes.js:477:          if (!groupGrade) {
+backend/src/routes/groups.routes.js:478:            groupGrade = validGradeLevel(
+backend/src/routes/groups.routes.js:487:                groupGrade
+backend/src/routes/groups.routes.js:500:              `Only Grade ${groupGrade} students can be added to this group. Mismatched: ${names}.`
+backend/src/routes/groups.routes.js:507:            lockedGroup.gradeLevel = groupGrade;
+backend/src/routes/groups.routes.js:581:            groupGrade,
+backend/src/routes/groups.routes.js:603:        groupGrade:
+backend/src/routes/groups.routes.js:604:          transactionResult.groupGrade
+backend/src/routes/groups.routes.js:618:          transactionResult.groupGrade,
+backend/src/routes/groups.routes.js:637:      groupGrade:
+backend/src/routes/groups.routes.js:638:        transactionResult.groupGrade,
+backend/src/routes/groups.routes.js:684:function groupGradeSectionMessage(gradeLevel, section) {
+backend/src/routes/groups.routes.js:726:    const studentGrade = validGradeLevel(student.gradeLevel);
+backend/src/routes/groups.routes.js:728:    if (!studentGrade) {
+backend/src/routes/groups.routes.js:742:    let groupGrade =
+backend/src/routes/groups.routes.js:751:    if (!groupGrade) {
+
+------------------------------------------------------------
+L. Bulk student addition to groups
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/routes/groups.routes.js:344:router.post('/:id/members/bulk', requireRole('teacher', 'admin'), async (req, res, next) => {
+backend/src/routes/groups.routes.js:546:          const studentIdsToAdd =
+backend/src/routes/groups.routes.js:558:            index < studentIdsToAdd.length;
+backend/src/routes/groups.routes.js:562:              studentIdsToAdd[index];
+backend/src/routes/groups.routes.js:584:              studentIdsToAdd,
+mobile/src/api/teacher.js:143:  return api(`/groups/${groupId}/members/bulk`, {
+
+------------------------------------------------------------
+M. Existing-section dropdown for adding or editing students
+------------------------------------------------------------
+[EVIDENCE FOUND]
+web/src/App.jsx:502:  const [teacherData, setTeacherData] = useState({ stats: null, rows: [], groups: [], students: [], lessons: [], assignedClasses: [] });
+web/src/App.jsx:510:  classOptions: [],
+web/src/App.jsx:913:    setTeacherData({ stats: null, rows: [], groups: [], students: [], lessons: [], assignedClasses: [] });
+web/src/App.jsx:921:  classOptions: [],
+web/src/App.jsx:1467:      assignedClasses: dash.assignedClasses || monitoring.assignedClasses || quizPerformance.assignedClasses || [],
+web/src/App.jsx:1597:    return (teacherData?.assignedClasses || [])
+web/src/App.jsx:1932:    classOptions: enrollments.classOptions || [],
+web/src/pages/Teacher/TeacherDashboard.jsx:193:  const assignedClasses = data.assignedClasses || [];
+web/src/pages/Teacher/TeacherDashboard.jsx:197:      assignedClasses
+web/src/pages/Teacher/TeacherDashboard.jsx:203:  const teacherAssignedSections = assignedClasses
+web/src/pages/Teacher/TeacherDashboard.jsx:226:    const sections = assignedClasses
+web/src/pages/Teacher/TeacherDashboard.jsx:241:    assignedClasses,
+web/src/pages/Teacher/TeacherDashboard.jsx:295:  asArray(assignedClasses).forEach((item) => {
+web/src/pages/Teacher/TeacherDashboard.jsx:1407:            {assignedClasses.length ? assignedClasses.map(item => (
+web/src/pages/Teacher/TeacherDashboard.jsx:1455:            <TeacherLessonManager lessons={lessons} createLesson={createLesson} deleteLesson={deleteLesson} assignedClasses={assignedClasses} />
+web/src/pages/Teacher/TeacherDashboard.jsx:2850:                        assignedClasses
+web/src/pages/Teacher/TeacherDashboard.jsx:2896:                          <option value="" disabled>No assigned sections available</option>
+web/src/pages/Teacher/TeacherDashboard.jsx:2981:function TeacherLessonManager({ lessons, createLesson, deleteLesson, assignedClasses = [] }) {
+web/src/pages/Teacher/TeacherDashboard.jsx:2997:  const assignedGrades = [...new Set((assignedClasses || [])
+web/src/pages/Admin/AdminDashboard.jsx:272:  const classOptions = data.classOptions || [];
+web/src/pages/Admin/AdminDashboard.jsx:487:  const sectionOptions = [...new Set(
+web/src/pages/Admin/AdminDashboard.jsx:488:    classOptions
+web/src/pages/Admin/AdminDashboard.jsx:495:  // Sources: teacher assignments (class structure) + existing students (classOptions).
+web/src/pages/Admin/AdminDashboard.jsx:501:    ...classOptions
+
+------------------------------------------------------------
+N. Changing a student's section
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/routes/admin.routes.js:388:      const key = `${student.gradeLevel}||${student.section}`;
+backend/src/routes/admin.routes.js:537:      message: 'Student enrollment updated successfully.',
+backend/src/routes/reports.routes.js:418:    for (const s of students) lines.push([s.studentCode, s.name, s.gradeLevel, s.section, s.xp, s.status, s.lastActiveAt || ''].map(csvEscape).join(','));
+backend/src/routes/reports.routes.js:938:      const key = `Grade ${row.student.gradeLevel} - ${row.student.section || 'N/A'}`;
+backend/src/routes/reports.routes.js:1419:          `G${s.gradeLevel || '—'} - ${s.section || 'N/A'}`,
+backend/src/routes/teachers.routes.js:1072:      if (!gradeLevel || !section) {
+backend/src/routes/groups.routes.js:684:function groupGradeSectionMessage(gradeLevel, section) {
+backend/src/routes/groups.routes.js:686:  return `Only Grade ${gradeLevel}${sectionText ? ` - Section ${sectionText}` : ''} students can be added to this group.`;
+backend/src/seed/seedData.js:433:  for (const [studentCode, name, gradeLevel, section, avatar] of demoStudents) {
+backend/src/seed/seedData.js:435:    const student = await Student.create({ userId: user.id, studentCode, name, gradeLevel, section, avatar, xp: 0, status: 'active' });
+web/src/App.jsx:1593:    return { gradeLevel, section };
+web/src/App.jsx:1602:      .filter((item) => [1, 2, 3, 4, 5, 6].includes(item.gradeLevel) || item.section);
+web/src/App.jsx:1605:  function teacherCanUseWebGroupClass(gradeLevel, section) {
+web/src/App.jsx:1648:    if (!teacherCanUseWebGroupClass(gradeLevel, section)) {
+web/src/App.jsx:1976:      if (!teacherId || !gradeLevel || !section) {
+web/src/App.jsx:1995:        body: { gradeLevel, section }
+web/src/App.jsx:2045:    if (!studentId || !Number.isInteger(gradeLevel) || gradeLevel < 1 || gradeLevel > 6 || !section) {
+web/src/App.jsx:2051:      `Update student enrollment to Grade ${gradeLevel} • ${section}?`
+web/src/App.jsx:2059:        body: { gradeLevel, section },
+web/src/App.jsx:2062:      notify('Student enrollment updated.');
+web/src/App.jsx:2066:    }, 'Hindi na-update ang student enrollment.');
+web/src/App.jsx:4504:  updateStudentEnrollment={adminUpdateStudentEnrollment}
+web/src/App.jsx:7307:          <div className="g12-pill">🌸 Baitang {s.gradeLevel || '—'} • {s.section || '—'}</div>
+web/src/App.jsx:8065:                  <small>Baitang {s.gradeLevel || '—'} • {s.section || '—'}</small>
+
+------------------------------------------------------------
+O. Archive and reactivate student/teacher accounts
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/routes/admin.routes.js:604:    const reactivated =
+backend/src/routes/admin.routes.js:607:    if (reactivated) {
+backend/src/routes/admin.routes.js:617:        : reactivated
+backend/src/routes/admin.routes.js:618:          ? 'teacher_assignment.reactivate'
+backend/src/routes/admin.routes.js:627:        reactivated
+backend/src/routes/teachers.routes.js:879:  '/:teacherIdentifier/reactivate',
+backend/src/routes/teachers.routes.js:916:        'teacher.reactivate',
+backend/src/routes/students.routes.js:1068:      let reactivated = false;
+backend/src/routes/students.routes.js:1076:          reactivated = true;
+backend/src/routes/students.routes.js:1102:          reactivated = true;
+backend/src/routes/students.routes.js:1116:          reactivated,
+backend/src/routes/students.routes.js:1123:        reactivated,
+backend/src/routes/students.routes.js:1126:          : reactivated
+backend/src/routes/students.routes.js:1127:            ? 'Existing section reactivated successfully.'
+backend/src/routes/students.routes.js:1403:    if (student.User) { student.User.status = 'archived'; await student.User.save(); }
+backend/src/routes/students.routes.js:1415:router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
+backend/src/routes/students.routes.js:1433:      'student.reactivate',
+web/src/App.jsx:506:  archivedStudents: [],
+web/src/App.jsx:508:  archivedTeachers: [],
+web/src/App.jsx:917:  archivedStudents: [],
+web/src/App.jsx:919:  archivedTeachers: [],
+web/src/App.jsx:1914:  const [stats, students, archivedStudents, teachers, archivedTeachers, enrollments, accounts, logs] = await Promise.all([
+web/src/App.jsx:1928:    archivedStudents: archivedStudents.students || [],
+web/src/App.jsx:1930:    archivedTeachers: archivedTeachers.teachers || [],
+
+------------------------------------------------------------
+P. Audit logs for archived students and teachers
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/routes/auth.routes.js:457:    await audit(user.id, 'auth.login', 'user', user.id, {
+backend/src/routes/auth.routes.js:570:  await audit(req.user.id, 'auth.logout', 'user', req.user.id);
+backend/src/routes/auth.routes.js:609:      await audit(
+backend/src/routes/auth.routes.js:681:    await audit(req.user.id, 'auth.change_password', 'user', req.user.id);
+backend/src/routes/auth.routes.js:910:      await audit(req.user.id, 'teacher.create', 'teacher', teacher.id);
+backend/src/routes/lessons.routes.js:1270:    await audit(req.user.id, 'lesson.archive', 'lesson', lesson.id);
+backend/src/routes/lessons.routes.js:1426:    await audit(req.user.id, 'lesson.create', 'lesson', lesson.id);
+backend/src/routes/lessons.routes.js:1505:    await audit(
+backend/src/routes/lessons.routes.js:1589:    await audit(req.user.id, 'lesson.complete', 'lesson', lesson.id);
+backend/src/routes/lessons.routes.js:2095:    await audit(req.user.id, 'quiz.result', 'lesson', lesson.id, {
+backend/src/routes/admin.routes.js:290:    await audit(
+backend/src/routes/admin.routes.js:341:    await audit(req.user.id, 'account.status', 'user', user.id, {
+backend/src/routes/admin.routes.js:519:      await audit(
+backend/src/routes/admin.routes.js:613:    await audit(
+backend/src/routes/admin.routes.js:659:    await audit(
+backend/src/routes/teachers.routes.js:293:      await audit(
+backend/src/routes/teachers.routes.js:739:      await audit(
+backend/src/routes/teachers.routes.js:806:      await audit(
+backend/src/routes/teachers.routes.js:863:      await audit(
+backend/src/routes/teachers.routes.js:865:        'teacher.archive',
+backend/src/routes/teachers.routes.js:914:      await audit(
+backend/src/routes/teachers.routes.js:1912:      await audit(
+backend/src/routes/groups.routes.js:225:    await audit(req.user.id, 'group.create', 'group', group.id);
+backend/src/routes/groups.routes.js:301:    await audit(req.user.id, 'group.update', 'group', group.id, req.body);
+
+------------------------------------------------------------
+Q. Inactive teacher status handling
+------------------------------------------------------------
+[EVIDENCE FOUND]
+backend/src/models/index.js:38:    type: DataTypes.ENUM('active', 'archived'),
+backend/src/models/index.js:81:  status: { type: DataTypes.ENUM('active', 'archived'), allowNull: false, defaultValue: 'active' },
+backend/src/models/index.js:111:  status: { type: DataTypes.ENUM('active', 'archived'), allowNull: false, defaultValue: 'active' }
+backend/src/models/index.js:135:    type: DataTypes.ENUM('active', 'archived'),
+backend/src/models/index.js:160:  status: { type: DataTypes.ENUM('published', 'draft', 'archived'), allowNull: false, defaultValue: 'published' }
+backend/src/models/index.js:313:  status: { type: DataTypes.ENUM('active', 'archived'), allowNull: false, defaultValue: 'active' }
+backend/src/models/index.js:337:  status: { type: DataTypes.ENUM('active', 'archived'), allowNull: false, defaultValue: 'active' }
+backend/src/routes/auth.routes.js:215:      message: 'This account is archived. Please contact the administrator.'
+backend/src/routes/auth.routes.js:230:        message: 'This teacher account is archived. Please contact the administrator.'
+backend/src/routes/auth.routes.js:912:      return res.status(201).json({ teacher });
+backend/src/routes/lessons.routes.js:1032:    if (['published', 'draft', 'archived'].includes(req.query.status)) {
+backend/src/routes/lessons.routes.js:1267:    lesson.status = 'archived';
+backend/src/routes/admin.routes.js:320:    if (Number(user.id) === Number(req.user.id) && req.body.status === 'archived') {
+backend/src/routes/admin.routes.js:327:      req.body.status === 'archived'
+backend/src/routes/admin.routes.js:328:        ? 'archived'
+backend/src/routes/admin.routes.js:339:    if (teacher) await teacher.update({ status: user.status });
+backend/src/routes/reports.routes.js:763:    const archivedAccounts = req.role === 'admin'
+backend/src/routes/reports.routes.js:764:      ? await User.count({ where: { status: 'archived' } })
+backend/src/routes/reports.routes.js:780:      archivedAccounts
+backend/src/routes/reports.routes.js:1573:        `Archived Accounts: ${await User.count({ where: { status: 'archived' } })}`
+backend/src/routes/teachers.routes.js:199:      if (['active', 'archived'].includes(req.query.status)) {
+backend/src/routes/teachers.routes.js:773:        teacher.status !== 'active' ||
+backend/src/routes/teachers.routes.js:774:        teacher.User.status !== 'active'
+backend/src/routes/teachers.routes.js:855:      teacher.status = 'archived';
+
+------------------------------------------------------------
+R. Grade 1-2 leader submission and pending teacher review
+------------------------------------------------------------
+[EVIDENCE FOUND]
+web/src/App.jsx:16187:    selectedGroup?.currentStudentIsLeader
+web/src/App.jsx:16529:                              ? 'Ang pinuno ng pangkat ang magpapasa ng gawaing ito.'
+web/src/App.jsx:16668:              const isGroupLeader = group.currentStudentIsLeader || group.currentStudentGroupRole === 'leader';
+web/src/App.jsx:16750:                                <strong>{isReturned ? 'Ang lider ng grupo ang magpapasa ng inayos na output.' : 'Ang lider ng grupo ang magpapasa ng output.'}</strong>
+web/src/pages/Teacher/TeacherDashboard.jsx:319:  const pendingGroupRows = asArray(pendingGroupChecks.rows);
+web/src/pages/Teacher/TeacherDashboard.jsx:2177:                  <h3>Pending Group Checks</h3>
+web/src/pages/Teacher/TeacherDashboard.jsx:2180:                <span className="lms-mini-pill">⏳ {pendingGroupRows.length} pending</span>
+web/src/pages/Teacher/TeacherDashboard.jsx:2183:              {pendingGroupRows.length ? (
+web/src/pages/Teacher/TeacherDashboard.jsx:2185:                  {pendingGroupRows.map(row => (
+web/src/pages/Teacher/TeacherDashboard.jsx:2321:                  <div className="lms-section-label">Group Submission Summary</div>
+mobile/src/screens/GroupsScreen.js:170:  return group.currentStudentIsLeader
+mobile/src/screens/GroupsScreen.js:427:          group.currentStudentIsLeader ? 'leader' : 'member',
+mobile/src/screens/GroupsScreen.js:648:    const canIpasa = group.currentStudentIsLeader && !task.completed && !task.pendingTeacherCheck;
+mobile/src/screens/GroupsScreen.js:825:          {group.currentStudentIsLeader
+mobile/src/screens/teacher/TeacherHome.js:2382:      Alert.alert('Pending Group Checks', 'Missing task or student details.');
+mobile/src/screens/teacher/TeacherHome.js:2407:      Alert.alert('Pending Group Checks', 'Missing task or student details.');
+mobile/src/screens/teacher/TeacherHome.js:2471:          <Text style={styles.cardTitle}>Pending Group Checks</Text>
+backend/src/routes/students.routes.js:641:        currentStudentIsLeader: (m.groupRole || 'member') === 'leader',
+
+------------------------------------------------------------
+S. Security evaluation documentation: OWASP ZAP and MobSF
+------------------------------------------------------------
+[NO STATIC EVIDENCE FOUND]
+
+=== 3. BACKEND JAVASCRIPT SYNTAX CHECK ===
+
+[ERROR] backend/src/services/oneTimeLoginToken.service.js
+node:fs:440
+    return binding.readFileUtf8(path, stringToFlags(options.flag));
+                   ^
+
+Error: EACCES: permission denied, open '/srv/development/Tuklas-Talino-Web-and-Mobile/backend/src/services/oneTimeLoginToken.service.js'
+    at Object.readFileSync (node:fs:440:20)
+    at node:internal/main/check_syntax:36:21 {
+  errno: -13,
+  code: 'EACCES',
+  syscall: 'open',
+  path: '/srv/development/Tuklas-Talino-Web-and-Mobile/backend/src/services/oneTimeLoginToken.service.js'
+}
+
+Node.js v22.23.0
+[ERROR] 1 of 33 backend files failed syntax checking.
+
+=== 4. WEB PRODUCTION BUILD ===
+
+> tuklas-talino-web@1.0.0 build
+> vite build
+
+vite v6.4.2 building for production...
+transforming...
+✓ 60 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.76 kB │ gzip:   0.42 kB
+dist/assets/index-2aK9-icy.css  185.43 kB │ gzip:  32.13 kB
+dist/assets/index-CvNLLyFk.js   979.99 kB │ gzip: 218.37 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.98s
+[OK] Web production build completed successfully.
+
+=== 5. AVAILABLE TEST SCRIPTS ===
+
+Web package scripts:
+{
+  "dev": "vite --host 0.0.0.0",
+  "build": "vite build",
+  "preview": "vite preview"
+}
+
+Backend package scripts:
+{
+  "dev": "nodemon src/server.js",
+  "start": "node src/server.js",
+  "migrate": "node scripts/migrate.js",
+  "seed": "node scripts/seed.js",
+  "reset": "node scripts/reset.js"
+}
+
+=== AUDIT FINISHED ===

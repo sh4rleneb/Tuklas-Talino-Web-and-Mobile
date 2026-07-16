@@ -61,7 +61,7 @@ export default function LessonDetailPage() {
 
       {mcq && (
         <article className="content-card">
-          <h2>MCQ Activity</h2>
+          <h2>Pagsusulit</h2>
           <p>{mcq.question}</p>
           <div className="option-list">
             {mcq.options.map(o => <button className="option-btn" key={o.id} onClick={() => answer(o.id)}>{o.optionText}</button>)}
@@ -71,7 +71,7 @@ export default function LessonDetailPage() {
 
       {writingTask && (
         <article className="content-card">
-          <h2>Writing Activity</h2>
+          <h2>Gawain sa Pagsulat</h2>
           <p>{writingTask.prompt}</p>
           <textarea value={writing} onChange={e => setWriting(e.target.value)} placeholder="Isulat ang iyong sagot dito..." />
           <button className="btn primary" onClick={submitWriting}>Ipasa ang Sinulat</button>
@@ -80,7 +80,7 @@ export default function LessonDetailPage() {
 
       {speechTask && (
         <article className="content-card">
-          <h2>Speech / Oral Practice</h2>
+          <h2>Pagsasanay sa Pagbigkas</h2>
           <p>Target: <strong>{speechTask.targetText}</strong></p>
           <textarea value={transcript} onChange={e => setTranscript(e.target.value)} placeholder="Type or paste transcript while browser/mobile speech support is connected." />
           <button className="btn secondary" onClick={submitSpeech}>Itala ang Pagsubok sa Pagbigkas</button>

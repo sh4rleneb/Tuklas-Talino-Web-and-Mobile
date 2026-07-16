@@ -198,7 +198,7 @@ export function LandingScreen({ go }) {
       <section className="tt-panel tt-modules-panel" aria-label="Learning modules">
         <div className="tt-section-heading">
           <h2>📚 Mga Learning Modules</h2>
-          <button onClick={() => go('screen-login-student')}>Open student dashboard →</button>
+          <button onClick={() => go('screen-login-student')}>Buksan ang Student Dashboard →</button>
         </div>
         <div className="tt-module-grid">
           {SUBJECTS.map((s) => (
@@ -275,7 +275,7 @@ export function LandingScreen({ go }) {
       <section className="tt-panel tt-flow-panel" aria-label="How Tuklas Talino works">
         <div className="tt-section-heading">
           <h2>🔄 How Tuklas Talino Works</h2>
-          <button onClick={() => selectPublicPage('help')}>View help →</button>
+          <button onClick={() => selectPublicPage('help')}>Tingnan ang Gabay →</button>
         </div>
         <div className="tt-flow-list">
           {howSteps.map((step, idx) => (
