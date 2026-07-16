@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "GRADLE_WORKERS_MAX": "4"
+        "GRADLE_WORKERS_MAX": "10"
       }
     },
     "preview": {
@@ -17,13 +17,13 @@
         "buildType": "apk"
       },
       "env": {
-        "GRADLE_WORKERS_MAX": "4"
+        "GRADLE_WORKERS_MAX": "10"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "GRADLE_WORKERS_MAX": "4"
+        "GRADLE_WORKERS_MAX": "10"
       }
     },
     "apk-preview": {
@@ -32,7 +32,7 @@
         "buildType": "apk"
       },
       "env": {
-        "GRADLE_WORKERS_MAX": "4"
+        "GRADLE_WORKERS_MAX": "10"
       }
     },
     "view": {
@@ -41,7 +41,7 @@
         "buildType": "apk"
       },
       "env": {
-        "GRADLE_WORKERS_MAX": "4"
+        "GRADLE_WORKERS_MAX": "10"
       }
     }
   },

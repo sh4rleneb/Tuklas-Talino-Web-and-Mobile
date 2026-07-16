@@ -803,7 +803,7 @@ router.post(
 
     const existingStudentsWithSameName =
       await Student.findAll({
-        attributes: ['id', 'name', 'gradeLevel', 'section', 'deletedAt'],
+        attributes: ['id', 'name', 'gradeLevel', 'section', 'status'],
         paranoid: false,
       });
 
@@ -817,7 +817,7 @@ router.post(
 
         return (
           studentName === normalizedStudentName &&
-          !student.deletedAt
+          student.status === 'active'
         );
       });
 
