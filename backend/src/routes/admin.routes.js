@@ -682,16 +682,37 @@ router.get('/audit-logs', async (req, res, next) => {
       10
     );
 
+    const requestedPage = Number.parseInt(
+      String(req.query.page || '1'),
+      10
+    );
+
     const limit = Number.isInteger(requestedLimit)
-      ? Math.min(500, Math.max(1, requestedLimit))
+      ? Math.min(200, Math.max(1, requestedLimit))
       : 100;
 
-    const logs = await AuditLog.findAll({
+    const page = Number.isInteger(requestedPage)
+      ? Math.max(1, requestedPage)
+      : 1;
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await AuditLog.findAndCountAll({
       order: [['createdAt', 'DESC']],
-      limit
+      limit,
+      offset
     });
 
-    res.json({ logs });
+    res.json({
+      logs: rows,
+      pagination: {
+        total: count,
+        page,
+        limit,
+        pages: Math.ceil(count / limit)
+      }
+    });
+
   } catch (err) {
     next(err);
   }

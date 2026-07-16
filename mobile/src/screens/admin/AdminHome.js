@@ -62,7 +62,7 @@ const NAV_ITEMS = [
   ['assignments', '📌', 'Assignments'],
   ['students', '🎓', 'Students'],
   ['teachers', '👩‍🏫', 'Teachers'],
-  ['archives', '🗃️', 'Archives'],
+  ['archives', '🗃️', 'Deactivated Accounts'],
   ['logs', '🧾', 'Audit Logs'],
   ['reports', '📊', 'Reports'],
 ];
@@ -100,16 +100,12 @@ export default function AdminHome({ navigation }) {
   const [section, setSection] = useState('overview');
   const [studentSearch, setStudentSearch] = useState('');
   const [logoutVisible, setLogoutVisible] = useState(false);
-  const [vaultVisible, setVaultVisible] = useState(false);
-  const [vaultUser, setVaultUser] = useState(null);
-  const [generatedPin, setGeneratedPin] = useState('');
 
   const [stats, setStats] = useState({});
   const [enrollments, setEnrollments] = useState({ students: [], teachers: [], teacherAssignments: [], classOptions: [] });
   const [accounts, setAccounts] = useState([]);
   const [workspaceNotice, setWorkspaceNotice] = useState(null);
   const [recentCredentials, setRecentCredentials] = useState([]);
-  const [revealedPins, setRevealedPins] = useState({});
 
   const [passwordVerifyVisible, setPasswordVerifyVisible] = useState(false);
   const [passwordVerifyInput, setPasswordVerifyInput] = useState('');
@@ -160,10 +156,24 @@ const [auditSearch, setAuditSearch] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [accountType, setAccountType] = useState('student');
-  const [studentForm, setStudentForm] = useState({ name: '', gradeLevel: '1', section: '', sectionMode: 'existing', newSection: '' });
+  const [studentForm, setStudentForm] = useState({
+    name: '',
+    gradeLevel: '1',
+    section: '',
+    sectionMode: 'existing',
+    newSection: '',
+    gradeMenuOpen: false,
+  });
   const [studentSectionMenuOpen, setStudentSectionMenuOpen] = useState(false);
   const [teacherForm, setTeacherForm] = useState({ name: '', email: '' });
-  const [assignmentForm, setAssignmentForm] = useState({ teacherId: '', gradeLevel: '1', section: '' });
+  const [assignmentForm, setAssignmentForm] = useState({
+    teacherId: '',
+    gradeLevel: '1',
+    section: '',
+    teacherMenuOpen: false,
+    gradeMenuOpen: false,
+    sectionMenuOpen: false,
+  });
   const [studentGradeFilter, setStudentGradeFilter] = useState('all');
   const [studentSectionFilter, setStudentSectionFilter] = useState('all');
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
@@ -191,6 +201,28 @@ const [auditSearch, setAuditSearch] = useState('');
 
   const gradeOptions = ['1', '2', '3', '4', '5', '6'];
 
+  const [studentEnrollmentDrafts, setStudentEnrollmentDrafts] = useState({});
+
+  function enrollmentDraftFor(student = {}) {
+    const id = studentRecordId(student);
+    return (
+      studentEnrollmentDrafts[id] || {
+        gradeLevel: String(student.gradeLevel || student.grade || ''),
+        section: studentSectionValue(student),
+      }
+    );
+  }
+
+  function updateStudentEnrollmentDraft(studentId, values) {
+    setStudentEnrollmentDrafts((current) => ({
+      ...current,
+      [studentId]: {
+        ...(current[studentId] || {}),
+        ...values,
+      },
+    }));
+  }
+
   function studentRecordId(student = {}) {
     return student.id ?? student.studentId ?? student.student_id ?? student.profileId ?? student.profile_id;
   }
@@ -212,6 +244,33 @@ const [auditSearch, setAuditSearch] = useState('');
 
   function studentSectionValue(student = {}) {
     return normalizeSpaces(student.section || student.sectionName || student.classSection || '');
+  }
+
+  async function saveStudentEnrollment(student) {
+    const id = studentRecordId(student);
+    const draft = enrollmentDraftFor(student);
+
+    await run(
+      `student-enrollment-${id}`,
+      () =>
+        updateStudentEnrollment(id, {
+          gradeLevel: Number(draft.gradeLevel),
+          section: normalizeSpaces(draft.section),
+        }),
+      'Student enrollment updated.'
+    );
+
+    setStudents((current) =>
+      current.map((item) =>
+        String(studentRecordId(item)) === String(id)
+          ? {
+              ...item,
+              gradeLevel: Number(draft.gradeLevel),
+              section: normalizeSpaces(draft.section),
+            }
+          : item
+      )
+    );
   }
 
   const studentSectionOptions = [
@@ -324,7 +383,7 @@ const [auditSearch, setAuditSearch] = useState('');
         getActiveTeachers(),
         getArchivedStudents(),
         getArchivedTeachers(),
-        getAdminAuditLogs(500),
+        getAdminAuditLogs(100),
         getReportSummary(),
       ]);
       setStats(statData.stats || {});
@@ -369,10 +428,7 @@ const [auditSearch, setAuditSearch] = useState('');
 
 async function handleLogout() {
     setRecentCredentials([]);
-    setGeneratedPin('');
     setVerificationExpiresAt(null);
-    setVaultUser(null);
-    setVaultVisible(false);
 
     await logout();
 
@@ -410,14 +466,6 @@ async function handleLogout() {
   async function executeProtectedAdminAction() {
     if (!pendingAdminAction) return;
 
-    if (!adminActionReason.trim()) {
-      Alert.alert(
-        'Reason Required',
-        'Please provide a reason before continuing.'
-      );
-      return;
-    }
-
     if (
       pendingAdminAction.keyword &&
       adminActionKeyword.trim() !== String(pendingAdminAction.keyword || '').trim().toUpperCase()
@@ -429,12 +477,10 @@ async function handleLogout() {
       return;
     }
 
-    const reason = adminActionReason.trim();
-
     setAdminActionVisible(false);
 
     runProtectedAction(async () => {
-      await pendingAdminAction.action(reason);
+      await pendingAdminAction.action();
     });
   }
 
@@ -498,7 +544,7 @@ async function executeVerifiedAction() {
       'auth.verify_password': 'Verified password',
       'student.create': 'Created student account',
       'student.update': 'Updated student account',
-      'student.archive': 'Archive students',
+      'student.archive': 'Deactivated student account',
       'student.reactivate': 'Reactivate students',
       'student.reset_password': 'Reset student password',
       'student.reset_progress': 'Reset student progress',
@@ -506,7 +552,7 @@ async function executeVerifiedAction() {
       'student.promote': 'Promoted student',
       'teacher.create': 'Created teacher account',
       'teacher.update': 'Updated teacher account',
-      'teacher.archive': 'Archive teachers',
+      'teacher.archive': 'Deactivated teacher account',
       'teacher.reactivate': 'Reactivate teachers',
       'teacher.reset_password': 'Reset teacher password',
       'teacher.assignment.create': 'Assigned teacher class',
@@ -555,7 +601,7 @@ async function executeVerifiedAction() {
       })),
       ...archivedStudents.map((student) => ({
         userId: Number(student.userId || student.User?.id || student.user?.id || 0),
-        name: student.name || student.User?.displayName || student.user?.displayName || student.studentCode || 'Archived student',
+        name: student.name || student.User?.displayName || student.user?.displayName || student.studentCode || 'Deactivated student',
         username: student.studentCode || student.User?.username || student.user?.username || '',
         roleLabel: 'student',
       })),
@@ -567,7 +613,7 @@ async function executeVerifiedAction() {
       })),
       ...archivedTeachers.map((teacher) => ({
         userId: Number(teacher.userId || teacher.User?.id || teacher.user?.id || 0),
-        name: teacher.name || teacher.User?.displayName || teacher.user?.displayName || teacher.employeeCode || 'Archived teacher',
+        name: teacher.name || teacher.User?.displayName || teacher.user?.displayName || teacher.employeeCode || 'Deactivated teacher',
         username: teacher.employeeCode || teacher.User?.username || teacher.user?.username || '',
         roleLabel: 'teacher',
       })),
@@ -845,21 +891,13 @@ async function executeVerifiedAction() {
       return;
     }
 
-    requestProtectedAdminAction({
-      keyword: nextStatus === 'archived' ? 'ARCHIVE' : 'ACTIVE',
-      reasonPlaceholder:
-        nextStatus === 'archived'
-          ? `e.g.\n${label} should be moved to Archive`
-          : `e.g.\n${label} should be restored as active`,
-      action: (reason) =>
-        run(
-          `account-status-${userId}-${nextStatus}`,
-          () => updateAccountStatus(userId, nextStatus, { reason }),
-          nextStatus === 'archived'
-            ? 'Account moved to Archive.'
-            : 'Account status updated.'
-        ),
-    });
+    run(
+      `account-status-${userId}-${nextStatus}`,
+      () => updateAccountStatus(userId, nextStatus),
+      nextStatus === 'archived'
+        ? 'Account deactivated.'
+        : 'Account status updated.'
+    );
   }
 
   function renderStatusControl(entity, label) {
@@ -893,7 +931,7 @@ async function executeVerifiedAction() {
                 }}
               >
                 <Text style={{ color: selected ? '#ffffff' : '#111827', fontWeight: '800' }}>
-                  {statusOption === 'active' ? 'Active' : 'Archived'}
+                  {statusOption === 'active' ? 'Active' : 'Deactivated'}
                 </Text>
               </TouchableOpacity>
             );
@@ -901,7 +939,7 @@ async function executeVerifiedAction() {
         </View>
 
         <Text style={{ marginTop: 2, fontSize: 11, color: '#6b7280' }}>
-          Only Active and Archived are allowed.
+          Only Active and Deactivated are allowed.
         </Text>
       </View>
     );
@@ -920,7 +958,7 @@ async function executeVerifiedAction() {
             ['📌', assignments.length, 'Assignments'],
             ['✅', students.length, 'Active Students'],
             ['✅', teachers.length, 'Active Teachers'],
-            ['🗃️', archived, 'Archived Accounts'],
+            ['🗃️', archived, 'Deactivated Accounts'],
           ].map(([icon, value, label]) => (
             <Card key={label} style={styles.statCard}>
               <Text style={styles.statIcon}>{icon}</Text>
@@ -974,7 +1012,7 @@ async function executeVerifiedAction() {
                   {actor.roleLabel}{actor.username ? ` • ${actor.username}` : ''}{actor.userId ? ` • User #${actor.userId}` : ''}
                 </Text>
                 <Text style={styles.muted}>
-                  {auditEntityLabel(log)} • {new Date(log.createdAt).toLocaleString()}
+                  {new Date(log.createdAt).toLocaleString()}
                 </Text>
               </View>
             );
@@ -1012,18 +1050,53 @@ async function executeVerifiedAction() {
               </Text>
             )}
               <Text style={styles.fieldLabel}>Grade</Text>
-              <View style={styles.choiceRow}>
-                {gradeOptions.map((grade) => (
-                  <Button
-                    key={`student-grade-${grade}`}
-                    tone={Number(studentForm.gradeLevel) === Number(grade) ? 'green' : 'slate'}
-                    disabled={Boolean(busy)}
-                    onPress={() => setStudentForm((current) => ({ ...current, gradeLevel: grade, section: '', sectionMode: 'existing', newSection: '' }))}
-                  >
-                    G{grade}
-                  </Button>
-                ))}
-              </View>
+
+              <TouchableOpacity
+                style={styles.auditDateDropdownButton}
+                onPress={() =>
+                  setStudentForm((current) => ({
+                    ...current,
+                    gradeMenuOpen: !current.gradeMenuOpen,
+                  }))
+                }
+                disabled={Boolean(busy)}
+              >
+                <Text style={styles.auditDateDropdownText}>
+                  {studentForm.gradeLevel
+                    ? `Grade ${studentForm.gradeLevel}`
+                    : 'Select Grade'}
+                </Text>
+
+                <Text style={styles.auditDateDropdownChevron}>
+                  {studentForm.gradeMenuOpen ? '▲' : '▼'}
+                </Text>
+              </TouchableOpacity>
+
+
+              {studentForm.gradeMenuOpen ? (
+                <View style={styles.auditDateDropdownPanel}>
+                  {gradeOptions.map((grade) => (
+                    <TouchableOpacity
+                      key={`student-grade-${grade}`}
+                      style={styles.auditDateDropdownOption}
+                      onPress={() =>
+                        setStudentForm((current) => ({
+                          ...current,
+                          gradeLevel: grade,
+                          section: '',
+                          sectionMode: 'existing',
+                          newSection: '',
+                          gradeMenuOpen: false,
+                        }))
+                      }
+                    >
+                      <Text style={styles.auditDateDropdownOptionText}>
+                        Grade {grade}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
             {studentValidation.gradeLevel && (
               <Text style={styles.errorText}>
                 Grade level must be from 1 to 6.
@@ -1276,45 +1349,149 @@ async function executeVerifiedAction() {
     return (
       <>
         <Card>
-          <Text style={styles.cardTitle}>I-assign ang Teacher</Text>
+          <Text style={styles.cardTitle}>Assign Teacher</Text>
+
           <Text style={styles.fieldLabel}>Teacher</Text>
-          <View style={styles.choiceRow}>{teachers.map((teacher) => <Button key={teacherRecordId(teacher)} tone={String(assignmentForm.teacherId) === String(teacherRecordId(teacher)) ? 'green' : 'slate'} onPress={() => setAssignmentForm((current) => ({ ...current, teacherId: teacherRecordId(teacher) }))}>{teacher.name}</Button>)}</View>
-            <Text style={styles.fieldLabel}>Grade</Text>
-            <View style={styles.choiceRow}>
-              {gradeOptions.map((grade) => (
-                <Button
-                  key={`assignment-grade-${grade}`}
-                  tone={Number(assignmentForm.gradeLevel) === Number(grade) ? 'green' : 'slate'}
-                  disabled={Boolean(busy)}
-                  onPress={() => setAssignmentForm((current) => ({ ...current, gradeLevel: grade, section: '' }))}
+
+          <TouchableOpacity
+            style={styles.auditDateDropdownButton}
+            onPress={() =>
+              setAssignmentForm((current) => ({
+                ...current,
+                teacherMenuOpen: !current.teacherMenuOpen,
+              }))
+            }
+          >
+            <Text style={styles.auditDateDropdownText}>
+              {
+                teachers.find(
+                  (teacher) =>
+                    String(teacherRecordId(teacher)) ===
+                    String(assignmentForm.teacherId)
+                )?.name || 'Select Teacher'
+              }
+            </Text>
+
+            <Text style={styles.auditDateDropdownChevron}>
+              {assignmentForm.teacherMenuOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+
+          {assignmentForm.teacherMenuOpen ? (
+            <View style={styles.auditDateDropdownPanel}>
+              {teachers.map((teacher) => (
+                <TouchableOpacity
+                  key={`assignment-teacher-${teacherRecordId(teacher)}`}
+                  style={styles.auditDateDropdownOption}
+                  onPress={() =>
+                    setAssignmentForm((current) => ({
+                      ...current,
+                      teacherId: teacherRecordId(teacher),
+                      teacherMenuOpen: false,
+                    }))
+                  }
                 >
-                  G{grade}
-                </Button>
+                  <Text style={styles.auditDateDropdownOptionText}>
+                    {teacher.name}
+                  </Text>
+                </TouchableOpacity>
               ))}
             </View>
-          <Field
-            label="Section"
-            value={assignmentForm.section}
-            onChangeText={(section) => setAssignmentForm((current) => ({ ...current, section: normalizeSpaces(section) }))}
-          />
-            {assignmentSectionOptions.length ? (
-              <>
-                <Text style={styles.helperText}>Section suggestions for selected grade:</Text>
-                <View style={styles.choiceRow}>
-                  {assignmentSectionOptions.map((sectionOption) => (
-                    <Button
-                      key={`assignment-section-${sectionOption}`}
-                      tone={normalizeSpaces(assignmentForm.section) === sectionOption ? 'green' : 'slate'}
-                      disabled={Boolean(busy)}
-                      onPress={() => setAssignmentForm((current) => ({ ...current, section: sectionOption }))}
-                    >
-                      {sectionOption}
-                    </Button>
-                  ))}
-                </View>
-              </>
-            ) : null}
-          <Button
+          ) : null}
+
+
+          <Text style={styles.fieldLabel}>Grade</Text>
+
+          <TouchableOpacity
+            style={styles.auditDateDropdownButton}
+            onPress={() =>
+              setAssignmentForm((current) => ({
+                ...current,
+                gradeMenuOpen: !current.gradeMenuOpen,
+              }))
+            }
+          >
+            <Text style={styles.auditDateDropdownText}>
+              {assignmentForm.gradeLevel
+                ? `Grade ${assignmentForm.gradeLevel}`
+                : 'Select Grade'}
+            </Text>
+
+            <Text style={styles.auditDateDropdownChevron}>
+              {assignmentForm.gradeMenuOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+
+          {assignmentForm.gradeMenuOpen ? (
+            <View style={styles.auditDateDropdownPanel}>
+              {gradeOptions.map((grade) => (
+                <TouchableOpacity
+                  key={`assignment-grade-${grade}`}
+                  style={styles.auditDateDropdownOption}
+                  onPress={() =>
+                    setAssignmentForm((current) => ({
+                      ...current,
+                      gradeLevel: grade,
+                      section: '',
+                      gradeMenuOpen: false,
+                    }))
+                  }
+                >
+                  <Text style={styles.auditDateDropdownOptionText}>
+                    Grade {grade}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+
+<Text style={styles.fieldLabel}>Section</Text>
+
+          <TouchableOpacity
+            style={styles.auditDateDropdownButton}
+            onPress={() =>
+              setAssignmentForm((current) => ({
+                ...current,
+                sectionMenuOpen: !current.sectionMenuOpen,
+              }))
+            }
+          >
+            <Text style={styles.auditDateDropdownText}>
+              {assignmentForm.section || 'Select Section'}
+            </Text>
+
+            <Text style={styles.auditDateDropdownChevron}>
+              {assignmentForm.sectionMenuOpen ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+
+
+          {assignmentForm.sectionMenuOpen ? (
+            <View style={styles.auditDateDropdownPanel}>
+
+              {assignmentSectionOptions.map((sectionOption) => (
+                <TouchableOpacity
+                  key={`assignment-section-${sectionOption}`}
+                  style={styles.auditDateDropdownOption}
+                  onPress={() =>
+                    setAssignmentForm((current) => ({
+                      ...current,
+                      section: sectionOption,
+                      sectionMenuOpen: false,
+                    }))
+                  }
+                >
+                  <Text style={styles.auditDateDropdownOptionText}>
+                    {sectionOption}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+<Button
+            tone="green"
             disabled={
               !assignmentForm.teacherId ||
               !isValidGrade(assignmentForm.gradeLevel) ||
@@ -1519,7 +1696,7 @@ async function executeVerifiedAction() {
           ) : null}
 
           <Text style={styles.muted}>
-            Ipinapakita ang {visibleStudents.length} sa {filteredStudents.length} tugmang aktibong mag-aaral. Kabuuan: {students.length}.
+            Showing {visibleStudents.length} of {filteredStudents.length} matching active students. Total: {students.length}.
           </Text>
 
         {visibleStudents.map((student) => (
@@ -1538,79 +1715,139 @@ async function executeVerifiedAction() {
                   (data) => `Temporary PIN: ${data.temporaryPin}`
                 )
               })}>Reset Password</Button>
-              <Button tone="slate" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
-                keyword: 'RESET',
-                reasonPlaceholder: 'e.g. Student needs to restart their lesson progress',
-                action: (reason) => run(
-                      `student-progress-${student.id}`,
-                      () => resetStudentProgress(studentRecordId(student), {
-                        reason
-                      }),
-                      'Progress reset.'
-                    )
-              })}>Reset Progress</Button>
-              <Button tone="slate" onPress={() => {
-                setGeneratedPin('');
-                setVaultUser({
-                  id: student.id,
-                  type: 'Student',
-                  username: student?.User?.username || student.studentCode,
-                  email: student?.User?.email || 'Not provided',
-                  status: student?.status || 'active'
-                });
-                setVaultVisible(true);
-              }}>Login Credentials</Button>
-            {renderStatusControl(student, student.name || 'student account')}
-            {renderLoginSecurityControl(student, student.name || 'student account')}
+
+              <Button tone="slate" disabled={Boolean(busy)} onPress={() => run(
+                `student-progress-${student.id}`,
+                () => resetStudentProgress(studentRecordId(student)),
+                'Progress reset.'
+              )}>Reset Progress</Button>
+
             </View>
-            <View style={styles.choiceRow}>
-              {['1', '2', '3', '4', '5', '6'].map((grade) => <Button key={grade} tone={Number(student.gradeLevel) === Number(grade) ? 'green' : 'slate'} disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
-                    keyword: 'PROMOTE',
-                    reasonPlaceholder: 'e.g. Student is moving to the selected grade level',
-                    action: (reason) => run(
-                      `grade-${student.id}`,
-                      () => updateStudentEnrollment(studentRecordId(student), {
-                        gradeLevel: Number(grade),
-                        section: studentSectionValue(student),
-                        promotionReason: reason
-                      }),
-                      'Student enrollment updated.'
-                    )
-                  })}>G{grade}</Button>)}
-            </View>
+            {(() => {
+              const enrollmentDraft = enrollmentDraftFor(student);
+
+              return (
+                <>
+                  <Text style={styles.fieldLabel}>Grade</Text>
+
+                  <TouchableOpacity
+                    style={styles.auditDateDropdownButton}
+                    onPress={() =>
+                      updateStudentEnrollmentDraft(studentRecordId(student), {
+                        gradeMenuOpen:
+                          !enrollmentDraft.gradeMenuOpen,
+                      })
+                    }
+                  >
+                    <Text style={styles.auditDateDropdownText}>
+                      {enrollmentDraft.gradeLevel
+                        ? `Grade ${enrollmentDraft.gradeLevel}`
+                        : 'Select Grade'}
+                    </Text>
+
+                    <Text style={styles.auditDateDropdownChevron}>
+                      {enrollmentDraft.gradeMenuOpen ? '▲' : '▼'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {enrollmentDraft.gradeMenuOpen ? (
+                    <View style={styles.auditDateDropdownPanel}>
+                      {gradeOptions.map((grade) => (
+                        <TouchableOpacity
+                          key={`student-grade-${student.id}-${grade}`}
+                          style={styles.auditDateDropdownOption}
+                          onPress={() =>
+                            updateStudentEnrollmentDraft(
+                              studentRecordId(student),
+                              {
+                                gradeLevel: grade,
+                                gradeMenuOpen: false,
+                              }
+                            )
+                          }
+                        >
+                          <Text style={styles.auditDateDropdownOptionText}>
+                            Grade {grade}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+
 
             <Text style={styles.fieldLabel}>Section</Text>
-            <View style={styles.choiceRow}>
-              {[
-                ...new Set(
+
+            <TouchableOpacity
+              style={styles.auditDateDropdownButton}
+              onPress={() =>
+                updateStudentEnrollmentDraft(studentRecordId(student), {
+                  sectionMenuOpen:
+                    !enrollmentDraft.sectionMenuOpen,
+                })
+              }
+            >
+              <Text style={styles.auditDateDropdownText}>
+                {enrollmentDraft.section || 'Select Section'}
+              </Text>
+
+              <Text style={styles.auditDateDropdownChevron}>
+                {enrollmentDraft.sectionMenuOpen ? '▲' : '▼'}
+              </Text>
+            </TouchableOpacity>
+
+            {enrollmentDraft.sectionMenuOpen ? (
+              <View style={styles.auditDateDropdownPanel}>
+                {[...new Set(
                   classOptions
-                    .filter((item) => !student.gradeLevel || Number(item.gradeLevel || item.grade) === Number(student.gradeLevel))
-                    .map((item) => normalizeSpaces(item.section || item.sectionName || item.classSection || ''))
+                    .filter(item =>
+                      !enrollmentDraft.gradeLevel ||
+                      Number(item.gradeLevel || item.grade) ===
+                      Number(enrollmentDraft.gradeLevel)
+                    )
+                    .map(item =>
+                      normalizeSpaces(
+                        item.section ||
+                        item.sectionName ||
+                        item.classSection ||
+                        ''
+                      )
+                    )
                     .filter(Boolean)
-                ),
-              ].sort((first, second) => first.localeCompare(second)).map((sectionOption) => (
-                <Button
-                  key={`student-section-update-${student.id}-${sectionOption}`}
-                  tone={normalizeSpaces(student.section) === sectionOption ? 'green' : 'slate'}
-                  disabled={Boolean(busy)}
-                  onPress={() => requestProtectedAdminAction({
-                    keyword: 'SECTION',
-                    reasonPlaceholder: 'e.g. Student moved to a different section',
-                    action: (reason) => run(
-                      `section-${student.id}-${sectionOption}`,
-                      () => updateStudentEnrollment(studentRecordId(student), {
-                        gradeLevel: studentGradeValue(student),
-                        section: sectionOption,
-                        promotionReason: reason,
-                      }),
-                      'Student enrollment updated.'
-                    ),
-                  })}
-                >
-                  {sectionOption}
-                </Button>
-              ))}
-            </View>
+                )]
+                  .sort((a, b) => a.localeCompare(b))
+                  .map(sectionOption => (
+                    <TouchableOpacity
+                      key={`student-section-${student.id}-${sectionOption}`}
+                      style={styles.auditDateDropdownOption}
+                      onPress={() =>
+                        updateStudentEnrollmentDraft(
+                          studentRecordId(student),
+                          {
+                            section: sectionOption,
+                            sectionMenuOpen: false,
+                          }
+                        )
+                      }
+                    >
+                      <Text style={styles.auditDateDropdownOptionText}>
+                        {sectionOption}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            ) : null}
+
+            <Button
+              tone="slate"
+              disabled={Boolean(busy)}
+              onPress={() => saveStudentEnrollment(student)}
+            >
+              Save Class
+            </Button>
+
+                </>
+              );
+            })()}
           </View>
         ))}
         {hiddenFilteredStudentCount > 0 && (
@@ -1620,14 +1857,14 @@ async function executeVerifiedAction() {
               setStudentRenderLimit((current) => current + 25)
             }
           >
-            Magpakita pa ng {Math.min(25, hiddenFilteredStudentCount)} mag-aaral
+            Show {Math.min(25, hiddenFilteredStudentCount)} more students
           </Button>
         )}
 
         {!filteredStudents.length && (
           <Text style={styles.muted}>
             {students.length
-              ? 'Walang mag-aaral na tumutugma sa napiling filter.'
+              ? 'No students match the selected filters.'
               : 'Walang aktibong mag-aaral.'}
           </Text>
         )}
@@ -1658,17 +1895,6 @@ async function executeVerifiedAction() {
                     (data) => `Temporary PIN: ${data.temporaryPin}`
                   )
                 })}>Reset Password</Button>
-                <Button tone="slate" onPress={() => {
-                  setGeneratedPin('');
-                  setVaultUser({
-                    id: teacher.id,
-                    type: 'Teacher',
-                    username: teacher?.User?.username || teacher.employeeCode,
-                    email: teacher?.User?.email || 'Not provided',
-                    status: teacher?.status || 'active'
-                  });
-                  setVaultVisible(true);
-                }}>Login Credentials</Button>
             {renderStatusControl(teacher, teacher.name || 'teacher account')}
             {renderLoginSecurityControl(teacher, teacher.name || 'teacher account')}
               </View>
@@ -1682,35 +1908,33 @@ async function executeVerifiedAction() {
   function renderArchive() {
     return (
       <Card>
-        <Text style={styles.cardTitle}>Archive</Text>
+        <Text style={styles.cardTitle}>Deactivate</Text>
+
+        <Text style={styles.helperText}>
+          Deactivated students and teachers cannot log in, but their records remain saved and can be reactivated at any time.
+        </Text>
         {archivedStudents.map((student) => (
           <View key={`student-${student.id}`} style={styles.actionRow}>
             <View style={styles.flex}><Text style={styles.rowTitle}>{student.name}</Text><Text style={styles.muted}>Student • {student.studentCode}</Text></View>
-            <Button tone="green" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
-              keyword: 'REACTIVATE',
-              action: (reason) => run(
-                `student-reactivate-${student.id}`,
-                () => reactivateStudent(studentRecordId(student), {
-                  reason
-                }),
-                'Student reactivated and restored to active accounts.'
-              )
-            })}>Reactivate</Button>
+            <Button tone="green" disabled={Boolean(busy)} onPress={() => run(
+              `student-reactivate-${student.id}`,
+              () => reactivateStudent(studentRecordId(student), {
+                reason: 'Reactivated by administrator'
+              }),
+              'Student reactivated and restored to active accounts.'
+            )}>Reactivate</Button>
           </View>
         ))}
         {archivedTeachers.map((teacher) => (
           <View key={`teacher-${teacher.id}`} style={styles.actionRow}>
             <View style={styles.flex}><Text style={styles.rowTitle}>{teacher.name}</Text><Text style={styles.muted}>Teacher • {teacher.employeeCode}</Text></View>
-            <Button tone="green" disabled={Boolean(busy)} onPress={() => requestProtectedAdminAction({
-              keyword: 'REACTIVATE',
-              action: (reason) => run(
-                `teacher-reactivate-${teacher.id}`,
-                () => reactivateTeacher(teacherRecordId(teacher), {
-                  reason
-                }),
-                'Teacher reactivated and restored to active accounts.'
-              )
-            })}>Reactivate</Button>
+            <Button tone="green" disabled={Boolean(busy)} onPress={() => run(
+              `teacher-reactivate-${teacher.id}`,
+              () => reactivateTeacher(teacherRecordId(teacher), {
+                reason: 'Reactivated by administrator'
+              }),
+              'Teacher reactivated and restored to active accounts.'
+            )}>Reactivate</Button>
           </View>
         ))}
         {!archivedStudents.length && !archivedTeachers.length && <Text style={styles.muted}>No archived student or teacher accounts.</Text>}
@@ -1910,7 +2134,7 @@ function renderLogs() {
 
         <View style={styles.auditStatsGrid}>
           {[
-            [logs.length, 'Kabuuang Logs'],
+            [logs.length, 'Total Logs'],
             [todayLogs, 'Today'],
             [weekLogs, 'Last 7 Days'],
             [monthLogs, 'Ngayong Buwan'],
@@ -2201,9 +2425,6 @@ function renderLogs() {
                   {auditActionLabel(log.action)}
                 </Text>
 
-                <Text style={styles.auditEntity}>
-                  {log.entityType || 'record'}
-                </Text>
               </View>
 
               <Text style={styles.auditActor}>
@@ -2215,7 +2436,7 @@ function renderLogs() {
               </Text>
 
               <Text style={styles.auditRecord}>
-                Action: {log.action} • {auditEntityLabel(log)}
+                Action: {log.action}
               </Text>
 
               {details ? (
@@ -2268,6 +2489,7 @@ function renderLogs() {
           </Text>
 
           <Button
+            tone="green"
             disabled={Boolean(busy)}
             onPress={() =>
               runExport('admin-audit-csv', () =>
@@ -2309,7 +2531,7 @@ function renderLogs() {
           <Text style={styles.body}>Students: {reportSummary?.students || 0}</Text>
           <Text style={styles.body}>Teachers: {reportSummary?.teachers || 0}</Text>
           <Text style={styles.body}>Assignments: {reportSummary?.teacherAssignments || 0}</Text>
-          <Text style={styles.body}>Archived accounts: {reportSummary?.archivedAccounts || 0}</Text>
+          <Text style={styles.body}>Deactivated accounts: {reportSummary?.archivedAccounts || 0}</Text>
         </Card>
       </>
     );
@@ -2456,117 +2678,6 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
         {section === 'logs' && renderLogs()}
         {section === 'reports' && renderReports()}
 
-
-      <Modal
-        visible={vaultVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setVaultVisible(false)}
-      >
-        <View style={styles.workspaceLogoutModalBackdrop}>
-          <View style={styles.workspaceLogoutModalCard}>
-            <Text style={styles.vaultTitle}>🔑 Login Credentials</Text>
-
-            <Text style={styles.vaultSubtitle}>
-              View login information and generate a temporary PIN for password resets.
-            </Text>
-
-            <View style={styles.vaultRow}>
-              <Text style={styles.fieldLabel}>Role</Text>
-              <Text style={styles.rowTitle}>{vaultUser?.type}</Text>
-            </View>
-
-            <View style={styles.vaultRow}>
-              <Text style={styles.fieldLabel}>Username</Text>
-              <Text style={styles.rowTitle}>{vaultUser?.username}</Text>
-            </View>
-
-            <View style={styles.vaultRow}>
-              <Text style={styles.fieldLabel}>Email</Text>
-              <Text style={styles.rowTitle}>{vaultUser?.email}</Text>
-            </View>
-
-            <View style={styles.vaultRow}>
-              <Text style={styles.fieldLabel}>Status</Text>
-              <Text style={styles.rowTitle}>{vaultUser?.status}</Text>
-            </View>
-
-            <View style={styles.vaultRow}>
-              <Text style={styles.fieldLabel}>Password</Text>
-              <Text style={styles.rowTitle}>Protected by Encryption</Text>
-            </View>
-
-            {generatedPin ? (
-              <>
-                <Text style={styles.fieldLabel}>Temporary PIN</Text>
-                <Text
-                  style={{
-                    fontSize: 28,
-                    fontWeight: '900',
-                    color: '#16A34A',
-                    textAlign: 'center',
-                    marginTop: 6,
-                    marginBottom: 10
-                  }}
-                >
-                  {generatedPin}
-                </Text>
-
-                <Text
-                  style={{
-                    color: '#64748B',
-                    textAlign: 'center',
-                    marginBottom: 14
-                  }}
-                >
-                  Kailangang palitan ng user ang password sa susunod na login.
-                </Text>
-              </>
-            ) : null}
-
-            <View style={styles.workspaceLogoutActions}>
-              <TouchableOpacity
-                style={styles.vaultGenerateButton}
-                onPress={() => {
-                  if (!vaultUser?.id) return;
-
-                  runProtectedAction(async () => {
-                    try {
-                      const result =
-                        vaultUser.type === 'Student'
-                          ? await resetStudentPassword(vaultUser.id)
-                          : await resetTeacherPassword(vaultUser.id);
-
-                      setGeneratedPin(result?.temporaryPin || '');
-                    } catch (err) {
-                      Alert.alert(
-                        'Unable to Reset PIN',
-                        err?.message || 'Pakisubukan muli.'
-                      );
-                    }
-                  });
-                }}
-              >
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  style={styles.vaultGenerateText}
-                >
-                  Generate New PIN
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.workspaceLogoutConfirm}
-                onPress={() => setVaultVisible(false)}
-              >
-                <Text style={styles.workspaceLogoutConfirmText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       <Modal
         visible={adminActionVisible}
         transparent
@@ -2580,19 +2691,21 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
               Administrative Confirmation
             </Text>
 
-            <Text style={styles.workspaceLogoutBody}>
-              This action requires a reason and confirmation.
-            </Text>
+            {pendingAdminAction?.reasonPlaceholder ? (
+              <>
+                <Text style={styles.workspaceLogoutBody}>
+                  This action requires a reason and confirmation.
+                </Text>
 
-            <Text style={styles.workspaceLogoutBody}>
-              The reason will be recorded in the audit log.
-            </Text>
+                <Text style={styles.workspaceLogoutBody}>
+                  The reason will be recorded in the audit log.
+                </Text>
 
-            <Text style={styles.workspaceLogoutCancelText}>
-              Reason *
-            </Text>
+                <Text style={styles.workspaceLogoutCancelText}>
+                  Reason *
+                </Text>
 
-            <TextInput
+                <TextInput
               style={[
                 styles.input,
                 styles.adminActionInput,
@@ -2607,6 +2720,8 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
                 .trim()}
               placeholderTextColor="#94A3B8"
             />
+              </>
+            ) : null}
 
             <Text style={styles.workspaceLogoutCancelText}>
               Confirmation *
@@ -2665,7 +2780,7 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
                 style={[
                   styles.workspaceLogoutConfirm,
                   (
-                    !adminActionReason.trim() ||
+                    (pendingAdminAction?.reasonPlaceholder && !adminActionReason.trim()) ||
                     (
                       Boolean(
                         pendingAdminAction?.keyword
@@ -2683,7 +2798,7 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
                   executeProtectedAdminAction
                 }
                 disabled={
-                  !adminActionReason.trim() ||
+                  (pendingAdminAction?.reasonPlaceholder && !adminActionReason.trim()) ||
                   (
                     Boolean(
                       pendingAdminAction?.keyword

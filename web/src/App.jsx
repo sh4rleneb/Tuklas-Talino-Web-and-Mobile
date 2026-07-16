@@ -1867,7 +1867,7 @@ async function loadAdminDashboard() {
     api('/teachers?status=archived'),
     api('/admin/enrollments'),
     api('/admin/accounts'),
-    api('/admin/audit-logs?limit=500')
+    api('/admin/audit-logs?page=1&limit=100')
   ]);
 
   setAdminData({
@@ -2016,14 +2016,14 @@ async function loadAdminDashboard() {
 
   async function archiveStudent(id) {
   const confirmed = window.confirm(
-    'Archive this student account? The student will not be able to log in until reactivated.'
+    'Deactivate this student account? The student will not be able to log in until reactivated.'
   );
 
   if (!confirmed) return;
 
   await safeRun(async () => {
-    await api(`/students/${id}/archive`, { method: 'POST', body: { reason: 'Archived by administrator' } });
-    notify('Student archived. You can restore this account from Archived Students.');
+    await api(`/students/${id}/archive`, { method: 'POST', body: { reason: 'Deactivated by administrator' } });
+    notify('Student deactivated. You can restore this account from Deactivated Students.');
     await loadAdminDashboard();
     await loadTeacherDashboard().catch(() => null);
   });
@@ -2047,7 +2047,15 @@ async function reactivateStudent(id) {
   });
 }
 
-async function resetStudentPassword(id, name = 'student', silent = false) {
+async function resetStudentPassword(id, options = {}, silentLegacy = false) {
+  const legacyCall = typeof options === 'string';
+
+  const name = legacyCall ? options : (options.name || 'student');
+  const silent = legacyCall ? silentLegacy : Boolean(options.silent);
+  const reason = legacyCall
+    ? 'Admin password reset'
+    : (options.reason || 'Admin password reset');
+
   if (!silent) {
     const confirmed = window.confirm(
       `Reset password for ${name}? The system will generate a temporary 4-digit PIN. The student must change it after logging in.`
@@ -2061,7 +2069,7 @@ async function resetStudentPassword(id, name = 'student', silent = false) {
   await safeRun(async () => {
     const data = await api(`/students/${id}/reset-password`, {
       method: 'POST',
-      body: {}
+      body: { reason }
     });
 
     temporaryPin = data.temporaryPin || '';
@@ -2088,7 +2096,15 @@ async function resetStudentPassword(id, name = 'student', silent = false) {
     });
   }
 
-  async function resetTeacherPassword(id, name = 'teacher', silent = false) {
+  async function resetTeacherPassword(id, options = {}, silentLegacy = false) {
+  const legacyCall = typeof options === 'string';
+
+  const name = legacyCall ? options : (options.name || 'teacher');
+  const silent = legacyCall ? silentLegacy : Boolean(options.silent);
+  const reason = legacyCall
+    ? 'Admin password reset'
+    : (options.reason || 'Admin password reset');
+
   if (!silent) {
     const confirmed = window.confirm(
       `Reset password for ${name}? The system will generate a temporary 4-digit PIN. The teacher must change it after logging in.`
@@ -2102,7 +2118,7 @@ async function resetStudentPassword(id, name = 'student', silent = false) {
   await safeRun(async () => {
     const data = await api(`/teachers/${id}/reset-password`, {
       method: 'POST',
-      body: {}
+      body: { reason }
     });
 
     temporaryPin = data.temporaryPin || '';
@@ -2139,14 +2155,14 @@ async function reactivateTeacher(id) {
 
 async function archiveTeacher(id) {
   const confirmed = window.confirm(
-    'Archive this teacher account? The teacher will not be able to log in until reactivated.'
+    'Deactivate this teacher account? The teacher will not be able to log in until reactivated.'
   );
 
   if (!confirmed) return;
 
   await safeRun(async () => {
-    await api(`/teachers/${id}/archive`, { method: 'POST', body: { reason: 'Archived by administrator' } });
-    notify('Teacher archived. You can restore this account from Archived Teachers.');
+    await api(`/teachers/${id}/archive`, { method: 'POST', body: { reason: 'Deactivated by administrator' } });
+    notify('Teacher deactivated. You can restore this account from Deactivated Teachers.');
     await loadAdminDashboard();
   });
 }

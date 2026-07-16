@@ -286,7 +286,7 @@ export default function AdminDashboard({
     })),
     ...archivedStudents.map(student => ({
       userId: Number(student.userId || student.User?.id || student.user?.id || 0),
-      name: student.name || student.User?.displayName || student.user?.displayName || student.studentCode || 'Archived student',
+      name: student.name || student.User?.displayName || student.user?.displayName || student.studentCode || 'Deactivated student',
       username: student.studentCode || student.User?.username || student.user?.username || '',
       roleLabel: 'student',
     })),
@@ -298,7 +298,7 @@ export default function AdminDashboard({
     })),
     ...archivedTeachers.map(teacher => ({
       userId: Number(teacher.userId || teacher.User?.id || teacher.user?.id || 0),
-      name: teacher.name || teacher.User?.displayName || teacher.user?.displayName || teacher.employeeCode || 'Archived teacher',
+      name: teacher.name || teacher.User?.displayName || teacher.user?.displayName || teacher.employeeCode || 'Deactivated teacher',
       username: teacher.employeeCode || teacher.User?.username || teacher.user?.username || '',
       roleLabel: 'teacher',
     })),
@@ -315,7 +315,7 @@ export default function AdminDashboard({
 
       'student.create': 'Created student account',
       'student.update': 'Updated student account',
-      'student.archive': 'Archived student account',
+      'student.archive': 'Deactivated student account',
       'student.reactivate': 'Reactivated student account',
       'student.reset_password': 'Reset student password',
       'student.reset_progress': 'Reset student progress',
@@ -323,7 +323,7 @@ export default function AdminDashboard({
 
       'teacher.create': 'Created teacher account',
       'teacher.update': 'Updated teacher account',
-      'teacher.archive': 'Archived teacher account',
+      'teacher.archive': 'Deactivated teacher account',
       'teacher.reactivate': 'Reactivated teacher account',
       'teacher.reset_password': 'Reset teacher password',
       'teacher.assignment.create': 'Assigned teacher class',
@@ -332,19 +332,19 @@ export default function AdminDashboard({
 
       'lesson.create': 'Created lesson',
       'lesson.update': 'Updated lesson',
-      'lesson.archive': 'Archived lesson',
+      'lesson.archive': 'Deactivated lesson',
       'lesson.complete': 'Completed lesson',
 
       'quiz.result': 'Submitted quiz result',
 
       'group.create': 'Created group',
       'group.update': 'Updated group',
-      'group.archive': 'Archived group',
+      'group.archive': 'Deactivated group',
       'group.add_member': 'Added group member',
       'group.set_leader': 'Set group leader',
 
       'group_task.create': 'Created group task',
-      'group_task.archive': 'Archived group task',
+      'group_task.archive': 'Deactivated group task',
       'group_task.approve_group_completion': 'Approved group task completion',
       'group_task.return_group_completion': 'Returned group task completion',
 
@@ -481,6 +481,7 @@ const filteredLogs = logs.filter(log => {
   const [assignGradeFilter, setAssignGradeFilter] = useState('');
   const [studentGradeFilter, setStudentGradeFilter] = useState('all');
   const [studentSectionFilter, setStudentSectionFilter] = useState('all');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [studentEnrollmentDrafts, setStudentEnrollmentDrafts] = useState({});
   const [savingEnrollmentId, setSavingEnrollmentId] = useState(null);
   const [savingAccountStatusId, setSavingAccountStatusId] = useState(null);
@@ -511,10 +512,44 @@ const filteredLogs = logs.filter(log => {
   )].sort();
 
   const filteredStudents = students.filter(student => {
-    const matchesGrade = studentGradeFilter === 'all' || Number(student.gradeLevel || student.grade) === Number(studentGradeFilter);
-    const matchesSection = studentSectionFilter === 'all' || normalizeSpaces(student.section || student.sectionName || student.classSection || '') === studentSectionFilter;
+    const matchesGrade =
+      studentGradeFilter === 'all' ||
+      Number(student.gradeLevel || student.grade) === Number(studentGradeFilter);
 
-    return matchesGrade && matchesSection;
+    const matchesSection =
+      studentSectionFilter === 'all' ||
+      normalizeSpaces(
+        student.section ||
+        student.sectionName ||
+        student.classSection ||
+        ''
+      ) === studentSectionFilter;
+
+    const query = normalizeSpaces(studentSearchQuery).toLowerCase();
+
+    const searchable = [
+      student.name,
+      student.studentCode,
+      student.username,
+      student.User?.username,
+      student.gradeLevel,
+      student.grade,
+      student.section,
+      student.sectionName,
+      student.classSection,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    const matchesStudentSearch =
+      !query || searchable.includes(query);
+
+    return (
+      matchesGrade &&
+      matchesSection &&
+      matchesStudentSearch
+    );
   });
 
   function scrollTo(id) {
@@ -621,51 +656,62 @@ const filteredLogs = logs.filter(log => {
     return teacher?.User?.username || teacher?.user?.username || teacher?.username || teacher?.employeeCode || 'No username';
   }
 
+  const [passwordResetModalOpen, setPasswordResetModalOpen] = useState(false);
+  const [passwordResetReason, setPasswordResetReason] = useState('');
+  const [passwordResetAction, setPasswordResetAction] = useState(null);
+  const [passwordResetLabel, setPasswordResetLabel] = useState('');
+  const [passwordResetKeyword, setPasswordResetKeyword] = useState('');
+  const [passwordResetPlaceholder, setPasswordResetPlaceholder] = useState('');
+  const [passwordResetKeywordInput, setPasswordResetKeywordInput] = useState('');
 
-  const [vaultOpen, setVaultOpen] = useState(false);
-  const [vaultUser, setVaultUser] = useState(null);
-  const [generatedPin, setGeneratedPin] = useState('');
+  function requestPasswordReset(
+    action,
+    label,
+    keyword,
+    placeholder
+  ) {
+    setPasswordResetReason('');
+    setPasswordResetKeywordInput('');
+    setPasswordResetAction(() => action);
+    setPasswordResetLabel(label);
+    setPasswordResetKeyword(keyword);
+    setPasswordResetPlaceholder(placeholder);
+    setPasswordResetModalOpen(true);
+  }
 
-  const [passwordVerifyOpen, setPasswordVerifyOpen] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [pendingVaultUser, setPendingVaultUser] = useState(null);
-
-  const [verificationExpiresAt, setVerificationExpiresAt] = useState(null);
-
-
-
-  async function openVault(userType, user) {
-    try {
-
-      if (hasActiveVerificationSession()) {
-        setGeneratedPin('');
-
-        setVaultUser({
-          ...user,
-          type: userType
-        });
-
-        setVaultOpen(true);
-        return;
-      }
-
-      setPasswordInput('');
-
-      setPendingVaultUser({
-        ...user,
-        type: userType
-      });
-
-      setPasswordVerifyOpen(true);
-    } catch (err) {
+  function confirmPasswordReset() {
+    if (
+      passwordResetKeyword &&
+      passwordResetKeywordInput.trim() !== passwordResetKeyword
+    ) {
       window.alert(
-        err?.message ||
-        'Unable to generate temporary PIN.'
+        `Confirmation Required\n\nType ${passwordResetKeyword} using uppercase letters only.`
       );
+      return;
     }
+
+    if (!passwordResetReason.trim()) {
+      return;
+    }
+
+    setPasswordResetModalOpen(false);
+
+    if (passwordResetAction) {
+      passwordResetAction(passwordResetReason.trim());
+    }
+
+    setPasswordResetAction(null);
+    setPasswordResetReason('');
+    setPasswordResetKeywordInput('');
   }
 
 
+
+
+  const [passwordVerifyOpen, setPasswordVerifyOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+
+  const [verificationExpiresAt, setVerificationExpiresAt] = useState(null);
 
   function hasActiveVerificationSession() {
     return (
@@ -674,41 +720,6 @@ const filteredLogs = logs.filter(log => {
       hasAdminReauthProof()
     );
   }
-
-async function executeVerifiedOpenVault() {
-    try {
-      const verification =
-        await verifyPassword(passwordInput);
-
-      const serverExpiry =
-        Date.parse(
-          String(
-            verification?.reauthExpiresAt || ''
-          )
-        );
-
-      setVerificationExpiresAt(
-        Number.isFinite(serverExpiry)
-          ? serverExpiry
-          : Date.now() + (5 * 60 * 1000)
-      );
-
-      setGeneratedPin('');
-
-      setVaultUser(pendingVaultUser);
-      setVaultOpen(true);
-
-      setPasswordVerifyOpen(false);
-      setPasswordInput('');
-      setPendingVaultUser(null);
-    } catch (err) {
-      window.alert(
-        err?.message ||
-        'Password verification failed.'
-      );
-    }
-  }
-
 function teacherNameForAssignment(assignment) {
     return assignment.Teacher?.name || teachers.find(t => Number(t.id) === Number(assignment.teacherId))?.name || 'Teacher';
   }
@@ -780,7 +791,7 @@ function teacherNameForAssignment(assignment) {
 
             <button className={`teacher-sidebar-button ${adminTab === 'archives' ? 'active' : ''}`} type="button" onClick={() => openTab('archives')}>
               <span>🗃️</span>
-              <strong>Archives</strong>
+              <strong>Deactivated Accounts</strong>
             </button>
 
             <button className={`teacher-sidebar-button ${adminTab === 'logs' ? 'active' : ''}`} type="button" onClick={() => openTab('logs')}>
@@ -877,7 +888,7 @@ function teacherNameForAssignment(assignment) {
                           <span>Report Data</span>
                         </div>
 
-                        {['Students', 'Teachers', 'Assignments', 'Archived Accounts', 'Performance Summary', 'Needs Intervention'].map((item) => (
+                        {['Students', 'Teachers', 'Assignments', 'Deactivated Accounts', 'Performance Summary', 'Needs Intervention'].map((item) => (
                           <div className="admin-report-preview-row" key={item}>
                             <span>{item}</span>
                             <span>Admin View</span>
@@ -930,7 +941,7 @@ function teacherNameForAssignment(assignment) {
                   <div className="teacher-monitor-summary">
                     <div><span>Active Students</span><strong>{students.length}</strong></div>
                     <div><span>Active Teachers</span><strong>{teachers.length}</strong></div>
-                    <div><span>Archived Accounts</span><strong>{archivedStudents.length + archivedTeachers.length}</strong></div>
+                    <div><span>Deactivated Accounts</span><strong>{archivedStudents.length + archivedTeachers.length}</strong></div>
                   </div>
 
                   <div className="lms-empty-line" style={{ marginTop: 14 }}>
@@ -943,6 +954,12 @@ function teacherNameForAssignment(assignment) {
             {adminTab === 'add' && (
               <section className="teacher-clean-panel">
                 <div className="teacher-form-grid">
+                          <input
+                            className="input-field"
+                            placeholder="Search students..."
+                            value={studentSearchQuery}
+                            onChange={event => setStudentSearchQuery(event.target.value)}
+                          />
                   <div className="teacher-workspace-card">
                     <div className="teacher-workspace-heading">
                       <div>
@@ -1372,15 +1389,43 @@ function teacherNameForAssignment(assignment) {
                           >
                             {accountStatusOptions.map(status => (
                               <option key={`student-${s.id}-status-${status}`} value={status}>
-                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                                {(status === 'archived' ? 'Deactivate' : 'Active')}
                               </option>
                             ))}
                           </select>
                         </span>
 
                         <span className="admin-clean-actions">
-                          <button className="btn btn-outline btn-sm" onClick={() => openVault('Student', s)}>Login Credentials</button>
-                          <button className="btn btn-outline btn-sm" onClick={() => resetStudent(s.id)}>Reset Progress</button>
+
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() =>
+                              requestPasswordReset(
+                                (reason) =>
+                                  resetStudentPassword(s.id, {
+                                    reason,
+                                    name: s.name,
+                                  }).then((pin) => {
+                                    if (pin) {
+                                      window.alert(`Temporary PIN: ${pin}`);
+                                    }
+                                  }),
+                                s.name,
+                                'STUDENTPIN',
+                                'e.g. Student forgot their password'
+                              )
+                            }
+                          >
+                            Reset Password
+                          </button>
+
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => resetStudent(s.id)}
+                          >
+                            Reset Progress
+                          </button>
+
                         </span>
                       </div>
                     );
@@ -1423,6 +1468,29 @@ function teacherNameForAssignment(assignment) {
                         </div>
 
                         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() =>
+                              requestPasswordReset(
+                                (reason) =>
+                                  resetTeacherPassword(t.id, {
+                                    reason,
+                                    name: t.name,
+                                  }).then((pin) => {
+                                    if (pin) {
+                                      window.alert(`Temporary PIN: ${pin}`);
+                                    }
+                                  }),
+                                t.name,
+                                'TEACHERPIN',
+                                'e.g. Teacher forgot their password'
+                              )
+                            }
+                          >
+                            Reset Password
+                          </button>
+
                           <select
                             className="input-field"
                             value={accountStatusOptions.includes(statusForEntity(t)) ? statusForEntity(t) : 'active'}
@@ -1433,11 +1501,10 @@ function teacherNameForAssignment(assignment) {
                           >
                             {accountStatusOptions.map(status => (
                               <option key={`teacher-${t.id}-status-${status}`} value={status}>
-                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                                {(status === 'archived' ? 'Deactivate' : 'Active')}
                               </option>
                             ))}
                           </select>
-                          <button className="btn btn-outline btn-sm" onClick={() => openVault('Teacher', t)}>Login Credentials</button>
                         </div>
                       </div>
                     );
@@ -1455,9 +1522,9 @@ function teacherNameForAssignment(assignment) {
                 <div className="teacher-workspace-card">
                   <div className="teacher-workspace-heading">
                     <div>
-                      <div className="lms-section-label">Archived Accounts</div>
-                      <h2>Archived Students</h2>
-                      <p>Archived students cannot log in, but their records remain saved.</p>
+                      <div className="lms-section-label">Deactivated Accounts</div>
+                      <h2>Deactivated Students</h2>
+                      <p>Deactivated students cannot log in, but their records remain saved.</p>
                     </div>
                   </div>
 
@@ -1481,9 +1548,9 @@ function teacherNameForAssignment(assignment) {
                 <div className="teacher-workspace-card" style={{ marginTop: 16 }}>
                   <div className="teacher-workspace-heading">
                     <div>
-                      <div className="lms-section-label">Archived Accounts</div>
-                      <h2>Archived Teachers</h2>
-                      <p>Archived teachers cannot log in, but their records remain saved.</p>
+                      <div className="lms-section-label">Deactivated Accounts</div>
+                      <h2>Deactivated Teachers</h2>
+                      <p>Deactivated teachers cannot log in, but their records remain saved.</p>
                     </div>
                   </div>
 
@@ -1493,7 +1560,7 @@ function teacherNameForAssignment(assignment) {
                         <div>
                           <strong>{t.name}</strong>
                           <p>
-                            Username: <strong>{teacherUsernameForCard(t)}</strong> • Archived
+                            Username: <strong>{teacherUsernameForCard(t)}</strong> • Deactivated
                           </p>
                         </div>
                         <button className="btn btn-green btn-sm" onClick={() => reactivateTeacher(t.id)}>Reactivate</button>
@@ -1667,7 +1734,6 @@ function teacherNameForAssignment(assignment) {
                   >
                     <span>User</span>
                     <span>Action</span>
-                    <span>Entity</span>
                     <span>Details</span>
                     <span>Date</span>
                   </div>
@@ -1691,10 +1757,6 @@ function teacherNameForAssignment(assignment) {
                           <small>{log.action}</small>
                         </span>
 
-                        <span>
-                          <strong>{auditEntityLabel(log)}</strong>
-                          <small>{log.entityType || 'record'}</small>
-                        </span>
 
                         <span>
                           <small>{auditDetails(log)}</small>
@@ -1716,123 +1778,80 @@ function teacherNameForAssignment(assignment) {
           </div>
         </div>
 
-      {passwordVerifyOpen && (
+
+      {passwordResetModalOpen && (
         <div
           className="vault-overlay"
-          onClick={() => {
-            setPasswordVerifyOpen(false);
-            setPasswordInput('');
-            setPendingVaultUser(null);
-          }}
+          onClick={() => setPasswordResetModalOpen(false)}
         >
           <div
             className="vault-card"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2>🔐 Verify Password</h2>
+            <h2>
+              🔐 Reset Password
+            </h2>
 
             <div className="vault-note">
-              Re-enter your admin password to continue.
+              Provide a reason before resetting {passwordResetLabel}'s password.
+            </div>
+
+            <label className="field-label">
+              Reason
+            </label>
+
+            <textarea
+              className="input-field"
+              value={passwordResetReason}
+              onChange={(e) =>
+                setPasswordResetReason(e.target.value)
+              }
+              placeholder={passwordResetPlaceholder}
+              rows={4}
+            />
+
+            <label className="field-label">
+              Confirmation Required
+            </label>
+
+            <div className="vault-note">
+              Type {passwordResetKeyword} using uppercase letters only.
             </div>
 
             <input
               className="input-field"
-              type="password"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              placeholder="Admin password"
+              value={passwordResetKeywordInput}
+              onChange={(e) =>
+                setPasswordResetKeywordInput(e.target.value)
+              }
+              placeholder={passwordResetKeyword}
+              autoCapitalize="characters"
             />
 
             <div className="vault-actions">
+
               <button
                 className="btn btn-primary"
-                onClick={executeVerifiedOpenVault}
+                disabled={!passwordResetReason.trim()}
+                onClick={confirmPasswordReset}
               >
-                Verify
+                Confirm Reset
               </button>
 
               <button
                 className="btn btn-secondary"
                 onClick={() => {
-                  setPasswordVerifyOpen(false);
-                  setPasswordInput('');
-                  setPendingVaultUser(null);
+                  setPasswordResetModalOpen(false);
+                  setPasswordResetReason('');
+                  setPasswordResetAction(null);
+                  setPasswordResetKeywordInput('');
+                  setPasswordResetKeyword('');
+                  setPasswordResetPlaceholder('');
                 }}
               >
                 Cancel
               </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-{vaultOpen && (
-        <div
-          className="vault-overlay"
-          onClick={() => setVaultOpen(false)}
-        >
-          <div
-            className="vault-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>🔑 Login Credentials</h2>
-
-            <div className="vault-note">
-              View login information and generate a temporary PIN for password resets.
-            </div>
-
-            <div className="vault-row">
-              <strong>Name</strong>
-              <span>{vaultUser?.name}</span>
-            </div>
-
-            <div className="vault-row">
-              <strong>Account Type</strong>
-              <span>{vaultUser?.type}</span>
-            </div>
-
-            <div className="vault-row">
-              <strong>Temporary PIN</strong>
-              <div className="vault-pin">
-                {generatedPin}
-              </div>
-            </div>
-
-            <div className="vault-note">
-              User must change password on next login.
-            </div>
-
-            <div className="vault-actions">
-              <button
-                className="btn btn-primary"
-                onClick={async () => {
-                  if (!vaultUser) return;
-
-                  const pin =
-                    vaultUser.type === 'Student'
-                      ? await resetStudentPassword(vaultUser.id, vaultUser.name, true)
-                      : await resetTeacherPassword(vaultUser.id, vaultUser.name, true);
-
-                  setGeneratedPin(pin || '');
-                }}
-              >
-                Generate New PIN
-              </button>
-
-              <button
-                className="btn btn-primary"
-                disabled={!generatedPin}
-                onClick={() => navigator.clipboard.writeText(generatedPin)}
-              >
-                Copy Temporary PIN
-              </button>
-
-              <button
-                className="btn btn-secondary"
-                onClick={() => setVaultOpen(false)}
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>

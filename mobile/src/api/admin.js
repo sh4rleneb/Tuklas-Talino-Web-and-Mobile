@@ -16,8 +16,8 @@ export async function getAdminEnrollments() {
   return api('/admin/enrollments');
 }
 
-export async function getAdminAuditLogs(limit = 20) {
-  return api(`/admin/audit-logs?limit=${limit}`);
+export async function getAdminAuditLogs(limit = 100) {
+  return api(`/admin/audit-logs?page=1&limit=${Math.min(limit || 100, 200)}`);
 }
 
 export async function getAdminAccounts() {
