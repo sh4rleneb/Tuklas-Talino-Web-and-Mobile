@@ -354,11 +354,7 @@ async function completeMission(req, res, next, options = {}) {
       ? existingMissionAttempts + 1
       : existingMissionAttempts;
 
-    const requestAttemptNo = Number(req.body?.attemptNo || 0);
-    const currentAttemptNo = Math.max(
-      attemptsUsed,
-      Number.isFinite(requestAttemptNo) ? requestAttemptNo : 0
-    );
+    const currentAttemptNo = attemptsUsed;
 
     const shouldClaimBituin =
       created &&

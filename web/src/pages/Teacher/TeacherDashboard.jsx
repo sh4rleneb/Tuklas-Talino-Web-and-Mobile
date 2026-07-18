@@ -156,6 +156,7 @@ export default function TeacherDashboard({
   logout,
   reload,
   createGroup,
+  updateGroup,
   addTask,
   addMember,
   setGroupLeader,
@@ -178,6 +179,7 @@ export default function TeacherDashboard({
       : downloadBuodReport;
 
   const [teacherTab, setTeacherTab] = useState('lessons');
+  const [groupForm, setGroupForm] = useState({ name: '', selectedClass: '', gradeLevel: '1', section: '' });
   const [openGroupTools, setOpenGroupTools] = useState({});
   const [openGroupProgress, setOpenGroupProgress] = useState({});
   const [gradingWritingIds, setGradingWritingIds] = useState({});
@@ -205,9 +207,26 @@ export default function TeacherDashboard({
     .map(item => item.section)
     .filter(Boolean);
 
+  function parseGroupClassSelection(value = '') {
+    const rawValue = String(value || '').trim();
+    const parts = rawValue.split('||');
+    const gradeLevel = Number(parts.shift() || 0);
+    const section = String(parts.join('||')).replace(/\s+/g, ' ').trim();
 
+    return { gradeLevel, section };
+  }
 
+  async function handleGroupSubmit() {
+    const payload = {
+      ...groupForm,
+      name: String(groupForm.name || '').trim(),
+    };
 
+    if (typeof createGroup === 'function') {
+      await createGroup(payload);
+      setGroupForm({ name: '', selectedClass: '', gradeLevel: '1', section: '' });
+    }
+  }
 
   useEffect(() => {
     if (!teacherAssignedGrades.length) return;
@@ -2488,10 +2507,31 @@ export default function TeacherDashboard({
                   <h3>Create Group</h3>
                   <p>Set up a group, class section, or collaborative activity team.</p>
 
-                    <input className="input-field" id="t-group-name" placeholder="Group name" />
+                    <input
+                      className="input-field"
+                      id="t-group-name"
+                      placeholder="Group name"
+                      value={groupForm.name}
+                      onChange={(event) => setGroupForm(current => ({ ...current, name: event.target.value }))}
+                    />
 
                     {groupClassOptions.length ? (
-                      <select className="input-field" id="t-group-class" defaultValue={groupClassOptions[0]?.value || ''}>
+                      <select
+                        className="input-field"
+                        id="t-group-class"
+                        value={groupForm.selectedClass || groupClassOptions[0]?.value || ''}
+                        onChange={(event) => {
+                          const selectedClass = event.target.value;
+                          const parsed = parseGroupClassSelection(selectedClass);
+
+                          setGroupForm(current => ({
+                            ...current,
+                            selectedClass,
+                            gradeLevel: String(parsed.gradeLevel || current.gradeLevel || '1'),
+                            section: parsed.section || '',
+                          }));
+                        }}
+                      >
                         {groupClassOptions.map(option => (
                           <option value={option.value} key={option.value}>
                             {option.label}
@@ -2500,15 +2540,26 @@ export default function TeacherDashboard({
                       </select>
                     ) : (
                       <>
-                        <select className="input-field" id="t-group-grade" defaultValue="1">
+                        <select
+                          className="input-field"
+                          id="t-group-grade"
+                          value={groupForm.gradeLevel || '1'}
+                          onChange={(event) => setGroupForm(current => ({ ...current, gradeLevel: event.target.value, selectedClass: '' }))}
+                        >
                           {[1, 2, 3, 4, 5, 6].map(grade => (
                             <option value={grade} key={grade}>Grade {grade}</option>
                           ))}
                         </select>
-                        <input className="input-field" id="t-group-section" placeholder="Section" />
+                        <input
+                          className="input-field"
+                          id="t-group-section"
+                          placeholder="Section"
+                          value={groupForm.section}
+                          onChange={(event) => setGroupForm(current => ({ ...current, section: event.target.value, selectedClass: '' }))}
+                        />
                       </>
                     )}
-                  <button className="lms-main-action full" onClick={createGroup}>
+                  <button className="lms-main-action full" onClick={handleGroupSubmit}>
                     Create Group
                   </button>
                 </div>
@@ -2600,52 +2651,75 @@ export default function TeacherDashboard({
                           {groupSection ? <span className="lms-mini-pill">Section {groupSection}</span> : null}
                         </div>
 
-                        <div className="teacher-group-details-box">
-                          <div className="teacher-group-detail-section">
-                            <h4>Members</h4>
-                            {members.length ? (
-                              <div className="teacher-group-chip-list">
-                                {members.map(member => {
-                                  const student = member.Student || member.student || member;
-                                  const studentId = student.id || member.studentId;
-                                  const isLeader = member.groupRole === 'leader';
-                                  return (
-                                    <div className={`teacher-group-chip teacher-group-member-chip ${isLeader ? 'leader' : ''}`} key={member.id || studentId || student.studentCode || student.name}>
-                                      <span>👤 {student.name || 'Student'}</span>
-                                      <small>{isLeader ? 'Leader' : 'Member'}</small>
-                                      {!isLeader && (
-                                        <button type="button" onClick={() => setGroupLeader(group.id, studentId)}>
-                                          Set as Leader
-                                        </button>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            ) : (
-                              <div className="teacher-group-empty-note">No members added yet.</div>
-                            )}
-                          </div>
+                        {isOpen ? (
+                          <div className="teacher-group-details-box">
+                            <div className="teacher-group-detail-section">
+                              <h4>Members</h4>
+                              {members.length ? (
+                                <div className="teacher-group-chip-list">
+                                  {members.map(member => {
+                                    const student = member.Student || member.student || member;
+                                    const studentId = student.id || member.studentId;
+                                    const isLeader = member.groupRole === 'leader';
+                                    return (
+                                      <div className={`teacher-group-chip teacher-group-member-chip ${isLeader ? 'leader' : ''}`} key={member.id || studentId || student.studentCode || student.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                          <span>👤 {student.name || 'Student'}</span>
+                                          <small>{isLeader ? 'Leader' : 'Member'}</small>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                          {!isLeader && (
+                                            <button type="button" className="lms-outline-action" onClick={() => setGroupLeader(group.id, studentId)}>
+                                              Set as Leader
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            className="lms-outline-action"
+                                            style={{ color: '#b42318', borderColor: 'rgba(180, 35, 24, 0.28)' }}
+                                            onClick={() => {
+                                              if (!studentId) return;
+                                              api(`/groups/${group.id}/members/${studentId}`, { method: 'DELETE' })
+                                                .then(() => {
+                                                  window.location.reload();
+                                                })
+                                                .catch(() => {
+                                                  window.alert('Failed to remove member.');
+                                                });
+                                            }}
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="teacher-group-empty-note">No members added yet.</div>
+                              )}
+                            </div>
 
-                          <div className="teacher-group-detail-section">
-                            <h4>Tasks</h4>
-                            {tasks.length ? (
-                              <div className="teacher-group-task-list">
-                                {tasks.slice(0, 3).map(task => (
-                                  <div className="teacher-group-task-item" key={task.id || task.title}>
-                                    {task.title || 'Group task'}
-                                    <small>+{task.xpReward || 0} XP</small>
-                                  </div>
-                                ))}
-                                {tasks.length > 3 && (
-                                  <div className="teacher-group-empty-note">+{tasks.length - 3} more task{tasks.length - 3 === 1 ? '' : 's'}</div>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="teacher-group-empty-note">No tasks assigned yet.</div>
-                            )}
+                            <div className="teacher-group-detail-section">
+                              <h4>Tasks</h4>
+                              {tasks.length ? (
+                                <div className="teacher-group-task-list">
+                                  {tasks.slice(0, 3).map(task => (
+                                    <div className="teacher-group-task-item" key={task.id || task.title}>
+                                      {task.title || 'Group task'}
+                                      <small>+{task.xpReward || 0} XP</small>
+                                    </div>
+                                  ))}
+                                  {tasks.length > 3 && (
+                                    <div className="teacher-group-empty-note">+{tasks.length - 3} more task{tasks.length - 3 === 1 ? '' : 's'}</div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="teacher-group-empty-note">No tasks assigned yet.</div>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        ) : null}
 
                         <div className="teacher-group-actions-row">
                           <button
@@ -2653,7 +2727,7 @@ export default function TeacherDashboard({
                             type="button"
                             onClick={() => toggleGroupTools(group.id)}
                           >
-                            {isOpen ? 'Hide Add Students' : 'Add Students'}
+                            {isOpen ? 'Hide Details' : 'View Details'}
                           </button>
 
                           <button
@@ -2668,6 +2742,7 @@ export default function TeacherDashboard({
 
                         {isOpen && (
                           <div
+                            id={`member-${group.id}`}
                             className="teacher-add-students-panel"
                             style={{
                               display: 'grid',
@@ -2692,64 +2767,27 @@ export default function TeacherDashboard({
                                 gap: 3
                               }}
                             >
-                              <strong>Select Students</strong>
-
+                              <strong style={{ fontSize: 15 }}>Add Students</strong>
+                              <p style={{ margin: 0, color: '#64748b', fontSize: 13 }}>
+                                Tick the students you want to add to this group.
+                              </p>
                             </div>
 
-                            <select
-                              className="input-field"
-                              id={`member-${group.id}`}
-                              multiple
-                              size={
-                                availableStudentsForGroup.length
-                                  ? Math.min(
-                                      8,
-                                      Math.max(
-                                        3,
-                                        availableStudentsForGroup.length
-                                      )
-                                    )
-                                  : 1
-                              }
-                              disabled={
-                                !availableStudentsForGroup.length
-                              }
-                              style={{
-                                display: 'block',
-                                width: '100%',
-                                maxWidth: '100%',
-                                minWidth: 0,
-                                minHeight:
-                                  availableStudentsForGroup.length
-                                    ? 130
-                                    : 48,
-                                padding: 8,
-                                boxSizing: 'border-box'
-                              }}
-                            >
+                            <div style={{ display: 'grid', gap: 8, maxHeight: 240, overflowY: 'auto', paddingRight: 2 }}>
                               {availableStudentsForGroup.length ? (
-                                availableStudentsForGroup.map(
-                                  student => (
-                                    <option
-                                      key={student.id}
-                                      value={student.id}
-                                    >
-                                      {student.name}
-                                      {' - Grade '}
-                                      {student.gradeLevel}
-                                      {student.section
-                                        ? ` - Section ${student.section}`
-                                        : ''}
-                                    </option>
-                                  )
-                                )
+                                availableStudentsForGroup.map(student => (
+                                  <label key={student.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', cursor: 'pointer' }}>
+                                    <input type="checkbox" value={student.id} />
+                                    <span style={{ fontSize: 13 }}>
+                                      {student.name} · Grade {student.gradeLevel}
+                                      {student.section ? ` · Section ${student.section}` : ''}
+                                    </span>
+                                  </label>
+                                ))
                               ) : (
-                                <option value="">
-                                  No available students for this group
-                                </option>
+                                <div className="teacher-group-empty-note">No available students for this group.</div>
                               )}
-                            </select>
-
+                            </div>
 
                             <div
                               style={{
@@ -2761,23 +2799,13 @@ export default function TeacherDashboard({
                               <button
                                 className="lms-outline-action"
                                 type="button"
-                                disabled={
-                                  !availableStudentsForGroup.length
-                                }
+                                disabled={!availableStudentsForGroup.length}
                                 onClick={() => {
-                                  const select =
-                                    document.getElementById(
-                                      `member-${group.id}`
-                                    );
-
-                                  if (!select) return;
-
-                                  Array.from(select.options).forEach(
-                                    option => {
-                                      option.selected =
-                                        Boolean(option.value);
-                                    }
-                                  );
+                                  const container = document.getElementById(`member-${group.id}`);
+                                  if (!container) return;
+                                  container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                                    input.checked = true;
+                                  });
                                 }}
                               >
                                 Select All
@@ -2786,22 +2814,13 @@ export default function TeacherDashboard({
                               <button
                                 className="lms-outline-action"
                                 type="button"
-                                disabled={
-                                  !availableStudentsForGroup.length
-                                }
+                                disabled={!availableStudentsForGroup.length}
                                 onClick={() => {
-                                  const select =
-                                    document.getElementById(
-                                      `member-${group.id}`
-                                    );
-
-                                  if (!select) return;
-
-                                  Array.from(select.options).forEach(
-                                    option => {
-                                      option.selected = false;
-                                    }
-                                  );
+                                  const container = document.getElementById(`member-${group.id}`);
+                                  if (!container) return;
+                                  container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+                                    input.checked = false;
+                                  });
                                 }}
                               >
                                 Clear
@@ -2810,12 +2829,21 @@ export default function TeacherDashboard({
                               <button
                                 className="lms-outline-action"
                                 type="button"
-                                onClick={() =>
-                                  addMember(group.id)
-                                }
-                                disabled={
-                                  !availableStudentsForGroup.length
-                                }
+                                disabled={!availableStudentsForGroup.length}
+                                onClick={() => {
+                                  const container = document.getElementById(`member-${group.id}`);
+                                  if (!container) return;
+                                  const selected = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(input => Number(input.value)).filter(Boolean);
+                                  if (!selected.length) return window.alert('Select at least one student to add.');
+                                  const addPromises = selected.map(studentId => api(`/groups/${group.id}/members`, { method: 'POST', body: { studentId } }));
+                                  Promise.all(addPromises)
+                                    .then(() => {
+                                      window.location.reload();
+                                    })
+                                    .catch(() => {
+                                      window.alert('One or more students could not be added.');
+                                    });
+                                }}
                               >
                                 Add Selected Students
                               </button>

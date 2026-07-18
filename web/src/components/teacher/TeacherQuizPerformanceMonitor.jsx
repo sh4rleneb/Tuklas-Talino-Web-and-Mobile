@@ -72,14 +72,23 @@ function TeacherQuizPerformanceMonitor({
           Assessment
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <button
-            type="button"
-            className={selectedQuiz === "ALL" ? "lms-report-button" : "quiz-secondary"}
-            onClick={() => onSelectQuiz("ALL")}
-          >
-            🌎 All
-          </button>
+        <select
+          value={selectedQuiz}
+          onChange={(event) => onSelectQuiz(event.target.value)}
+          style={{
+            width: '100%',
+            maxWidth: 420,
+            minHeight: 48,
+            borderRadius: 12,
+            border: '2px solid #d8e7da',
+            padding: '0 14px',
+            fontWeight: 600,
+            fontSize: '0.96rem',
+            background: '#fff',
+            color: '#14223b'
+          }}
+        >
+          <option value="ALL">🌎 All Assessments</option>
 
           {Array.from(
             new Map(
@@ -89,16 +98,14 @@ function TeacherQuizPerformanceMonitor({
               ])
             ).entries()
           ).map(([quizId, quizTitle]) => (
-            <button
+            <option
               key={quizId}
-              type="button"
-              className={selectedQuiz === quizId ? "lms-report-button" : "quiz-secondary"}
-              onClick={() => onSelectQuiz(quizId)}
+              value={quizId}
             >
               {quizTitle}
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
       </div>
 
       <div

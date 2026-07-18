@@ -100,7 +100,7 @@ export async function downloadTextReport({
     file.delete();
   }
 
-  file.write(content || '');
+  await file.write(content || '', { encoding: 'utf8' });
 
   return saveReportFile(file, title, filename, {
     mimeType,
@@ -118,8 +118,6 @@ export async function downloadPdfReport({
   loader,
   url = 'https://tuklastalino.com/api/reports/summary.pdf',
 }) {
-  void loader;
-
   const token = await getToken();
 
   const destination = new File(Paths.cache, filename);
@@ -127,8 +125,6 @@ export async function downloadPdfReport({
   if (destination.exists) {
     destination.delete();
   }
-
-  void 0;
 
   const file = await File.downloadFileAsync(
     url,
@@ -140,8 +136,6 @@ export async function downloadPdfReport({
       },
     }
   );
-
-  void 0;
 
   return saveReportFile(file, title, filename, {
     mimeType: 'application/pdf',

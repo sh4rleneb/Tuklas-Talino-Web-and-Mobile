@@ -321,8 +321,8 @@ export default function StudentJuniorHome({ navigation }) {
           <View style={styles.xpCard}>
             <View style={styles.xpRow}>
               <View>
-                <Text style={styles.xpLabel}>⭐ XP</Text>
                 <Text style={styles.xpValue}>{xp}</Text>
+                <Text style={styles.xpLabel}>⭐ XP</Text>
               </View>
               <View style={styles.levelBadge}>
                 <Text style={styles.levelText}>Antas {level}</Text>
@@ -709,10 +709,10 @@ const styles = StyleSheet.create({
   },
   xpRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    flexWrap: 'wrap',
-    gap: 10,
+    width: '100%',
+    columnGap: 8,
   },
   xpLabel: {
     fontSize: 15,
@@ -722,24 +722,32 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   xpValue: {
-    fontSize: 36,
-    fontFamily: 'Fredoka_700Bold',
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '900',
     color: '#16A34A',
-    marginTop: 4,
-    lineHeight: 42,
+    marginTop: 2,
   },
   levelBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    minWidth: 58,
+    maxWidth: 92,
+    minHeight: 44,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#86EFAC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 1,
   },
   levelText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '900',
     color: '#166534',
-    fontSize: 14,
-    fontFamily: 'Fredoka_700Bold',
+    textAlign: 'center',
   },
   progressBar: {
     height: 13,

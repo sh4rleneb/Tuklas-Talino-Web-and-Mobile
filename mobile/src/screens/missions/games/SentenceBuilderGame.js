@@ -134,6 +134,7 @@ function getSentenceQuestions(mission = {}) {
 
 function SentenceBuilderGame({
   mission = {},
+  onMissionComplete,
   onComplete,
   onSuccess,
   onSubmit,
@@ -236,10 +237,15 @@ function SentenceBuilderGame({
 
     setFeedback('Mahusay! Nabuo mo ang pangungusap.');
 
-    const complete = onComplete || onSuccess || onSubmit;
+    const complete =
+      onMissionComplete ||
+      onComplete ||
+      onSuccess ||
+      onSubmit;
 
     if (typeof complete === 'function') {
       await complete({
+        forceComplete: true,
         correct: true,
         answer: selectedSentence,
         sentence: targetSentence,

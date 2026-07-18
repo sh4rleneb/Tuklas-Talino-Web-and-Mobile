@@ -2586,14 +2586,18 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
   display:flex !important;
   align-items:center;
   gap:8px;
-  flex-wrap:wrap;
-  width:100%;
+  flex-wrap:nowrap;
+  width:auto;
   justify-content:space-between;
+  padding:8px 10px;
+  background: #ffffff;
+  border: 1px solid #e6f3eb;
+  border-radius: 12px;
 }
 
 .teacher-group-member-chip small{
   padding:4px 8px;
-  border-radius:999px;
+  border-radius:8px;
   background:#f1f5f9;
   color:var(--muted);
   font-weight:900;
@@ -2606,7 +2610,7 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
 
 .teacher-group-member-chip button{
   border:0;
-  border-radius:999px;
+  border-radius:8px;
   padding:6px 10px;
   background:#ecfdf3;
   color:var(--green-dark);

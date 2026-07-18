@@ -31,6 +31,7 @@ import {
   approveGroupTask,
   archiveLesson,
   createGroup,
+  updateGroup,
   deleteGroup,
   createLesson,
   createTeacherSection,
@@ -264,12 +265,12 @@ function SelectMenu({ label, value, options = [], onSelect, disabled = false, pl
           <View style={styles.selectSheet}>
             <Text style={styles.selectTitle}>{label}</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {normalizedOptions.map((option) => {
+              {normalizedOptions.map((option, teacherKeyIndex) => {
                 const active = String(option.value) === String(value);
 
                 return (
                   <TouchableOpacity
-                    key={option.value}
+                    key={String((option.value) || 'teacher-map-268') + '-' + teacherKeyIndex}
                     style={[styles.selectOption, active && styles.selectOptionActive]}
                     onPress={() => {
                       onSelect(option.value);
@@ -300,7 +301,14 @@ function SmallButton({ children, onPress, tone = 'green', disabled = false }) {
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={styles.smallButtonText}>{children}</Text>
+      <Text
+        style={[
+          styles.smallButtonText,
+          tone === 'slate' && styles.secondaryButtonText,
+        ]}
+      >
+        {children}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -1172,6 +1180,7 @@ export default function TeacherHome({ navigation }) {
       ? newActivityState
       : {};
   const [groupForm, setGroupForm] = useState({ name: '', description: '', section: '', gradeLevel: '1' });
+  const [editingGroupId, setEditingGroupId] = useState(null);
   const [selectedGroupId, setSelectedGroupId] = useState(null);
   const [openGroupTools, setOpenGroupTools] = useState({});
   const [selectedGroupStudentIds, setSelectedGroupStudentIds] = useState({});
@@ -1465,6 +1474,44 @@ export default function TeacherHome({ navigation }) {
     }
   }
 
+  function startEditGroup(group = {}) {
+    setEditingGroupId(group?.id || null);
+    setGroupForm({
+      name: String(group?.name || '').trim(),
+      description: String(group?.description || group?.section || '').trim(),
+      section: String(group?.section || group?.sectionName || group?.classSection || '').trim(),
+      gradeLevel: String(group?.gradeLevel || group?.grade || '1'),
+    });
+    setSelectedGroupId(group?.id || null);
+  }
+
+  function buildGroupPayload() {
+    const groupGradeLevel = Number(groupForm.gradeLevel);
+
+    if (![1, 2, 3, 4, 5, 6].includes(groupGradeLevel)) {
+      Alert.alert('Create Group', 'Select a valid grade level from Grade 1 to Grade 6.');
+      return null;
+    }
+
+    const groupSection = normalizeSectionName(groupForm.section || groupForm.description);
+
+    if (!groupSection) {
+      Alert.alert('Create Group', 'Select a section for this group.');
+      return null;
+    }
+
+    if (!canUseGradeSection(groupGradeLevel, groupSection)) {
+      Alert.alert('Create Group', 'You can only create groups for your assigned grade level or section.');
+      return null;
+    }
+
+    return {
+      ...groupForm,
+      gradeLevel: groupGradeLevel,
+      section: groupSection,
+      description: groupSection,
+    };
+  }
 
   function confirmLogout() {
     setLogoutVisible(true);
@@ -2283,9 +2330,9 @@ async function handleLogout() {
   function renderTabs() {
     return (
       <View style={styles.navRow}>
-        {NAV_ITEMS.map(([key, icon, label]) => (
+        {NAV_ITEMS.map(([key, icon, label], teacherKeyIndex) => (
           <TouchableOpacity
-            key={key}
+            key={String((key) || 'teacher-map-2333') + '-' + teacherKeyIndex}
             style={[
               styles.navChip,
               section === key && styles.navChipActive,
@@ -2446,8 +2493,8 @@ async function handleLogout() {
             ['🎓', stats.students ?? 0, 'Students'],
             ['📈', `${stats.classProgress ?? 0}%`, 'Class Progress'],
             ['📝', stats.draftLessons ?? 0, 'Draft Lessons'],
-          ].map(([icon, value, label]) => (
-            <SectionCard key={label} style={styles.statCard}>
+          ].map(([icon, value, label], teacherKeyIndex) => (
+            <SectionCard key={String((label) || 'teacher-map-2491') + '-' + teacherKeyIndex} style={styles.statCard}>
               <Text style={styles.statIcon}>{icon}</Text>
               <Text style={styles.statValue}>{value}</Text>
               <Text style={styles.muted}>{label}</Text>
@@ -2457,8 +2504,8 @@ async function handleLogout() {
 
         <SectionCard>
           <Text style={styles.cardTitle}>Assigned Classes</Text>
-          {(dashboard?.assignedClasses || []).map((item) => (
-            <View key={item.id} style={styles.softRow}>
+          {(dashboard?.assignedClasses || []).map((item, teacherKeyIndex) => (
+            <View key={String((item.id) || 'teacher-map-2507') + '-' + teacherKeyIndex} style={styles.softRow}>
               <Text style={styles.rowTitle}>Grade {item.gradeLevel} • {item.section}</Text>
             </View>
           ))}
@@ -2469,11 +2516,11 @@ async function handleLogout() {
 
         <SectionCard>
           <Text style={styles.cardTitle}>Pending Group Checks</Text>
-          {(pendingChecks.rows || []).slice(0, 4).map((row) => {
+          {(pendingChecks.rows || []).slice(0, 4).map((row, teacherKeyIndex) => {
             const actionId = getPendingGroupCheckActionKey(row);
 
             return (
-              <View key={actionId || row.id || `${row.groupName}-${row.taskTitle}-${row.studentName}`} style={styles.softRow}>
+              <View key={String((actionId || row.id || `${row.groupName}-${row.taskTitle}-${row.studentName}`) || 'teacher-map-2519') + '-' + teacherKeyIndex} style={styles.softRow}>
                 <Text style={styles.rowTitle}>{row.groupName || row.group?.name || 'Group'}</Text>
                 <Text style={styles.muted}>
                   {row.taskTitle || row.task?.title || 'Task'} • {row.studentName || row.student?.name || 'Student'}
@@ -2511,7 +2558,7 @@ async function handleLogout() {
         <View style={styles.builderTabs}>
           {BUILDER_STEPS.map((label, index) => (
             <TouchableOpacity
-              key={label}
+              key={String((label) || 'teacher-map-2559') + '-' + index}
               style={[
                 styles.stepChip,
                 builderStep === index && styles.stepChipActive,
@@ -2562,7 +2609,7 @@ async function handleLogout() {
             >
               <Text
                 style={{
-                  color: '#ffffff',
+                  color: '#FFFFFF',
                   fontSize: 14,
                   fontWeight: '800',
                 }}
@@ -2583,8 +2630,8 @@ async function handleLogout() {
                 onPress={() => setBuilderStep(1)}
                 style={({ pressed }) => ({
                   alignSelf: 'flex-start',
-                  backgroundColor: '#16A34A',
-                  borderColor: '#16A34A',
+                  backgroundColor: '#2563EB',
+                  borderColor: '#1D4ED8',
                   borderWidth: 1,
                   borderRadius: 12,
                   paddingHorizontal: 14,
@@ -2594,7 +2641,7 @@ async function handleLogout() {
               >
                 <Text
                   style={{
-                    color: '#ffffff',
+                    color: '#FFFFFF',
                     fontSize: 14,
                     fontWeight: '800',
                   }}
@@ -2886,12 +2933,12 @@ async function handleLogout() {
                 {ACTIVITY_CHOICE_KEYS.slice(
                   0,
                   Math.min(ACTIVITY_CHOICE_KEYS.length, Math.max(2, Number(newActivity.choiceCount || 2)))
-                ).map((choice) => {
+                ).map((choice, teacherKeyIndex) => {
                   const optionKey = `option${choice}`;
 
                   return (
                     <Field
-                      key={choice}
+                      key={String((choice) || 'teacher-map-2933') + '-' + teacherKeyIndex}
                       label={`Choice ${choice}`}
                       value={newActivity[optionKey] || ''}
                       onChangeText={(value) =>
@@ -2955,9 +3002,9 @@ async function handleLogout() {
                   {ACTIVITY_CHOICE_KEYS.slice(
                     0,
                     Math.min(ACTIVITY_CHOICE_KEYS.length, Math.max(2, Number(newActivity.choiceCount || 2)))
-                  ).map((choice) => (
+                  ).map((choice, teacherKeyIndex) => (
                     <SmallButton
-                      key={choice}
+                      key={String((choice) || 'teacher-map-3002') + '-' + teacherKeyIndex}
                       tone={newActivity.correctOption === choice ? 'green' : 'slate'}
                       onPress={() => setNewActivity((current) => ({ ...current, correctOption: choice }))}
                     >
@@ -2985,7 +3032,7 @@ async function handleLogout() {
                 ) : null}
               </>
             )}
-            <SmallButton onPress={addActivity}>{typeof newActivity.editingActivityIndex === 'number' ? 'Update Activity Block' : 'Add Activity Block'}</SmallButton>
+            <SmallButton tone="mediumBlue" onPress={addActivity}>{typeof newActivity.editingActivityIndex === 'number' ? 'Update Activity Block' : 'Add Activity Block'}</SmallButton>
             {draft.activities.map((activity, index) => (
               <View key={`${activity.type}-${index}`} style={styles.softRow}>
                 <Text style={styles.rowTitle}>{index + 1}. {activity.title}</Text>
@@ -2998,7 +3045,7 @@ async function handleLogout() {
                 </SmallButton>
               </View>
             ))}
-            <SmallButton onPress={() => setBuilderStep(3)}>Next: Preview →</SmallButton>
+            <SmallButton tone="darkBlue" onPress={() => setBuilderStep(3)}>Next: Preview →</SmallButton>
           </SectionCard>
         )}
 
@@ -3152,11 +3199,11 @@ async function handleLogout() {
           <SectionCard>
             <Text style={styles.cardTitle}>My Created Lessons</Text>
             <Text style={styles.muted}>Edit draft or published lessons from your list.</Text>
-            {lessons.map((lesson) => {
+            {lessons.map((lesson, teacherKeyIndex) => {
               const isPublished = (lesson.status || 'published') === 'published';
 
               return (
-                <View key={lesson.id} style={styles.lessonListCard}>
+                <View key={String((lesson.id) || 'teacher-map-3202') + '-' + teacherKeyIndex} style={styles.lessonListCard}>
                   <View style={styles.lessonListHeader}>
                     <View style={styles.flex}>
                       <Text style={styles.rowTitle}>📘 {lesson.title || 'Untitled Lesson'}</Text>
@@ -3579,42 +3626,29 @@ async function handleLogout() {
           />
 
           <SmallButton disabled={!groupForm.name.trim() || !(groupForm.section || groupForm.description || '').trim() || Boolean(busy)} onPress={async () => {
-            const groupGradeLevel = Number(groupForm.gradeLevel);
+            const groupPayload = buildGroupPayload();
 
-            if (![1, 2, 3, 4, 5, 6].includes(groupGradeLevel)) {
-              Alert.alert('Create Group', 'Select a valid grade level from Grade 1 to Grade 6.');
-              return;
-            }
+            if (!groupPayload) return;
 
-            const groupSection = normalizeSectionName(groupForm.section || groupForm.description);
-
-            if (!groupSection) {
-              Alert.alert('Create Group', 'Select a section for this group.');
-              return;
-            }
-
-            if (!canUseGradeSection(groupGradeLevel, groupSection)) {
-              Alert.alert('Create Group', 'You can only create groups for your assigned grade level or section.');
-              return;
-            }
-
-            const groupPayload = {
-              ...groupForm,
-              gradeLevel: groupGradeLevel,
-              section: groupSection,
-              description: groupSection,
-            };
-            const saved = await run('group-create', () => createGroup(groupPayload), 'Group created.');
+            const saved = await run(
+              editingGroupId ? `group-update-${editingGroupId}` : 'group-create',
+              () => editingGroupId ? updateGroup(editingGroupId, groupPayload) : createGroup(groupPayload),
+              editingGroupId ? 'Group updated.' : 'Group created.'
+            );
 
             if (saved) {
-              setGroups((current) => [
-                { ...saved, gradeLevel: saved.gradeLevel || groupGradeLevel },
-                ...current.filter((group) => Number(group.id) !== Number(saved.id)),
-              ]);
-              setSelectedGroupId(saved.id);
-              setGroupForm({ name: '', description: '', section: '', gradeLevel: String(groupGradeLevel) });
+              setGroups((current) => {
+                const nextGroup = { ...saved, gradeLevel: saved.gradeLevel || groupPayload.gradeLevel };
+
+                return editingGroupId
+                  ? current.map((group) => Number(group.id) === Number(editingGroupId) ? nextGroup : group)
+                  : [nextGroup, ...current.filter((group) => Number(group.id) !== Number(saved.id))];
+              });
+              setSelectedGroupId(editingGroupId || saved.id);
+              setGroupForm({ name: '', description: '', section: '', gradeLevel: String(groupPayload.gradeLevel) });
+              setEditingGroupId(null);
             }
-          }}>Create Group</SmallButton>
+          }}>{editingGroupId ? 'Save Changes' : 'Create Group'}</SmallButton>
         </SectionCard>
 
         <SectionCard>
@@ -3999,7 +4033,7 @@ async function handleLogout() {
             <Text style={styles.lessonStatusChip}>{groups.length} group{groups.length === 1 ? '' : 's'}</Text>
           </View>
 
-          {groups.length ? groups.map((group) => {
+          {groups.length ? groups.map((group, teacherKeyIndex) => {
             const members = getGroupMembers(group);
             const tasks = getGroupTasks(group);
             const memberCount = members.length;
@@ -4049,8 +4083,8 @@ async function handleLogout() {
               );
 
             return (
-              <View key={group.id} style={[styles.lessonListCard, Number(selectedGroup?.id) === Number(group.id) && styles.selectedRow]}>
-                <TouchableOpacity onPress={() => setSelectedGroupId(group.id)}>
+              <View key={String((group.id) || 'teacher-map-4036') + '-' + teacherKeyIndex} style={[styles.lessonListCard, Number(selectedGroup?.id) === Number(group.id) && styles.selectedRow]}>
+                <TouchableOpacity onPress={() => toggleGroupTools(group.id)}>
                   <Text style={styles.rowTitle}>{group.name}</Text>
                   <Text style={styles.muted}>{group.description || 'No description added.'}</Text>
                   <View style={styles.lessonMetaGrid}>
@@ -4069,68 +4103,89 @@ async function handleLogout() {
                       </View>
                     ) : null}
                   </View>
+                  {/* Compact members preview (first 3 members) */}
+                  <View style={styles.memberPreviewContainer}>
+                    {members.slice(0, 3).map((member, teacherKeyIndex) => {
+                      const student = getMemberStudent(member);
+                      const studentName = student?.name || 'Learner';
+                      const isLeader = String(member.groupRole || '').toLowerCase() === 'leader';
+
+                      return (
+                        <View key={String((member.id || studentName) || 'teacher-map-4108') + '-' + teacherKeyIndex} style={styles.memberPreviewChip}>
+                          <Text numberOfLines={1} style={styles.memberPreviewChipText}>{studentName}</Text>
+                          {isLeader ? <Text style={styles.memberPreviewLeader}>Leader</Text> : null}
+                        </View>
+                      );
+                    })}
+
+                    {members.length > 3 ? (
+                      <Text style={styles.memberPreviewMore}>+{members.length - 3} more</Text>
+                    ) : null}
+                  </View>
                 </TouchableOpacity>
 
-                <View style={styles.softRow}>
-                  <Text style={styles.rowTitle}>Members</Text>
-                  {members.length ? members.map((member) => {
-                    const student = getMemberStudent(member);
-                    const studentId = student.id || member.studentId;
-                    const isLeader = String(member.groupRole || '').toLowerCase() === 'leader';
+                {isOpen ? (
+                  <>
+                    <View style={styles.softRow}>
+                      <Text style={styles.rowTitle}>Members</Text>
+                      {members.length ? members.map((member, teacherKeyIndex) => {
+                        const student = getMemberStudent(member);
+                        const studentId = student.id || member.studentId;
+                        const isLeader = String(member.groupRole || '').toLowerCase() === 'leader';
 
-                    return (
-                      <View key={member.id || studentId || student.studentCode || student.name} style={styles.actionRow}>
-                        <View style={styles.flex}>
-                          <Text style={styles.body}>👤 {student.name || 'Student'}</Text>
-                          <Text style={styles.muted}>{isLeader ? 'Leader' : 'Member'}</Text>
-                        </View>
-                        {!isLeader ? (
-                          <SmallButton
-                            tone="slate"
-                            disabled={Boolean(busy)}
-                            onPress={() => handleSetGroupLeader(group.id, studentId)}
-                          >
-                            Set as Leader
-                          </SmallButton>
-                        ) : null}
-                        <SmallButton
-                          tone="red"
-                          disabled={Boolean(busy)}
-                          onPress={() => confirmRemoveGroupMember(group, member)}
-                        >
-                          Remove
-                        </SmallButton>
-                      </View>
-                    );
-                  }) : (
-                    <Text style={styles.muted}>No members added yet.</Text>
-                  )}
-                </View>
-
-                <View style={styles.softRow}>
-                  <Text style={styles.rowTitle}>Tasks</Text>
-                  {tasks.length ? (
-                    <>
-                      {tasks.slice(0, 3).map((task) => (
-                        <View key={task.id || task.title} style={styles.actionRow}>
-                          <View style={styles.flex}>
-                            <Text style={styles.body}>{task.title || 'Group task'}</Text>
-                            <Text style={styles.muted}>
-                              +{task.xpReward || 0} XP{getGroupTaskDeadlineLabel(task) ? ` • Due ${getGroupTaskDeadlineLabel(task)}` : ''}
-                            </Text>
+                        return (
+                          <View key={String((member.id || studentId || student.studentCode || student.name) || 'teacher-map-4131') + '-' + teacherKeyIndex} style={styles.actionRow}>
+                            <View style={styles.flex}>
+                              <Text style={styles.body}>👤 {student.name || 'Student'}</Text>
+                              <Text style={styles.muted}>{isLeader ? 'Leader' : 'Member'}</Text>
+                            </View>
+                            {!isLeader ? (
+                              <SmallButton
+                                tone="slate"
+                                disabled={Boolean(busy)}
+                                onPress={() => handleSetGroupLeader(group.id, studentId)}
+                              >
+                                Set as Leader
+                              </SmallButton>
+                            ) : null}
+                            <SmallButton
+                              tone="red"
+                              disabled={Boolean(busy)}
+                              onPress={() => confirmRemoveGroupMember(group, member)}
+                            >
+                              Remove
+                            </SmallButton>
                           </View>
-                        </View>
-                      ))}
-                      {tasks.length > 3 ? (
-                        <Text style={styles.muted}>+{tasks.length - 3} more task{tasks.length - 3 === 1 ? '' : 's'}</Text>
-                      ) : null}
-                    </>
-                  ) : (
-                    <Text style={styles.muted}>No tasks assigned yet.</Text>
-                  )}
-                </View>
+                        );
+                      }) : (
+                        <Text style={styles.muted}>No members added yet.</Text>
+                      )}
+                    </View>
 
-                  <View style={styles.groupManagementActions}>
+                    <View style={styles.softRow}>
+                      <Text style={styles.rowTitle}>Tasks</Text>
+                      {tasks.length ? (
+                        <>
+                          {tasks.slice(0, 3).map((task, teacherKeyIndex) => (
+                            <View key={String((task.id || task.title) || 'teacher-map-4169') + '-' + teacherKeyIndex} style={styles.actionRow}>
+                              <View style={styles.flex}>
+                                <Text style={styles.body}>{task.title || 'Group task'}</Text>
+                                <Text style={styles.muted}>
+                                  +{task.xpReward || 0} XP{getGroupTaskDeadlineLabel(task) ? ` • Due ${getGroupTaskDeadlineLabel(task)}` : ''}
+                                </Text>
+                              </View>
+                            </View>
+                          ))}
+                          {tasks.length > 3 ? (
+                            <Text style={styles.muted}>+{tasks.length - 3} more task{tasks.length - 3 === 1 ? '' : 's'}</Text>
+                          ) : null}
+                        </>
+                      ) : (
+                        <Text style={styles.muted}>No tasks assigned yet.</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.groupManagementActions}>
                     <TouchableOpacity
                       style={[
                         styles.groupAddMemberToggle,
@@ -4168,6 +4223,25 @@ async function handleLogout() {
 
                       <Text style={styles.groupActionChevron}>
                         {isOpen ? '▲' : '▼'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.groupSelectionSecondaryButton,
+                        Boolean(busy) && styles.groupSelectionSecondaryButtonDisabled,
+                      ]}
+                      disabled={Boolean(busy)}
+                      activeOpacity={0.86}
+                      accessibilityRole="button"
+                      accessibilityLabel="Expand group"
+                      onPress={() => {
+                        startEditGroup(group);
+                        toggleGroupTools(group.id);
+                      }}
+                    >
+                      <Text style={styles.groupSelectionSecondaryButtonText}>
+                        {isOpen ? '✕ Collapse' : '✏ Expand'}
                       </Text>
                     </TouchableOpacity>
 
@@ -4282,7 +4356,7 @@ async function handleLogout() {
                           </Text>
 
                           <View style={styles.groupStudentList}>
-                            {addableStudents.map((student) => {
+                            {addableStudents.map((student, teacherKeyIndex) => {
                               const studentId =
                                 getStudentGroupMemberId(student);
 
@@ -4303,11 +4377,9 @@ async function handleLogout() {
 
                               return (
                                 <TouchableOpacity
-                                  key={
-                                    studentId ||
+                                  key={String((studentId ||
                                     studentCode ||
-                                    student.name
-                                  }
+                                    student.name) || 'teacher-map-4359') + '-' + teacherKeyIndex}
                                   style={[
                                     styles.groupStudentRow,
                                     isSelected &&
@@ -4475,6 +4547,8 @@ async function handleLogout() {
                       ) : null}
                     </View>
                   ) : null}
+                  </>
+                ) : null}
               </View>
             );
           }) : (
@@ -4563,34 +4637,14 @@ async function handleLogout() {
             ['📊', `${summary.averageBest || 0}%`, 'Average Score'],
             ['🧭', summary.needsSupport || 0, 'Needs Support'],
             ['🏅', proficientTotal, 'Proficient Students'],
-            ['🎯', `${readiness}%`, 'Quiz Readiness'],
-            ['❓', totalQuestions, 'Total Questions'],
-          ].map(([icon, value, label]) => (
-            <View key={label} style={styles.assessmentMetricCard}>
+          ].map(([icon, value, label], teacherKeyIndex) => (
+            <View key={String((label) || 'teacher-map-4637') + '-' + teacherKeyIndex} style={styles.assessmentMetricCard}>
               <Text style={styles.assessmentMetricIcon}>{icon}</Text>
               <Text style={styles.assessmentMetricValue}>{value}</Text>
               <Text style={styles.assessmentMetricLabel}>{label}</Text>
             </View>
           ))}
         </View>
-
-        <SectionCard>
-          <Text style={styles.cardTitle}>Assessment Coverage</Text>
-          <Text style={styles.muted}>
-            {quizReadyLessons} of {activityCoverage.length} lesson(s) have objective quiz evidence.
-            {missingQuizLessons ? ` ${missingQuizLessons} lesson(s) still need quiz items.` : ' All lessons are quiz-ready.'}
-          </Text>
-          {activityCoverage.map((lesson) => (
-            <View key={lesson.id} style={styles.softRow}>
-              <Text style={styles.rowTitle}>{lesson.title}</Text>
-              <Text style={styles.muted}>
-                {lesson.quizCount} quiz question(s) • {lesson.writingCount} writing • {lesson.speechCount} speech
-              </Text>
-              {!lesson.quizCount && <Text style={styles.warning}>Missing quiz evidence</Text>}
-            </View>
-          ))}
-          {!activityCoverage.length && <Text style={styles.muted}>No lessons available for assessment coverage yet.</Text>}
-        </SectionCard>
 
         <SectionCard>
           <Text style={styles.cardTitle}>Student Assessment Results</Text>
@@ -4616,7 +4670,7 @@ async function handleLogout() {
               setShowAllAssessmentRows(false);
             }}
             placeholder="Search student or assessment..."
-            placeholderTextColor="#8aa39b"
+            placeholderTextColor="#94A3B8"
           />
 
           <SelectMenu
@@ -4633,8 +4687,8 @@ async function handleLogout() {
             Showing {visibleRows.length} of {filteredRows.length} assessment record{filteredRows.length === 1 ? '' : 's'}
           </Text>
 
-          {visibleRows.map((row) => (
-            <View key={row.key || `${row.studentName}-${row.quizId}`} style={styles.assessmentResultRow}>
+          {visibleRows.map((row, teacherKeyIndex) => (
+            <View key={String((row.key || `${row.studentName}-${row.quizId}`) || 'teacher-map-4692') + '-' + teacherKeyIndex} style={styles.assessmentResultRow}>
               <View style={styles.assessmentResultHeader}>
                 <View style={styles.assessmentResultIdentity}>
                   <Text style={styles.assessmentLearnerName}>{row.studentName || 'Student'}</Text>
@@ -5408,7 +5462,9 @@ async function handleLogout() {
       return (
         <View style={styles.reviewIdentityCard}>
           <View style={styles.reviewAvatar}>
-            <Text style={styles.reviewAvatarText}>{String(reviewStudentName(item)).charAt(0).toUpperCase() || 'S'}</Text>
+            <Text style={styles.reviewAvatarText}>
+              {item.student?.avatar || '🧒'}
+            </Text>
           </View>
           <View style={styles.reviewIdentityContent}>
             <Text style={styles.reviewStudentName}>{reviewStudentName(item)}</Text>
@@ -5474,8 +5530,8 @@ async function handleLogout() {
             ['✍️', pendingWritingReviewRows.length, 'Pending Writing'],
             ['⭐', gradedWritingReviewRows.length, 'Graded Writing'],
             ['🎙️', speechReviewRows.length, 'Speech Attempts'],
-          ].map(([icon, value, label]) => (
-            <View key={label} style={styles.reviewMetricCard}>
+          ].map(([icon, value, label], teacherKeyIndex) => (
+            <View key={String((label) || 'teacher-map-5531') + '-' + teacherKeyIndex} style={styles.reviewMetricCard}>
               <Text style={styles.reviewMetricIcon}>{icon}</Text>
               <Text style={styles.reviewMetricValue}>{value}</Text>
               <Text style={styles.reviewMetricLabel}>{label}</Text>
@@ -5510,11 +5566,11 @@ async function handleLogout() {
             </View>
           </View>
 
-          {pendingWritingReviewRows.length ? pendingWritingReviewRows.map((item) => {
+          {pendingWritingReviewRows.length ? pendingWritingReviewRows.map((item, teacherKeyIndex) => {
             const draft = getReviewDraft('writing', item);
             const isSaving = Boolean(draft.saving);
             return (
-              <View key={`writing-review-${getReviewSubmissionId(item)}`} style={styles.reviewCard}>
+              <View key={String((`writing-review-${getReviewSubmissionId(item)}`) || 'teacher-map-5571') + '-' + teacherKeyIndex} style={styles.reviewCard}>
                 {renderReviewIdentity(item, 'Pending Grade')}
 
                 <View style={styles.reviewEvidenceGrid}>
@@ -5557,7 +5613,7 @@ async function handleLogout() {
                   value={draft.feedback || ''}
                   onChangeText={(value) => updateReviewDraft('writing', item, 'feedback', value)}
                   placeholder="Write feedback for the student..."
-                  placeholderTextColor="#8aa39b"
+                  placeholderTextColor="#94A3B8"
                   multiline
                 />
 
@@ -5602,7 +5658,7 @@ async function handleLogout() {
 
                 {speechRows.length ? (
                   <>
-                    {visibleSpeechRows.map((item) => {
+                    {visibleSpeechRows.map((item, teacherKeyIndex) => {
                   const attemptId = getSpeechReviewAttemptId(item);
                   const draftKey = getSpeechReviewDraftKey(item);
                   const speechDraft = reviewDrafts[draftKey] || {};
@@ -5612,7 +5668,7 @@ async function handleLogout() {
                   const targetText = getSpeechReviewTargetText(item);
 
                   return (
-                    <View key={`speech-review-${attemptId || draftKey}`} style={styles.reviewCardCompact}>
+                    <View key={String((`speech-review-${attemptId || draftKey}`) || 'teacher-map-5663') + '-' + teacherKeyIndex} style={styles.reviewCardCompact}>
                       {renderReviewIdentity(item, item.lessonTitle || item.activityTitle || 'Speech attempt')}
 
                       {targetText ? (
@@ -5703,8 +5759,8 @@ async function handleLogout() {
             </View>
           </View>
 
-          {gradedWritingReviewRows.length ? gradedWritingReviewRows.map((item) => (
-            <View key={`graded-writing-${getReviewSubmissionId(item)}`} style={styles.reviewCardCompact}>
+          {gradedWritingReviewRows.length ? gradedWritingReviewRows.map((item, teacherKeyIndex) => (
+            <View key={String((`graded-writing-${getReviewSubmissionId(item)}`) || 'teacher-map-5764') + '-' + teacherKeyIndex} style={styles.reviewCardCompact}>
               {renderReviewIdentity(item, `Score ${item.score ?? '-'} / 10`)}
               <View style={styles.reviewXpPill}>
                 <Text style={styles.reviewXpPillText}>+{item.xpPreview ?? item.score ?? 0} XP</Text>
@@ -6245,7 +6301,7 @@ async function handleLogout() {
 
               <View style={styles.studentResultList}>
                 {teacherStudentSearchResults.map(
-                  (student) => {
+                  (student, teacherKeyIndex) => {
                     const studentId =
                       student?.id ??
                       student?.studentId ??
@@ -6282,11 +6338,9 @@ async function handleLogout() {
 
                     return (
                       <TouchableOpacity
-                        key={
-                          studentId ||
+                        key={String((studentId ||
                           studentCode ||
-                          studentName
-                        }
+                          studentName) || 'teacher-map-6305') + '-' + teacherKeyIndex}
                         style={[
                           styles.studentSearchResultCard,
                           isSelected &&
@@ -6855,7 +6909,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   canvasOpenButton: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 11,
     paddingHorizontal: 14,
@@ -6918,18 +6972,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EFF6FF',
     borderWidth: 1,
-    borderColor: '#86EFAC',
-    shadowColor: '#14532D',
+    borderColor: '#93C5FD',
+    shadowColor: '#0B3D22',
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
     elevation: 2,
   },
   workspaceNoticeSuccess: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#22C55E',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#1D4ED8',
   },
   workspaceNoticeWarning: {
     backgroundColor: '#FEF3C7',
@@ -6964,8 +7018,8 @@ const styles = StyleSheet.create({
   },
 
   taskNoticeSuccess: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#22C55E',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#1D4ED8',
   },
 
   taskNoticeWarning: {
@@ -6999,8 +7053,8 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#DCFCE7',
-    shadowColor: '#16A34A',
+    borderColor: '#BFDBFE',
+    shadowColor: '#1E40AF',
     shadowOpacity: 0.22,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -7010,7 +7064,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -7045,7 +7099,7 @@ const styles = StyleSheet.create({
   },
   workspaceLogoutConfirm: {
     flex: 1,
-    backgroundColor: '#16A34A',
+    backgroundColor: '#125334',
     borderRadius: 18,
     paddingVertical: 14,
     alignItems: 'center',
@@ -7065,14 +7119,14 @@ const styles = StyleSheet.create({
   workspaceHero: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EFF6FF',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BFDBFE',
     borderRadius: 28,
     padding: 18,
     marginTop: 18,
     marginBottom: 18,
-    shadowColor: '#16A34A',
+    shadowColor: '#1E40AF',
     shadowOpacity: 0.16,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
@@ -7082,7 +7136,7 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 26,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 15,
@@ -7094,7 +7148,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   workspaceHeroKicker: {
-    color: '#15803D',
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -7115,8 +7169,8 @@ const styles = StyleSheet.create({
   workspaceHeroChip: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
-    color: '#166534',
+    borderColor: '#BFDBFE',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '900',
     paddingHorizontal: 10,
@@ -7137,8 +7191,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   canvasStudentButtonActive: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#22C55E',
+    backgroundColor: '#DBEAFE',
+    borderColor: '#1D4ED8',
   },
   canvasStudentName: {
     color: '#0F172A',
@@ -7146,7 +7200,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   canvasStudentNameActive: {
-    color: '#166534',
+    color: '#0F172A',
   },
   canvasStudentMeta: {
     color: '#64748B',
@@ -7155,7 +7209,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   canvasStudentMetaActive: {
-    color: '#166534',
+    color: '#0F172A',
   },
   canvasStudentCount: {
     minWidth: 36,
@@ -7167,7 +7221,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   canvasStudentCountText: {
-    color: '#166534',
+    color: '#0F172A',
     fontWeight: '900',
   },
   canvasSectionHeader: {
@@ -7176,7 +7230,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   canvasSectionLabel: {
-    color: '#166534',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -7185,12 +7239,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   canvasSubmissionCard: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#EFF6FF',
     borderRadius: 18,
     padding: 14,
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: '#BFDBFE',
   },
   canvasSubmissionHeader: {
     flexDirection: 'row',
@@ -7198,7 +7252,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   canvasSubmissionType: {
-    color: '#166534',
+    color: '#0F172A',
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -7216,7 +7270,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   canvasStatusChip: {
-    color: '#166534',
+    color: '#0F172A',
     backgroundColor: '#FFFFFF',
     borderRadius: 999,
     paddingHorizontal: 9,
@@ -7234,7 +7288,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   canvasBlockLabel: {
-    color: '#166534',
+    color: '#0F172A',
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -7252,15 +7306,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   canvasFeedbackBlock: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EFF6FF',
     borderRadius: 14,
     padding: 11,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BFDBFE',
   },
   canvasPlayButton: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -7273,12 +7327,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   canvasReviewPanel: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EFF6FF',
     borderRadius: 14,
     padding: 11,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BFDBFE',
   },
   canvasScoreRow: {
     flexDirection: 'row',
@@ -7295,7 +7349,7 @@ const styles = StyleSheet.create({
     width: 82,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BFDBFE',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -7307,7 +7361,7 @@ const styles = StyleSheet.create({
     minHeight: 82,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BFDBFE',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -7315,7 +7369,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   canvasReviewButton: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#2563EB',
     borderRadius: 12,
     paddingVertical: 11,
     paddingHorizontal: 14,
@@ -7345,7 +7399,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
 
-  safe: { flex: 1, backgroundColor: '#F6FFF5' },
+  safe: { flex: 1, backgroundColor: '#EFF6FF' },
   page: { padding: 16, paddingBottom: 44 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
@@ -7375,25 +7429,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navChipActive: {
-    backgroundColor: '#DCFCE7',
-    borderColor: '#22C55E',
+    backgroundColor: '#DBEAFE',
+    borderWidth: 2,
+    borderColor: '#2563EB',
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.16,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   navLabel: { color: '#64748B', fontWeight: '800' },
-  navLabelActive: { color: '#166534' },
-  card: { backgroundColor: '#FFF', borderRadius: 22, padding: 16, marginBottom: 14, shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
+  navLabelActive: { color: '#1D4ED8', fontWeight: '900' },
+  card: { backgroundColor: '#FFF', borderRadius: 22, padding: 16, marginBottom: 14, shadowColor: '#1E40AF', shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
   cardTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900', marginBottom: 10 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   statCard: {
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
+    shadowColor: '#1E40AF',
     shadowOpacity: 0.10,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 7 },
     elevation: 4,
  width: '48%' },
   statIcon: { fontSize: 24 },
-  statValue: { color: '#166534', fontWeight: '900', fontSize: 28, marginTop: 6 },
+  statValue: { color: '#0F172A', fontWeight: '900', fontSize: 28, marginTop: 6 },
   selectTrigger: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E1', borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 12, marginTop: 6, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   selectTriggerDisabled: { opacity: 0.6 },
   selectValue: { color: '#0F172A', fontWeight: '800', flex: 1 },
@@ -7402,15 +7462,15 @@ const styles = StyleSheet.create({
   selectSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, maxHeight: '72%' },
   selectTitle: { color: '#0F172A', fontSize: 18, fontWeight: '900', marginBottom: 10 },
   selectOption: { borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 14, padding: 13, marginTop: 8, backgroundColor: '#F8FAFC' },
-  selectOptionActive: { borderColor: '#16A34A', backgroundColor: '#DCFCE7' },
+  selectOptionActive: { borderColor: '#1D4ED8', backgroundColor: '#DBEAFE' },
   selectOptionText: { color: '#0F172A', fontWeight: '800' },
-  selectOptionTextActive: { color: '#166534', fontWeight: '900' },
-  selectClose: { backgroundColor: '#0F172A', borderRadius: 14, padding: 13, alignItems: 'center', marginTop: 12 },
+  selectOptionTextActive: { color: '#0F172A', fontWeight: '900' },
+  selectClose: { backgroundColor: '#2563EB', borderRadius: 14, padding: 13, alignItems: 'center', marginTop: 12 },
   selectCloseText: { color: '#FFFFFF', fontWeight: '900' },
   muted: { color: '#64748B', marginTop: 4 },
   body: { color: '#475569', marginTop: 7, lineHeight: 20 },
-  softRow: { backgroundColor: '#F0FDF4', borderRadius: 14, padding: 12, marginTop: 9 },
-  selectedRow: { borderWidth: 2, borderColor: '#22C55E' },
+  softRow: { backgroundColor: '#EFF6FF', borderRadius: 14, padding: 12, marginTop: 9 },
+  selectedRow: { borderWidth: 2, borderColor: '#1D4ED8' },
   studentSearchHint: {
     color: '#64748B',
     fontSize: 12,
@@ -7426,10 +7486,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   studentResultsPanel: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#EFF6FF',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BFDBFE',
     padding: 12,
     marginTop: 16,
   },
@@ -7445,13 +7505,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   studentResultCountBadge: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#DBEAFE',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   studentResultCountText: {
-    color: '#166534',
+    color: '#0F172A',
     fontSize: 11,
     fontWeight: '900',
   },
@@ -7462,13 +7522,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#DCE7E1',
+    borderColor: '#BFDBFE',
     padding: 13,
   },
   studentSearchResultCardSelected: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#DBEAFE',
     borderWidth: 2,
-    borderColor: '#16A34A',
+    borderColor: '#1D4ED8',
   },
   studentSearchResultTop: {
     flexDirection: 'row',
@@ -7484,7 +7544,7 @@ const styles = StyleSheet.create({
     marginRight: 11,
   },
   studentSearchAvatarSelected: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#2563EB',
   },
   studentSearchAvatarText: {
     color: '#475569',
@@ -7527,7 +7587,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   studentSelectionBadgeSelected: {
-    backgroundColor: '#16A34A',
+    backgroundColor: '#2563EB',
   },
   studentSelectionBadgeText: {
     color: '#475569',
@@ -7559,10 +7619,10 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   selectedStudentSummary: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#EFF6FF',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BFDBFE',
     padding: 14,
     marginTop: 14,
   },
@@ -7574,7 +7634,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#16A34A',
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -7589,7 +7649,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   selectedStudentEyebrow: {
-    color: '#15803D',
+    color: '#0F172A',
     fontSize: 10,
     fontWeight: '900',
     letterSpacing: 0.7,
@@ -7610,7 +7670,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 13,
     borderWidth: 1,
-    borderColor: '#D1FAE5',
+    borderColor: '#BFDBFE',
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginTop: 12,
@@ -7623,7 +7683,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   currentSectionValue: {
-    color: '#166534',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '900',
     marginTop: 2,
@@ -7652,8 +7712,8 @@ const styles = StyleSheet.create({
     minHeight: 46,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#16A34A',
-    backgroundColor: '#F0FDF4',
+    borderColor: '#1D4ED8',
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 14,
@@ -7665,7 +7725,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   sectionCreateToggleText: {
-    color: '#15803D',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '900',
   },
@@ -7711,22 +7771,22 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   sectionChangePreview: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#EFF6FF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#86EFAC',
+    borderColor: '#93C5FD',
     padding: 12,
     marginTop: 14,
   },
   sectionChangePreviewLabel: {
-    color: '#15803D',
+    color: '#0F172A',
     fontSize: 11,
     fontWeight: '900',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   sectionChangePreviewValue: {
-    color: '#166534',
+    color: '#0F172A',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 4,
@@ -7737,11 +7797,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 12,
   },
+    buttonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 12,
+  },
+  secondaryButtonText: {
+    color: '#334155',
+  },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   lessonListCard: { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 16, padding: 12, marginTop: 12 },
   lessonListHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   lessonStatusChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, fontSize: 11, fontWeight: '900', overflow: 'hidden' },
-  lessonStatusPublished: { backgroundColor: '#DCFCE7', color: '#166534' },
+  lessonStatusPublished: { backgroundColor: '#DBEAFE', color: '#0F172A' },
   lessonStatusDraft: { backgroundColor: '#FEF3C7', color: '#92400E' },
   lessonMetaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   lessonMetaPill: { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0', borderWidth: 1, borderRadius: 12, padding: 9, minWidth: '47%', flex: 1 },
@@ -7764,14 +7832,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   groupAddMemberToggleActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#22C55E',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#1D4ED8',
   },
   groupActionIcon: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -7815,11 +7883,11 @@ const styles = StyleSheet.create({
   groupMemberPanel: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BFDBFE',
     borderRadius: 20,
     padding: 14,
     marginTop: 12,
-    shadowColor: '#14532D',
+    shadowColor: '#1E40AF',
     shadowOpacity: 0.07,
     shadowRadius: 10,
     shadowOffset: {
@@ -7848,13 +7916,13 @@ const styles = StyleSheet.create({
     minWidth: 48,
     minHeight: 34,
     borderRadius: 999,
-    backgroundColor: '#DCFCE7',
+    backgroundColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
   groupMemberCountText: {
-    color: '#166534',
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '900',
   },
@@ -7906,8 +7974,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   groupStudentRowSelected: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#22C55E',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#1D4ED8',
     borderWidth: 2,
   },
   groupStudentCheckbox: {
@@ -7921,8 +7989,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   groupStudentCheckboxSelected: {
-    backgroundColor: '#16A34A',
-    borderColor: '#16A34A',
+    backgroundColor: '#2563EB',
+    borderColor: '#1D4ED8',
   },
   groupStudentCheckboxMark: {
     color: '#FFFFFF',
@@ -7939,7 +8007,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   groupStudentNameSelected: {
-    color: '#166534',
+    color: '#0F172A',
   },
   groupStudentMeta: {
     color: '#64748B',
@@ -7958,17 +8026,50 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '900',
   },
+  memberPreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  memberPreviewChip: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E6EEF6',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minWidth: 80,
+    maxWidth: 160,
+  },
+  memberPreviewChipText: {
+    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  memberPreviewLeader: {
+    marginTop: 4,
+    color: '#065f46',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  memberPreviewMore: {
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '900',
+    marginLeft: 6,
+  },
   groupAddSelectedButton: {
     minHeight: 52,
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#16A34A',
+    backgroundColor: '#2563EB',
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 13,
     marginTop: 16,
-    shadowColor: '#14532D',
+    shadowColor: '#1E40AF',
     shadowOpacity: 0.16,
     shadowRadius: 8,
     shadowOffset: {
@@ -8016,16 +8117,27 @@ const styles = StyleSheet.create({
   },
   lessonActionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   rowTitle: { color: '#0F172A', fontWeight: '800' },
-  statusText: { color: '#166534', fontWeight: '800', marginTop: 5 },
+  statusText: { color: '#0F172A', fontWeight: '800', marginTop: 5 },
   warning: { color: '#B45309', fontWeight: '800', marginTop: 5 },
   field: { marginTop: 12 },
   fieldLabel: { color: '#334155', fontWeight: '800', marginTop: 10, marginBottom: 5 },
   input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, color: '#0F172A', backgroundColor: '#FFF' },
   textarea: { minHeight: 88, textAlignVertical: 'top' },
   smallButton: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, alignSelf: 'flex-start', marginTop: 8 },
-  greenButton: { backgroundColor: '#16A34A' },
-  slateButton: { backgroundColor: '#64748B' },
-  redButton: { backgroundColor: '#DC2626' },
+  greenButton: {
+      backgroundColor: '#16A34A',
+      borderColor: '#15803D',
+    },
+  darkBlueButton: { backgroundColor: '#1E3A8A' },
+  mediumBlueButton: { backgroundColor: '#2563EB' },
+  slateButton: {
+      backgroundColor: '#FFFFFF',
+      borderColor: '#CBD5E1',
+    },
+  redButton: {
+      backgroundColor: '#DC2626',
+      borderColor: '#B91C1C',
+    },
   disabledButton: { opacity: 0.5 },
   smallButtonText: { color: '#FFF', fontWeight: '900', fontSize: 12 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 4 },
@@ -8048,15 +8160,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  stepChipActive: { backgroundColor: '#DCFCE7', borderColor: '#22C55E' },
+  stepChipActive: { backgroundColor: '#DBEAFE', borderColor: '#1D4ED8' },
   stepText: { color: '#64748B', fontWeight: '800', fontSize: 12, lineHeight: 16, textAlign: 'center', includeFontPadding: false },
-  stepTextActive: { color: '#166534', fontWeight: '900', fontSize: 12, lineHeight: 16, textAlign: 'center', includeFontPadding: false },
-  previewTitle: { color: '#166534', fontSize: 24, fontWeight: '900' },
+  stepTextActive: { color: '#0F172A', fontWeight: '900', fontSize: 12, lineHeight: 16, textAlign: 'center', includeFontPadding: false },
+  previewTitle: { color: '#1E40AF', fontSize: 24, fontWeight: '900' },
   buttonRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   studentCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   studentAvatar: { fontSize: 28 },
   progressTrack: { height: 7, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 7 },
-  progressFill: { height: '100%', backgroundColor: '#22C55E', borderRadius: 99 },
+  progressFill: { height: '100%', backgroundColor: '#2563EB', borderRadius: 99 },
   error: { color: '#B91C1C', fontWeight: '800' },
   assessmentSummaryGrid: {
     flexDirection: 'row',
@@ -8067,12 +8179,12 @@ const styles = StyleSheet.create({
   assessmentMetricCard: {
     flexGrow: 1,
     flexBasis: '47%',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#d8e7da',
-    shadowColor: '#125334',
+    borderColor: '#BFDBFE',
+    shadowColor: '#1E40AF',
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -8083,12 +8195,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   assessmentMetricValue: {
-    color: '#125334',
+    color: '#0F172A',
     fontSize: 22,
     fontWeight: '900',
   },
   assessmentMetricLabel: {
-    color: '#587066',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '800',
     marginTop: 2,
@@ -8097,27 +8209,27 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#d8e7da',
-    backgroundColor: '#ffffff',
+    borderColor: '#BFDBFE',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    color: '#14223b',
+    color: '#0F172A',
     fontSize: 15,
     fontWeight: '700',
     marginTop: 12,
     marginBottom: 12,
   },
   assessmentCountText: {
-    color: '#587066',
+    color: '#64748B',
     fontSize: 13,
     fontWeight: '800',
     marginTop: 10,
     marginBottom: 10,
   },
   assessmentResultRow: {
-    backgroundColor: '#f8fbf8',
+    backgroundColor: '#F8FAFC',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#dcefe3',
+    borderColor: '#BFDBFE',
     padding: 14,
     marginTop: 12,
   },
@@ -8131,12 +8243,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   assessmentLearnerName: {
-    color: '#14223b',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '900',
   },
   assessmentLessonTitle: {
-    color: '#125334',
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '900',
     marginTop: 3,
@@ -8152,25 +8264,25 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   assessmentStatusGood: {
-    backgroundColor: '#dcfce7',
-    borderColor: '#86efac',
+    backgroundColor: '#DBEAFE',
+    borderColor: '#93C5FD',
   },
   assessmentStatusWarn: {
-    backgroundColor: '#fef9c3',
-    borderColor: '#fde68a',
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FCD34D',
   },
   assessmentStatusBad: {
-    backgroundColor: '#fee2e2',
-    borderColor: '#fecaca',
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
   },
   assessmentStatusGoodText: {
-    color: '#166534',
+    color: '#0F172A',
   },
   assessmentStatusWarnText: {
-    color: '#854d0e',
+    color: '#92400E',
   },
   assessmentStatusBadText: {
-    color: '#991b1b',
+    color: '#B91C1C',
   },
   assessmentMetaGrid: {
     flexDirection: 'row',
@@ -8179,29 +8291,29 @@ const styles = StyleSheet.create({
   },
   assessmentMetaItem: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#e5efe8',
+    borderColor: '#BFDBFE',
   },
   assessmentMetaLabel: {
-    color: '#6b7f76',
+    color: '#64748B',
     fontSize: 11,
     fontWeight: '800',
   },
   assessmentMetaValue: {
-    color: '#14223b',
+    color: '#0F172A',
     fontSize: 15,
     fontWeight: '900',
     marginTop: 3,
   },
   assessmentEmptyState: {
     alignItems: 'center',
-    backgroundColor: '#f8fbf8',
+    backgroundColor: '#F8FAFC',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#dcefe3',
+    borderColor: '#BFDBFE',
     padding: 18,
     marginTop: 12,
   },
@@ -8215,12 +8327,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#125334',
-    backgroundColor: '#eef8f1',
+    borderColor: '#1D4ED8',
+    backgroundColor: '#EFF6FF',
     marginTop: 14,
   },
   assessmentShowMoreText: {
-    color: '#125334',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '900',
   },
@@ -8237,12 +8349,12 @@ const styles = StyleSheet.create({
   reviewMetricCard: {
     flexGrow: 1,
     flexBasis: '30%',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#d8e7da',
-    shadowColor: '#125334',
+    borderColor: '#BFDBFE',
+    shadowColor: '#1E40AF',
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
@@ -8253,12 +8365,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   reviewMetricValue: {
-    color: '#125334',
+    color: '#0F172A',
     fontSize: 22,
     fontWeight: '900',
   },
   reviewMetricLabel: {
-    color: '#587066',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '800',
     marginTop: 2,
@@ -8271,7 +8383,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   reviewSectionLabel: {
-    color: '#587066',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -8279,32 +8391,32 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   reviewMiniPill: {
-    backgroundColor: '#eef8f1',
+    backgroundColor: '#EFF6FF',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#c7e6d1',
+    borderColor: '#BFDBFE',
     paddingHorizontal: 10,
     paddingVertical: 6,
     alignSelf: 'flex-start',
   },
   reviewMiniPillText: {
-    color: '#125334',
+    color: '#0F172A',
     fontSize: 11,
     fontWeight: '900',
   },
   reviewCard: {
-    backgroundColor: '#f8fbf8',
+    backgroundColor: '#F8FAFC',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#dcefe3',
+    borderColor: '#BFDBFE',
     padding: 14,
     marginTop: 12,
   },
   reviewCardCompact: {
-    backgroundColor: '#f8fbf8',
+    backgroundColor: '#F8FAFC',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#dcefe3',
+    borderColor: '#BFDBFE',
     padding: 14,
     marginTop: 12,
   },
@@ -8318,12 +8430,12 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#125334',
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   reviewAvatarText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontWeight: '900',
     fontSize: 16,
   },
@@ -8331,18 +8443,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   reviewStudentName: {
-    color: '#14223b',
+    color: '#0F172A',
     fontSize: 16,
     fontWeight: '900',
   },
   reviewStudentMeta: {
-    color: '#587066',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '800',
     marginTop: 2,
   },
   reviewLessonLine: {
-    color: '#125334',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '900',
     marginTop: 3,
@@ -8354,45 +8466,45 @@ const styles = StyleSheet.create({
   },
   reviewEvidenceItem: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#e5efe8',
+    borderColor: '#BFDBFE',
   },
   reviewEvidenceLabel: {
-    color: '#6b7f76',
+    color: '#64748B',
     fontSize: 11,
     fontWeight: '800',
   },
   reviewEvidenceValue: {
-    color: '#14223b',
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '900',
     marginTop: 3,
   },
   reviewContentBlock: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e5efe8',
+    borderColor: '#BFDBFE',
     padding: 12,
     marginBottom: 12,
   },
   reviewBlockLabel: {
-    color: '#587066',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '900',
     marginBottom: 6,
   },
   reviewBlockText: {
-    color: '#14223b',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
   },
   reviewInputLabel: {
-    color: '#587066',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '900',
     marginTop: 12,
@@ -8401,9 +8513,9 @@ const styles = StyleSheet.create({
   reviewTextInput: {
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: '#d8e7da',
-    backgroundColor: '#ffffff',
-    color: '#14223b',
+    borderColor: '#BFDBFE',
+    backgroundColor: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 14,
     fontWeight: '700',
     paddingHorizontal: 14,
@@ -8416,44 +8528,44 @@ const styles = StyleSheet.create({
   },
   reviewFileButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#eef8f1',
+    backgroundColor: '#EFF6FF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#125334',
+    borderColor: '#1D4ED8',
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginTop: 4,
   },
   reviewFileButtonText: {
-    color: '#125334',
+    color: '#0F172A',
     fontSize: 13,
     fontWeight: '900',
   },
   reviewXpPill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#dcfce7',
+    backgroundColor: '#DBEAFE',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
     marginTop: 8,
   },
   reviewXpPillText: {
-    color: '#166534',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '900',
   },
   reviewFeedbackText: {
-    color: '#587066',
+    color: '#64748B',
     fontSize: 13,
     fontWeight: '800',
     marginTop: 10,
   },
   reviewEmptyPanel: {
     alignItems: 'center',
-    backgroundColor: '#f8fbf8',
+    backgroundColor: '#F8FAFC',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#dcefe3',
+    borderColor: '#BFDBFE',
     padding: 18,
     marginTop: 12,
   },
@@ -8467,7 +8579,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   primaryAction: {
-    backgroundColor: '#0B7A3B',
+    backgroundColor: '#125334',
     borderRadius: 18,
     paddingVertical: 14,
     paddingHorizontal: 18,

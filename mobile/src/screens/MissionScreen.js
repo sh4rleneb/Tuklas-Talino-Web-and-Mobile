@@ -141,7 +141,7 @@ const MISSION_GAMES = normalizeMissionCatalog([
     xp: 12,
     baseStatus: 'Handa na',
     short: 'Piliin ang pantig na bubuo sa salita!',
-    instruction: 'Tap the balloon na bubuo sa salita. Kapag tama, pop!',
+    instruction: 'Tapikin ang tamang lobo upang mabuo ang salita. Kapag tama, puputok ito!',
     sample: 'pu + ___ = 🌳',
     reward: 'Pag-unlad sa sunod-sunod na pagbasa',
     tone: 'sun',
@@ -365,7 +365,7 @@ function statusLabel(mission = {}) {
   const finishedAttempts = hasUsedAllMissionAttempts(mission);
 
   if (state === 'claimed') {
-    return 'Natapos';
+    return 'Natapos na';
   }
 
   if (
@@ -379,6 +379,10 @@ function statusLabel(mission = {}) {
 
   if (state === 'locked') {
     return 'Naka-lock';
+  }
+
+  if (finishedAttempts) {
+    return 'Naubos na';
   }
 
   return mission.baseStatus || 'Handa na';
@@ -448,7 +452,7 @@ function missionAttemptLabel(mission = {}) {
   const finishedAttempts = used >= max;
 
   if (state === 'claimed') {
-    return 'Natapos na';
+    return `Pagsubok ${max} sa ${max}`;
   }
 
   if (
@@ -457,11 +461,11 @@ function missionAttemptLabel(mission = {}) {
   ) {
     return state === 'ready_to_claim'
       ? 'Kumpleto • Kunin ang Bituin'
-      : 'Natapos na';
+      : `Pagsubok ${max} sa ${max}`;
   }
 
   if (finishedAttempts) {
-    return `Pagsubok ${max} sa ${max} • Naubos na`;
+    return `Pagsubok ${max} sa ${max}`;
   }
 
   const currentAttemptNo = Number(
@@ -714,6 +718,8 @@ export default function MissionScreen({ navigation, route }) {
       1
     );
 
+    const gradeMeta = missionDifficultyForGrade(safeGradeLevel);
+
     const merged = buildMergedMissions(
       Array.isArray(backendMissions) ? backendMissions : [],
       safeGradeLevel
@@ -748,13 +754,9 @@ export default function MissionScreen({ navigation, route }) {
         )
       );
 
-      const overrideAttemptNo = Number(
-        override.attemptNo || 0
-      );
-
       const attemptCount = Math.max(
         getMissionAttemptCount(mission),
-        overrideAttemptNo
+        Number(override?.attemptNo || 0)
       );
 
       const cappedAttemptCount = Math.max(
@@ -794,10 +796,8 @@ export default function MissionScreen({ navigation, route }) {
   }, []);
 
   const load = useCallback(async (overrides = missionAttemptOverridesRef.current) => {
-    const storedOverrides = await readStoredMissionAttempts();
     const combinedOverrides = {
-      ...storedOverrides,
-      ...overrides,
+      ...(overrides || {}),
     };
     setLoading(true);
     setError('');
@@ -817,7 +817,56 @@ export default function MissionScreen({ navigation, route }) {
         combinedOverrides,
         dashboardGradeLevel
       );
-      syncMissionAttemptOverrides(combinedOverrides);
+
+      /*
+       * Preserve every mission's highest known attempt count.
+       * This prevents other mission cards from appearing reset after
+       * the student returns from completing a different mission.
+       */
+      const mergedOverrides = {
+        ...combinedOverrides,
+      };
+
+      merged.forEach((mission = {}) => {
+        const knownAttempts = getMissionAttemptCount(mission);
+        const knownMaxAttempts = getMissionMaxAttempts(mission);
+
+        const missionKeys = [
+          mission.missionId,
+          mission.id,
+          mission.key,
+          mission.gameId,
+          mission.type,
+          mission.gameType,
+        ]
+          .filter(Boolean)
+          .map(String);
+
+        missionKeys.forEach((key) => {
+          const previousAttempts = Number(
+            mergedOverrides[key]?.attemptNo || 0
+          );
+
+          const previousMaxAttempts = Number(
+            mergedOverrides[key]?.maxAttempts || 0
+          );
+
+          mergedOverrides[key] = {
+            ...mergedOverrides[key],
+            attemptNo: Math.max(
+              previousAttempts,
+              knownAttempts
+            ),
+            maxAttempts: Math.max(
+              MAX_MISSION_ATTEMPTS,
+              previousMaxAttempts,
+              knownMaxAttempts
+            ),
+          };
+        });
+      });
+
+      syncMissionAttemptOverrides(mergedOverrides);
 
       setMissions(merged);
       setStudent(dashboard.student || null);
@@ -841,7 +890,9 @@ export default function MissionScreen({ navigation, route }) {
       const update = route?.params?.missionAttemptUpdate;
 
       if (update?.missionApiId || update?.missionId) {
-        const attemptNo = Number(update.attemptNo || 0);
+        const attemptNo = Number(
+          update.attemptsUsed ?? update.attemptNo ?? 0
+        );
         const maxAttempts = Math.max(
           MAX_MISSION_ATTEMPTS,
           Number(update.maxAttempts || MAX_MISSION_ATTEMPTS)
@@ -871,7 +922,6 @@ export default function MissionScreen({ navigation, route }) {
         });
 
         syncMissionAttemptOverrides(nextOverrides);
-        writeStoredMissionAttempts(nextOverrides);
         load(nextOverrides);
 
         navigation.setParams?.({
@@ -1416,7 +1466,7 @@ const styles = StyleSheet.create({
 
   missionTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
   },
 
@@ -1435,6 +1485,7 @@ const styles = StyleSheet.create({
 
   missionTextWrap: {
     flex: 1,
+    minWidth: 0,
   },
 
   missionModule: {
@@ -1447,9 +1498,11 @@ const styles = StyleSheet.create({
   missionTitle: {
     color: '#0F172A',
     fontSize: 20,
-    lineHeight: 25,
+    lineHeight: 26,
     fontWeight: '900',
     marginTop: 3,
+    flexShrink: 1,
+    width: '100%',
   },
 
   missionShort: {
@@ -1458,12 +1511,18 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '800',
     marginTop: 4,
+    flexShrink: 1,
+    width: '100%',
   },
 
   statusPill: {
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 92,
+    maxWidth: '38%',
+    flexShrink: 1,
+    alignItems: 'flex-end',
   },
 
   statusText: {
@@ -1477,6 +1536,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 4,
     textAlign: 'right',
+    flexShrink: 1,
   },
 
   missionInstruction: {
@@ -1654,11 +1714,12 @@ const styles = StyleSheet.create({
 
   playTitle: {
     color: '#0F172A',
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '900',
     textAlign: 'center',
     marginTop: 5,
+    width: '100%',
   },
 
   playSubtitle: {
@@ -1668,6 +1729,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     marginTop: 8,
+    width: '100%',
   },
 
   playMetaRow: {

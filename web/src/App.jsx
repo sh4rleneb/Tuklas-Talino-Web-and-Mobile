@@ -1565,20 +1565,18 @@ if (role === 'admin') {
     });
   }
 
-  function getWebGroupCreatePayload() {
-    const name = String(read('t-group-name') || '').trim();
-    const selectedClass = String(read('t-group-class') || '').trim();
+  function getWebGroupCreatePayload(values = null) {
+    const formValues = values || {};
+    const name = String(formValues.name ?? read('t-group-name') ?? '').trim();
+    const selectedClass = String(formValues.selectedClass ?? read('t-group-class') ?? '').trim();
 
-    let gradeLevel = 0;
-    let section = '';
+    let gradeLevel = Number(formValues.gradeLevel ?? read('t-group-grade') ?? 0);
+    let section = normalizeWebGroupSection(formValues.section ?? read('t-group-section'));
 
     if (selectedClass) {
       const parsed = parseWebGroupClassSelection(selectedClass);
       gradeLevel = parsed.gradeLevel;
       section = parsed.section;
-    } else {
-      gradeLevel = Number(read('t-group-grade') || 0);
-      section = normalizeWebGroupSection(read('t-group-section'));
     }
 
     if (!name) {
@@ -1605,9 +1603,9 @@ if (role === 'admin') {
     };
   }
 
-  async function teacherCreateGroup() {
+  async function teacherCreateGroup(body = null) {
     await safeRun(async () => {
-      await api('/groups', { method: 'POST', body: getWebGroupCreatePayload() });
+      await api('/groups', { method: 'POST', body: getWebGroupCreatePayload(body) });
       notify('Group created.');
       await loadTeacherDashboard();
     });
@@ -1708,6 +1706,21 @@ if (role === 'admin') {
         groups: (prev.groups || []).filter(group => String(group.id) !== String(groupId))
       } : prev);
       notify('Group removed.');
+      await loadTeacherDashboard();
+    });
+  }
+
+
+  async function teacherUpdateGroup(groupId, body = null) {
+    if (!groupId) return notify('Missing group details.', 'warn');
+
+    await safeRun(async () => {
+      await api(`/groups/${groupId}`, {
+        method: 'PATCH',
+        body: getWebGroupCreatePayload(body),
+      });
+
+      notify('Group updated.');
       await loadTeacherDashboard();
     });
   }
@@ -2199,7 +2212,7 @@ async function archiveTeacher(id) {
 
   async function exportSummaryCSV() {
     await safeRun(async () => {
-      await downloadFile('/reports/activity-logs.csv', 'tuklas-talino-admin-audit-trail-report.csv');
+      await downloadFile('/reports/summary.csv', 'tuklas-talino-admin-audit-trail-report.csv');
     }, 'Hindi ma-download ang admin audit trail CSV.');
   }
 
@@ -4436,6 +4449,7 @@ async function archiveTeacher(id) {
           logout={doLogout}
           reload={() => safeRun(loadTeacherDashboard)}
           createGroup={teacherCreateGroup}
+          updateGroup={teacherUpdateGroup}
           addTask={teacherAddTask}
           addMember={teacherAddMember}
           setGroupLeader={teacherSetGroupLeader}

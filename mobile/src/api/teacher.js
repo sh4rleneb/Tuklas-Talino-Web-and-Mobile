@@ -159,6 +159,13 @@ export async function removeGroupMember(groupId, studentId) {
   });
 }
 
+export async function updateGroup(groupId, body) {
+  return api(`/groups/${groupId}`, {
+    method: 'PATCH',
+    body,
+  });
+}
+
 export async function deleteGroup(groupId) {
   return api(`/groups/${groupId}`, {
     method: 'DELETE',

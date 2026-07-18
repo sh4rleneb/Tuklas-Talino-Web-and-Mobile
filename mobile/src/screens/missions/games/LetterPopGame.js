@@ -29,10 +29,63 @@ export default function LetterPopGame({
   const floatValue = useRef(new Animated.Value(0)).current;
   const timerRef = useRef(null);
 
+  const questions = useMemo(() => {
+    const rawQuestions =
+      Array.isArray(activity?.attemptQuestions) &&
+      activity.attemptQuestions.length
+        ? activity.attemptQuestions
+        : Array.isArray(activity?.questions) &&
+          activity.questions.length
+          ? activity.questions
+          : Array.isArray(activity?.questionPool) &&
+            activity.questionPool.length
+            ? activity.questionPool
+            : [activity];
+
+    const seen = new Set();
+
+    const uniqueQuestions = rawQuestions.filter((question = {}, index) => {
+      const key = String(
+        question.id ||
+        question.prompt ||
+        question.equation ||
+        question.resultWord ||
+        `letter-pop-question-${index}`
+      )
+        .trim()
+        .toLocaleLowerCase();
+
+      if (!key || seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+
+    return uniqueQuestions.slice(0, 3);
+  }, [
+    activity,
+    activity?.attemptQuestions,
+    activity?.questionPool,
+    activity?.questions,
+  ]);
+
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  const currentQuestion =
+    questions[currentQuestionIndex] ||
+    questions[0] ||
+    activity;
+
+  const totalQuestions = Math.max(1, questions.length);
+
   const options = useMemo(() => {
-    const raw = Array.isArray(activity?.options)
-      ? activity.options
-      : DEFAULT_OPTIONS;
+    const raw = Array.isArray(currentQuestion?.options)
+      ? currentQuestion.options
+      : Array.isArray(currentQuestion?.choices)
+        ? currentQuestion.choices
+        : DEFAULT_OPTIONS;
 
     const normalized = raw
       .map((option) => {
@@ -49,30 +102,76 @@ export default function LetterPopGame({
       })
       .filter(Boolean);
 
-    return normalized.length >= 3
+    const source = normalized.length >= 3
       ? normalized.slice(0, 3)
       : DEFAULT_OPTIONS;
-  }, [activity?.options]);
 
-  const prefix = String(activity?.prefix || 'pu');
-  const resultEmoji = String(activity?.resultEmoji || '🌳');
+    const seedText = [
+      currentQuestion?.id,
+      currentQuestion?.prompt,
+      activity?.questionPoolAttemptNo,
+      currentQuestionIndex,
+    ].join(':');
+
+    let seed = 0;
+
+    for (let index = 0; index < seedText.length; index += 1) {
+      seed = ((seed << 5) - seed) + seedText.charCodeAt(index);
+      seed |= 0;
+    }
+
+    const seededValue = (index) => {
+      const value = Math.sin(seed + index + 1) * 10000;
+      return value - Math.floor(value);
+    };
+
+    return source
+      .map((choice, index) => ({
+        choice,
+        order: seededValue(index),
+      }))
+      .sort((a, b) => a.order - b.order)
+      .map((item) => item.choice);
+  }, [
+    activity?.questionPoolAttemptNo,
+    currentQuestion,
+    currentQuestionIndex,
+  ]);
+
+  const prefix = String(currentQuestion?.prefix || 'pu');
+  const resultEmoji = String(
+    currentQuestion?.resultEmoji || '🌳'
+  );
+
+  const promptText = String(
+    currentQuestion?.prompt ||
+    currentQuestion?.equation ||
+    `${prefix} + ___ = ${resultEmoji}`
+  ).trim();
+
   const correct = String(
-    activity?.correct ??
-    activity?.answer ??
+    currentQuestion?.correct ??
+    currentQuestion?.answer ??
     'no'
   ).trim();
+
   const missionLabel = String(
     activity?.missionLabel ||
     'Misyong Pantig'
   );
+
   const clue = String(
-    activity?.clue ||
-    'Halamang may katawan, sanga, at dahon.'
+    currentQuestion?.resultEmoji ||
+    currentQuestion?.imageEmoji ||
+    resultEmoji
   );
+
   const instruction = String(
+    currentQuestion?.instruction ||
+    currentQuestion?.instructions ||
     activity?.instruction ||
     activity?.instructions ||
-    'Tap the balloon na bubuo sa salita. Kapag tama, pop!'
+    'Pindutin ang lobong bubuo sa salita. Kapag tama, puputok ito!'
   );
 
   const [selected, setSelected] = useState('');
@@ -116,6 +215,7 @@ export default function LetterPopGame({
   }, [floatValue]);
 
   useEffect(() => {
+    setCurrentQuestionIndex(0);
     setSelected('');
     setWrongChoice('');
     setLocked(false);
@@ -124,7 +224,22 @@ export default function LetterPopGame({
     popOpacity.setValue(1);
   }, [
     activity?.id,
-    activity?.prompt,
+    activity?.questionPoolAttemptNo,
+    popOpacity,
+    popScale,
+  ]);
+
+  useEffect(() => {
+    setSelected('');
+    setWrongChoice('');
+    setLocked(false);
+    setToast('');
+    popScale.setValue(1);
+    popOpacity.setValue(1);
+  }, [
+    currentQuestion?.id,
+    currentQuestion?.prompt,
+    currentQuestionIndex,
     popOpacity,
     popScale,
   ]);
@@ -163,12 +278,24 @@ export default function LetterPopGame({
       ]),
     ]).start(() => {
       timerRef.current = setTimeout(() => {
-        onMissionComplete?.({
-          forceComplete: true,
-          selected: choice,
-          correct,
-        });
-      }, 180);
+        const isLastQuestion =
+          currentQuestionIndex >= totalQuestions - 1;
+
+        if (isLastQuestion) {
+          onMissionComplete?.({
+            forceComplete: true,
+            selected: choice,
+            correct,
+            answeredQuestions: totalQuestions,
+            totalQuestions,
+          });
+          return;
+        }
+
+        setCurrentQuestionIndex((current) =>
+          Math.min(current + 1, totalQuestions - 1)
+        );
+      }, 380);
     });
   }
 
@@ -198,22 +325,24 @@ export default function LetterPopGame({
   return (
     <View style={styles.container}>
       <View style={styles.challengeCard}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            {missionLabel}
-          </Text>
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              {missionLabel}
+            </Text>
+          </View>
+
+          <View style={styles.questionCounter}>
+            <Text style={styles.questionCounterText}>
+              Tanong {currentQuestionIndex + 1} sa {totalQuestions}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.equationRow}>
           <Text style={styles.equationText}>
-            {prefix} + ___ =
+            {promptText}
           </Text>
-
-          <Text style={styles.resultEmoji}>
-            {resultEmoji}
-          </Text>
-        </View>
-
         <View style={styles.clueRow}>
           <Text style={styles.clueIcon}>
             💡
@@ -221,11 +350,14 @@ export default function LetterPopGame({
 
           <Text style={styles.clueText}>
             <Text style={styles.clueLabel}>
-              Clue:{' '}
+              Pahiwatig:{' '}
             </Text>
-            {clue}
+            {currentQuestion?.clue ||
+              'Piliin ang pantig na bubuo sa tamang salita.'}
           </Text>
         </View>
+        </View>
+
       </View>
 
       <View style={styles.balloonRow}>
@@ -348,6 +480,28 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  cardHeaderRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  questionCounter: {
+    borderRadius: 999,
+    backgroundColor: '#E8F3FF',
+    borderWidth: 1,
+    borderColor: '#A7D2FF',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+
+  questionCounterText: {
+    color: '#24558A',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
   badge: {
     alignSelf: 'flex-start',
     borderRadius: 999,
@@ -373,16 +527,11 @@ const styles = StyleSheet.create({
 
   equationText: {
     color: '#17213D',
-    fontSize: 34,
-    lineHeight: 41,
+    fontSize: 26,
+    lineHeight: 33,
     fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-
-  resultEmoji: {
-    marginLeft: 10,
-    fontSize: 39,
-    lineHeight: 44,
+    letterSpacing: 0.2,
+    flexShrink: 1,
   },
 
   clueRow: {

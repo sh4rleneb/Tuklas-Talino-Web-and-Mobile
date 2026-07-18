@@ -6,6 +6,8 @@ import React, {
   useState,
 } from 'react';
 import {
+  Animated,
+  Image,
   ScrollView,
   View,
   Text,
@@ -17,6 +19,7 @@ import { Audio } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { api } from '../../api/client';
+import { getBadgeImageSource } from '../../utils/badgeAssets';
 
 import MissionHeader from './components/MissionHeader';
 import MissionCompleteModal from './components/MissionCompleteModal';
@@ -454,9 +457,9 @@ const GRADE_MISSION_QUESTION_POOLS = Object.freeze({
       { sample: 'malinis ↔ clean', prompt: 'Itugma ang salita: malinis', options: ['clean', 'dirty', 'small'], correct: 'clean' },
     ],
     'letter-pop': [
-      { sample: 'ma + ___ = malaki', prompt: 'ma + ___ = malaki', prefix: 'ma', resultEmoji: '📏', resultWord: 'malaki', clue: 'Hindi maliit.', options: ['laki', 'saya', 'linis'], correct: 'laki', instruction: 'Piliin ang pantig na bubuo sa salita.' },
-      { sample: 'ma + ___ = masaya', prompt: 'ma + ___ = masaya', prefix: 'ma', resultEmoji: '😊', resultWord: 'masaya', clue: 'Nakakaramdam ng tuwa.', options: ['saya', 'laki', 'ganda'], correct: 'saya', instruction: 'Piliin ang pantig na bubuo sa salita.' },
-      { sample: 'ma + ___ = mabait', prompt: 'ma + ___ = mabait', prefix: 'ma', resultEmoji: '🤝', resultWord: 'mabait', clue: 'Magalang at tumutulong.', options: ['bait', 'bilis', 'tamis'], correct: 'bait', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+      { sample: 'ma + ___ = malaki', prompt: 'ma + ___ = 📏', prefix: 'ma', resultEmoji: '📏', resultWord: 'malaki', clue: 'Hindi maliit.', options: ['laki', 'saya', 'linis'], correct: 'laki', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+      { sample: 'ma + ___ = masaya', prompt: 'ma + ___ = 😊', prefix: 'ma', resultEmoji: '😊', resultWord: 'masaya', clue: 'Nakakaramdam ng tuwa.', options: ['saya', 'laki', 'ganda'], correct: 'saya', instruction: 'Piliin ang pantig na bubuo sa salita.' },
+      { sample: 'ma + ___ = mabait', prompt: 'ma + ___ = 🤝', prefix: 'ma', resultEmoji: '🤝', resultWord: 'mabait', clue: 'Magalang at tumutulong.', options: ['bait', 'bilis', 'tamis'], correct: 'bait', instruction: 'Piliin ang pantig na bubuo sa salita.' },
     ],
     'picture-guess': [
       { sample: '📚 → aklat', prompt: 'Ano ang nasa larawan? 📚', imageEmoji: '📚', options: ['aklat', 'lapis', 'bag'], correct: 'aklat' },
@@ -915,6 +918,7 @@ export default function MissionGameScreen({ navigation, route }) {
   const [attempts, setAttempts] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [badgePopup, setBadgePopup] = useState(null);
+  const badgeScale = useRef(new Animated.Value(0.6)).current;
   const recordingRef = useRef(null);
   const soundRef = useRef(null);
   const recordingBusyRef = useRef(false);
@@ -930,10 +934,7 @@ export default function MissionGameScreen({ navigation, route }) {
 
   const achievement =
     attempts <= 1
-      ? {
-          title: '',
-          message: '',
-        }
+      ? null
       : attempts === 2
       ? {
           title: '🌟 Bituin sa Pag-aaral',
@@ -948,6 +949,29 @@ export default function MissionGameScreen({ navigation, route }) {
     soundRef.current?.unloadAsync?.();
     recordingRef.current?.stopAndUnloadAsync?.();
   }, []);
+
+  useEffect(() => {
+    if (!badgePopup) return undefined;
+
+    Animated.spring(badgeScale, {
+      toValue: 1,
+      friction: 7,
+      tension: 60,
+      useNativeDriver: true,
+    }).start();
+
+    const timer = setTimeout(() => {
+      Animated.timing(badgeScale, {
+        toValue: 0.9,
+        duration: 180,
+        useNativeDriver: true,
+      }).start(() => {
+        setBadgePopup(null);
+      });
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [badgePopup, badgeScale]);
 
   useEffect(() => {
     if (!missionNotice) return undefined;
@@ -1146,10 +1170,6 @@ export default function MissionGameScreen({ navigation, route }) {
 
         if (Array.isArray(data?.newBadges) && data.newBadges.length) {
           setBadgePopup(data.newBadges[0]);
-
-          setTimeout(() => {
-            setBadgePopup(null);
-          }, 5500);
         }
 
         await persistMissionAttemptUpdate({
@@ -1272,6 +1292,47 @@ export default function MissionGameScreen({ navigation, route }) {
             });
           }}
         />
+
+        {badgePopup ? (
+          <Animated.View
+            style={{
+              position: 'absolute',
+              top: 70,
+              right: 16,
+              left: 16,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 24,
+              padding: 18,
+              borderWidth: 2,
+              borderColor: '#FDE68A',
+              shadowColor: '#000',
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              transform: [{ scale: badgeScale }],
+            }}
+          >
+            <Image
+              source={getBadgeImageSource(badgePopup)}
+              style={styles.badgePopupImage}
+              resizeMode="contain"
+            />
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#D97706', fontWeight: '900', fontSize: 12 }}>
+                Bagong Gantimpala!
+              </Text>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#92400E', marginTop: 2 }}>
+                {badgePopup?.name || 'Bagong Tagumpay'}
+              </Text>
+              <Text style={{ color: '#78716C', marginTop: 2, fontSize: 13 }}>
+                Nakamit ang Tagumpay ⭐
+              </Text>
+            </View>
+          </Animated.View>
+        ) : null}
 
         {missionNoticePopup}
       </SafeAreaView>
@@ -1693,11 +1754,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(15, 23, 42, 0.12)',
   },
   missionBackButtonText: {
-    color: '#16A34A',
-    fontWeight: '900',
-    fontSize: 15,
-    fontWeight: '800',
     color: '#1F2937',
+    fontWeight: '800',
+    fontSize: 15,
+  },
+  badgePopupImage: {
+    width: 64,
+    height: 64,
+    marginRight: 12,
   },
 
   disabledActionButton: {

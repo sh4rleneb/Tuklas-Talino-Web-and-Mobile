@@ -89,9 +89,27 @@ function Field({ label, value, onChangeText, keyboardType = 'default', secureTex
 }
 
 function Button({ children, onPress, tone = 'dark', disabled = false }) {
+  const isSecondary = tone === 'slate';
+
   return (
-    <TouchableOpacity style={[styles.button, styles[`${tone}Button`], disabled && styles.disabled]} onPress={onPress} disabled={disabled}>
-      <Text style={styles.buttonText}>{children}</Text>
+    <TouchableOpacity
+      style={[
+        styles.button,
+        styles[`${tone}Button`],
+        disabled && styles.disabled,
+      ]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.78}
+    >
+      <Text
+        style={[
+          styles.buttonText,
+          isSecondary && styles.secondaryButtonText,
+        ]}
+      >
+        {children}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -923,14 +941,14 @@ async function executeVerifiedAction() {
                   paddingHorizontal: 12,
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: selected ? '#111827' : '#d1d5db',
-                  backgroundColor: selected ? '#111827' : '#ffffff',
+                  borderColor: selected ? '#125334' : '#D1D5DB',
+                  backgroundColor: selected ? '#125334' : '#FFFFFF',
                   opacity: selected || busy ? 0.85 : 1,
                   marginRight: 8,
                   marginBottom: 8,
                 }}
               >
-                <Text style={{ color: selected ? '#ffffff' : '#111827', fontWeight: '800' }}>
+                <Text style={{ color: selected ? '#FFFFFF' : '#334155', fontWeight: '800' }}>
                   {statusOption === 'active' ? 'Active' : 'Deactivated'}
                 </Text>
               </TouchableOpacity>
@@ -1721,6 +1739,11 @@ async function executeVerifiedAction() {
                 () => resetStudentProgress(studentRecordId(student)),
                 'Progress reset.'
               )}>Reset Progress</Button>
+
+{renderLoginSecurityControl(
+  student,
+  student.name || 'student account'
+)}
 
             </View>
             {(() => {
@@ -2538,7 +2561,7 @@ function renderLogs() {
   }
 
   if (loading && !accounts.length) {
-    return <SafeAreaView style={styles.safe}><View style={styles.center}><ActivityIndicator size="large" color="#0F172A" /><Text style={styles.muted}>Loading admin workspace...</Text></View></SafeAreaView>;
+    return <SafeAreaView style={styles.safe}><View style={styles.center}><ActivityIndicator size="large" color="#7C3AED" /><Text style={styles.muted}>Loading admin workspace...</Text></View></SafeAreaView>;
   }
 
   return (
@@ -2969,8 +2992,8 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#DBEAFE',
-    shadowColor: '#2563EB',
+    borderColor: '#EDE9FE',
+    shadowColor: '#7C3AED',
     shadowOpacity: 0.22,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -2980,7 +3003,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#EDE9FE',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -3057,7 +3080,7 @@ const styles = StyleSheet.create({
   },
   workspaceLogoutConfirm: {
     flex: 1,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#125334',
     borderRadius: 18,
     paddingVertical: 14,
     alignItems: 'center',
@@ -3088,7 +3111,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 22,
     borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderColor: '#EDE9FE',
   },
 
 
@@ -3128,14 +3151,14 @@ const styles = StyleSheet.create({
   workspaceHero: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F5F3FF',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#C4B5FD',
     borderRadius: 28,
     padding: 18,
     marginTop: 18,
     marginBottom: 18,
-    shadowColor: '#2563EB',
+    shadowColor: '#7C3AED',
     shadowOpacity: 0.16,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
@@ -3145,7 +3168,7 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 26,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#EDE9FE',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 15,
@@ -3157,7 +3180,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   workspaceHeroKicker: {
-    color: '#1D4ED8',
+    color: '#6D28D9',
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -3178,8 +3201,8 @@ const styles = StyleSheet.create({
   workspaceHeroChip: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    color: '#1E40AF',
+    borderColor: '#C4B5FD',
+    color: '#5B21B6',
     fontSize: 12,
     fontWeight: '900',
     paddingHorizontal: 10,
@@ -3197,10 +3220,29 @@ const styles = StyleSheet.create({
   title: { color: '#0F172A', fontSize: 29, fontWeight: '900' },
   subtitle: { color: '#64748B', marginTop: 5, lineHeight: 20 },
   navRow: { gap: 8, paddingVertical: 8, paddingBottom: 16 },
-  navChip: { flexDirection: 'row', gap: 5, borderRadius: 99, backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 9, alignItems: 'center' },
-  navChipActive: { backgroundColor: '#DBEAFE', borderWidth: 1, borderColor: '#3B82F6' },
+  navChip: {
+    flexDirection: 'row',
+    gap: 5,
+    borderRadius: 99,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  navChipActive: {
+    backgroundColor: '#EDE9FE',
+    borderWidth: 2,
+    borderColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.16,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
   navLabel: { color: '#64748B', fontWeight: '800' },
-  navLabelActive: { color: '#1D4ED8' },
+  navLabelActive: { color: '#6D28D9', fontWeight: '900' },
   card: { backgroundColor: '#FFF', borderRadius: 22, padding: 16, marginBottom: 14, shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
   cardTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900', marginBottom: 10 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
@@ -3232,8 +3274,8 @@ const styles = StyleSheet.create({
   },
 
   auditEntity: {
-    backgroundColor: '#DBEAFE',
-    color: '#1D4ED8',
+    backgroundColor: '#EDE9FE',
+    color: '#6D28D9',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -3251,19 +3293,19 @@ const styles = StyleSheet.create({
   auditStatCard: {
     flexGrow: 1,
     flexBasis: '46%',
-    backgroundColor: '#f8fbf8',
+    backgroundColor: '#FAF7FF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#d8e7da',
+    borderColor: '#DDD6FE',
     padding: 14,
   },
   auditStatValue: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 20,
     fontWeight: '900',
   },
   auditStatLabel: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 13,
     fontWeight: '800',
     marginTop: 4,
@@ -3271,7 +3313,7 @@ const styles = StyleSheet.create({
   auditDateDropdownButton: {
     minHeight: 52,
     borderWidth: 2,
-    borderColor: '#9be4b7',
+    borderColor: '#C4B5FD',
     borderRadius: 12,
     backgroundColor: '#ffffff',
     paddingHorizontal: 14,
@@ -3285,20 +3327,20 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   auditDateDropdownText: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 14,
     fontWeight: '900',
     flex: 1,
   },
   auditDateDropdownChevron: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 12,
     fontWeight: '900',
     marginLeft: 10,
   },
   auditDateDropdownPanel: {
     borderWidth: 1,
-    borderColor: '#d8e7da',
+    borderColor: '#DDD6FE',
     borderRadius: 14,
     backgroundColor: '#ffffff',
     marginTop: -4,
@@ -3309,25 +3351,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#edf5ef',
+    borderBottomColor: '#F3E8FF',
   },
   auditDateDropdownOptionActive: {
-    backgroundColor: '#eef8f1',
+    backgroundColor: '#F3E8FF',
   },
   auditDateDropdownOptionText: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 14,
     fontWeight: '900',
   },
   auditDateDropdownOptionTextActive: {
-    color: '#125334',
+    color: '#6D28D9',
   },
   auditCustomDatePanel: {
     padding: 12,
-    backgroundColor: '#f8fbf8',
+    backgroundColor: '#FAF7FF',
   },
   auditCustomDateTitle: {
-    color: '#125334',
+    color: '#6D28D9',
     fontSize: 12,
     fontWeight: '900',
     marginBottom: 8,
@@ -3347,19 +3389,19 @@ const styles = StyleSheet.create({
   },
   auditSearchInput: {
     borderWidth: 2,
-    borderColor: '#9be4b7',
+    borderColor: '#C4B5FD',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 12,
-    color: '#06183f',
+    color: '#2E1065',
     fontWeight: '800',
     backgroundColor: '#ffffff',
   },
   auditActionDropdownButton: {
     minHeight: 52,
     borderWidth: 2,
-    borderColor: '#9be4b7',
+    borderColor: '#125334',
     borderRadius: 12,
     backgroundColor: '#ffffff',
     paddingHorizontal: 14,
@@ -3370,20 +3412,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   auditActionDropdownText: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 14,
     fontWeight: '900',
     flex: 1,
   },
   auditActionDropdownIcon: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 12,
     fontWeight: '900',
     marginLeft: 10,
   },
   auditActionDropdownPanel: {
     borderWidth: 1,
-    borderColor: '#d8e7da',
+    borderColor: '#DDD6FE',
     borderRadius: 14,
     backgroundColor: '#ffffff',
     marginTop: -4,
@@ -3394,21 +3436,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#edf5ef',
+    borderBottomColor: '#F3E8FF',
   },
   auditActionDropdownOptionActive: {
-    backgroundColor: '#eef8f1',
+    backgroundColor: '#F3E8FF',
   },
   auditActionDropdownOptionText: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 14,
     fontWeight: '900',
   },
   auditActionDropdownOptionTextActive: {
-    color: '#125334',
+    color: '#6D28D9',
   },
   auditActionDropdownRawText: {
-    color: '#6b7f76',
+    color: '#7C6F8A',
     fontSize: 11,
     fontWeight: '700',
     marginTop: 3,
@@ -3417,7 +3459,7 @@ const styles = StyleSheet.create({
   auditCalendarField: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#9be4b7',
+    borderColor: '#C4B5FD',
     borderRadius: 12,
     backgroundColor: '#ffffff',
     paddingHorizontal: 12,
@@ -3425,17 +3467,17 @@ const styles = StyleSheet.create({
     minHeight: 62,
   },
   auditCalendarFieldActive: {
-    borderColor: '#125334',
-    backgroundColor: '#eef8f1',
+    borderColor: '#6D28D9',
+    backgroundColor: '#F3E8FF',
   },
   auditCalendarFieldLabel: {
-    color: '#587066',
+    color: '#6B7280',
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 4,
   },
   auditCalendarFieldValue: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 13,
     fontWeight: '900',
   },
@@ -3449,7 +3491,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#d8e7da',
+    borderColor: '#DDD6FE',
     padding: 10,
     marginTop: 10,
   },
@@ -3465,15 +3507,15 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#eef8f1',
+    backgroundColor: '#F3E8FF',
   },
   auditCalendarNavText: {
-    color: '#125334',
+    color: '#6D28D9',
     fontSize: 22,
     fontWeight: '900',
   },
   auditCalendarMonthTitle: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 14,
     fontWeight: '900',
   },
@@ -3484,7 +3526,7 @@ const styles = StyleSheet.create({
   auditCalendarWeekText: {
     flex: 1,
     textAlign: 'center',
-    color: '#587066',
+    color: '#6B7280',
     fontSize: 11,
     fontWeight: '900',
   },
@@ -3504,15 +3546,15 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   auditCalendarDaySelected: {
-    backgroundColor: '#125334',
+    backgroundColor: '#6D28D9',
   },
   auditCalendarDayText: {
-    color: '#06183f',
+    color: '#2E1065',
     fontSize: 12,
     fontWeight: '800',
   },
   auditCalendarDayTextMuted: {
-    color: '#8aa39b',
+    color: '#A78BFA',
   },
   auditCalendarDayTextSelected: {
     color: '#ffffff',
@@ -3524,7 +3566,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   auditCalendarFooterText: {
-    color: '#125334',
+    color: '#6D28D9',
     fontSize: 13,
     fontWeight: '900',
   },
@@ -3537,17 +3579,17 @@ const styles = StyleSheet.create({
   auditDateInput: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#9be4b7',
+    borderColor: '#C4B5FD',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    color: '#06183f',
+    color: '#2E1065',
     fontWeight: '800',
     backgroundColor: '#ffffff',
   },
 
   auditActor: {
-    color: '#125334',
+    color: '#6D28D9',
     fontSize: 14,
     fontWeight: '900',
     marginTop: 8,
@@ -3613,13 +3655,52 @@ const styles = StyleSheet.create({
   fieldLabel: { color: '#334155', fontWeight: '800', marginTop: 8, marginBottom: 5 },
   input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, color: '#0F172A', backgroundColor: '#FFF', marginBottom: 18 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 8 },
-  button: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, alignSelf: 'flex-start', marginTop: 8 },
-  darkButton: { backgroundColor: '#0F172A' },
-  greenButton: { backgroundColor: '#16A34A' },
-  slateButton: { backgroundColor: '#64748B' },
-  redButton: { backgroundColor: '#DC2626' },
-  disabled: { opacity: 0.5 },
-  buttonText: { color: '#FFF', fontWeight: '900', fontSize: 12 },
+  button: {
+    minHeight: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignSelf: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.10,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  darkButton: {
+    backgroundColor: '#125334',
+    borderColor: '#125334',
+  },
+  greenButton: {
+    backgroundColor: '#16A34A',
+    borderColor: '#15803D',
+  },
+  slateButton: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#CBD5E1',
+  },
+  redButton: {
+    backgroundColor: '#DC2626',
+    borderColor: '#B91C1C',
+  },
+  disabled: {
+    opacity: 0.42,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 12,
+  },
+  secondaryButtonText: {
+    color: '#334155',
+  },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   recordCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, marginTop: 10 },
   error: { color: '#B91C1C', fontWeight: '800' },

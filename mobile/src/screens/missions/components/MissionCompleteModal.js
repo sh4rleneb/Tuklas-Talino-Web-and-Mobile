@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet,
-  StatusBar,} from 'react-native';
+import { Image, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { getBadgeImageSource } from '../../../utils/badgeAssets';
 
 function cleanMissionTitle(title) {
   return String(title || 'Natapos ang Gawain!')
@@ -72,7 +72,11 @@ export default function MissionCompleteModal({
         {badge ? (
           <View style={styles.badgeCard}>
             <View style={styles.badgeIconWrap}>
-              <Text style={styles.badgeIcon}>{badge.icon || '🏅'}</Text>
+              <Image
+                source={getBadgeImageSource(badge)}
+                style={styles.badgeImage}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.badgeTextWrap}>
               <Text style={styles.badgeLabel}>Bagong Badge</Text>
@@ -313,8 +317,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
-  badgeIcon: {
-    fontSize: 33,
+  badgeImage: {
+    width: 44,
+    height: 44,
   },
 
   badgeTextWrap: {
