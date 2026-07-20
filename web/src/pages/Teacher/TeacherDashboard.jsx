@@ -330,6 +330,49 @@ export default function TeacherDashboard({
     .sort((a, b) => a.gradeLevel - b.gradeLevel || a.section.localeCompare(b.section));
 
   const rows = data.rows || [];
+
+  const [leaderboardGradeFilter, setLeaderboardGradeFilter] =
+    useState('all');
+
+  const leaderboardGradeOptions = [
+    ...new Set(
+      rows
+        .map(student =>
+          Number(student?.gradeLevel || student?.grade || 0)
+        )
+        .filter(grade => grade >= 1 && grade <= 6)
+    )
+  ].sort((first, second) => first - second);
+
+
+  const teacherStudentLeaderboard = rows
+    .filter(student => {
+      if (leaderboardGradeFilter === 'all') {
+        return true;
+      }
+
+      const studentGrade =
+        Number(student?.gradeLevel || student?.grade || 0);
+
+      return studentGrade === Number(leaderboardGradeFilter);
+    })
+    .sort((first, second) => {
+      const xpDifference =
+        Number(second?.xp || 0) -
+        Number(first?.xp || 0);
+
+      if (xpDifference !== 0) {
+        return xpDifference;
+      }
+
+      return String(first?.name || 'Student')
+        .localeCompare(String(second?.name || 'Student'));
+    })
+    .map((student, index) => ({
+      ...student,
+      leaderboardRank: index + 1,
+    }));
+
   const stats = data.stats || {};
   const quizPerformance = data.quizPerformance || { summary: {}, rows: [] };
   const pendingGroupChecks = data.pendingGroupChecks || { summary: {}, rows: [] };
@@ -2512,7 +2555,11 @@ export default function TeacherDashboard({
                       id="t-group-name"
                       placeholder="Group name"
                       value={groupForm.name}
-                      onChange={(event) => setGroupForm(current => ({ ...current, name: event.target.value }))}
+                      maxLength={20}
+                      onChange={(event) => setGroupForm(current => ({
+                        ...current,
+                        name: event.target.value.slice(0, 20)
+                      }))}
                     />
 
                     {groupClassOptions.length ? (
@@ -2555,7 +2602,12 @@ export default function TeacherDashboard({
                           id="t-group-section"
                           placeholder="Section"
                           value={groupForm.section}
-                          onChange={(event) => setGroupForm(current => ({ ...current, section: event.target.value, selectedClass: '' }))}
+                          maxLength={20}
+                          onChange={(event) => setGroupForm(current => ({
+                            ...current,
+                            section: event.target.value.slice(0, 20),
+                            selectedClass: ''
+                          }))}
                         />
                       </>
                     )}
@@ -2727,7 +2779,7 @@ export default function TeacherDashboard({
                             type="button"
                             onClick={() => toggleGroupTools(group.id)}
                           >
-                            {isOpen ? 'Hide Details' : 'View Details'}
+                            {isOpen ? 'Hide Details' : 'Edit Group'}
                           </button>
 
                           <button
@@ -2886,6 +2938,291 @@ export default function TeacherDashboard({
 
 
 
+            <div
+              data-teacher-student-leaderboard="true"
+              style={{
+                marginBottom: 24,
+                padding: 22,
+                borderRadius: 20,
+                border: '1px solid #fde68a',
+                background:
+                  'linear-gradient(135deg, #fffbeb 0%, #ffffff 55%, #f0fdf4 100%)',
+                boxShadow: '0 12px 30px rgba(15, 23, 42, 0.06)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 16,
+                  flexWrap: 'wrap',
+                  marginBottom: 18,
+                }}
+              >
+                <div>
+                  <div className="lms-section-label">
+                    Student Ranking
+                  </div>
+
+                  <h2 style={{ margin: '4px 0 5px' }}>
+                    🏆 Student Leaderboard
+                  </h2>
+
+                  <p
+                    className="muted"
+                    style={{ margin: 0 }}
+                  >
+                    Ranking of your assigned students based on total XP.
+                  </p>
+
+
+                  <div
+                    data-leaderboard-grade-filter="web"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      marginTop: 14,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setLeaderboardGradeFilter('all')}
+                      style={{
+                        border:
+                          leaderboardGradeFilter === 'all'
+                            ? '2px solid #16a34a'
+                            : '1px solid #cbd5e1',
+                        background:
+                          leaderboardGradeFilter === 'all'
+                            ? '#dcfce7'
+                            : '#ffffff',
+                        color:
+                          leaderboardGradeFilter === 'all'
+                            ? '#166534'
+                            : '#475569',
+                        borderRadius: 999,
+                        padding: '8px 14px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      All Grades
+                    </button>
+
+                    {leaderboardGradeOptions.map(grade => (
+                      <button
+                        key={`web-leaderboard-grade-${grade}`}
+                        type="button"
+                        onClick={() =>
+                          setLeaderboardGradeFilter(String(grade))
+                        }
+                        style={{
+                          border:
+                            Number(leaderboardGradeFilter) === grade
+                              ? '2px solid #16a34a'
+                              : '1px solid #cbd5e1',
+                          background:
+                            Number(leaderboardGradeFilter) === grade
+                              ? '#dcfce7'
+                              : '#ffffff',
+                          color:
+                            Number(leaderboardGradeFilter) === grade
+                              ? '#166534'
+                              : '#475569',
+                          borderRadius: 999,
+                          padding: '8px 14px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Grade {grade}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    minWidth: 70,
+                    minHeight: 70,
+                    borderRadius: 22,
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: 34,
+                    background: '#fef3c7',
+                    border: '1px solid #fde68a',
+                  }}
+                >
+                  🏆
+                </div>
+              </div>
+
+              {teacherStudentLeaderboard.length ? (
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: 10,
+                  }}
+                >
+                  {teacherStudentLeaderboard.map((student, index) => {
+                    const rank =
+                      student.leaderboardRank || index + 1;
+
+                    const rankDisplay =
+                      rank === 1
+                        ? '🥇'
+                        : rank === 2
+                          ? '🥈'
+                          : rank === 3
+                            ? '🥉'
+                            : rank;
+
+                    const studentSection =
+                      student.section ||
+                      student.sectionName ||
+                      student.classSection ||
+                      'No section';
+
+                    return (
+                      <div
+                        key={`web-teacher-leaderboard-${
+                          student.id ||
+                          student.studentId ||
+                          student.studentCode ||
+                          `${student.name}-${rank}`
+                        }`}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns:
+                            '54px minmax(180px, 1fr) minmax(120px, auto)',
+                          alignItems: 'center',
+                          gap: 14,
+                          padding: '13px 15px',
+                          borderRadius: 16,
+                          border:
+                            rank <= 3
+                              ? '1px solid #fde68a'
+                              : '1px solid #e2e8f0',
+                          background:
+                            rank <= 3
+                              ? '#fffbeb'
+                              : '#ffffff',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 46,
+                            height: 46,
+                            borderRadius: 15,
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontWeight: 900,
+                            fontSize:
+                              rank <= 3 ? 24 : 16,
+                            color: '#334155',
+                            background:
+                              rank <= 3
+                                ? '#fef3c7'
+                                : '#f1f5f9',
+                          }}
+                        >
+                          {rankDisplay}
+                        </div>
+
+                        <div style={{ minWidth: 0 }}>
+                          <strong
+                            style={{
+                              display: 'block',
+                              fontSize: 16,
+                              color: '#0f172a',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {student.name || 'Student'}
+                          </strong>
+
+                          <small
+                            style={{
+                              display: 'block',
+                              marginTop: 3,
+                              color: '#64748b',
+                              fontWeight: 700,
+                            }}
+                          >
+                            Grade {student.gradeLevel || student.grade || '—'}
+                            {' • '}
+                            {studentSection}
+                          </small>
+                        </div>
+
+                        <div
+                          style={{
+                            textAlign: 'right',
+                            paddingLeft: 12,
+                          }}
+                        >
+                          <strong
+                            style={{
+                              display: 'block',
+                              color: '#16a34a',
+                              fontSize: 20,
+                            }}
+                          >
+                            ⚡ {Number(student.xp || 0)}
+                          </strong>
+
+                          <small
+                            style={{
+                              color: '#64748b',
+                              fontWeight: 800,
+                            }}
+                          >
+                            Total XP
+                          </small>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: 24,
+                    borderRadius: 16,
+                    textAlign: 'center',
+                    border: '1px dashed #cbd5e1',
+                    background: '#ffffff',
+                  }}
+                >
+                  <div style={{ fontSize: 34 }}>
+                    🏆
+                  </div>
+
+                  <strong
+                    style={{
+                      display: 'block',
+                      marginTop: 8,
+                    }}
+                  >
+                    No students to rank yet
+                  </strong>
+
+                  <p
+                    className="muted"
+                    style={{ margin: '5px 0 0' }}
+                  >
+                    Assigned students will appear here once their
+                    monitoring records are available.
+                  </p>
+                </div>
+              )}
+            </div>
+
 
             <div className="teacher-table-wrapper">
               <table className="teacher-monitor-table">
@@ -2915,76 +3252,7 @@ export default function TeacherDashboard({
                           .filter(Boolean)
                       )];
 
-                      return (
-                    <form onSubmit={handleCreateStudentAccount}>
-                      <div className="teacher-two-fields">
-                        <input
-                          className="input-field"
-                          value={studentAccountForm.name}
-                          onChange={(event) => setStudentAccountForm(form => ({ ...form, name: event.target.value }))}
-                          placeholder="Student full name"
-                        />
-                        <select
-                          className="input-field"
-                          value={studentAccountForm.gradeLevel}
-                          onChange={(event) => setStudentAccountForm(form => ({ ...form, gradeLevel: event.target.value }))}
-                        >
-                          {teacherAssignedGrades.map(grade => (
-                            <option key={grade} value={grade}>
-                              Grade {grade}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <select
-                        className="input-field"
-                        value={studentAccountForm.section}
-                        onChange={(event) =>
-                          setStudentAccountForm(form => ({
-                            ...form,
-                            section: event.target.value
-                          }))
-                        }
-                        style={{ marginTop: 10 }}
-                      >
-                        {availableSections.length ? (
-                          availableSections.map(section => (
-                            <option key={section} value={section}>
-                              {section}
-                            </option>
-                          ))
-                        ) : (
-                          <option value="" disabled>No assigned sections available</option>
-                        )}
-                      </select>
-
-                      {studentAccountError && (
-                        <p style={{ color: '#dc2626', fontWeight: 800, margin: '10px 0 0' }}>
-                          {studentAccountError}
-                        </p>
-                      )}
-
-                      {studentAccountResult && (
-                        <div className="lms-empty-line" style={{ marginTop: 10, textAlign: 'left' }}>
-                          <strong>Student account created.</strong>
-                          <br />
-                          Username: {studentAccountResult.username || studentAccountResult.student?.studentCode || '—'}
-                          <br />
-                          Temporary PIN: {studentAccountResult.temporaryPin || '—'}
-                        </div>
-                      )}
-
-                      <button
-                        className="lms-main-action full"
-                        type="submit"
-                        disabled={studentAccountBusy}
-                        style={{ marginTop: 12 }}
-                      >
-                        {studentAccountBusy ? 'Creating...' : 'Create Student Account'}
-                      </button>
-                    </form>
-                      );
+                      return null;
                     })()}
                   </div>
 

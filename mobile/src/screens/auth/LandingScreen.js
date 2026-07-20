@@ -381,13 +381,13 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#16A34A',
+    color: '#6F35D7',
   },
 
   logoSubtitle: {
     fontSize: 13,
 
-    color: '#6B7280',
+    color: '#6F35D7',
 
     marginTop: 2,
 
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#15803D',
+    color: '#6F35D7',
 
     textAlign: 'center',
 
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
   heroDescription: {
     fontSize: 16,
 
-    color: '#475569',
+    color: '#6F35D7',
 
     textAlign: 'center',
 
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_600SemiBold',
 
-    color: '#0F172A',
+    color: '#6F35D7',
   },
 
   heroImage: {
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
 
     fontSize: 16,
 
-    color: '#64748B',
+    color: '#6F35D7',
 
     textAlign: 'center',
 
@@ -528,8 +528,8 @@ const styles = StyleSheet.create({
 
   teacherCard: {
     backgroundColor: '#EFF6FF',
-    borderColor: '#60A5FA',
-    shadowColor: '#2563EB',
+    borderColor: '#2F80ED',
+    shadowColor: '#2F80ED',
     width: '100%',
 
 
@@ -552,8 +552,8 @@ const styles = StyleSheet.create({
 
   adminCard: {
     backgroundColor: '#F5F3FF',
-    borderColor: '#A78BFA',
-    shadowColor: '#7C3AED',
+    borderColor: '#6F35D7',
+    shadowColor: '#6F35D7',
     width: '100%',
 
 
@@ -588,11 +588,11 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#16A34A',
+    color: '#6F35D7',
   },
 
   teacherTitle: {
-    color: '#2563EB',
+    color: '#2F80ED',
     fontSize: 38,
 
     fontFamily: 'Fredoka_700Bold',
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   },
 
   adminTitle: {
-    color: '#7C3AED',
+    color: '#6F35D7',
     fontSize: 38,
 
     fontFamily: 'Fredoka_700Bold',
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
 
     lineHeight: 32,
 
-    color: '#475569',
+    color: '#6F35D7',
 
     textAlign: 'center',
 
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   },
 
   studentButton: {
-    backgroundColor: '#22C55E',
+    backgroundColor: '#6F35D7',
     width: '82%',
     alignSelf: 'center',
     paddingVertical: 20,
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 44,
     marginBottom: 6,
-    shadowColor: '#16A34A',
+    shadowColor: '#6F35D7',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.22,
     shadowRadius: 12,
@@ -643,9 +643,9 @@ const styles = StyleSheet.create({
   },
 
   teacherButton: {
-    backgroundColor: '#2563EB',
-    borderColor: '#1D4ED8',
-    shadowColor: '#2563EB',
+    backgroundColor: '#2F80ED',
+    borderColor: '#2F80ED',
+    shadowColor: '#2F80ED',
 
     width: '92%',
     alignSelf: 'center',
@@ -660,9 +660,9 @@ const styles = StyleSheet.create({
   },
 
   adminButton: {
-    backgroundColor: '#7C3AED',
-    borderColor: '#6D28D9',
-    shadowColor: '#7C3AED',
+    backgroundColor: '#6F35D7',
+    borderColor: '#6F35D7',
+    shadowColor: '#6F35D7',
 
     width: '92%',
     alignSelf: 'center',
@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 100,
 
-    backgroundColor: '#CBD5E1',
+    backgroundColor: '#6F35D7',
 
     marginHorizontal: 7,
   },
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
   activeDot: {
     width: 24,
 
-    backgroundColor: '#16A34A',
+    backgroundColor: '#6F35D7',
   },
 
 });

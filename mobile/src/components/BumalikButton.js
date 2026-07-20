@@ -69,21 +69,21 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   blueButton: {
-    borderColor: '#60A5FA',
-    shadowColor: '#2563EB',
+    borderColor: '#2F80ED',
+    shadowColor: '#2F80ED',
   },
   blueText: {
-    color: '#2563EB',
+    color: '#2F80ED',
   },
 
 
   violetButton: {
-    borderColor: '#C4B5FD',
-    shadowColor: '#7C3AED',
+    borderColor: '#6F35D7',
+    shadowColor: '#6F35D7',
   },
 
   violetText: {
-    color: '#7C3AED',
+    color: '#6F35D7',
   },
 
 });

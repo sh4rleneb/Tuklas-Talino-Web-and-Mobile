@@ -222,7 +222,7 @@ function handleIdentifierChange(value) {
                     : 'eye-off'
                 }
                 size={22}
-                color="#1D4ED8"
+                color="#2F80ED"
               />
 
             </TouchableOpacity>
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
 
   homeButton: {
     borderWidth: 2,
-    borderColor: '#2563EB',
+    borderColor: '#2F80ED',
 
     paddingHorizontal: 18,
     paddingVertical: 8,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   },
 
   homeText: {
-    color: '#1D4ED8',
+    color: '#2F80ED',
 
     fontFamily: 'Fredoka_600SemiBold',
   },
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#1D4ED8',
+    color: '#2F80ED',
   },
 
   card: {
@@ -341,13 +341,13 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#1D4ED8',
+    color: '#2F80ED',
   },
 
   sub: {
     fontSize: 15,
 
-    color: '#64748B',
+    color: '#2F80ED',
 
     marginTop: 10,
     marginBottom: 30,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: '#2563EB',
+    color: '#2F80ED',
     fontSize: 18,
 
     fontFamily: 'Fredoka_600SemiBold',
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
 
     borderWidth: 2,
-    borderColor: '#93C5FD',
+    borderColor: '#2F80ED',
 
     borderRadius: 24,
 
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   },
 
   icon: {
-    color: '#2563EB',
+    color: '#2F80ED',
     fontSize: 18,
     marginRight: 10,
   },
@@ -398,14 +398,14 @@ const styles = StyleSheet.create({
 
     fontSize: 16,
 
-    color: '#0F172A',
+    color: '#2F80ED',
 
     fontFamily: 'Nunito_700Bold',
   },
 
   passwordContainer: {
     borderWidth: 2,
-    borderColor: '#93C5FD',
+    borderColor: '#2F80ED',
 
     borderRadius: 24,
 
@@ -426,13 +426,13 @@ const styles = StyleSheet.create({
 
     fontSize: 16,
 
-    color: '#0F172A',
+    color: '#2F80ED',
   },
 
   loginButton: {
-    backgroundColor: '#2563EB',
-    borderColor: '#1D4ED8',
-    shadowColor: '#2563EB',
+    backgroundColor: '#2F80ED',
+    borderColor: '#2F80ED',
+    shadowColor: '#2F80ED',
 
     paddingVertical: 20,
 
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#1D4ED8',
+    backgroundColor: '#2F80ED',
     alignItems: 'center',
     justifyContent: 'center',
   },

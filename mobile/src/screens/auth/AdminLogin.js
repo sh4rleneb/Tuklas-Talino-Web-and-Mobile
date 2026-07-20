@@ -222,7 +222,7 @@ function handleIdentifierChange(value) {
                     : 'eye-off'
                 }
                 size={22}
-                color="#7C3AED"
+                color="#6F35D7"
               />
 
             </TouchableOpacity>
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
 
   homeButton: {
     borderWidth: 2,
-    borderColor: '#7C3AED',
+    borderColor: '#6F35D7',
 
     paddingHorizontal: 18,
     paddingVertical: 8,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
 
   homeText: {
-    color: '#7C3AED',
+    color: '#6F35D7',
 
     fontFamily: 'Fredoka_600SemiBold',
   },
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#7C3AED',
+    color: '#6F35D7',
   },
 
   card: {
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
 
     borderRadius: 100,
 
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#6F35D7',
 
     justifyContent: 'center',
     alignItems: 'center',
@@ -348,13 +348,13 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_700Bold',
 
-    color: '#6D28D9',
+    color: '#6F35D7',
   },
 
   sub: {
     fontSize: 15,
 
-    color: '#64748B',
+    color: '#6F35D7',
 
     marginTop: 10,
     marginBottom: 30,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
 
     fontFamily: 'Fredoka_600SemiBold',
 
-    color: '#5B21B6',
+    color: '#6F35D7',
 
     marginBottom: 12,
   },
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
 
     borderWidth: 2,
-    borderColor: '#C4B5FD',
+    borderColor: '#6F35D7',
 
     borderRadius: 24,
 
@@ -404,14 +404,14 @@ const styles = StyleSheet.create({
 
     fontSize: 16,
 
-    color: '#0F172A',
+    color: '#6F35D7',
 
     fontFamily: 'Nunito_700Bold',
   },
 
   passwordContainer: {
     borderWidth: 2,
-    borderColor: '#C4B5FD',
+    borderColor: '#6F35D7',
 
     borderRadius: 24,
 
@@ -432,13 +432,13 @@ const styles = StyleSheet.create({
 
     fontSize: 16,
 
-    color: '#0F172A',
+    color: '#6F35D7',
 
     fontFamily: 'Nunito_700Bold',
   },
 
   loginButton: {
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#6F35D7',
 
     paddingVertical: 20,
 
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
 
     textAlign: 'center',
 
-    color: '#64748B',
+    color: '#6F35D7',
 
     fontSize: 14,
 
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#6F35D7',
     alignItems: 'center',
     justifyContent: 'center',
   },

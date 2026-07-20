@@ -82,7 +82,7 @@ function Field({ label, value, onChangeText, keyboardType = 'default', secureTex
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor="#2F80ED"
       />
     </View>
   );
@@ -223,12 +223,23 @@ const [auditSearch, setAuditSearch] = useState('');
 
   function enrollmentDraftFor(student = {}) {
     const id = studentRecordId(student);
-    return (
-      studentEnrollmentDrafts[id] || {
-        gradeLevel: String(student.gradeLevel || student.grade || ''),
-        section: studentSectionValue(student),
-      }
-    );
+    const existing =
+      studentEnrollmentDrafts[id] || {};
+
+    return {
+      gradeLevel: String(
+        existing.gradeLevel ??
+        student.gradeLevel ??
+        student.grade_level ??
+        student.grade ??
+        ''
+      ),
+      section:
+        existing.section !== undefined
+          ? normalizeSpaces(existing.section)
+          : studentSectionValue(student),
+      ...existing,
+    };
   }
 
   function updateStudentEnrollmentDraft(studentId, values) {
@@ -267,28 +278,53 @@ const [auditSearch, setAuditSearch] = useState('');
   async function saveStudentEnrollment(student) {
     const id = studentRecordId(student);
     const draft = enrollmentDraftFor(student);
+    const gradeLevel = Number(draft.gradeLevel);
+    const section = normalizeSpaces(draft.section);
 
-    await run(
+    const data = await run(
       `student-enrollment-${id}`,
       () =>
         updateStudentEnrollment(id, {
-          gradeLevel: Number(draft.gradeLevel),
-          section: normalizeSpaces(draft.section),
+          gradeLevel,
+          section,
         }),
       'Student enrollment updated.'
     );
+
+    if (!data) {
+      return;
+    }
+
+    const savedStudent = data?.student || {
+      ...student,
+      gradeLevel,
+      section,
+    };
 
     setStudents((current) =>
       current.map((item) =>
         String(studentRecordId(item)) === String(id)
           ? {
               ...item,
-              gradeLevel: Number(draft.gradeLevel),
-              section: normalizeSpaces(draft.section),
+              ...savedStudent,
+              gradeLevel: Number(
+                savedStudent.gradeLevel ??
+                savedStudent.grade_level ??
+                gradeLevel
+              ),
+              section: normalizeSpaces(
+                savedStudent.section || section
+              ),
             }
           : item
       )
     );
+
+    setStudentEnrollmentDrafts((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
   }
 
   const studentSectionOptions = [
@@ -654,12 +690,50 @@ async function executeVerifiedAction() {
     };
   }
 
-  function auditEntityLabel(log) {
-    const entity = String(log.entityType || 'record')
+  function auditAccountLabel(log) {
+    const metadata = log.metadata || {};
+    const entityId = Number(log.entityId || 0);
+
+    const savedName = String(
+      metadata.entityName ||
+      metadata.studentName ||
+      metadata.teacherName ||
+      metadata.accountName ||
+      metadata.userName ||
+      ''
+    ).trim();
+
+    const matchedProfile = actorProfiles.find(
+      (profile) => Number(profile.userId) === entityId
+    );
+
+    const accountName = savedName || matchedProfile?.name || '';
+
+    const rawRole =
+      matchedProfile?.roleLabel ||
+      metadata.role ||
+      metadata.accountRole ||
+      (
+        String(log.entityType || '').toLowerCase() === 'student'
+          ? 'Student'
+          : String(log.entityType || '').toLowerCase() === 'teacher'
+            ? 'Teacher'
+            : ''
+      );
+
+    const roleLabel = String(rawRole || '')
       .replace(/[._-]+/g, ' ')
       .replace(/\b\w/g, (char) => char.toUpperCase());
 
-    return `${entity} #${log.entityId ?? '—'}`;
+    if (accountName) {
+      return roleLabel
+        ? `${accountName} (${roleLabel})`
+        : accountName;
+    }
+
+    return entityId
+      ? `Account #${entityId}`
+      : 'Account unavailable';
   }
 
   function auditDetails(log) {
@@ -667,14 +741,56 @@ async function executeVerifiedAction() {
     const details = [];
 
     if (log.action === 'student.promote') {
-      details.push(`${metadata.studentName || 'Student'}${metadata.studentCode ? ` (${metadata.studentCode})` : ''}`);
       if (metadata.oldGrade || metadata.newGrade) {
-        details.push(`Grade ${metadata.oldGrade || '—'} → Grade ${metadata.newGrade || '—'}`);
+        details.push(
+          `Grade level changed from Grade ${metadata.oldGrade || '—'} to Grade ${metadata.newGrade || '—'}`
+        );
       }
-      if (metadata.section) details.push(`Section ${metadata.section}`);
+
+      if (
+        metadata.previousSection &&
+        metadata.section &&
+        String(metadata.previousSection).toLowerCase() !==
+          String(metadata.section).toLowerCase()
+      ) {
+        details.push(
+          `Section changed from ${metadata.previousSection} to ${metadata.section}`
+        );
+      } else if (metadata.section) {
+        details.push(`Section: ${metadata.section}`);
+      }
     }
 
-    if (metadata.status) details.push(`Status: ${metadata.status}`);
+    if (
+      log.action === 'student.enrollment.update' ||
+      log.action === 'student.section.update'
+    ) {
+      if (
+        metadata.previousSection &&
+        metadata.section &&
+        String(metadata.previousSection).toLowerCase() !==
+          String(metadata.section).toLowerCase()
+      ) {
+        details.push(
+          `Section changed from ${metadata.previousSection} to ${metadata.section}`
+        );
+      } else if (metadata.section) {
+        details.push(`Section: ${metadata.section}`);
+      }
+
+      if (metadata.gradeLevel) {
+        details.push(`Grade level: Grade ${metadata.gradeLevel}`);
+      }
+    }
+
+    if (metadata.status) {
+      const displayedStatus =
+        String(metadata.status).toLowerCase() === 'archived'
+          ? 'deactivated'
+          : metadata.status;
+
+      details.push(`Status: ${displayedStatus}`);
+    }
     if (metadata.reason) details.push(`Reason: ${metadata.reason}`);
     if (metadata.score !== undefined && metadata.score !== null) details.push(`Score: ${metadata.score}`);
     if (metadata.reviewStatus) details.push(`Review: ${metadata.reviewStatus}`);
@@ -831,7 +947,7 @@ async function executeVerifiedAction() {
         <Text style={{
           fontSize: 12,
           fontWeight: '800',
-          color: '#374151',
+          color: '#2F80ED',
           marginBottom: 5,
         }}>
           Login Security
@@ -857,7 +973,7 @@ async function executeVerifiedAction() {
         <Text style={{
           marginTop: 5,
           fontSize: 11,
-          color: '#6b7280',
+          color: '#2F80ED',
         }}>
           Current cycle failures: {security.failedLoginAttempts}
         </Text>
@@ -865,7 +981,7 @@ async function executeVerifiedAction() {
         <Text style={{
           marginTop: 2,
           fontSize: 11,
-          color: '#6b7280',
+          color: '#2F80ED',
         }}>
           Total failed logins: {security.totalFailedLoginAttempts}/10
         </Text>
@@ -923,7 +1039,7 @@ async function executeVerifiedAction() {
 
     return (
       <View style={{ marginTop: 10 }}>
-        <Text style={{ fontSize: 12, fontWeight: '800', color: '#374151', marginBottom: 6 }}>
+        <Text style={{ fontSize: 12, fontWeight: '800', color: '#2F80ED', marginBottom: 6 }}>
           Account Status
         </Text>
 
@@ -941,14 +1057,14 @@ async function executeVerifiedAction() {
                   paddingHorizontal: 12,
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: selected ? '#125334' : '#D1D5DB',
-                  backgroundColor: selected ? '#125334' : '#FFFFFF',
+                  borderColor: selected ? '#2F80ED' : '#D1D5DB',
+                  backgroundColor: selected ? '#2F80ED' : '#FFFFFF',
                   opacity: selected || busy ? 0.85 : 1,
                   marginRight: 8,
                   marginBottom: 8,
                 }}
               >
-                <Text style={{ color: selected ? '#FFFFFF' : '#334155', fontWeight: '800' }}>
+                <Text style={{ color: selected ? '#FFFFFF' : '#2F80ED', fontWeight: '800' }}>
                   {statusOption === 'active' ? 'Active' : 'Deactivated'}
                 </Text>
               </TouchableOpacity>
@@ -956,7 +1072,7 @@ async function executeVerifiedAction() {
           })}
         </View>
 
-        <Text style={{ marginTop: 2, fontSize: 11, color: '#6b7280' }}>
+        <Text style={{ marginTop: 2, fontSize: 11, color: '#2F80ED' }}>
           Only Active and Deactivated are allowed.
         </Text>
       </View>
@@ -1561,7 +1677,7 @@ async function executeVerifiedAction() {
             value={studentSearchQuery}
             onChangeText={setStudentSearchQuery}
             placeholder="Search by name, student code, username, grade, or section..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor="#2F80ED"
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
@@ -2110,7 +2226,7 @@ function renderLogs() {
         const searchableLog = [
           JSON.stringify(log),
           auditActionLabel(log.action),
-          auditEntityLabel(log),
+          auditAccountLabel(log),
           auditDetails(log),
           actor.name,
           actor.username,
@@ -2173,7 +2289,7 @@ function renderLogs() {
           value={auditSearch}
           onChangeText={setAuditSearch}
           placeholder="Search user, action, or entity..."
-          placeholderTextColor="#8aa39b"
+          placeholderTextColor="#6F35D7"
           style={styles.auditSearchInput}
         />
 
@@ -2462,6 +2578,10 @@ function renderLogs() {
                 Action: {log.action}
               </Text>
 
+              <Text style={styles.auditRecord}>
+                Account: {auditAccountLabel(log)}
+              </Text>
+
               {details ? (
                 <Text style={styles.muted}>
                   {details}
@@ -2741,7 +2861,7 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
               )
                 .replace(/\s+/g, ' ')
                 .trim()}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#6F35D7"
             />
               </>
             ) : null}
@@ -2770,7 +2890,7 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
               autoCorrect={false}
               maxLength={32}
               placeholder={`Type ${pendingAdminAction?.keyword || ''} to continue`}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#6F35D7"
             />
 
             {pendingAdminAction?.keyword ? (
@@ -2869,7 +2989,7 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
               value={passwordVerifyInput}
               onChangeText={setPasswordVerifyInput}
               placeholder="Admin password"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor="#6F35D7"
             />
 
             <View style={styles.workspaceLogoutActions}>
@@ -2956,8 +3076,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#86EFAC',
-    shadowColor: '#14532D',
+    borderColor: '#6F35D7',
+    shadowColor: '#6F35D7',
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 },
@@ -2965,7 +3085,7 @@ const styles = StyleSheet.create({
   },
   workspaceNoticeSuccess: {
     backgroundColor: '#ECFDF5',
-    borderColor: '#22C55E',
+    borderColor: '#6F35D7',
   },
   workspaceNoticeWarning: {
     backgroundColor: '#FEF3C7',
@@ -2976,7 +3096,7 @@ const styles = StyleSheet.create({
     borderColor: '#EF4444',
   },
   workspaceNoticeText: {
-    color: '#0F172A',
+    color: '#6F35D7',
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '900',
@@ -2984,7 +3104,7 @@ const styles = StyleSheet.create({
 
   workspaceLogoutModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.58)',
+    backgroundColor: 'rgba(111, 53, 215, 0.58)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -3001,8 +3121,8 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#EDE9FE',
-    shadowColor: '#7C3AED',
+    borderColor: '#6F35D7',
+    shadowColor: '#6F35D7',
     shadowOpacity: 0.22,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -3012,7 +3132,7 @@ const styles = StyleSheet.create({
     width: 78,
     height: 78,
     borderRadius: 39,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#6F35D7',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -3027,7 +3147,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
     lineHeight: 37,
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#6F35D7',
 
     textAlign: 'center',
 
@@ -3036,7 +3156,7 @@ const styles = StyleSheet.create({
   workspaceLogoutBody: {
     fontSize: 16,
     lineHeight: 23,
-    color: '#475569',
+    color: '#6F35D7',
     textAlign: 'center',
     marginBottom: 22,
   },
@@ -3066,7 +3186,7 @@ const styles = StyleSheet.create({
     marginTop: -10,
     marginBottom: 14,
 
-    color: '#64748B',
+    color: '#6F35D7',
     fontSize: 12,
     lineHeight: 17,
     fontWeight: '700',
@@ -3089,14 +3209,14 @@ const styles = StyleSheet.create({
   },
   workspaceLogoutConfirm: {
     flex: 1,
-    backgroundColor: '#125334',
+    backgroundColor: '#6F35D7',
     borderRadius: 18,
     paddingVertical: 14,
     alignItems: 'center',
     marginLeft: 10,
   },
   workspaceLogoutCancelText: {
-    color: '#334155',
+    color: '#6F35D7',
     fontSize: 16,
     fontWeight: '900',
   },
@@ -3120,13 +3240,13 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 22,
     borderWidth: 1,
-    borderColor: '#EDE9FE',
+    borderColor: '#6F35D7',
   },
 
 
   vaultSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#6F35D7',
     textAlign: 'center',
     lineHeight: 20,
     marginTop: 6,
@@ -3136,7 +3256,7 @@ const styles = StyleSheet.create({
   vaultTitle: {
     fontSize: 26,
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#6F35D7',
     marginBottom: 18,
     textAlign: 'center',
   },
@@ -3150,7 +3270,7 @@ const styles = StyleSheet.create({
 
   vaultGenerateButton: {
     flex: 1,
-    backgroundColor: '#16A34A',
+    backgroundColor: '#6F35D7',
     borderRadius: 18,
     paddingVertical: 14,
     alignItems: 'center',
@@ -3162,12 +3282,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F5F3FF',
     borderWidth: 1,
-    borderColor: '#C4B5FD',
+    borderColor: '#6F35D7',
     borderRadius: 28,
     padding: 18,
     marginTop: 18,
     marginBottom: 18,
-    shadowColor: '#7C3AED',
+    shadowColor: '#6F35D7',
     shadowOpacity: 0.16,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
@@ -3177,7 +3297,7 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 26,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#6F35D7',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 15,
@@ -3189,7 +3309,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   workspaceHeroKicker: {
-    color: '#6D28D9',
+    color: '#6F35D7',
     fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -3197,7 +3317,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   workspaceHeroTitle: {
-    color: '#0F172A',
+    color: '#6F35D7',
     fontSize: 18,
     lineHeight: 24,
     fontWeight: '900',
@@ -3210,8 +3330,8 @@ const styles = StyleSheet.create({
   workspaceHeroChip: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#C4B5FD',
-    color: '#5B21B6',
+    borderColor: '#6F35D7',
+    color: '#6F35D7',
     fontSize: 12,
     fontWeight: '900',
     paddingHorizontal: 10,
@@ -3226,8 +3346,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   flex: { flex: 1 },
-  title: { color: '#0F172A', fontSize: 29, fontWeight: '900' },
-  subtitle: { color: '#64748B', marginTop: 5, lineHeight: 20 },
+  title: { color: '#6F35D7', fontSize: 29, fontWeight: '900' },
+  subtitle: { color: '#6F35D7', marginTop: 5, lineHeight: 20 },
   navRow: { gap: 8, paddingVertical: 8, paddingBottom: 16 },
   navChip: {
     flexDirection: 'row',
@@ -3241,34 +3361,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navChipActive: {
-    backgroundColor: '#EDE9FE',
+    backgroundColor: '#6F35D7',
     borderWidth: 2,
-    borderColor: '#7C3AED',
-    shadowColor: '#7C3AED',
+    borderColor: '#6F35D7',
+    shadowColor: '#6F35D7',
     shadowOpacity: 0.16,
     shadowRadius: 7,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  navLabel: { color: '#64748B', fontWeight: '800' },
-  navLabelActive: { color: '#6D28D9', fontWeight: '900' },
-  card: { backgroundColor: '#FFF', borderRadius: 22, padding: 16, marginBottom: 14, shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
-  cardTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900', marginBottom: 10 },
+  navLabel: { color: '#6F35D7', fontWeight: '800' },
+  navLabelActive: { color: '#6F35D7', fontWeight: '900' },
+  card: { backgroundColor: '#FFF', borderRadius: 22, padding: 16, marginBottom: 14, shadowColor: '#6F35D7', shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
+  cardTitle: { color: '#6F35D7', fontSize: 20, fontWeight: '900', marginBottom: 10 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   statCard: {
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
+    shadowColor: '#6F35D7',
     shadowOpacity: 0.10,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 7 },
     elevation: 4,
  width: '48%' },
   statIcon: { fontSize: 24 },
-  statValue: { color: '#0F172A', fontWeight: '900', fontSize: 28, marginTop: 6 },
-  muted: { color: '#64748B', marginTop: 4 },
-  body: { color: '#475569', marginTop: 7, lineHeight: 20 },
-  rowTitle: { color: '#0F172A', fontWeight: '800' },
+  statValue: { color: '#6F35D7', fontWeight: '900', fontSize: 28, marginTop: 6 },
+  muted: { color: '#6F35D7', marginTop: 4 },
+  body: { color: '#6F35D7', marginTop: 7, lineHeight: 20 },
+  rowTitle: { color: '#6F35D7', fontWeight: '800' },
 
   auditHeader: {
     flexDirection: 'row',
@@ -3277,14 +3397,14 @@ const styles = StyleSheet.create({
   },
 
   auditAction: {
-    color: '#0F172A',
+    color: '#6F35D7',
     fontWeight: '900',
     flex: 1,
   },
 
   auditEntity: {
-    backgroundColor: '#EDE9FE',
-    color: '#6D28D9',
+    backgroundColor: '#6F35D7',
+    color: '#6F35D7',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -3305,16 +3425,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF7FF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#6F35D7',
     padding: 14,
   },
   auditStatValue: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 20,
     fontWeight: '900',
   },
   auditStatLabel: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 13,
     fontWeight: '800',
     marginTop: 4,
@@ -3322,7 +3442,7 @@ const styles = StyleSheet.create({
   auditDateDropdownButton: {
     minHeight: 52,
     borderWidth: 2,
-    borderColor: '#C4B5FD',
+    borderColor: '#6F35D7',
     borderRadius: 12,
     backgroundColor: '#ffffff',
     paddingHorizontal: 14,
@@ -3336,20 +3456,20 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   auditDateDropdownText: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 14,
     fontWeight: '900',
     flex: 1,
   },
   auditDateDropdownChevron: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 12,
     fontWeight: '900',
     marginLeft: 10,
   },
   auditDateDropdownPanel: {
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#6F35D7',
     borderRadius: 14,
     backgroundColor: '#ffffff',
     marginTop: -4,
@@ -3360,25 +3480,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3E8FF',
+    borderBottomColor: '#6F35D7',
   },
   auditDateDropdownOptionActive: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#6F35D7',
   },
   auditDateDropdownOptionText: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 14,
     fontWeight: '900',
   },
   auditDateDropdownOptionTextActive: {
-    color: '#6D28D9',
+    color: '#6F35D7',
   },
   auditCustomDatePanel: {
     padding: 12,
     backgroundColor: '#FAF7FF',
   },
   auditCustomDateTitle: {
-    color: '#6D28D9',
+    color: '#6F35D7',
     fontSize: 12,
     fontWeight: '900',
     marginBottom: 8,
@@ -3386,7 +3506,7 @@ const styles = StyleSheet.create({
   auditApplyDateButton: {
     minHeight: 42,
     borderRadius: 12,
-    backgroundColor: '#125334',
+    backgroundColor: '#6F35D7',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
@@ -3398,19 +3518,19 @@ const styles = StyleSheet.create({
   },
   auditSearchInput: {
     borderWidth: 2,
-    borderColor: '#C4B5FD',
+    borderColor: '#6F35D7',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 12,
-    color: '#2E1065',
+    color: '#6F35D7',
     fontWeight: '800',
     backgroundColor: '#ffffff',
   },
   auditActionDropdownButton: {
     minHeight: 52,
     borderWidth: 2,
-    borderColor: '#125334',
+    borderColor: '#6F35D7',
     borderRadius: 12,
     backgroundColor: '#ffffff',
     paddingHorizontal: 14,
@@ -3421,20 +3541,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   auditActionDropdownText: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 14,
     fontWeight: '900',
     flex: 1,
   },
   auditActionDropdownIcon: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 12,
     fontWeight: '900',
     marginLeft: 10,
   },
   auditActionDropdownPanel: {
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#6F35D7',
     borderRadius: 14,
     backgroundColor: '#ffffff',
     marginTop: -4,
@@ -3445,21 +3565,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3E8FF',
+    borderBottomColor: '#6F35D7',
   },
   auditActionDropdownOptionActive: {
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#6F35D7',
   },
   auditActionDropdownOptionText: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 14,
     fontWeight: '900',
   },
   auditActionDropdownOptionTextActive: {
-    color: '#6D28D9',
+    color: '#6F35D7',
   },
   auditActionDropdownRawText: {
-    color: '#7C6F8A',
+    color: '#6F35D7',
     fontSize: 11,
     fontWeight: '700',
     marginTop: 3,
@@ -3468,7 +3588,7 @@ const styles = StyleSheet.create({
   auditCalendarField: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#C4B5FD',
+    borderColor: '#6F35D7',
     borderRadius: 12,
     backgroundColor: '#ffffff',
     paddingHorizontal: 12,
@@ -3476,17 +3596,17 @@ const styles = StyleSheet.create({
     minHeight: 62,
   },
   auditCalendarFieldActive: {
-    borderColor: '#6D28D9',
-    backgroundColor: '#F3E8FF',
+    borderColor: '#6F35D7',
+    backgroundColor: '#6F35D7',
   },
   auditCalendarFieldLabel: {
-    color: '#6B7280',
+    color: '#6F35D7',
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 4,
   },
   auditCalendarFieldValue: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 13,
     fontWeight: '900',
   },
@@ -3500,7 +3620,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#DDD6FE',
+    borderColor: '#6F35D7',
     padding: 10,
     marginTop: 10,
   },
@@ -3516,15 +3636,15 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3E8FF',
+    backgroundColor: '#6F35D7',
   },
   auditCalendarNavText: {
-    color: '#6D28D9',
+    color: '#6F35D7',
     fontSize: 22,
     fontWeight: '900',
   },
   auditCalendarMonthTitle: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 14,
     fontWeight: '900',
   },
@@ -3535,7 +3655,7 @@ const styles = StyleSheet.create({
   auditCalendarWeekText: {
     flex: 1,
     textAlign: 'center',
-    color: '#6B7280',
+    color: '#6F35D7',
     fontSize: 11,
     fontWeight: '900',
   },
@@ -3555,15 +3675,15 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   auditCalendarDaySelected: {
-    backgroundColor: '#6D28D9',
+    backgroundColor: '#6F35D7',
   },
   auditCalendarDayText: {
-    color: '#2E1065',
+    color: '#6F35D7',
     fontSize: 12,
     fontWeight: '800',
   },
   auditCalendarDayTextMuted: {
-    color: '#A78BFA',
+    color: '#6F35D7',
   },
   auditCalendarDayTextSelected: {
     color: '#ffffff',
@@ -3575,7 +3695,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   auditCalendarFooterText: {
-    color: '#6D28D9',
+    color: '#6F35D7',
     fontSize: 13,
     fontWeight: '900',
   },
@@ -3588,29 +3708,29 @@ const styles = StyleSheet.create({
   auditDateInput: {
     flex: 1,
     borderWidth: 2,
-    borderColor: '#C4B5FD',
+    borderColor: '#6F35D7',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    color: '#2E1065',
+    color: '#6F35D7',
     fontWeight: '800',
     backgroundColor: '#ffffff',
   },
 
   auditActor: {
-    color: '#6D28D9',
+    color: '#6F35D7',
     fontSize: 14,
     fontWeight: '900',
     marginTop: 8,
   },
 
   auditRecord: {
-    color: '#475569',
+    color: '#6F35D7',
     marginTop: 8,
   },
 
   auditDate: {
-    color: '#94A3B8',
+    color: '#6F35D7',
     marginTop: 6,
     fontSize: 12,
   },
@@ -3625,7 +3745,7 @@ const styles = StyleSheet.create({
   },
 
   sectionEyebrow: {
-    color: '#16A34A',
+    color: '#6F35D7',
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
@@ -3634,14 +3754,14 @@ const styles = StyleSheet.create({
   },
 
   formHeroTitle: {
-    color: '#0F172A',
+    color: '#6F35D7',
     fontSize: 30,
     fontWeight: '900',
     marginBottom: 8,
   },
 
   formHeroSubtitle: {
-    color: '#64748B',
+    color: '#6F35D7',
     lineHeight: 20,
     marginBottom: 16,
   },
@@ -3655,14 +3775,14 @@ const styles = StyleSheet.create({
 
 
   helperText: {
-    color: '#64748B',
+    color: '#6F35D7',
     fontSize: 13,
     marginTop: -4,
     marginBottom: 16,
   },
   field: { marginTop: 12 },
-  fieldLabel: { color: '#334155', fontWeight: '800', marginTop: 8, marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, color: '#0F172A', backgroundColor: '#FFF', marginBottom: 18 },
+  fieldLabel: { color: '#6F35D7', fontWeight: '800', marginTop: 8, marginBottom: 5 },
+  input: { borderWidth: 1, borderColor: '#6F35D7', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, color: '#6F35D7', backgroundColor: '#FFF', marginBottom: 18 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 8 },
   button: {
     minHeight: 42,
@@ -3675,23 +3795,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    shadowColor: '#0F172A',
+    shadowColor: '#6F35D7',
     shadowOpacity: 0.10,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
   darkButton: {
-    backgroundColor: '#125334',
-    borderColor: '#125334',
+    backgroundColor: '#6F35D7',
+    borderColor: '#6F35D7',
   },
   greenButton: {
-    backgroundColor: '#16A34A',
-    borderColor: '#15803D',
+    backgroundColor: '#6F35D7',
+    borderColor: '#6F35D7',
   },
   slateButton: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#CBD5E1',
+    borderColor: '#6F35D7',
   },
   redButton: {
     backgroundColor: '#DC2626',
@@ -3708,7 +3828,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   secondaryButtonText: {
-    color: '#334155',
+    color: '#6F35D7',
   },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
   recordCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 12, marginTop: 10 },

@@ -860,12 +860,32 @@ router.post(
         await teacher.User.save();
       }
 
+      const teacherEntityName = [
+        teacher.firstName || teacher.User?.firstName,
+        teacher.middleName || teacher.User?.middleName,
+        teacher.lastName || teacher.User?.lastName
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+        teacher.fullName ||
+        teacher.name ||
+        teacher.User?.fullName ||
+        teacher.User?.name ||
+        teacher.User?.username ||
+        `Teacher #${teacher.id}`;
+
       await audit(
         req.user.id,
         'teacher.archive',
         'teacher',
         teacher.id,
-        { reason }
+        {
+          reason,
+          entityName: teacherEntityName,
+          teacherName: teacherEntityName,
+          status: 'deactivated'
+        }
       );
 
       return res.json({ teacher });
@@ -911,12 +931,32 @@ router.post(
         await teacher.User.save();
       }
 
+      const teacherEntityName = [
+        teacher.firstName || teacher.User?.firstName,
+        teacher.middleName || teacher.User?.middleName,
+        teacher.lastName || teacher.User?.lastName
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+        teacher.fullName ||
+        teacher.name ||
+        teacher.User?.fullName ||
+        teacher.User?.name ||
+        teacher.User?.username ||
+        `Teacher #${teacher.id}`;
+
       await audit(
         req.user.id,
         'teacher.reactivate',
         'teacher',
         teacher.id,
-        { reason }
+        {
+          reason,
+          entityName: teacherEntityName,
+          teacherName: teacherEntityName,
+          status: 'reactivated'
+        }
       );
 
       return res.json({ teacher });

@@ -223,7 +223,15 @@ function SectionCard({ children, style }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-function Field({ label, value, onChangeText, multiline = false, keyboardType = 'default', placeholder = '' }) {
+function Field({
+  label,
+  value,
+  onChangeText,
+  multiline = false,
+  keyboardType = 'default',
+  placeholder = '',
+  maxLength,
+}) {
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -235,6 +243,7 @@ function Field({ label, value, onChangeText, multiline = false, keyboardType = '
         keyboardType={keyboardType}
         placeholder={placeholder}
         placeholderTextColor="#94A3B8"
+        maxLength={maxLength}
       />
     </View>
   );
@@ -1403,6 +1412,63 @@ export default function TeacherHome({ navigation }) {
     canUseGradeSection(getStudentGradeValue(student), getStudentSectionValue(student))
   )), [canUseGradeSection, currentStudents]);
 
+  const [leaderboardGradeFilter, setLeaderboardGradeFilter] =
+    useState('all');
+
+  const leaderboardGradeOptions = useMemo(() => (
+    [
+      ...new Set(
+        usableStudents
+          .map(student =>
+            Number(
+              getStudentGradeValue(student) ||
+              student?.gradeLevel ||
+              student?.grade ||
+              0
+            )
+          )
+          .filter(grade => grade >= 1 && grade <= 6)
+      )
+    ].sort((first, second) => first - second)
+  ), [usableStudents]);
+
+  const teacherStudentLeaderboard = useMemo(() => (
+    usableStudents
+      .filter(student => {
+        if (leaderboardGradeFilter === 'all') {
+          return true;
+        }
+
+        const studentGrade = Number(
+          getStudentGradeValue(student) ||
+          student?.gradeLevel ||
+          student?.grade ||
+          0
+        );
+
+        return studentGrade === Number(leaderboardGradeFilter);
+      })
+      .sort((first, second) => {
+        const xpDifference =
+          Number(second?.xp || 0) -
+          Number(first?.xp || 0);
+
+        if (xpDifference !== 0) {
+          return xpDifference;
+        }
+
+        return String(first?.name || 'Student')
+          .localeCompare(String(second?.name || 'Student'));
+      })
+      .map((student, index) => ({
+        ...student,
+        leaderboardRank: index + 1,
+      }))
+  ), [
+    leaderboardGradeFilter,
+    usableStudents,
+  ]);
+
   const studentSectionOptions = useMemo(() => {
     const sections = new Set();
 
@@ -1509,7 +1575,21 @@ export default function TeacherHome({ navigation }) {
   }
 
   function buildGroupPayload() {
+    const groupName = String(groupForm.name || '').trim();
     const groupGradeLevel = Number(groupForm.gradeLevel);
+
+    if (!groupName) {
+      Alert.alert('Create Group', 'Enter a group name.');
+      return null;
+    }
+
+    if (groupName.length > 20) {
+      Alert.alert(
+        'Create Group',
+        'Group name must not exceed 20 characters.'
+      );
+      return null;
+    }
 
     if (![1, 2, 3, 4, 5, 6].includes(groupGradeLevel)) {
       Alert.alert('Create Group', 'Select a valid grade level from Grade 1 to Grade 6.');
@@ -1523,6 +1603,14 @@ export default function TeacherHome({ navigation }) {
       return null;
     }
 
+    if (groupSection.length > 20) {
+      Alert.alert(
+        'Create Group',
+        'Section must not exceed 20 characters.'
+      );
+      return null;
+    }
+
     if (!canUseGradeSection(groupGradeLevel, groupSection)) {
       Alert.alert('Create Group', 'You can only create groups for your assigned grade level or section.');
       return null;
@@ -1530,6 +1618,7 @@ export default function TeacherHome({ navigation }) {
 
     return {
       ...groupForm,
+      name: groupName,
       gradeLevel: groupGradeLevel,
       section: groupSection,
       description: groupSection,
@@ -2648,6 +2737,265 @@ async function handleLogout() {
               <Text style={styles.assignedClassesEmptyText}>
                 Your assigned grade levels and sections will appear
                 here once they are added by the administrator.
+              </Text>
+            </View>
+          )}
+        </SectionCard>
+
+        <SectionCard>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 6,
+            }}
+          >
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={styles.cardTitle}>
+                Student Leaderboard
+              </Text>
+
+              <Text style={styles.muted}>
+                Ranking of your assigned students based on total XP.
+              </Text>
+
+
+              <View
+                testID="mobile-leaderboard-grade-filter"
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  marginTop: 12,
+                }}
+              >
+                <Text
+                  onPress={() => setLeaderboardGradeFilter('all')}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 13,
+                    borderRadius: 999,
+                    overflow: 'hidden',
+                    fontWeight: '800',
+                    color:
+                      leaderboardGradeFilter === 'all'
+                        ? '#166534'
+                        : '#475569',
+                    backgroundColor:
+                      leaderboardGradeFilter === 'all'
+                        ? '#dcfce7'
+                        : '#f8fafc',
+                    borderWidth:
+                      leaderboardGradeFilter === 'all' ? 2 : 1,
+                    borderColor:
+                      leaderboardGradeFilter === 'all'
+                        ? '#16a34a'
+                        : '#cbd5e1',
+                  }}
+                >
+                  All Grades
+                </Text>
+
+                {leaderboardGradeOptions.map(grade => (
+                  <Text
+                    key={`mobile-leaderboard-grade-${grade}`}
+                    onPress={() =>
+                      setLeaderboardGradeFilter(String(grade))
+                    }
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 13,
+                      borderRadius: 999,
+                      overflow: 'hidden',
+                      fontWeight: '800',
+                      color:
+                        Number(leaderboardGradeFilter) === grade
+                          ? '#166534'
+                          : '#475569',
+                      backgroundColor:
+                        Number(leaderboardGradeFilter) === grade
+                          ? '#dcfce7'
+                          : '#f8fafc',
+                      borderWidth:
+                        Number(leaderboardGradeFilter) === grade
+                          ? 2
+                          : 1,
+                      borderColor:
+                        Number(leaderboardGradeFilter) === grade
+                          ? '#16a34a'
+                          : '#cbd5e1',
+                    }}
+                  >
+                    Grade {grade}
+                  </Text>
+                ))}
+              </View>
+            </View>
+
+            <View
+              style={{
+                minWidth: 48,
+                minHeight: 48,
+                borderRadius: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#FEF3C7',
+                borderWidth: 1,
+                borderColor: '#FDE68A',
+              }}
+            >
+              <Text style={{ fontSize: 24 }}>
+                🏆
+              </Text>
+            </View>
+          </View>
+
+          {teacherStudentLeaderboard.length ? (
+            <View style={{ marginTop: 10 }}>
+              {teacherStudentLeaderboard.map(
+                (student, leaderboardIndex) => {
+                  const rank =
+                    student.leaderboardRank ||
+                    leaderboardIndex + 1;
+
+                  const medal =
+                    rank === 1
+                      ? '🥇'
+                      : rank === 2
+                        ? '🥈'
+                        : rank === 3
+                          ? '🥉'
+                          : String(rank);
+
+                  const name =
+                    student?.name ||
+                    student?.studentName ||
+                    'Student';
+
+                  const grade =
+                    getStudentGradeValue(student) ||
+                    '—';
+
+                  const studentSection =
+                    normalizeSectionName(
+                      getStudentSectionValue(student)
+                    ) || 'Not assigned';
+
+                  return (
+                    <View
+                      key={`teacher-leaderboard-${
+                        getStudentStableId(student)
+                      }-${rank}`}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 12,
+                        paddingHorizontal: 12,
+                        marginBottom: 8,
+                        borderRadius: 14,
+                        backgroundColor:
+                          rank <= 3 ? '#FFFBEB' : '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor:
+                          rank <= 3 ? '#FDE68A' : '#E2E8F0',
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: 14,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                          backgroundColor:
+                            rank <= 3 ? '#FEF3C7' : '#E2E8F0',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: rank <= 3 ? 22 : 15,
+                            fontWeight: '900',
+                            color: '#334155',
+                          }}
+                        >
+                          {medal}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.rowTitle}>
+                          {name}
+                        </Text>
+
+                        <Text style={styles.muted}>
+                          Grade {grade} • {studentSection}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={{
+                          alignItems: 'flex-end',
+                          paddingLeft: 10,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: '#16A34A',
+                            fontSize: 17,
+                            fontWeight: '900',
+                          }}
+                        >
+                          {Number(student?.xp || 0)}
+                        </Text>
+
+                        <Text
+                          style={{
+                            color: '#64748B',
+                            fontSize: 11,
+                            fontWeight: '800',
+                          }}
+                        >
+                          XP
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                }
+              )}
+            </View>
+          ) : (
+            <View
+              style={{
+                marginTop: 12,
+                padding: 18,
+                borderRadius: 14,
+                alignItems: 'center',
+                backgroundColor: '#F8FAFC',
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+              }}
+            >
+              <Text style={{ fontSize: 28, marginBottom: 6 }}>
+                🏆
+              </Text>
+
+              <Text style={styles.rowTitle}>
+                No students to rank yet
+              </Text>
+
+              <Text
+                style={[
+                  styles.muted,
+                  {
+                    textAlign: 'center',
+                    marginTop: 4,
+                  },
+                ]}
+              >
+                Assigned students will appear here once their
+                records are available.
               </Text>
             </View>
           )}
@@ -3800,7 +4148,13 @@ async function handleLogout() {
           <Field
             label="Group Name"
             value={groupForm.name}
-            onChangeText={(name) => setGroupForm((current) => ({ ...current, name }))}
+            maxLength={20}
+            onChangeText={(name) =>
+              setGroupForm((current) => ({
+                ...current,
+                name: String(name || '').slice(0, 20),
+              }))
+            }
             placeholder="Group name"
           />
 

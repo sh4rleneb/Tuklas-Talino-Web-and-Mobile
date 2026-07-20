@@ -1440,12 +1440,32 @@ router.post('/:id/archive', requireRole('admin'), async (req, res, next) => {
     student.status = 'archived';
     await student.save();
     if (student.User) { student.User.status = 'archived'; await student.User.save(); }
+    const studentEntityName = [
+      student.firstName || student.User?.firstName,
+      student.middleName || student.User?.middleName,
+      student.lastName || student.User?.lastName
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+      student.fullName ||
+      student.name ||
+      student.User?.fullName ||
+      student.User?.name ||
+      student.User?.username ||
+      `Student #${student.id}`;
+
     await audit(
       req.user.id,
       'student.archive',
       'student',
       student.id,
-      { reason }
+      {
+        reason,
+        entityName: studentEntityName,
+        studentName: studentEntityName,
+        status: 'deactivated'
+      }
     );
     res.json({ student });
   } catch (err) { next(err); }
@@ -1467,12 +1487,32 @@ router.post('/:id/reactivate', requireRole('admin'), async (req, res, next) => {
     student.status = 'active';
     await student.save();
     if (student.User) { student.User.status = 'active'; await student.User.save(); }
+    const studentEntityName = [
+      student.firstName || student.User?.firstName,
+      student.middleName || student.User?.middleName,
+      student.lastName || student.User?.lastName
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+      student.fullName ||
+      student.name ||
+      student.User?.fullName ||
+      student.User?.name ||
+      student.User?.username ||
+      `Student #${student.id}`;
+
     await audit(
       req.user.id,
       'student.reactivate',
       'student',
       student.id,
-      { reason }
+      {
+        reason,
+        entityName: studentEntityName,
+        studentName: studentEntityName,
+        status: 'reactivated'
+      }
     );
     res.json({ student });
   } catch (err) { next(err); }

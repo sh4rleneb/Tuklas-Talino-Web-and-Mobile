@@ -46,6 +46,181 @@ export default function AdminDashboard({
   const [tchAdminPassword, setTchAdminPassword] = useState('');
 
   // Validation helpers (mirrors mobile accountValidation.js)
+
+  // WEB_LOGIN_SECURITY_HELPERS_V1
+  function loginSecurityForEntity(entity = {}) {
+    const user =
+      entity?.User ||
+      entity?.user ||
+      entity?.account ||
+      {};
+
+    const suppliedSecurity =
+      user?.loginSecurity ||
+      entity?.loginSecurity ||
+      user?.login_security ||
+      entity?.login_security ||
+      {};
+
+    const failedLoginAttempts = Number(
+      suppliedSecurity.failedLoginAttempts ??
+      suppliedSecurity.failed_login_attempts ??
+      user?.failedLoginAttempts ??
+      user?.failed_login_attempts ??
+      entity?.failedLoginAttempts ??
+      entity?.failed_login_attempts ??
+      0
+    );
+
+    const totalFailedLoginAttempts = Number(
+      suppliedSecurity.totalFailedLoginAttempts ??
+      suppliedSecurity.total_failed_login_attempts ??
+      user?.totalFailedLoginAttempts ??
+      user?.total_failed_login_attempts ??
+      entity?.totalFailedLoginAttempts ??
+      entity?.total_failed_login_attempts ??
+      0
+    );
+
+    const lockedUntil =
+      suppliedSecurity.lockedUntil ??
+      suppliedSecurity.locked_until ??
+      user?.lockedUntil ??
+      user?.locked_until ??
+      entity?.lockedUntil ??
+      entity?.locked_until ??
+      null;
+
+    const explicitlyLocked = Boolean(
+      suppliedSecurity.locked ??
+      suppliedSecurity.isLocked ??
+      suppliedSecurity.is_locked ??
+      user?.locked ??
+      user?.isLocked ??
+      user?.is_locked ??
+      entity?.locked ??
+      entity?.isLocked ??
+      entity?.is_locked ??
+      false
+    );
+
+    const lockedUntilDate = lockedUntil
+      ? new Date(lockedUntil)
+      : null;
+
+    const hasValidLockDate =
+      lockedUntilDate &&
+      !Number.isNaN(lockedUntilDate.getTime());
+
+    const locked =
+      explicitlyLocked ||
+      Boolean(
+        hasValidLockDate &&
+        lockedUntilDate.getTime() > Date.now()
+      );
+
+    const remainingAttempts = Math.max(
+      0,
+      10 - totalFailedLoginAttempts
+    );
+
+    return {
+      failedLoginAttempts: Number.isFinite(failedLoginAttempts)
+        ? failedLoginAttempts
+        : 0,
+      totalFailedLoginAttempts: Number.isFinite(totalFailedLoginAttempts)
+        ? totalFailedLoginAttempts
+        : 0,
+      remainingAttempts,
+      locked,
+      lockedUntil: hasValidLockDate
+        ? lockedUntilDate
+        : null,
+    };
+  }
+
+  function loginSecurityLockText(security) {
+    if (!security.locked) {
+      if (security.failedLoginAttempts > 0) {
+        return 'Warning — failed login attempts detected';
+      }
+
+      return 'Account login is secure';
+    }
+
+    if (security.lockedUntil) {
+      return `Locked until ${security.lockedUntil.toLocaleString()}`;
+    }
+
+    return 'Account is locked';
+  }
+
+  function renderLoginSecurityControl(entity, label = 'account') {
+    const security = loginSecurityForEntity(entity);
+
+    return (
+      <div
+        className={`web-login-security-card ${
+          security.locked
+            ? 'is-locked'
+            : security.failedLoginAttempts > 0
+              ? 'has-warning'
+              : 'is-secure'
+        }`}
+        aria-label={`Login security for ${label}`}
+      >
+        <div className="web-login-security-heading">
+          <strong>🔐 Login Security</strong>
+
+          <span
+            className={`web-login-security-status ${
+              security.locked
+                ? 'locked'
+                : security.failedLoginAttempts > 0
+                  ? 'warning'
+                  : 'secure'
+            }`}
+          >
+            {security.locked
+              ? 'Locked'
+              : security.failedLoginAttempts > 0
+                ? 'Warning'
+                : 'Secure'}
+          </span>
+        </div>
+
+        <p className="web-login-security-message">
+          {loginSecurityLockText(security)}
+        </p>
+
+        <div className="web-login-security-stats">
+          <div>
+            <span>Current cycle failures</span>
+            <strong>{security.failedLoginAttempts}</strong>
+          </div>
+
+          <div>
+            <span>Total failed logins</span>
+            <strong>{security.totalFailedLoginAttempts}/10</strong>
+          </div>
+
+          <div>
+            <span>Remaining attempts</span>
+            <strong>{security.remainingAttempts}</strong>
+          </div>
+        </div>
+
+        {security.locked && (
+          <p className="web-login-security-help">
+            Resetting the account password will provide the user with a
+            temporary PIN. Use the existing Reset Password action after
+            verifying the administrator request.
+          </p>
+        )}
+      </div>
+    );
+  }
+
   function normalizeSpaces(v = '') {
     return String(v).replace(/\s+/g, ' ').trim();
   }
@@ -379,12 +554,50 @@ export default function AdminDashboard({
     };
   }
 
-  function auditEntityLabel(log) {
-    const entity = String(log.entityType || 'record')
+  function auditAccountLabel(log) {
+    const metadata = log.metadata || {};
+    const entityId = Number(log.entityId || 0);
+
+    const savedName = String(
+      metadata.entityName ||
+      metadata.studentName ||
+      metadata.teacherName ||
+      metadata.accountName ||
+      metadata.userName ||
+      ''
+    ).trim();
+
+    const matchedProfile = auditActorProfiles.find(profile =>
+      Number(profile.userId) === entityId
+    );
+
+    const accountName = savedName || matchedProfile?.name || '';
+
+    const rawRole =
+      matchedProfile?.roleLabel ||
+      metadata.role ||
+      metadata.accountRole ||
+      (
+        String(log.entityType || '').toLowerCase() === 'student'
+          ? 'Student'
+          : String(log.entityType || '').toLowerCase() === 'teacher'
+            ? 'Teacher'
+            : ''
+      );
+
+    const roleLabel = String(rawRole || '')
       .replace(/[._-]+/g, ' ')
       .replace(/\b\w/g, char => char.toUpperCase());
 
-    return `${entity} #${log.entityId || '—'}`;
+    if (accountName) {
+      return roleLabel
+        ? `${accountName} (${roleLabel})`
+        : accountName;
+    }
+
+    return entityId
+      ? `Account #${entityId}`
+      : 'Account unavailable';
   }
 
   function auditDetails(log) {
@@ -392,14 +605,56 @@ export default function AdminDashboard({
     const details = [];
 
     if (log.action === 'student.promote') {
-      details.push(`${metadata.studentName || 'Student'}${metadata.studentCode ? ` (${metadata.studentCode})` : ''}`);
       if (metadata.oldGrade || metadata.newGrade) {
-        details.push(`Grade ${metadata.oldGrade || '—'} → Grade ${metadata.newGrade || '—'}`);
+        details.push(
+          `Grade level changed from Grade ${metadata.oldGrade || '—'} to Grade ${metadata.newGrade || '—'}`
+        );
       }
-      if (metadata.section) details.push(`Section ${metadata.section}`);
+
+      if (
+        metadata.previousSection &&
+        metadata.section &&
+        String(metadata.previousSection).toLowerCase() !==
+          String(metadata.section).toLowerCase()
+      ) {
+        details.push(
+          `Section changed from ${metadata.previousSection} to ${metadata.section}`
+        );
+      } else if (metadata.section) {
+        details.push(`Section: ${metadata.section}`);
+      }
     }
 
-    if (metadata.status) details.push(`Status: ${metadata.status}`);
+    if (
+      log.action === 'student.enrollment.update' ||
+      log.action === 'student.section.update'
+    ) {
+      if (
+        metadata.previousSection &&
+        metadata.section &&
+        String(metadata.previousSection).toLowerCase() !==
+          String(metadata.section).toLowerCase()
+      ) {
+        details.push(
+          `Section changed from ${metadata.previousSection} to ${metadata.section}`
+        );
+      } else if (metadata.section) {
+        details.push(`Section: ${metadata.section}`);
+      }
+
+      if (metadata.gradeLevel) {
+        details.push(`Grade level: Grade ${metadata.gradeLevel}`);
+      }
+    }
+
+    if (metadata.status) {
+      const displayedStatus =
+        String(metadata.status).toLowerCase() === 'archived'
+          ? 'deactivated'
+          : metadata.status;
+
+      details.push(`Status: ${displayedStatus}`);
+    }
     if (metadata.reason) details.push(`Reason: ${metadata.reason}`);
     if (metadata.score !== undefined && metadata.score !== null) details.push(`Score: ${metadata.score}`);
     if (metadata.reviewStatus) details.push(`Review: ${metadata.reviewStatus}`);
@@ -444,10 +699,11 @@ const filteredLogs = logs.filter(log => {
       auditActionLabel(log.action),
       log.entityType,
       log.entityId,
+      auditAccountLabel(log),
       actor.name,
       actor.username,
       actor.roleLabel,
-      auditEntityLabel(log),
+      auditAccountLabel(log),
       auditDetails(log),
     ]
       .filter(Boolean)
@@ -592,11 +848,27 @@ const filteredLogs = logs.filter(log => {
   }
 
   function enrollmentDraftForStudent(student = {}) {
-    const existing = studentEnrollmentDrafts[student.id];
+    const existing =
+      studentEnrollmentDrafts[student.id] || {};
 
-    return existing || {
-      gradeLevel: String(student.gradeLevel || student.grade || '1'),
-      section: normalizeSpaces(student.section || student.sectionName || student.classSection || ''),
+    return {
+      gradeLevel: String(
+        existing.gradeLevel ??
+        student.gradeLevel ??
+        student.grade_level ??
+        student.grade ??
+        '1'
+      ),
+      section:
+        existing.section !== undefined
+          ? normalizeSpaces(existing.section)
+          : normalizeSpaces(
+              student.section ||
+              student.sectionName ||
+              student.classSection ||
+              ''
+            ),
+      ...existing,
     };
   }
 
@@ -614,13 +886,44 @@ const filteredLogs = logs.filter(log => {
     if (!updateStudentEnrollment) return;
 
     const draft = enrollmentDraftForStudent(student);
+    const gradeLevel = Number(draft.gradeLevel);
+    const section = normalizeSpaces(draft.section);
+
     setSavingEnrollmentId(student.id);
 
     try {
-      await updateStudentEnrollment(student.id, {
-        gradeLevel: Number(draft.gradeLevel),
-        section: normalizeSpaces(draft.section),
-      });
+      const data = await updateStudentEnrollment(
+        student.id,
+        {
+          gradeLevel,
+          section,
+        }
+      );
+
+      const savedStudent = data?.student || {
+        ...student,
+        gradeLevel,
+        section,
+      };
+
+      setStudents(current =>
+        current.map(item =>
+          String(item.id) === String(student.id)
+            ? {
+                ...item,
+                ...savedStudent,
+                gradeLevel: Number(
+                  savedStudent.gradeLevel ??
+                  savedStudent.grade_level ??
+                  gradeLevel
+                ),
+                section: normalizeSpaces(
+                  savedStudent.section || section
+                ),
+              }
+            : item
+        )
+      );
 
       setStudentEnrollmentDrafts(current => {
         const next = { ...current };
@@ -1397,6 +1700,12 @@ function teacherNameForAssignment(assignment) {
 
                         <span className="admin-clean-actions">
 
+                          {/* WEB_STUDENT_LOGIN_SECURITY_V1 */}
+                          {renderLoginSecurityControl(
+                            s,
+                            s.name || 'student account'
+                          )}
+
                           <button
                             className="btn btn-outline btn-sm"
                             onClick={() =>
@@ -1466,6 +1775,12 @@ function teacherNameForAssignment(assignment) {
                           </div>
                           <span className="lms-mini-pill">Teacher</span>
                         </div>
+
+                        {/* WEB_TEACHER_LOGIN_SECURITY_V1 */}
+                        {renderLoginSecurityControl(
+                          t,
+                          t.name || 'teacher account'
+                        )}
 
                         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
 
@@ -1757,6 +2072,10 @@ function teacherNameForAssignment(assignment) {
                           <small>{log.action}</small>
                         </span>
 
+                        <span>
+                          <strong>{auditAccountLabel(log)}</strong>
+                          <small>Account</small>
+                        </span>
 
                         <span>
                           <small>{auditDetails(log)}</small>

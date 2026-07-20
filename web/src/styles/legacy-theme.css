@@ -2881,3 +2881,463 @@ body[data-role="student"][data-grade-band="grade46"] #student-standard-sections{
   background: rgba(15, 23, 42, 0.18);
   border-radius: 999px;
 }
+
+/* TEACHER LOGIN BLUE RIGHT PANEL START */
+
+/* Teacher login heading */
+.teacher-form-panel .login-form-heading h1,
+.teacher-form-panel .login-form-heading h2,
+.teacher-form-panel .login-form-heading h3,
+.teacher-form-panel .login-form-heading h4 {
+    color: #2f80ed !important;
+}
+
+/* Teacher login field labels and icons */
+.teacher-form-panel .login-label,
+.teacher-form-panel .login-label svg,
+.teacher-form-panel .input-with-icon > span,
+.teacher-form-panel .input-with-icon > svg,
+.teacher-form-panel .password-eye-btn,
+.teacher-form-panel .password-eye-btn svg {
+    color: #2f80ed !important;
+    stroke: #2f80ed !important;
+}
+
+/* Teacher login input borders */
+.teacher-form-panel .input-field,
+.teacher-form-panel .input-with-icon {
+    border-color: #63a9f5 !important;
+}
+
+/* Blue border while typing */
+.teacher-form-panel .input-field:focus,
+.teacher-form-panel .input-with-icon:focus-within {
+    border-color: #2f80ed !important;
+    box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.14) !important;
+    outline: none !important;
+}
+
+/* Teacher login button */
+.teacher-form-panel .login-main-btn {
+    background: linear-gradient(
+        135deg,
+        #2f80ed 0%,
+        #1f75df 100%
+    ) !important;
+
+    border-color: #2f80ed !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px rgba(47, 128, 237, 0.24) !important;
+}
+
+/* Teacher login button hover */
+.teacher-form-panel .login-main-btn:hover:not(:disabled) {
+    background: linear-gradient(
+        135deg,
+        #2877de 0%,
+        #1768ca 100%
+    ) !important;
+
+    border-color: #2877de !important;
+}
+
+/* Teacher login button pressed */
+.teacher-form-panel .login-main-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+/* TEACHER LOGIN BLUE RIGHT PANEL END */
+
+/* TEACHER LOGIN TITLE BLUE START */
+.teacher-login-blue-title {
+    color: #2f80ed !important;
+}
+/* TEACHER LOGIN TITLE BLUE END */
+
+/* TEACHER LOGIN REMAINING BLUE START */
+
+/* Header: Teacher Login */
+.login-teacher-nav .logo,
+.teacher-login-nav .logo,
+body:has(.teacher-form-panel) .login-top-nav .logo {
+    color: #2f80ed !important;
+}
+
+/* Header: Home button */
+.login-teacher-nav .btn-outline,
+.teacher-login-nav .btn-outline,
+body:has(.teacher-form-panel) .login-top-nav .btn-outline {
+    color: #2f80ed !important;
+    border-color: #2f80ed !important;
+    background: #ffffff !important;
+}
+
+.login-teacher-nav .btn-outline:hover,
+.teacher-login-nav .btn-outline:hover,
+body:has(.teacher-form-panel) .login-top-nav .btn-outline:hover {
+    color: #ffffff !important;
+    border-color: #2f80ed !important;
+    background: #2f80ed !important;
+}
+
+/* Header: Salamat sa dedikasyon, Guro! */
+.login-teacher-nav .login-nav-pill,
+.teacher-login-nav .login-nav-pill,
+body:has(.teacher-form-panel) .login-top-nav .login-nav-pill {
+    color: #2478df !important;
+    background: #eef6ff !important;
+    box-shadow: 0 8px 24px rgba(47, 128, 237, 0.12) !important;
+}
+
+/* Left panel: Inspire Educate Empower */
+.teacher-stage .teacher-visual-card > h1,
+.teacher-stage .teacher-visual-card > h2,
+.teacher-stage .teacher-visual-card > h3,
+.teacher-stage .login-visual-card > h1,
+.teacher-stage .login-visual-card > h2,
+.teacher-stage .login-visual-card > h3,
+.teacher-stage .visual-title,
+.teacher-stage .teacher-visual-title,
+.teacher-stage .teacher-slogan {
+    color: #2f80ed !important;
+}
+
+/* Also change nested spans inside the slogan */
+.teacher-stage .teacher-visual-card > h1 *,
+.teacher-stage .teacher-visual-card > h2 *,
+.teacher-stage .teacher-visual-card > h3 *,
+.teacher-stage .login-visual-card > h1 *,
+.teacher-stage .login-visual-card > h2 *,
+.teacher-stage .login-visual-card > h3 *,
+.teacher-stage .visual-title *,
+.teacher-stage .teacher-visual-title *,
+.teacher-stage .teacher-slogan * {
+    color: #2f80ed !important;
+}
+
+/* TEACHER LOGIN REMAINING BLUE END */
+
+/* ADMIN LOGIN PURPLE THEME START */
+
+/* Admin header title */
+.login-admin-nav .logo,
+.admin-login-nav .logo,
+body:has(.admin-form-panel) .login-top-nav .logo {
+    color: #6f35d7 !important;
+}
+
+/* Admin Home button */
+.login-admin-nav .btn-outline,
+.admin-login-nav .btn-outline,
+body:has(.admin-form-panel) .login-top-nav .btn-outline {
+    color: #6f35d7 !important;
+    border-color: #6f35d7 !important;
+    background: #ffffff !important;
+}
+
+.login-admin-nav .btn-outline:hover,
+.admin-login-nav .btn-outline:hover,
+body:has(.admin-form-panel) .login-top-nav .btn-outline:hover {
+    color: #ffffff !important;
+    border-color: #6f35d7 !important;
+    background: #6f35d7 !important;
+}
+
+/* Admin security pill */
+.login-admin-nav .login-nav-pill,
+.admin-login-nav .login-nav-pill,
+body:has(.admin-form-panel) .login-top-nav .login-nav-pill {
+    color: #6f35d7 !important;
+    background: #f4efff !important;
+    box-shadow: 0 8px 24px rgba(111, 53, 215, 0.14) !important;
+}
+
+/* Admin form headings */
+.admin-form-panel .login-form-heading h1,
+.admin-form-panel .login-form-heading h2,
+.admin-form-panel .login-form-heading h3,
+.admin-form-panel > h1,
+.admin-form-panel > h2,
+.admin-form-panel > h3 {
+    color: #6f35d7 !important;
+}
+
+/* Admin labels and icons */
+.admin-form-panel .login-label,
+.admin-form-panel .login-label svg,
+.admin-form-panel .input-with-icon > span,
+.admin-form-panel .input-with-icon > svg,
+.admin-form-panel .password-eye-btn,
+.admin-form-panel .password-eye-btn svg {
+    color: #6f35d7 !important;
+    stroke: #6f35d7 !important;
+}
+
+/* Admin input borders */
+.admin-form-panel .input-field,
+.admin-form-panel .input-with-icon {
+    border-color: #aa83e8 !important;
+}
+
+/* Admin focused inputs */
+.admin-form-panel .input-field:focus,
+.admin-form-panel .input-with-icon:focus-within {
+    border-color: #6f35d7 !important;
+    box-shadow: 0 0 0 3px rgba(111, 53, 215, 0.14) !important;
+    outline: none !important;
+}
+
+/* Admin login button */
+.admin-form-panel .login-main-btn {
+    background: linear-gradient(
+        135deg,
+        #7138dc 0%,
+        #9854bd 100%
+    ) !important;
+    border-color: #7138dc !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px rgba(111, 53, 215, 0.24) !important;
+}
+
+.admin-form-panel .login-main-btn:hover:not(:disabled) {
+    background: linear-gradient(
+        135deg,
+        #6330c7 0%,
+        #8847ad 100%
+    ) !important;
+}
+
+/* Admin decorative line and shield badge */
+.admin-form-panel .heading-badge,
+.admin-form-panel .admin-login-icon,
+.admin-form-panel .admin-shield,
+.admin-form-panel .title-underline {
+    color: #6f35d7 !important;
+    border-color: #6f35d7 !important;
+}
+
+/* Left-side admin heading */
+.admin-stage .login-visual-card h1,
+.admin-stage .login-visual-card h2,
+.admin-stage .login-visual-card h3,
+.admin-stage .admin-visual-card h1,
+.admin-stage .admin-visual-card h2,
+.admin-stage .admin-visual-card h3 {
+    color: #6f35d7 !important;
+}
+
+/* ADMIN LOGIN PURPLE THEME END */
+
+/* SEPARATE ROLE LOGIN NAVIGATION START */
+
+/*
+ * Each login navigation now uses its own role class.
+ * Generic login navigation rules must not determine role colors.
+ */
+
+/* =========================
+   STUDENT NAVIGATION — GREEN
+   ========================= */
+
+.top-nav.login-top-nav.login-student-nav .logo {
+    color: #16A34A !important;
+}
+
+.top-nav.login-top-nav.login-student-nav .btn-outline {
+    color: #16A34A !important;
+    border-color: #16A34A !important;
+    background: #FFFFFF !important;
+}
+
+.top-nav.login-top-nav.login-student-nav .btn-outline:hover {
+    color: #FFFFFF !important;
+    border-color: #16A34A !important;
+    background: #16A34A !important;
+}
+
+.top-nav.login-top-nav.login-student-nav .login-nav-pill {
+    color: #16A34A !important;
+    background: #ECFDF5 !important;
+    border-color: #BBF7D0 !important;
+    box-shadow: 0 8px 24px rgba(22, 163, 74, 0.12) !important;
+}
+
+
+/* ========================
+   TEACHER NAVIGATION — BLUE
+   ======================== */
+
+.top-nav.login-top-nav.login-teacher-nav .logo {
+    color: #2F80ED !important;
+}
+
+.top-nav.login-top-nav.login-teacher-nav .btn-outline {
+    color: #2F80ED !important;
+    border-color: #2F80ED !important;
+    background: #FFFFFF !important;
+}
+
+.top-nav.login-top-nav.login-teacher-nav .btn-outline:hover {
+    color: #FFFFFF !important;
+    border-color: #2F80ED !important;
+    background: #2F80ED !important;
+}
+
+.top-nav.login-top-nav.login-teacher-nav .login-nav-pill {
+    color: #2F80ED !important;
+    background: #EEF6FF !important;
+    border-color: #BFDBFE !important;
+    box-shadow: 0 8px 24px rgba(47, 128, 237, 0.12) !important;
+}
+
+
+/* ========================
+   ADMIN NAVIGATION — PURPLE
+   ======================== */
+
+.top-nav.login-top-nav.login-admin-nav .logo {
+    color: #6F35D7 !important;
+}
+
+.top-nav.login-top-nav.login-admin-nav .btn-outline {
+    color: #6F35D7 !important;
+    border-color: #6F35D7 !important;
+    background: #FFFFFF !important;
+}
+
+.top-nav.login-top-nav.login-admin-nav .btn-outline:hover {
+    color: #FFFFFF !important;
+    border-color: #6F35D7 !important;
+    background: #6F35D7 !important;
+}
+
+.top-nav.login-top-nav.login-admin-nav .login-nav-pill {
+    color: #6F35D7 !important;
+    background: #F4EFFF !important;
+    border-color: #DDD0FA !important;
+    box-shadow: 0 8px 24px rgba(111, 53, 215, 0.12) !important;
+}
+
+/* SEPARATE ROLE LOGIN NAVIGATION END */
+
+/* WEB_LOGIN_SECURITY_STYLES_V1 */
+.web-login-security-card {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  margin: 10px 0;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  background: #f9fafb;
+  box-sizing: border-box;
+}
+
+.web-login-security-card.is-secure {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.web-login-security-card.has-warning {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.web-login-security-card.is-locked {
+  border-color: #f59e0b;
+  background: #fff7ed;
+}
+
+.web-login-security-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #6f35d7;
+}
+
+.web-login-security-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.web-login-security-status.secure {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.web-login-security-status.warning {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.web-login-security-status.locked {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.web-login-security-message,
+.web-login-security-help {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.web-login-security-message {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.web-login-security-help {
+  color: #92400e;
+  font-size: 12px;
+}
+
+.web-login-security-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.web-login-security-stats > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(111, 53, 215, 0.15);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.web-login-security-stats span {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.web-login-security-stats strong {
+  color: #6f35d7;
+  font-size: 15px;
+}
+
+.admin-clean-actions .web-login-security-card {
+  flex-basis: 100%;
+}
+
+@media (max-width: 760px) {
+  .web-login-security-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .web-login-security-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
