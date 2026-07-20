@@ -2604,23 +2604,93 @@ async function handleLogout() {
   function renderDashboard() {
     return (
       <>
-        <View style={styles.statsGrid}>
+        <View style={styles.teacherParityMetricsGrid}>
           {[
-            ['📗', stats.publishedLessons ?? stats.lessons ?? 0, 'Published Lessons'],
-            ['🎓', stats.students ?? 0, 'Students'],
-            ['📈', `${stats.classProgress ?? 0}%`, 'Class Progress'],
-            ['📝', stats.draftLessons ?? 0, 'Draft Lessons'],
-          ].map(([icon, value, label], teacherKeyIndex) => (
-            <SectionCard key={String((label) || 'teacher-map-2491') + '-' + teacherKeyIndex} style={styles.statCard}>
-              <Text style={styles.statIcon}>{icon}</Text>
-              <Text style={styles.statValue}>{value}</Text>
-              <Text style={styles.muted}>{label}</Text>
-            </SectionCard>
+            {
+              icon: '📗',
+              value:
+                stats.publishedLessons ??
+                stats.lessons ??
+                lessons.filter(
+                  lesson =>
+                    String(lesson?.status || 'published').toLowerCase() ===
+                    'published'
+                ).length,
+              label: 'Published Lessons',
+              description: 'Available to learners',
+              destination: 'lessons',
+            },
+            {
+              icon: '📝',
+              value:
+                stats.draftLessons ??
+                lessons.filter(
+                  lesson =>
+                    String(lesson?.status || '').toLowerCase() ===
+                    'draft'
+                ).length,
+              label: 'Draft Lessons',
+              description: 'Waiting to be published',
+              destination: 'lessons',
+            },
+            {
+              icon: '🎓',
+              value:
+                stats.students ??
+                currentStudents.length ??
+                0,
+              label: 'Students',
+              description: 'Assigned learners',
+              destination: 'students',
+            },
+            {
+              icon: '📈',
+              value: `${stats.classProgress ?? 0}%`,
+              label: 'Class Progress',
+              description: 'Average completion',
+              destination: 'students',
+            },
+          ].map((metric, teacherKeyIndex) => (
+            <TouchableOpacity
+              key={`${metric.label}-${teacherKeyIndex}`}
+              activeOpacity={0.84}
+              style={styles.teacherParityMetricCard}
+              onPress={() => setSection(metric.destination)}
+            >
+              <View style={styles.teacherParityMetricTopRow}>
+                <View style={styles.teacherParityMetricIcon}>
+                  <Text style={styles.teacherParityMetricEmoji}>
+                    {metric.icon}
+                  </Text>
+                </View>
+
+                <Text style={styles.teacherParityMetricArrow}>
+                  →
+                </Text>
+              </View>
+
+              <Text style={styles.teacherParityMetricValue}>
+                {metric.value}
+              </Text>
+
+              <Text style={styles.teacherParityMetricLabel}>
+                {metric.label}
+              </Text>
+
+              <Text style={styles.teacherParityMetricDescription}>
+                {metric.description}
+              </Text>
+            </TouchableOpacity>
           ))}
         </View>
 
         {/* TEACHER_ASSIGNED_CLASSES_UI_V1 */}
-        <SectionCard style={styles.assignedClassesCard}>
+        <SectionCard
+          style={[
+            styles.assignedClassesCard,
+            styles.teacherParityDashboardCard,
+          ]}
+        >
           <View style={styles.assignedClassesHeader}>
             <View style={styles.assignedClassesHeaderCopy}>
               <View style={styles.assignedClassesTitleRow}>
@@ -2742,7 +2812,7 @@ async function handleLogout() {
           )}
         </SectionCard>
 
-        <SectionCard>
+        <SectionCard style={styles.teacherParityDashboardCard}>
           <View
             style={{
               flexDirection: 'row',
@@ -3001,8 +3071,24 @@ async function handleLogout() {
           )}
         </SectionCard>
 
-        <SectionCard>
-          <Text style={styles.cardTitle}>Pending Group Checks</Text>
+        <SectionCard style={styles.teacherParityDashboardCard}>
+          <View style={styles.teacherParitySectionHeading}>
+            <View style={styles.teacherParitySectionIcon}>
+              <Text style={styles.teacherParitySectionEmoji}>
+                ✅
+              </Text>
+            </View>
+
+            <View style={styles.flex}>
+              <Text style={styles.cardTitle}>
+                Pending Group Checks
+              </Text>
+
+              <Text style={styles.muted}>
+                Review collaborative tasks submitted by your students.
+              </Text>
+            </View>
+          </View>
           {(pendingChecks.rows || []).slice(0, 4).map((row, teacherKeyIndex) => {
             const actionId = getPendingGroupCheckActionKey(row);
 
@@ -7596,28 +7682,68 @@ async function handleLogout() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
+          <View style={styles.teacherParityHeader}>
             <View style={styles.flex}>
-              <Text style={styles.title}>Teacher Workspace</Text>
-              <Text style={styles.subtitle}>Manage lessons, groups, assessments, and reports.</Text>
-            </View>
-            <SmallButton tone="red" onPress={confirmLogout}>Logout</SmallButton>
-          </View>
-
-          <View style={styles.workspaceHero}>
-            <View style={styles.workspaceHeroIcon}>
-              <Text style={styles.workspaceHeroEmoji}>📚</Text>
-            </View>
-
-            <View style={styles.workspaceHeroCopy}>
-              <Text style={styles.workspaceHeroKicker}>TEACHING HUB</Text>
-              <Text style={styles.workspaceHeroTitle}>
-                Guide lessons, groups, and learner progress safely.
+              <Text style={styles.teacherParityPageTitle}>
+                Teacher Dashboard
               </Text>
 
-              <View style={styles.workspaceHeroChips}>
-                <Text style={styles.workspaceHeroChip}>✨ Lessons</Text>
-                <Text style={styles.workspaceHeroChip}>✅ Checks</Text>
+              <Text style={styles.teacherParityPageSubtitle}>
+                Manage lessons, monitor learners, and review classroom progress.
+              </Text>
+            </View>
+
+            <SmallButton tone="red" onPress={confirmLogout}>
+              Logout
+            </SmallButton>
+          </View>
+
+          <View style={styles.teacherParityHero}>
+            <View style={styles.teacherParityHeroDecorationOne} />
+            <View style={styles.teacherParityHeroDecorationTwo} />
+
+            <View style={styles.teacherParityHeroContent}>
+              <View style={styles.teacherParityHeroIcon}>
+                <Text style={styles.teacherParityHeroEmoji}>
+                  👩‍🏫
+                </Text>
+              </View>
+
+              <View style={styles.teacherParityHeroCopy}>
+                <Text style={styles.teacherParityHeroKicker}>
+                  TEACHER DASHBOARD
+                </Text>
+
+                <Text style={styles.teacherParityHeroTitle}>
+                  Welcome back, Teacher!
+                </Text>
+
+                <Text style={styles.teacherParityHeroDescription}>
+                  Create meaningful lessons, organize your classes,
+                  and monitor each learner's progress in one place.
+                </Text>
+
+                <View style={styles.teacherParityHeroChips}>
+                  <TouchableOpacity
+                    activeOpacity={0.82}
+                    style={styles.teacherParityHeroChip}
+                    onPress={() => setSection('lessons')}
+                  >
+                    <Text style={styles.teacherParityHeroChipText}>
+                      📚 Manage Lessons
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.82}
+                    style={styles.teacherParityHeroChip}
+                    onPress={() => setSection('students')}
+                  >
+                    <Text style={styles.teacherParityHeroChipText}>
+                      🎓 View Students
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
@@ -9808,4 +9934,236 @@ const styles = StyleSheet.create({
   disabledAction: {
     opacity: 0.55,
   },
+
+  // TEACHER_WEB_MOBILE_DASHBOARD_PARITY_V1
+  teacherParityHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+    marginBottom: 16,
+  },
+  teacherParityPageTitle: {
+    color: '#0F172A',
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  teacherParityPageSubtitle: {
+    color: '#64748B',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  teacherParityHero: {
+    position: 'relative',
+    overflow: 'hidden',
+    width: '100%',
+    marginBottom: 18,
+    borderRadius: 24,
+    padding: 22,
+    backgroundColor: '#15803D',
+    borderWidth: 1,
+    borderColor: '#16A34A',
+    shadowColor: '#14532D',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 5,
+  },
+  teacherParityHeroDecorationOne: {
+    position: 'absolute',
+    width: 170,
+    height: 170,
+    borderRadius: 999,
+    top: -90,
+    right: -55,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  teacherParityHeroDecorationTwo: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 999,
+    bottom: -65,
+    left: -30,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  teacherParityHeroContent: {
+    position: 'relative',
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  teacherParityHeroIcon: {
+    width: 62,
+    height: 62,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.72)',
+  },
+  teacherParityHeroEmoji: {
+    fontSize: 31,
+  },
+  teacherParityHeroCopy: {
+    flex: 1,
+  },
+  teacherParityHeroKicker: {
+    color: '#DCFCE7',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '900',
+    letterSpacing: 1.4,
+  },
+  teacherParityHeroTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '900',
+    letterSpacing: -0.35,
+    marginTop: 4,
+  },
+  teacherParityHeroDescription: {
+    color: '#ECFDF5',
+    fontSize: 14,
+    lineHeight: 21,
+    fontWeight: '600',
+    marginTop: 7,
+  },
+  teacherParityHeroChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
+    marginTop: 16,
+  },
+  teacherParityHeroChip: {
+    minHeight: 38,
+    justifyContent: 'center',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.72)',
+  },
+  teacherParityHeroChipText: {
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  teacherParityMetricsGrid: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  teacherParityMetricCard: {
+    width: '48.5%',
+    minHeight: 166,
+    marginBottom: 12,
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  teacherParityMetricTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  teacherParityMetricIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  teacherParityMetricEmoji: {
+    fontSize: 22,
+  },
+  teacherParityMetricArrow: {
+    color: '#94A3B8',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  teacherParityMetricValue: {
+    color: '#0F172A',
+    fontSize: 29,
+    lineHeight: 35,
+    fontWeight: '900',
+    marginTop: 14,
+  },
+  teacherParityMetricLabel: {
+    color: '#1E293B',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  teacherParityMetricDescription: {
+    color: '#64748B',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
+    marginTop: 3,
+  },
+  teacherParityDashboardCard: {
+    width: '100%',
+    borderRadius: 22,
+    padding: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  teacherParitySectionHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  teacherParitySectionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  teacherParitySectionEmoji: {
+    fontSize: 22,
+  },
+
 });

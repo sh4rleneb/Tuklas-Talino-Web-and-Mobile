@@ -1448,7 +1448,134 @@ if (role === 'admin') {
     });
   }
 
-  async function teacherApproveGroupTaskCompletion(row, teacherFeedback = '') {
+
+  async function teacherSearchExistingStudents(query = '') {
+    const search = String(query || '').trim();
+
+    if (search.length < 2) {
+      notify(
+        'Enter at least two letters of the student name.',
+        'warn'
+      );
+      return [];
+    }
+
+    try {
+      const data = await api(
+        `/students?status=active&q=${encodeURIComponent(search)}`
+      );
+
+      return Array.isArray(data?.students)
+        ? data.students
+        : Array.isArray(data)
+          ? data
+          : [];
+    } catch (error) {
+      notify(
+        error?.message || 'Unable to search for students.',
+        'bad'
+      );
+      return [];
+    }
+  }
+
+  async function teacherCreateSection(gradeLevel, section) {
+    const normalizedGrade = Number(gradeLevel);
+    const normalizedSection = String(section || '')
+      .normalize('NFKC')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (
+      !Number.isInteger(normalizedGrade) ||
+      normalizedGrade < 1 ||
+      normalizedGrade > 6
+    ) {
+      notify('The selected student has an invalid grade level.', 'warn');
+      return null;
+    }
+
+    if (normalizedSection.length < 2) {
+      notify(
+        'Enter a section name with at least two characters.',
+        'warn'
+      );
+      return null;
+    }
+
+    if (normalizedSection.length > 80) {
+      notify(
+        'The section name must not exceed 80 characters.',
+        'warn'
+      );
+      return null;
+    }
+
+    return await safeRun(async () => {
+      const data = await api('/students/teacher-sections', {
+        method: 'POST',
+        body: {
+          gradeLevel: normalizedGrade,
+          section: normalizedSection,
+        },
+      });
+
+      await loadTeacherDashboard();
+
+      notify(
+        data?.message ||
+        `${normalizedSection} is ready to use for Grade ${normalizedGrade}.`
+      );
+
+      return data;
+    }, 'Unable to add the new section.');
+  }
+
+  async function teacherUpdateStudentSection(
+    studentId,
+    section
+  ) {
+    const normalizedStudentId = Number(studentId);
+    const normalizedSection = String(section || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (
+      !Number.isInteger(normalizedStudentId) ||
+      normalizedStudentId <= 0
+    ) {
+      notify('Select an existing student first.', 'warn');
+      return null;
+    }
+
+    if (!normalizedSection) {
+      notify('Select a section first.', 'warn');
+      return null;
+    }
+
+    return await safeRun(async () => {
+      const data = await api(
+        `/students/${normalizedStudentId}/section`,
+        {
+          method: 'PATCH',
+          body: {
+            section: normalizedSection,
+          },
+        }
+      );
+
+      await loadTeacherDashboard();
+
+      notify(
+        `${data?.student?.name || 'Student'} is now assigned to ${normalizedSection}.`
+      );
+
+      return data;
+    }, 'Unable to update the student section.');
+  }
+
+
+async function teacherApproveGroupTaskCompletion(row, teacherFeedback = '') {
     if (!row?.groupTaskId || !row?.studentId) {
       notify('Missing group task approval details.');
       return;
@@ -4493,6 +4620,9 @@ async function archiveTeacher(id) {
           downloadBuodReport={downloadBuodReport}
           gradeWritingSubmission={teacherGradeWritingSubmission}
           reviewSpeechAttempt={teacherReviewSpeechAttempt}
+          searchExistingStudents={teacherSearchExistingStudents}
+          createTeacherSection={teacherCreateSection}
+          updateStudentSection={teacherUpdateStudentSection}
         />
       </Screen>
 

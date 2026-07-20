@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, uploadForm } from '../../api/client';
 import { SUBJECTS } from '../../constants/studentConstants';
 import { asArray, fmtDate, lessonAssessmentProfile } from '../../utils/studentHelpers';
@@ -150,6 +150,1296 @@ function TeacherEffectivenessPanel({ rows = [], lessons = [], groups = [] }) {
 
 
 
+
+function TeacherStudentAssignmentPanel({
+  data,
+  rows = [],
+  searchExistingStudents,
+  createTeacherSection,
+  updateStudentSection,
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedSection, setSelectedSection] = useState('');
+  const [newSection, setNewSection] = useState('');
+  const [showNewSection, setShowNewSection] = useState(false);
+  const [busy, setBusy] = useState('');
+
+  const rawStudents = Array.isArray(data?.students)
+    ? data.students
+    : [];
+
+  const monitoringStudentLookup = useMemo(() => {
+    const lookup = new Map();
+
+    const add = (key, student) => {
+      const normalized = String(key ?? '')
+        .trim()
+        .toLowerCase();
+
+      if (normalized) {
+        lookup.set(normalized, student);
+      }
+    };
+
+    (Array.isArray(rows) ? rows : []).forEach((student) => {
+      add(student?.id, student);
+      add(student?.studentId, student);
+      add(student?.student_id, student);
+      add(student?.studentCode, student);
+      add(student?.student_code, student);
+      add(student?.name, student);
+    });
+
+    return lookup;
+  }, [rows]);
+
+  const students = useMemo(() => {
+    return rawStudents.map((student) => {
+      const possibleKeys = [
+        student?.id,
+        student?.studentId,
+        student?.student_id,
+        student?.studentCode,
+        student?.student_code,
+        student?.name,
+      ];
+
+      let monitoringStudent = null;
+
+      for (const key of possibleKeys) {
+        const normalized = String(key ?? '')
+          .trim()
+          .toLowerCase();
+
+        if (
+          normalized &&
+          monitoringStudentLookup.has(normalized)
+        ) {
+          monitoringStudent =
+            monitoringStudentLookup.get(normalized);
+          break;
+        }
+      }
+
+      if (!monitoringStudent) {
+        return student;
+      }
+
+      return {
+        ...monitoringStudent,
+        ...student,
+        avatar:
+          student?.avatar ||
+          monitoringStudent?.avatar ||
+          '',
+      };
+    });
+  }, [rawStudents, monitoringStudentLookup]);
+
+  const assignedClasses = Array.isArray(data?.assignedClasses)
+    ? data.assignedClasses
+    : [];
+
+  function normalizeSection(value = '') {
+    return String(value || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function studentIdFor(student = {}) {
+    return (
+      student?.id ??
+      student?.studentId ??
+      student?.student_id
+    );
+  }
+
+  function studentGradeFor(student = {}) {
+    return Number(
+      student?.gradeLevel ??
+      student?.grade_level ??
+      student?.grade ??
+      0
+    );
+  }
+
+  function studentAvatarFor(student = {}) {
+    const avatar =
+      student?.avatar ??
+      student?.avatarUrl ??
+      student?.avatar_url ??
+      student?.profileImageUrl ??
+      student?.profile_image_url ??
+      student?.profilePicture ??
+      student?.profile_picture ??
+      student?.profileImage ??
+      student?.profile_image ??
+      student?.photoUrl ??
+      student?.photo_url ??
+      student?.photo ??
+      student?.image ??
+      student?.avatar ??
+      student?.user?.avatarUrl ??
+      student?.user?.profileImage ??
+      student?.User?.avatarUrl ??
+      student?.User?.profileImage ??
+      '';
+
+    return String(avatar || '').trim();
+  }
+
+  function studentAvatarIsImage(value = '') {
+    const avatar = String(value || '').trim();
+
+    return Boolean(
+      avatar &&
+      (
+        avatar.startsWith('http://') ||
+        avatar.startsWith('https://') ||
+        avatar.startsWith('/') ||
+        avatar.startsWith('data:image/') ||
+        avatar.startsWith('blob:') ||
+        avatar.includes('/uploads/') ||
+        /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(avatar)
+      )
+    );
+  }
+
+  function studentInitialFor(student = {}) {
+    return (
+      String(student?.name || 'Student')
+        .trim()
+        .charAt(0)
+        .toUpperCase() || 'S'
+    );
+  }
+
+  function renderStudentAvatar(student = {}) {
+    const avatar = studentAvatarFor(student);
+    const initial = studentInitialFor(student);
+
+    if (!avatar) {
+      return initial;
+    }
+
+    if (!studentAvatarIsImage(avatar)) {
+      return avatar;
+    }
+
+    return (
+      <img
+        src={avatar}
+        alt={`${student?.name || 'Student'} avatar`}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          objectFit: 'cover',
+          borderRadius: 'inherit',
+        }}
+        onError={(event) => {
+          const parent = event.currentTarget.parentElement;
+
+          if (parent) {
+            parent.textContent = initial;
+          }
+        }}
+      />
+    );
+  }
+
+  const assignedClassKeys = useMemo(() => {
+    return new Set(
+      assignedClasses.map((item) => {
+        const grade = studentGradeFor(item);
+
+        const section = normalizeSection(
+          item?.section ??
+          item?.sectionName ??
+          item?.classSection ??
+          ''
+        ).toLowerCase();
+
+        return `${grade}||${section}`;
+      })
+    );
+  }, [assignedClasses]);
+
+  const myStudents = useMemo(() => {
+    return students.filter((student) => {
+      const grade = studentGradeFor(student);
+
+      const section = normalizeSection(
+        student?.section
+      ).toLowerCase();
+
+      return assignedClassKeys.has(
+        `${grade}||${section}`
+      );
+    });
+  }, [students, assignedClassKeys]);
+
+  const monitoringProgressLookup = useMemo(() => {
+    const lookup = new Map();
+
+    const addKey = (key, row) => {
+      const normalized = String(key ?? '')
+        .trim()
+        .toLowerCase();
+
+      if (normalized) {
+        lookup.set(normalized, row);
+      }
+    };
+
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      addKey(row?.id, row);
+      addKey(row?.studentId, row);
+      addKey(row?.student_id, row);
+      addKey(row?.studentCode, row);
+      addKey(row?.student_code, row);
+      addKey(row?.name, row);
+    });
+
+    return lookup;
+  }, [rows]);
+
+  function progressForStudent(student = {}) {
+    const possibleKeys = [
+      student?.id,
+      student?.studentId,
+      student?.student_id,
+      student?.studentCode,
+      student?.student_code,
+      student?.name,
+    ];
+
+    for (const key of possibleKeys) {
+      const normalized = String(key ?? '')
+        .trim()
+        .toLowerCase();
+
+      if (
+        normalized &&
+        monitoringProgressLookup.has(normalized)
+      ) {
+        return monitoringProgressLookup.get(normalized);
+      }
+    }
+
+    return {
+      xp: Number(student?.xp || 0),
+      completed: Number(
+        student?.completedLessons ??
+        student?.completed_lessons ??
+        0
+      ),
+      totalLessons: Number(
+        student?.totalLessons ??
+        student?.total_lessons ??
+        0
+      ),
+      percent: Number(
+        student?.percent ??
+        student?.progress ??
+        0
+      ),
+      status: student?.status || 'Active',
+    };
+  }
+
+  const groupedStudents = useMemo(() => {
+    const groups = new Map();
+
+    myStudents.forEach((student) => {
+      const grade = studentGradeFor(student);
+
+      const section =
+        normalizeSection(student?.section) ||
+        'Not assigned';
+
+      const key = `${grade}||${section.toLowerCase()}`;
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          grade,
+          section,
+          students: [],
+        });
+      }
+
+      groups.get(key).students.push(student);
+    });
+
+    return [...groups.values()].sort((a, b) => {
+      if (a.grade !== b.grade) {
+        return a.grade - b.grade;
+      }
+
+      return a.section.localeCompare(b.section);
+    });
+  }, [myStudents]);
+
+  const selectedGrade =
+    studentGradeFor(selectedStudent);
+
+  const currentSection = normalizeSection(
+    selectedStudent?.section
+  );
+
+  const sectionOptions = useMemo(() => {
+    return [
+      ...new Set(
+        assignedClasses
+          .filter(
+            (item) =>
+              studentGradeFor(item) === selectedGrade
+          )
+          .map((item) =>
+            normalizeSection(
+              item?.section ??
+              item?.sectionName ??
+              item?.classSection ??
+              ''
+            )
+          )
+          .filter(Boolean)
+      ),
+    ].sort((a, b) => a.localeCompare(b));
+  }, [assignedClasses, selectedGrade]);
+
+  async function handleSearch() {
+    const query = searchQuery.trim();
+
+    if (
+      query.length < 2 ||
+      typeof searchExistingStudents !== 'function'
+    ) {
+      return;
+    }
+
+    setBusy('search');
+
+    try {
+      const results =
+        await searchExistingStudents(query);
+
+      setSearchResults(
+        Array.isArray(results) ? results : []
+      );
+
+      setSelectedStudent(null);
+      setSelectedSection('');
+      setNewSection('');
+      setShowNewSection(false);
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function handleCreateSection() {
+    if (
+      !selectedStudent ||
+      typeof createTeacherSection !== 'function'
+    ) {
+      return;
+    }
+
+    setBusy('create-section');
+
+    try {
+      const result = await createTeacherSection(
+        selectedGrade,
+        newSection
+      );
+
+      const savedSection = normalizeSection(
+        result?.assignment?.section ||
+        newSection
+      );
+
+      if (savedSection) {
+        setSelectedSection(savedSection);
+        setNewSection('');
+        setShowNewSection(false);
+      }
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function handleUpdateSection() {
+    const studentId =
+      studentIdFor(selectedStudent);
+
+    if (
+      !studentId ||
+      !selectedSection ||
+      typeof updateStudentSection !== 'function'
+    ) {
+      return;
+    }
+
+    setBusy(`update-${studentId}`);
+
+    try {
+      const result = await updateStudentSection(
+        studentId,
+        selectedSection
+      );
+
+      const updatedStudent =
+        result?.student || {
+          ...selectedStudent,
+          section: selectedSection,
+        };
+
+      setSelectedStudent(updatedStudent);
+
+      setSearchResults((current) =>
+        current.map((student) =>
+          String(studentIdFor(student)) ===
+          String(studentId)
+            ? {
+                ...student,
+                ...updatedStudent,
+              }
+            : student
+        )
+      );
+    } finally {
+      setBusy('');
+    }
+  }
+
+  function clearSelection() {
+    setSelectedStudent(null);
+    setSelectedSection('');
+    setNewSection('');
+    setShowNewSection(false);
+  }
+
+  return (
+    <div
+      data-teacher-student-assignment="true"
+      style={{
+        display: 'grid',
+        gap: 18,
+        marginBottom: 24,
+      }}
+    >
+      <div
+        style={{
+          padding: 20,
+          borderRadius: 20,
+          border: '1px solid #bfdbfe',
+          background: '#f8fbff',
+        }}
+      >
+        <div className="lms-section-label">
+          Student Assignment
+        </div>
+
+        <h2 style={{ marginBottom: 6 }}>
+          Find Existing Student
+        </h2>
+
+        <p className="muted">
+          Student accounts are created by administrators.
+          Search for an existing student account and assign
+          the student to one of your handled classes.
+        </p>
+
+        <div
+          className="row teacher-student-search-row"
+          style={{
+            marginTop: 16,
+          }}
+        >
+          <label
+            className="teacher-student-search-field"
+            style={{
+              display: 'grid',
+              gap: 8,
+              minWidth: 0,
+            }}
+          >
+            <strong>Search Student</strong>
+
+            <div className="teacher-student-search-input-shell">
+              <span
+                className="teacher-student-search-icon"
+                aria-hidden="true"
+              >
+                ⌕
+              </span>
+
+              <input
+                className="teacher-student-search-input"
+                type="search"
+              value={searchQuery}
+              placeholder="Enter at least two letters..."
+              onChange={(event) => {
+                const value = event.target.value;
+
+                setSearchQuery(value);
+
+                if (!value.trim()) {
+                  setSearchResults([]);
+                  clearSelection();
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleSearch();
+                }
+              }}
+              />
+            </div>
+          </label>
+
+          <button
+            type="button"
+            className="lms-view-button teacher-student-search-button"
+            disabled={
+              busy === 'search' ||
+              searchQuery.trim().length < 2
+            }
+            onClick={handleSearch}
+          >
+            <span
+              className="teacher-student-search-button-icon"
+              aria-hidden="true"
+            >
+              ⌕
+            </span>
+
+            <span>
+              {busy === 'search'
+                ? 'Searching...'
+                : 'Search Student'}
+            </span>
+          </button>
+
+          {(searchQuery.trim() ||
+            searchResults.length > 0) && (
+            <button
+              type="button"
+              className="lms-report-button teacher-student-search-clear"
+              onClick={() => {
+                setSearchQuery('');
+                setSearchResults([]);
+                clearSelection();
+              }}
+            >
+              Clear Search
+            </button>
+          )}
+        </div>
+
+        {searchResults.length > 0 && (
+          <div
+            style={{
+              marginTop: 18,
+              padding: 14,
+              borderRadius: 18,
+              border: '1px solid #bfdbfe',
+              background: '#eff6ff',
+            }}
+          >
+            <div
+              className="row"
+              style={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 12,
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0 }}>
+                  Search Results
+                </h3>
+
+                <span className="muted">
+                  Select one student to continue.
+                </span>
+              </div>
+
+              <span className="pill">
+                {searchResults.length}{' '}
+                {searchResults.length === 1
+                  ? 'result'
+                  : 'results'}
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gap: 10,
+              }}
+            >
+              {searchResults.map((student, index) => {
+                const studentId =
+                  studentIdFor(student);
+
+                const selectedId =
+                  studentIdFor(selectedStudent);
+
+                const selected =
+                  studentId != null &&
+                  selectedId != null &&
+                  String(studentId) ===
+                    String(selectedId);
+
+                const name =
+                  student?.name || 'Student';
+
+                const code =
+                  student?.studentCode ||
+                  student?.student_code ||
+                  'No student code';
+
+                const grade =
+                  studentGradeFor(student) || '-';
+
+                const section =
+                  normalizeSection(student?.section) ||
+                  'Not assigned';
+
+                return (
+                  <button
+                    type="button"
+                    key={
+                      studentId ||
+                      `${code}-${index}`
+                    }
+                    onClick={() => {
+                      setSelectedStudent(student);
+                      setSelectedSection('');
+                      setNewSection('');
+                      setShowNewSection(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: 14,
+                      textAlign: 'left',
+                      borderRadius: 16,
+                      cursor: 'pointer',
+                      border: selected
+                        ? '2px solid #2563eb'
+                        : '1px solid #bfdbfe',
+                      background: selected
+                        ? '#dbeafe'
+                        : '#ffffff',
+                    }}
+                  >
+                    <div
+                      className="row"
+                      style={{
+                        alignItems: 'center',
+                        gap: 12,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: '50%',
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                          background: selected
+                            ? '#2563eb'
+                            : '#e2e8f0',
+                          color: selected
+                            ? '#ffffff'
+                            : '#475569',
+                          fontWeight: 900,
+                          fontSize: 18,
+                        }}
+                      >
+                        {renderStudentAvatar(student)}
+                      </span>
+
+                      <span
+                        style={{
+                          display: 'grid',
+                          gap: 3,
+                          flex: 1,
+                        }}
+                      >
+                        <strong>{name}</strong>
+
+                        <span>
+                          {code} • Grade {grade}
+                        </span>
+
+                        <span className="muted">
+                          Current section: {section}
+                        </span>
+                      </span>
+
+                      <span className="pill">
+                        {selected
+                          ? '✓ Selected Student'
+                          : 'Select Student'}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div
+        className="teacher-assignment-my-students"
+        style={{
+          padding: 20,
+          borderRadius: 20,
+          border: '1px solid #dbeafe',
+          background: '#ffffff',
+        }}
+      >
+        <div
+          className="row"
+          style={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <div className="lms-section-label">
+              Assigned Learners
+            </div>
+
+            <h2 style={{ marginBottom: 6 }}>
+              My Students
+            </h2>
+
+            <p className="muted">
+              Students assigned to your classes, grouped
+              by grade and section.
+            </p>
+          </div>
+
+          <span className="pill">
+            {myStudents.length}{' '}
+            {myStudents.length === 1
+              ? 'Student'
+              : 'Students'}
+          </span>
+        </div>
+
+        {groupedStudents.length > 0 ? (
+          <div
+            style={{
+              display: 'grid',
+              gap: 14,
+              marginTop: 16,
+            }}
+          >
+            {groupedStudents.map((group) => (
+              <div
+                key={group.key}
+                style={{
+                  padding: 16,
+                  borderRadius: 18,
+                  border: '1px solid #dbeafe',
+                  background: '#f8fafc',
+                }}
+              >
+                <div
+                  className="row"
+                  style={{
+                    justifyContent: 'space-between',
+                    marginBottom: 12,
+                  }}
+                >
+                  <div>
+                    <strong>
+                      Grade {group.grade}
+                    </strong>
+
+                    <div className="muted">
+                      {group.section}
+                    </div>
+                  </div>
+
+                  <span className="pill">
+                    {group.students.length}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: 8,
+                  }}
+                >
+                  {group.students.map((student, index) => {
+                    const studentId =
+                      studentIdFor(student);
+
+                    const progress =
+                      progressForStudent(student);
+
+                    const progressPercent = Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        Number(progress?.percent || 0)
+                      )
+                    );
+
+                    const completedLessons = Number(
+                      progress?.completed || 0
+                    );
+
+                    const totalLessons = Number(
+                      progress?.totalLessons || 0
+                    );
+
+                    const studentXp = Number(
+                      progress?.xp || 0
+                    );
+
+                    return (
+                      <div
+                        key={
+                          studentId ||
+                          `${student?.name}-${index}`
+                        }
+                        className="row"
+                        style={{
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: 11,
+                          borderRadius: 14,
+                          border: '1px solid #e2e8f0',
+                          background: '#ffffff',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: '50%',
+                            display: 'grid',
+                            placeItems: 'center',
+                            background: '#dbeafe',
+                            color: '#1d4ed8',
+                            fontWeight: 900,
+                          }}
+                        >
+                          {renderStudentAvatar(student)}
+                        </span>
+
+                        <div
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            className="row"
+                            style={{
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              gap: 10,
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <div>
+                              <strong>
+                                {student?.name || 'Student'}
+                              </strong>
+
+                              <div className="muted">
+                                Student ID:{' '}
+                                {student?.studentCode ||
+                                  student?.student_code ||
+                                  'Not available'}
+                              </div>
+                            </div>
+
+                            <span className="pill">
+                              {progressPercent}% Complete
+                            </span>
+                          </div>
+
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns:
+                                'repeat(auto-fit, minmax(110px, 1fr))',
+                              gap: 8,
+                              marginTop: 10,
+                            }}
+                          >
+                            <div
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: 10,
+                                background: '#eff6ff',
+                              }}
+                            >
+                              <small className="muted">
+                                XP
+                              </small>
+                              <div>
+                                <strong>{studentXp}</strong>
+                              </div>
+                            </div>
+
+                            <div
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: 10,
+                                background: '#f0fdf4',
+                              }}
+                            >
+                              <small className="muted">
+                                Lessons
+                              </small>
+                              <div>
+                                <strong>
+                                  {completedLessons}/
+                                  {totalLessons}
+                                </strong>
+                              </div>
+                            </div>
+
+                            <div
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: 10,
+                                background: '#fffbeb',
+                              }}
+                            >
+                              <small className="muted">
+                                Status
+                              </small>
+                              <div>
+                                <strong>
+                                  {progress?.status || 'Active'}
+                                </strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div
+                            style={{
+                              marginTop: 10,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: 10,
+                                marginBottom: 5,
+                              }}
+                            >
+                              <small className="muted">
+                                Learning Progress
+                              </small>
+
+                              <small>
+                                <strong>
+                                  {progressPercent}%
+                                </strong>
+                              </small>
+                            </div>
+
+                            <div
+                              role="progressbar"
+                              aria-label={`${student?.name || 'Student'} learning progress`}
+                              aria-valuemin="0"
+                              aria-valuemax="100"
+                              aria-valuenow={progressPercent}
+                              style={{
+                                width: '100%',
+                                height: 10,
+                                overflow: 'hidden',
+                                borderRadius: 999,
+                                background: '#e2e8f0',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width:
+                                    `${progressPercent}%`,
+                                  height: '100%',
+                                  borderRadius: 999,
+                                  background:
+                                    'linear-gradient(90deg, #2563eb, #22c55e)',
+                                  transition:
+                                    'width 240ms ease',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            className="teacher-empty-panel"
+            style={{ marginTop: 16 }}
+          >
+            <div>👥</div>
+            <strong>No assigned students yet</strong>
+            <p>
+              Students assigned to your grade and section
+              will appear here.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {selectedStudent && (
+        <div
+          className="teacher-assignment-section-editor"
+          style={{
+            padding: 20,
+            borderRadius: 20,
+            border: '1px solid #bfdbfe',
+            background: '#ffffff',
+          }}
+        >
+          <div
+            className="row"
+            style={{
+              justifyContent: 'space-between',
+              alignItems: 'start',
+              gap: 12,
+            }}
+          >
+            <div>
+              <div className="lms-section-label">
+                Class Assignment
+              </div>
+
+              <h2 style={{ marginBottom: 6 }}>
+                Update Student Section
+              </h2>
+
+              <p className="muted">
+                Choose a different assigned section for
+                this student.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="lms-report-button"
+              onClick={clearSelection}
+            >
+              Change
+            </button>
+          </div>
+
+          <div
+            style={{
+              marginTop: 16,
+              padding: 15,
+              borderRadius: 18,
+              border: '1px solid #bfdbfe',
+              background: '#eff6ff',
+            }}
+          >
+            <strong>
+              {selectedStudent?.name || 'Student'}
+            </strong>
+
+            <div className="muted">
+              {selectedStudent?.studentCode ||
+                selectedStudent?.student_code ||
+                'No student code'}
+              {' • '}
+              Grade {selectedGrade || '-'}
+            </div>
+
+            <div
+              style={{
+                marginTop: 12,
+                padding: 10,
+                borderRadius: 12,
+                border: '1px solid #bfdbfe',
+                background: '#ffffff',
+              }}
+            >
+              <small>Current Section</small>
+
+              <div>
+                <strong>
+                  {currentSection || 'Not assigned'}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <label
+            style={{
+              display: 'grid',
+              gap: 7,
+              marginTop: 16,
+            }}
+          >
+            <strong>New Section</strong>
+
+            <small className="muted">
+              Select a section assigned to your account
+              for Grade {selectedGrade || '-'}.
+            </small>
+
+            <select
+              value={selectedSection}
+              onChange={(event) =>
+                setSelectedSection(event.target.value)
+              }
+            >
+              <option value="">
+                Select Existing Section
+              </option>
+
+              {sectionOptions.map((section) => (
+                <option
+                  key={section}
+                  value={section}
+                >
+                  {section}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            className="lms-report-button"
+            style={{ marginTop: 12 }}
+            onClick={() =>
+              setShowNewSection((current) => !current)
+            }
+          >
+            {showNewSection
+              ? 'Cancel New Section'
+              : '+ Add New Section'}
+          </button>
+
+          {showNewSection && (
+            <div
+              className="row"
+              style={{
+                alignItems: 'end',
+                flexWrap: 'wrap',
+                gap: 10,
+                marginTop: 10,
+              }}
+            >
+              <label
+                style={{
+                  display: 'grid',
+                  gap: 7,
+                  flex: '1 1 260px',
+                }}
+              >
+                <strong>New Section Name</strong>
+
+                <input
+                  value={newSection}
+                  maxLength={80}
+                  placeholder="Enter new section name"
+                  onChange={(event) =>
+                    setNewSection(event.target.value)
+                  }
+                />
+              </label>
+
+              <button
+                type="button"
+                className="lms-view-button"
+                disabled={
+                  busy === 'create-section' ||
+                  newSection.trim().length < 2
+                }
+                onClick={handleCreateSection}
+              >
+                {busy === 'create-section'
+                  ? 'Adding Section...'
+                  : 'Add Section'}
+              </button>
+            </div>
+          )}
+
+          {selectedSection ? (
+            <div
+              style={{
+                marginTop: 14,
+                padding: 12,
+                borderRadius: 14,
+                border: '1px solid #86efac',
+                background: '#ecfdf5',
+              }}
+            >
+              <small>Ready to update</small>
+
+              <div>
+                <strong>
+                  {currentSection || 'Not assigned'}
+                  {' → '}
+                  {selectedSection}
+                </strong>
+              </div>
+            </div>
+          ) : (
+            <p
+              className="muted"
+              style={{ marginTop: 12 }}
+            >
+              Select a new section to enable the update
+              action.
+            </p>
+          )}
+
+          <button
+            type="button"
+            className="lms-view-button"
+            style={{ marginTop: 14 }}
+            disabled={
+              !selectedSection ||
+              selectedSection.toLowerCase() ===
+                currentSection.toLowerCase() ||
+              busy.startsWith('update-')
+            }
+            onClick={handleUpdateSection}
+          >
+            {busy.startsWith('update-')
+              ? 'Updating Section...'
+              : 'Update Student Section'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function TeacherDashboard({
   user,
   data,
@@ -170,7 +1460,10 @@ export default function TeacherDashboard({
   downloadSummaryReport,
   downloadBuodReport,
   gradeWritingSubmission,
-  reviewSpeechAttempt
+  reviewSpeechAttempt,
+  searchExistingStudents,
+  createTeacherSection,
+  updateStudentSection
 }) {
 
   const handleDownloadMonitoringSummary =
@@ -2923,6 +4216,14 @@ export default function TeacherDashboard({
 
         {teacherTab === 'students' && (
           <section className="teacher-workspace-card clean-students-panel" id="teacher-monitoring-table">
+            <TeacherStudentAssignmentPanel
+              data={data}
+              rows={rows}
+              searchExistingStudents={searchExistingStudents}
+              createTeacherSection={createTeacherSection}
+              updateStudentSection={updateStudentSection}
+            />
+
             <div className="teacher-workspace-heading monitor">
               <div>
                 <div className="lms-section-label">Student Monitoring Report</div>
@@ -3224,72 +4525,7 @@ export default function TeacherDashboard({
             </div>
 
 
-            <div className="teacher-table-wrapper">
-              <table className="teacher-monitor-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>XP</th>
-                    <th>Lessons</th>
-                    <th>Progress</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <div className="teacher-tool-box" style={{ marginBottom: 18 }}>
-                    <div className="teacher-workspace-heading" style={{ marginBottom: 12 }}>
-                      <div>
-                        <div className="lms-section-label">Student Account</div>
-                        <h3>Add Student</h3>
-                      </div>
-                    </div>
 
-                    {(() => {
-                      const availableSections = [...new Set(
-                        assignedClasses
-                          .filter(item => Number(item.gradeLevel) === Number(studentAccountForm.gradeLevel))
-                          .map(item => item.section)
-                          .filter(Boolean)
-                      )];
-
-                      return null;
-                    })()}
-                  </div>
-
-                  {rows.length ? rows.map(row => (
-                    <tr key={row.id}>
-                      <td>
-                        <strong>{row.name}</strong>
-                        <small>{row.studentCode} • Grade {row.gradeLevel}</small>
-                      </td>
-                      <td>{row.xp}</td>
-                      <td>{row.completed}/{row.totalLessons}</td>
-                      <td>
-                        <div className="teacher-progress-cell">
-                          <span>{row.percent}%</span>
-                          <div className="teacher-progress-track">
-                            <div style={{ width: `${Math.max(0, Math.min(100, Number(row.percent || 0)))}%` }} />
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="lms-status neutral">{row.status || 'Active'}</span>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan="5">
-                        <div className="teacher-empty-panel table">
-                          <div>📭</div>
-                          <strong>No monitoring data yet.</strong>
-                          <p>Student progress will appear here after learners start completing lessons.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
           </section>
         )}
 
