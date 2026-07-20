@@ -506,11 +506,13 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
     }
 
     const previousGrade = Number(student.gradeLevel);
+    const previousSection = normalizeSectionName(student.section);
 
     student.gradeLevel = gradeLevel;
     student.section = section;
 
     await student.save();
+    await student.reload({ include: [User] });
 
     if (previousGrade !== gradeLevel) {
 
@@ -524,8 +526,28 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
           studentCode: student.studentCode,
           oldGrade: previousGrade,
           newGrade: gradeLevel,
-          section,
+          previousSection,
+          section: student.section,
           reason: promotionReason
+        }
+      );
+
+    } else if (
+      previousSection.toLowerCase() !==
+      String(student.section || '').toLowerCase()
+    ) {
+
+      await audit(
+        req.user.id,
+        'student.enrollment.update',
+        'student',
+        student.id,
+        {
+          studentName: student.name,
+          studentCode: student.studentCode,
+          gradeLevel: student.gradeLevel,
+          previousSection,
+          section: student.section
         }
       );
 

@@ -1,4 +1,38 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+// TUKLAS_WEB_LOGIN_MOBILE_PARITY_V1
+function cleanLoginIdentifierInput(value, shouldUppercase = false) {
+  const cleaned = String(value || '')
+    .replace(/\s+/g, '')
+    .replace(/[^A-Za-z0-9._@-]/g, '');
+
+  return shouldUppercase ? cleaned.toUpperCase() : cleaned;
+}
+
+function cleanLoginPasswordInput(value) {
+  return String(value || '').replace(/\s+/g, '');
+}
+
+function useSingleLoginSubmission(onLogin) {
+  const [submitting, setSubmitting] = useState(false);
+  const inFlightRef = useRef(false);
+
+  async function submit() {
+    if (inFlightRef.current) return;
+
+    inFlightRef.current = true;
+    setSubmitting(true);
+
+    try {
+      await onLogin();
+    } finally {
+      inFlightRef.current = false;
+      setSubmitting(false);
+    }
+  }
+
+  return { submitting, submit };
+}
+
 const EyeIcon = () => (
   <svg viewBox="0 0 24 24" className="password-eye-svg" aria-hidden="true">
     <path d="M2.25 12s3.5-6.75 9.75-6.75S21.75 12 21.75 12s-3.5 6.75-9.75 6.75S2.25 12 2.25 12Z" />
@@ -15,22 +49,63 @@ const EyeOffIcon = () => (
   </svg>
 );
 
-export function StudentLogin({ go, onLogin }) {
+export function StudentLogin({ go, onLogin, loading = false }) {
   const [studentIdValue, setStudentIdValue] = useState('');
-const [showStudentPassword, setShowStudentPassword] = useState(false);
+  const [studentPasswordValue, setStudentPasswordValue] = useState('');
+  const [showStudentPassword, setShowStudentPassword] = useState(false);
+  const { submitting, submit } = useSingleLoginSubmission(onLogin);
+
+  const busy = loading || submitting;
+  const studentLoginDisabled =
+    busy ||
+    !studentIdValue.trim() ||
+    !studentPasswordValue.trim();
+
+  function handleStudentIdChange(event) {
+    setStudentIdValue(
+      cleanLoginIdentifierInput(event.target.value, true)
+    );
+  }
+
+  function handleStudentPasswordChange(event) {
+    setStudentPasswordValue(
+      cleanLoginPasswordInput(event.target.value)
+    );
+  }
+
+  function requestStudentLogin() {
+    if (studentLoginDisabled) return;
+    void submit();
+  }
+
+  function submitStudentLogin(event) {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+    requestStudentLogin();
+  }
+
 return <>
     <div className="top-nav login-top-nav login-student-nav"><button className="btn btn-outline btn-sm" onClick={() => go('screen-home')}>← Home</button><div className="logo">🎒 Student Login</div><div className="login-nav-pill">⭐ Tuklas. Matuto. Magsaya!</div></div>
     <div className="login-stage student-stage"><div className="login-shell student-shell">
       <aside className="login-visual-card student-visual-card"><div className="login-sparkles">✦</div><h2>Mag-login,<br />Estudyante! 👋</h2><p>Ilagay ang Student ID at password para magpatuloy.</p><div className="student-hero-illustration login-hero-png-wrap" aria-hidden="true"><img src="/login-student-girl.png" alt="" className="login-hero-png student" /></div><div className="login-info-card"><span className="info-icon">🛡️</span><div><b>Ligtas • Masaya • Makabuluhan</b><br /><span>Tuklas Talino, kasama mo sa bawat hakbang.</span></div></div></aside>
-      <section className="login-form-panel student-form-panel"><div className="login-form-heading"><span className="heading-badge">🪪</span><div><h3>Mag-login bilang Estudyante</h3><p>Ilagay ang Student ID at password para magpatuloy.</p></div></div><label className="login-label" htmlFor="stu-id">🪪 Student ID</label><div className="input-with-icon"><span>👤</span><input className="input-field" id="stu-id" value={studentIdValue} onChange={(event) => setStudentIdValue(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /></div><label className="login-label" htmlFor="stu-password">🔒 Password</label><div className="input-with-icon"><span>🔐</span><input className="input-field" id="stu-password" type={showStudentPassword ? "text" : "password"} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); onLogin(); } }} /><button type="button" className="password-eye-btn" aria-label={showStudentPassword ? "Hide password" : "Show password"} onClick={() => setShowStudentPassword((value) => !value)}>{showStudentPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div><button className="btn btn-green login-main-btn" onClick={onLogin}>✨ Login</button><p className="secure-note">🔒 Ang iyong impormasyon ay ligtas at protektado.</p></section>
+      <section className="login-form-panel student-form-panel"><div className="login-form-heading"><span className="heading-badge">🪪</span><div><h3>Mag-login bilang Estudyante</h3><p>Ilagay ang Student ID at password para magpatuloy.</p></div></div><label className="login-label" htmlFor="stu-id">🪪 Student ID</label><div className="input-with-icon"><span>👤</span><input className="input-field" id="stu-id" value={studentIdValue} onChange={handleStudentIdChange} onKeyDown={submitStudentLogin} autoCapitalize="characters" autoCorrect="off" spellCheck={false} autoComplete="username" /></div><label className="login-label" htmlFor="stu-password">🔒 Password</label><div className="input-with-icon"><span>🔐</span><input className="input-field" id="stu-password" type={showStudentPassword ? "text" : "password"} value={studentPasswordValue} onChange={handleStudentPasswordChange} onKeyDown={submitStudentLogin} autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="current-password" /><button type="button" className="password-eye-btn" aria-label={showStudentPassword ? "Hide password" : "Show password"} onClick={() => setShowStudentPassword((value) => !value)}>{showStudentPassword ? <EyeOffIcon /> : <EyeIcon />}</button></div><button type="button" className="btn btn-green login-main-btn" onClick={requestStudentLogin} disabled={studentLoginDisabled} aria-busy={busy}>{busy ? '⏳ Naglo-load...' : '✨ Mag-login'}</button><p className="secure-note">🔒 Ang iyong impormasyon ay ligtas at protektado.</p></section>
     </div></div>
   </>;
 }
 
-export function TeacherLogin({ go, onLogin }) {
+export function TeacherLogin({ go, onLogin, loading = false }) {
   const [showTeacherPassword, setShowTeacherPassword] = useState(false);
   const [teacherIdentifier, setTeacherIdentifier] = useState('');
-  const teacherLoginDisabled = false;
+  const [teacherPassword, setTeacherPassword] = useState('');
+  const { submitting, submit } = useSingleLoginSubmission(onLogin);
+
+  const busy = loading || submitting;
+  const teacherLoginDisabled =
+    busy ||
+    !teacherIdentifier.trim() ||
+    !teacherPassword.trim();
+
 function handleTeacherIdentifierChange(event) {
     const value = event.target.value
       .replace(/\s+/g, '')
@@ -40,11 +115,22 @@ function handleTeacherIdentifierChange(event) {
     setTeacherIdentifier(value);
   }
 
+  function handleTeacherPasswordChange(event) {
+    setTeacherPassword(
+      cleanLoginPasswordInput(event.target.value)
+    );
+  }
+
+  function requestTeacherLogin() {
+    if (teacherLoginDisabled) return;
+    void submit();
+  }
+
   function submitTeacherLogin(event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      if (!teacherLoginDisabled) onLogin();
-    }
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+    requestTeacherLogin();
   }
 
   return <>
@@ -99,7 +185,13 @@ function handleTeacherIdentifierChange(event) {
               className="input-field"
               id="t-password"
               type={showTeacherPassword ? "text" : "password"}
+              value={teacherPassword}
+              onChange={handleTeacherPasswordChange}
               onKeyDown={submitTeacherLogin}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="current-password"
             />
             <button
               type="button"
@@ -112,11 +204,13 @@ function handleTeacherIdentifierChange(event) {
           </div>
 
           <button
+            type="button"
             className="btn btn-green login-main-btn teacher-login-btn"
-            onClick={onLogin}
+            onClick={requestTeacherLogin}
             disabled={teacherLoginDisabled}
+            aria-busy={busy}
           >
-            🔐 Login
+            {busy ? '⏳ Naglo-load...' : '✨ Mag-login'}
           </button>
 
         </section>
@@ -132,10 +226,18 @@ function handleTeacherIdentifierChange(event) {
   </>;
 }
 
-export function AdminLogin({ go, onLogin }) {
+export function AdminLogin({ go, onLogin, loading = false }) {
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminIdentifier, setAdminIdentifier] = useState('');
-  const adminLoginDisabled = false;
+  const [adminPassword, setAdminPassword] = useState('');
+  const { submitting, submit } = useSingleLoginSubmission(onLogin);
+
+  const busy = loading || submitting;
+  const adminLoginDisabled =
+    busy ||
+    !adminIdentifier.trim() ||
+    !adminPassword.trim();
+
 function handleAdminIdentifierChange(event) {
     const value = event.target.value
       .replace(/\s+/g, '')
@@ -144,11 +246,22 @@ function handleAdminIdentifierChange(event) {
     setAdminIdentifier(value);
   }
 
+  function handleAdminPasswordChange(event) {
+    setAdminPassword(
+      cleanLoginPasswordInput(event.target.value)
+    );
+  }
+
+  function requestAdminLogin() {
+    if (adminLoginDisabled) return;
+    void submit();
+  }
+
   function submitAdminLogin(event) {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      if (!adminLoginDisabled) onLogin();
-    }
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+    requestAdminLogin();
   }
 
   return <>
@@ -203,7 +316,13 @@ function handleAdminIdentifierChange(event) {
               className="input-field"
               id="a-password"
               type={showAdminPassword ? "text" : "password"}
+              value={adminPassword}
+              onChange={handleAdminPasswordChange}
               onKeyDown={submitAdminLogin}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="current-password"
             />
             <button
               type="button"
@@ -216,11 +335,13 @@ function handleAdminIdentifierChange(event) {
           </div>
 
           <button
+            type="button"
             className="btn btn-purple login-main-btn admin-login-btn"
-            onClick={onLogin}
+            onClick={requestAdminLogin}
             disabled={adminLoginDisabled}
+            aria-busy={busy}
           >
-            🔐 Login
+            {busy ? '⏳ Naglo-load...' : '✨ Mag-login'}
           </button>
 
         </section>

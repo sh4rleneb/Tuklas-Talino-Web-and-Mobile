@@ -1,24 +1,9 @@
 import { useState } from 'react';
 
-const quizExample = `Question 1:
-Ano ang pangunahing ideya ng kwento?
-
-A. Mahalaga ang pagtutulungan at pagpapahalaga sa pamayanan.
-B. Mahirap magbasa ng lumang aklat.
-C. Mas masarap mamili sa palengke.
-D. Dapat iwasan ang lumang lugar.
-
-Answer: A
-
-Question 2:
-Bakit mahalaga ang lumang mapa sa kwento?
-
-A. Ipinakita nito ang mahahalagang lugar at kwento ng pamayanan.
-B. Ginamit ito ni Lira upang maglaro.
-C. Itinapon ito ng guro.
-D. Wala itong kinalaman sa kwento.
-
-Answer: A`;
+// TUKLAS_REAL_QUIZ_TEMPLATE_V1
+const QUIZ_TEMPLATE_URL = '/quiz-import-template.txt';
+const quizPastePlaceholder =
+  'Paste from "Question 1:" up to the final "Answer:" line...';
 
 function makeId(prefix = 'quiz') {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -136,7 +121,7 @@ export default function TeacherQuizTextImporter({
     const parsedQuestions = parseQuizText(rawQuizText);
 
     if (!parsedQuestions.length) {
-      setStatus('No valid quiz questions found. Please follow the example format.');
+      setStatus('No valid quiz questions found. Please follow the downloaded template format.');
       return;
     }
 
@@ -270,24 +255,45 @@ export default function TeacherQuizTextImporter({
           <small>Paste formatted questions and answers to auto-fill this Quiz block.</small>
         </div>
 
-        <button
-          type="button"
-          className="teacher-quiz-importer-toggle"
-          onClick={() => setIsOpen(value => !value)}
-        >
-          {isOpen ? 'Hide Importer' : 'Paste Quiz Text'}
-        </button>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a
+            href={QUIZ_TEMPLATE_URL}
+            download="quiz-import-template.txt"
+            className="teacher-quiz-importer-action secondary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              textDecoration: 'none'
+            }}
+          >
+            ⬇ Download Quiz Template
+          </a>
+
+          <button
+            type="button"
+            className="teacher-quiz-importer-toggle"
+            onClick={() => setIsOpen(value => !value)}
+          >
+            {isOpen ? 'Hide Importer' : 'Paste Quiz Text'}
+          </button>
+        </div>
       </div>
 
       {isOpen && (
         <div className="teacher-quiz-importer-body">
+          <div className="teacher-quiz-importer-status">
+            Paste only the question blocks. Remove the template title and
+            instructions first. Start with &quot;Question 1:&quot; and end
+            with the final &quot;Answer:&quot; line.
+          </div>
+
           <textarea
             value={rawQuizText}
             onChange={(e) => {
               setRawQuizText(e.target.value);
               setStatus('');
             }}
-            placeholder={quizExample}
+            placeholder={quizPastePlaceholder}
           />
 
           <div className="teacher-quiz-importer-actions">

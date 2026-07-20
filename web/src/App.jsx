@@ -1347,7 +1347,7 @@ if (role === 'admin') {
   }, 'Hindi ma-save ang sagot. Pakisubukan muli.');
 }
 
-  async function submitSpeech(taskId, transcript, score) {
+  async function submitSpeech(taskId, transcript, score, options = {}) {
   if (!selectedLesson) return null;
 
   if (!transcript || transcript.trim().length < 2) {
@@ -1355,6 +1355,33 @@ if (role === 'admin') {
     setLessonFeedback(`🎤 ${message}`);
     notify(message, 'warn');
     return null;
+  }
+
+  if (options?.validateOnly) {
+    try {
+      return await api(
+        `/lessons/${selectedLesson.id}/speech/validate`,
+        {
+          method: 'POST',
+          body: {
+            taskId,
+            transcript
+          }
+        }
+      );
+    } catch (err) {
+      const rawMessage = String(
+        err?.message || ''
+      ).trim();
+
+      notify(
+        rawMessage ||
+          'Hindi masuri ang nakilalang pagbigkas. Pakisubukan muli.',
+        'bad'
+      );
+
+      return null;
+    }
   }
 
   return await safeRun(async () => {
@@ -4268,6 +4295,7 @@ async function archiveTeacher(id) {
       <Screen id="screen-login-student" active={screen === 'screen-login-student'}>
         <StudentLogin
           go={go}
+          loading={loading}
           selectedAvatar={selectedAvatar}
           setSelectedAvatar={setSelectedAvatar}
           onLogin={() => handleLogin('student')}
@@ -4277,6 +4305,7 @@ async function archiveTeacher(id) {
       <Screen id="screen-login-teacher" active={screen === 'screen-login-teacher'}>
         <TeacherLogin
           go={go}
+          loading={loading}
           onLogin={() => handleLogin('teacher')}
         />
       </Screen>
@@ -4284,6 +4313,7 @@ async function archiveTeacher(id) {
       <Screen id="screen-login-admin" active={screen === 'screen-login-admin'}>
         <AdminLogin
           go={go}
+          loading={loading}
           onLogin={() => handleLogin('admin')}
         />
       </Screen>
@@ -8582,6 +8612,46 @@ function speechSimilarityScore(target = '', transcript = '') {
   return Math.max(0, Math.round((1 - distance / maxLength) * 100));
 }
 
+// TUKLAS_SPEECH_CATEGORY_SAFETY_V1
+function speechCategoryFromScore(score = 0) {
+  const value = Math.max(
+    0,
+    Math.min(100, Number(score || 0))
+  );
+
+  if (value >= 75) {
+    return {
+      label: 'Very Good',
+      message: 'Napakahusay ng iyong pagbigkas!',
+      icon: '✅',
+      background: '#E9FBEF',
+      border: '#B7E4C7',
+      color: '#166534'
+    };
+  }
+
+  if (value >= 50) {
+    return {
+      label: 'Good',
+      message: 'Maganda! Kaunting pagsasanay pa.',
+      icon: '👍',
+      background: '#FFF8DF',
+      border: '#F4E7AA',
+      color: '#6B4B00'
+    };
+  }
+
+  return {
+    label: 'Bad',
+    message:
+      'Subukan muli at bigkasin nang mas malinaw.',
+    icon: '🔴',
+    background: '#FFF4E5',
+    border: '#FED7AA',
+    color: '#9A3412'
+  };
+}
+
 function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
@@ -12260,6 +12330,7 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [speechScore, setSpeechScore] = useState(null);
   const [isListening, setIsListening] = useState(false);
+  const [isCheckingSpeech, setIsCheckingSpeech] = useState(false);
   const [speechError, setSpeechError] = useState('');
   const activityAlreadySubmitted = Boolean(
     activity?.speechAttempt ||
@@ -12277,9 +12348,15 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
   useEffect(() => {
     setSpeechSubmitted(activityAlreadySubmitted);
     setIsSubmittingSpeech(false);
+    setIsCheckingSpeech(false);
   }, [activity?.id, activity?.speechTask?.id, activityAlreadySubmitted]);
 
   const target = activity.speechTask?.targetText || activity.targetText || 'Basahin nang malinaw ang pangungusap.';
+
+  const speechResult =
+    speechScore !== null
+      ? speechCategoryFromScore(speechScore)
+      : null;
 
   function speakTarget() {
     speakText(target);
@@ -12301,20 +12378,46 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
     setSpeechError('');
     setSpeechTranscript('');
     setSpeechScore(null);
+    setIsCheckingSpeech(false);
     setIsListening(true);
 
-    recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript || '';
-      const score = speechSimilarityScore(target, transcript);
+    recognition.onresult = async (event) => {
+      const transcript =
+        event.results?.[0]?.[0]?.transcript || '';
+
+      const score = speechSimilarityScore(
+        target,
+        transcript
+      );
+
+      setIsListening(false);
+      setIsCheckingSpeech(true);
+
+      const validation = await submitSpeech(
+        activity.speechTask?.id,
+        transcript,
+        score,
+        {
+          validateOnly: true
+        }
+      );
+
+      if (!validation?.safe) {
+        setSpeechTranscript('');
+        setSpeechScore(null);
+        setIsCheckingSpeech(false);
+        return;
+      }
 
       setSpeechTranscript(transcript);
       setSpeechScore(score);
-      setIsListening(false);
+      setIsCheckingSpeech(false);
     };
 
     recognition.onerror = (event) => {
       setSpeechError(`Error sa pagkilala ng pagbigkas: ${event.error}`);
       setIsListening(false);
+      setIsCheckingSpeech(false);
     };
 
     recognition.onend = () => {
@@ -12325,7 +12428,12 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
   }
 
   async function handleSubmitSpeechAttempt() {
-    if (!speechTranscript || speechSubmitted || isSubmittingSpeech) return;
+    if (
+      !speechTranscript ||
+      speechSubmitted ||
+      isSubmittingSpeech ||
+      isCheckingSpeech
+    ) return;
 
     setIsSubmittingSpeech(true);
 
@@ -12333,6 +12441,20 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
       const result = await submitSpeech(activity.speechTask?.id, speechTranscript, speechScore || 0);
 
       if (result) {
+        const finalScore = Number(
+          result?.score ??
+          result?.attempt?.score
+        );
+
+        if (Number.isFinite(finalScore)) {
+          setSpeechScore(
+            Math.max(
+              0,
+              Math.min(100, finalScore)
+            )
+          );
+        }
+
         setSpeechSubmitted(true);
       }
     } finally {
@@ -12382,10 +12504,24 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
           {isEarlyGrade ? '🔊 Pakinggan' : '🔊 Pakinggan'}
         </button>
 
-        <button className="btn btn-blue" onClick={startSpeechRecognition} disabled={isListening} style={{ minHeight: isEarlyGrade ? 56 : 48, fontSize: isEarlyGrade ? 18 : 16, padding: '12px 24px', borderRadius: 999 }}>
-          {isListening
-            ? (isEarlyGrade ? '🎙️ Nakikinig...' : '🎙️ Nakikinig...')
-            : (isEarlyGrade ? '🎙️ Magsalita' : '🎙️ Simulan ang Pagbigkas')}
+        <button
+          className="btn btn-blue"
+          onClick={startSpeechRecognition}
+          disabled={isListening || isCheckingSpeech}
+          style={{
+            minHeight: isEarlyGrade ? 56 : 48,
+            fontSize: isEarlyGrade ? 18 : 16,
+            padding: '12px 24px',
+            borderRadius: 999
+          }}
+        >
+          {isCheckingSpeech
+            ? '🔎 Sinusuri ang pagbigkas...'
+            : isListening
+              ? '🎙️ Nakikinig...'
+              : isEarlyGrade
+                ? '🎙️ Magsalita'
+                : '🎙️ Simulan ang Pagbigkas'}
         </button>
 
         <button className="btn btn-outline" onClick={() => stopSpeech()} style={{ minHeight: isEarlyGrade ? 56 : 48, fontSize: isEarlyGrade ? 18 : 16, padding: '12px 24px', borderRadius: 999 }}>
@@ -12423,20 +12559,36 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
         </div>
       )}
 
-      {speechScore !== null && (
+      {speechResult && (
         <div
           style={{
             marginTop: 12,
             padding: 14,
             borderRadius: 16,
-            background: speechScore >= 75 ? '#E9FBEF' : '#FFF4E5',
+            background: speechResult.background,
+            border: `1px solid ${speechResult.border}`,
+            color: speechResult.color,
             fontWeight: 800,
-            fontSize: isEarlyGrade ? 18 : 15,
+            fontSize: isEarlyGrade ? 18 : 15
           }}
         >
-          {speechScore >= 75
-            ? `✅ Mahusay! Iskor sa pagbigkas: ${speechScore}%`
-            : `⭐ Subukan muli para mas malinaw. Iskor sa pagbigkas: ${speechScore}%`}
+          <div
+            style={{
+              fontSize: isEarlyGrade ? 22 : 17,
+              fontWeight: 950
+            }}
+          >
+            {speechResult.icon} {speechResult.label}
+          </div>
+
+          <div
+            style={{
+              marginTop: 4,
+              lineHeight: 1.45
+            }}
+          >
+            {speechResult.message}
+          </div>
         </div>
       )}
 
@@ -12445,7 +12597,12 @@ function SpeechActivity({ activity, index, total, isEarlyGrade, activityBoxStyle
       <button
         className="btn btn-purple"
         onClick={handleSubmitSpeechAttempt}
-        disabled={!speechTranscript || isSubmittingSpeech || speechSubmitted}
+        disabled={
+          !speechTranscript ||
+          isSubmittingSpeech ||
+          isCheckingSpeech ||
+          speechSubmitted
+        }
       >
         {speechSubmitted
           ? (isEarlyGrade ? '✅ Naipasa na' : '✅ Naipasa')

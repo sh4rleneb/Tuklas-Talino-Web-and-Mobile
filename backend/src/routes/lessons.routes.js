@@ -2656,6 +2656,63 @@ function isManualSpeechSubmission(
     placeholders.has(normalized);
 }
 
+// TUKLAS_SPEECH_CATEGORY_SAFETY_V1
+router.post(
+  '/:id/speech/validate',
+  requireRole('student'),
+  async (req, res, next) => {
+    try {
+      const task = await SpeechTask.findByPk(
+        req.body.taskId
+      );
+
+      const activity = task
+        ? await LessonActivity.findByPk(
+            task.activityId
+          )
+        : null;
+
+      if (
+        !task ||
+        !activity ||
+        Number(activity.lessonId) !==
+          Number(req.params.id)
+      ) {
+        return res.status(404).json({
+          message:
+            'Speech task was not found in this lesson.'
+        });
+      }
+
+      const transcript = String(
+        req.body.transcript || ''
+      ).trim();
+
+      if (transcript) {
+        assertSafeText(
+          transcript,
+          'speech transcript',
+          {
+            allowedTerms:
+              getEducationalLessonAllowedTerms(
+                collectSpeechSafetyTargets(
+                  task,
+                  activity
+                )
+              ),
+          }
+        );
+      }
+
+      return res.status(200).json({
+        safe: true
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
 router.post('/:id/speech', requireRole('student'), async (req, res, next) => {
   try {
     const task = await SpeechTask.findByPk(

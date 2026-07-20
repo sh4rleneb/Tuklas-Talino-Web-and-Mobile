@@ -1,0 +1,46 @@
+TUKLAS TALINO QUIZ IMPORT TEMPLATE
+
+IMPORTANT:
+Do not paste this title or these instructions into Tuklas Talino.
+
+Remove the title and instructions before importing.
+Copy only from "Question 1:" through the final "Answer:" line.
+
+INSTRUCTIONS:
+1. Use Question 1:, Question 2:, and so on.
+2. Use A., B., C., and D. for answer choices.
+3. Add the correct answer using Answer: A.
+4. Every question must have at least two answer choices.
+5. Do not add text after the final Answer: line.
+
+COPY ONLY FROM QUESTION 1 BELOW:
+
+Question 1:
+Ano ang pambansang wika ng Pilipinas?
+
+A. Filipino
+B. English
+C. Spanish
+D. Japanese
+
+Answer: A
+
+Question 2:
+Alin sa mga sumusunod ang pangngalan?
+
+A. Tumakbo
+B. Maganda
+C. Paaralan
+D. Mabilis
+
+Answer: C
+
+Question 3:
+Ano ang kasalungat ng salitang mataas?
+
+A. Malaki
+B. Mababa
+C. Mahaba
+D. Malayo
+
+Answer: B
