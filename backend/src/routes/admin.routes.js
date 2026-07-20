@@ -455,20 +455,18 @@ router.patch('/students/:id/enrollment', async (req, res, next) => {
       });
     }
 
+    // TUKLAS_OPTIONAL_PROMOTION_REASON_V1
+    let promotionReason = '';
+
     if (gradeLevel != Number(student.gradeLevel)) {
 
-      const promotionReason = String(
-        req.body.promotionReason || ''
+      promotionReason = String(
+        req.body.promotionReason ||
+        'Manual promotion by administrator.'
       )
         .normalize('NFKC')
         .replace(/\s+/g, ' ')
         .trim();
-
-      if (!promotionReason) {
-        return res.status(422).json({
-          message: 'Promotion reason is required.'
-        });
-      }
 
       if (promotionReason.length > 500) {
         return res.status(422).json({

@@ -271,6 +271,17 @@ export async function uploadLessonMaterial(asset = {}) {
       ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
       : lowerName.endsWith('.ppt')
       ? 'application/vnd.ms-powerpoint'
+      : lowerName.endsWith('.docx')
+      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : lowerName.endsWith('.doc')
+      ? 'application/msword'
+      : lowerName.endsWith('.png')
+      ? 'image/png'
+      : lowerName.endsWith('.jpg') ||
+        lowerName.endsWith('.jpeg')
+      ? 'image/jpeg'
+      : lowerName.endsWith('.webp')
+      ? 'image/webp'
       : 'application/octet-stream');
 
   const uploadFile = {

@@ -2578,7 +2578,7 @@ function renderLogs() {
             <Text style={styles.subtitle}>Manage accounts, classes, archives, and reports.</Text>
 
           </View>
-          <Button tone="slate" onPress={confirmLogout}>Logout</Button>
+          <Button tone="red" onPress={confirmLogout}>Logout</Button>
         </View>
 
         <View style={styles.workspaceHero}>
@@ -2926,8 +2926,12 @@ Kailangan mong palitan ang PIN pagkatapos ng unang login.`
                 <Text style={styles.workspaceLogoutCancelText}>Cancel</Text>
               </TouchableOpacity>
 
+              {/* WORKSPACE_LOGOUT_DANGER_RED_V1 */}
               <TouchableOpacity
-                style={styles.workspaceLogoutConfirm}
+                style={[
+                  styles.workspaceLogoutConfirm,
+                  styles.workspaceLogoutDangerConfirm,
+                ]}
                 onPress={handleLogout}
               >
                 <Text style={styles.workspaceLogoutConfirmText}>Logout</Text>
@@ -2985,6 +2989,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  workspaceLogoutDangerConfirm: {
+    backgroundColor: '#DC2626',
+    borderColor: '#B91C1C',
+  },
+
   workspaceLogoutModalCard: {
     width: '100%',
     backgroundColor: '#FFFFFF',

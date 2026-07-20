@@ -136,6 +136,9 @@ const ACTIVITY_TYPE_OPTIONS = [
   { value: 'mcq', label: 'Quiz' },
   { value: 'writing', label: 'Writing' },
   { value: 'speech', label: 'Speech' },
+  { value: 'matching', label: 'Matching Activity' },
+  { value: 'vocabulary', label: 'Vocabulary Activity' },
+  { value: 'infographic', label: 'Infographic Activity' },
 ];
 const WRITING_ACTIVITY_TYPE_OPTIONS = [
   { value: 'complete_sentence', label: 'Complete the Sentence' },
@@ -893,6 +896,17 @@ function getLessonMaterialMimeType(asset = {}) {
       ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
       : rawName.endsWith('.ppt')
       ? 'application/vnd.ms-powerpoint'
+      : rawName.endsWith('.docx')
+      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : rawName.endsWith('.doc')
+      ? 'application/msword'
+      : rawName.endsWith('.png')
+      ? 'image/png'
+      : rawName.endsWith('.jpg') ||
+        rawName.endsWith('.jpeg')
+      ? 'image/jpeg'
+      : rawName.endsWith('.webp')
+      ? 'image/webp'
       : '');
 }
 
@@ -908,9 +922,18 @@ function isSupportedLessonMaterial(asset = {}) {
     name.endsWith('.pdf') ||
     name.endsWith('.ppt') ||
     name.endsWith('.pptx') ||
+    name.endsWith('.doc') ||
+    name.endsWith('.docx') ||
+    name.endsWith('.png') ||
+    name.endsWith('.jpg') ||
+    name.endsWith('.jpeg') ||
+    name.endsWith('.webp') ||
     type.includes('pdf') ||
     type.includes('powerpoint') ||
-    type.includes('presentation')
+    type.includes('presentation') ||
+    type.includes('msword') ||
+    type.includes('wordprocessingml') ||
+    type.startsWith('image/')
   );
 }
 
@@ -957,7 +980,7 @@ function lessonMaterialUploadErrorMessage(error = {}) {
   ).trim();
 
   if (!message || message === 'Request failed') {
-    return 'The lesson material could not be uploaded. Make sure the file is a PDF, PPT, or PPTX, then try again.';
+    return 'The lesson material could not be uploaded. Make sure the file is a PDF, PPT, PPTX, DOC, DOCX, PNG, JPG, JPEG, or WEBP file, then try again.';
   }
 
   return message;
@@ -1549,6 +1572,11 @@ async function handleLogout() {
           'application/pdf',
           'application/vnd.ms-powerpoint',
           'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/png',
+          'image/jpeg',
+          'image/webp',
         ],
         multiple: false,
         copyToCacheDirectory: true,
@@ -1559,12 +1587,12 @@ async function handleLogout() {
       if (!asset) return;
 
       if (!asset.uri) {
-        Alert.alert('Lesson Material', 'The selected file could not be read. Select another PDF, PPT, or PPTX file.');
+        Alert.alert('Lesson Material', 'The selected file could not be read. Select another PDF, PPT, PPTX, DOC, DOCX, PNG, JPG, JPEG, or WEBP file.');
         return;
       }
 
       if (!isSupportedLessonMaterial(asset)) {
-        Alert.alert('Lesson Material', 'Only PDF, PPT, and PPTX files can be uploaded.');
+        Alert.alert('Lesson Material', 'Only PDF, PPT, PPTX, DOC, DOCX, PNG, JPG, JPEG, and WEBP files can be uploaded.');
         return;
       }
 
@@ -2502,15 +2530,126 @@ async function handleLogout() {
           ))}
         </View>
 
-        <SectionCard>
-          <Text style={styles.cardTitle}>Assigned Classes</Text>
-          {(dashboard?.assignedClasses || []).map((item, teacherKeyIndex) => (
-            <View key={String((item.id) || 'teacher-map-2507') + '-' + teacherKeyIndex} style={styles.softRow}>
-              <Text style={styles.rowTitle}>Grade {item.gradeLevel} • {item.section}</Text>
+        {/* TEACHER_ASSIGNED_CLASSES_UI_V1 */}
+        <SectionCard style={styles.assignedClassesCard}>
+          <View style={styles.assignedClassesHeader}>
+            <View style={styles.assignedClassesHeaderCopy}>
+              <View style={styles.assignedClassesTitleRow}>
+                <View style={styles.assignedClassesTitleIcon}>
+                  <Text style={styles.assignedClassesTitleEmoji}>
+                    🏫
+                  </Text>
+                </View>
+
+                <View style={styles.flex}>
+                  <Text style={styles.assignedClassesTitle}>
+                    Assigned Classes
+                  </Text>
+                  <Text style={styles.assignedClassesSubtitle}>
+                    Classes currently assigned to your account
+                  </Text>
+                </View>
+              </View>
             </View>
-          ))}
-          {!dashboard?.assignedClasses?.length && (
-            <Text style={styles.muted}>No assigned classes yet.</Text>
+
+            <View style={styles.assignedClassesCount}>
+              <Text style={styles.assignedClassesCountValue}>
+                {dashboard?.assignedClasses?.length || 0}
+              </Text>
+              <Text style={styles.assignedClassesCountLabel}>
+                {(dashboard?.assignedClasses?.length || 0) === 1
+                  ? 'Class'
+                  : 'Classes'}
+              </Text>
+            </View>
+          </View>
+
+          {(dashboard?.assignedClasses || []).length ? (
+            <View style={styles.assignedClassesGrid}>
+              {(dashboard?.assignedClasses || []).map(
+                (item, teacherKeyIndex) => {
+                  const gradeLevel =
+                    item?.gradeLevel ??
+                    item?.grade_level ??
+                    item?.grade ??
+                    '—';
+
+                  const section =
+                    item?.section ??
+                    item?.sectionName ??
+                    item?.classSection ??
+                    'No section';
+
+                  return (
+                    <View
+                      key={
+                        String(
+                          item?.id ||
+                            `${gradeLevel}-${section}` ||
+                            'teacher-assigned-class'
+                        ) +
+                        '-' +
+                        teacherKeyIndex
+                      }
+                      style={styles.assignedClassCard}
+                    >
+                      <View style={styles.assignedClassTopRow}>
+                        <View style={styles.assignedClassGradeBadge}>
+                          <Text style={styles.assignedClassGradeBadgeLabel}>
+                            GRADE
+                          </Text>
+                          <Text style={styles.assignedClassGradeBadgeValue}>
+                            {gradeLevel}
+                          </Text>
+                        </View>
+
+                        <View style={styles.assignedClassStatus}>
+                          <View style={styles.assignedClassStatusDot} />
+                          <Text style={styles.assignedClassStatusText}>
+                            Assigned
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.assignedClassBody}>
+                        <Text style={styles.assignedClassSectionLabel}>
+                          SECTION
+                        </Text>
+                        <Text style={styles.assignedClassSection}>
+                          {section}
+                        </Text>
+                      </View>
+
+                      <View style={styles.assignedClassFooter}>
+                        <Text style={styles.assignedClassFooterIcon}>
+                          📘
+                        </Text>
+                        <Text style={styles.assignedClassFooterText}>
+                          Active teaching class
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                }
+              )}
+            </View>
+          ) : (
+            <View style={styles.assignedClassesEmpty}>
+              <View style={styles.assignedClassesEmptyIcon}>
+                <Text style={styles.assignedClassesEmptyEmoji}>
+                  🏫
+                </Text>
+              </View>
+
+              <Text style={styles.assignedClassesEmptyTitle}>
+                No assigned classes yet
+              </Text>
+
+              <Text style={styles.assignedClassesEmptyText}>
+                Your assigned grade levels and sections will appear
+                here once they are added by the administrator.
+              </Text>
+            </View>
           )}
         </SectionCard>
 
@@ -2581,7 +2720,7 @@ async function handleLogout() {
         {builderStep === 0 && (
           <SectionCard>
             <Text style={styles.cardTitle}>Lesson Material</Text>
-            <Text style={styles.muted}>Upload a PPT, PPTX, or PDF file. PDFs can preview inside the student lesson. PPT/PPTX files open as slides or download.</Text>
+            <Text style={styles.muted}>Upload a PDF, PPT, PPTX, DOC, DOCX, PNG, JPG, JPEG, or WEBP file. PDFs and images can preview inside the student lesson. Office files open or download using a compatible app.</Text>
             {draft.material && (
               <View style={styles.softRow}>
                 <Text style={styles.rowTitle}>📎 {draft.material.fileName}</Text>
@@ -2929,6 +3068,30 @@ async function handleLogout() {
             {newActivity.type === 'mcq' ? (
               <>
                 <Field label="Question" value={newActivity.question} onChangeText={(value) => setNewActivity((current) => ({ ...current, question: value }))} />
+                {/* TEACHER_PERSISTENT_QUIZ_TEMPLATE */}
+                <View style={styles.softRow}>
+                  <Text style={styles.rowTitle}>
+                    Quiz Question Template
+                  </Text>
+                  <Text style={styles.muted}>
+                    Question: Ano ang kasingkahulugan ng masaya?
+                  </Text>
+                  <Text style={styles.muted}>
+                    A. Maligaya
+                  </Text>
+                  <Text style={styles.muted}>
+                    B. Malungkot
+                  </Text>
+                  <Text style={styles.muted}>
+                    C. Galit
+                  </Text>
+                  <Text style={styles.muted}>
+                    D. Takot
+                  </Text>
+                  <Text style={styles.muted}>
+                    Correct Answer: A
+                  </Text>
+                </View>
 
                 {ACTIVITY_CHOICE_KEYS.slice(
                   0,
@@ -2952,21 +3115,25 @@ async function handleLogout() {
                 })}
 
                 <View style={styles.choiceRow}>
-                  <SmallButton
-                    tone="slate"
-                    disabled={Number(newActivity.choiceCount || 2) >= ACTIVITY_CHOICE_KEYS.length}
-                    onPress={() =>
-                      setNewActivity((current) => ({
-                        ...current,
-                        choiceCount: Math.min(
-                          ACTIVITY_CHOICE_KEYS.length,
-                          Math.max(2, Number(current.choiceCount || 2)) + 1
-                        ),
-                      }))
-                    }
-                  >
-                    Add More Choice
-                  </SmallButton>
+                  {/* TEACHER_UNIFIED_ADD_MORE_CHOICE */}
+                  {/* TEACHER_ADD_CHOICE_VISUAL_OFFSET_FINAL */}
+                  <View style={{ transform: [{ translateY: 10 }] }}>
+                    <SmallButton
+                                          tone="mediumBlue"
+                                          disabled={Number(newActivity.choiceCount || 2) >= ACTIVITY_CHOICE_KEYS.length}
+                                          onPress={() =>
+                                            setNewActivity((current) => ({
+                                              ...current,
+                                              choiceCount: Math.min(
+                                                ACTIVITY_CHOICE_KEYS.length,
+                                                Math.max(2, Number(current.choiceCount || 2)) + 1
+                                              ),
+                                            }))
+                                          }
+                                        >
+                                          ＋  Add More Choice
+                                        </SmallButton>
+                  </View>
 
                   {Number(newActivity.choiceCount || 2) > 2 ? (
                     <SmallButton
@@ -2997,21 +3164,31 @@ async function handleLogout() {
                   ) : null}
                 </View>
 
-                <Text style={styles.fieldLabel}>Correct Choice</Text>
-                <View style={styles.choiceRow}>
-                  {ACTIVITY_CHOICE_KEYS.slice(
+                {/* TEACHER_CORRECT_CHOICE_TOP_SPACE_16 */}
+                <View style={{ height: 16 }} />
+                {/* TEACHER_QUIZ_CORRECT_CHOICE_DROPDOWN */}
+                <SelectMenu
+                  label="Correct Choice"
+                  value={newActivity.correctOption || 'A'}
+                  options={ACTIVITY_CHOICE_KEYS.slice(
                     0,
-                    Math.min(ACTIVITY_CHOICE_KEYS.length, Math.max(2, Number(newActivity.choiceCount || 2)))
-                  ).map((choice, teacherKeyIndex) => (
-                    <SmallButton
-                      key={String((choice) || 'teacher-map-3002') + '-' + teacherKeyIndex}
-                      tone={newActivity.correctOption === choice ? 'green' : 'slate'}
-                      onPress={() => setNewActivity((current) => ({ ...current, correctOption: choice }))}
-                    >
-                      {choice}
-                    </SmallButton>
-                  ))}
-                </View>
+                    Math.min(
+                      ACTIVITY_CHOICE_KEYS.length,
+                      Math.max(2, Number(newActivity.choiceCount || 2))
+                    )
+                  ).map((choice) => ({
+                    value: choice,
+                    label: `${choice}. ${String(
+                      newActivity[`option${choice}`] || `Choice ${choice}`
+                    ).trim() || `Choice ${choice}`}`,
+                  }))}
+                  onSelect={(correctOption) =>
+                    setNewActivity((current) => ({
+                      ...current,
+                      correctOption,
+                    }))
+                  }
+                />
               </>
             ) : (
               <>
@@ -3032,20 +3209,44 @@ async function handleLogout() {
                 ) : null}
               </>
             )}
-            <SmallButton tone="mediumBlue" onPress={addActivity}>{typeof newActivity.editingActivityIndex === 'number' ? 'Update Activity Block' : 'Add Activity Block'}</SmallButton>
-            {draft.activities.map((activity, index) => (
-              <View key={`${activity.type}-${index}`} style={styles.softRow}>
-                <Text style={styles.rowTitle}>{index + 1}. {activity.title}</Text>
-                <Text style={styles.muted}>Type: {typeof getTeacherLessonActivityTypeLabel === 'function' ? getTeacherLessonActivityTypeLabel(activity) : activity.type}</Text>
+            {/* TEACHER_ACTIVITY_FOOTER_ROW */}
+            <View
+              style={{
+                alignSelf: 'stretch',
+                width: '100%',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+                marginTop: 14,
+                paddingTop: 14,
+              }}
+            >
+              <View style={{ flexShrink: 1 }}>
                 <SmallButton
-                  tone="slate"
-                  onPress={() => setNewActivity((current) => hydrateActivityBuilderFromExisting(activity, index, current))}
+                  tone="mediumBlue"
+                  onPress={addActivity}
                 >
-                  Edit This Activity
+                  {typeof newActivity.editingActivityIndex === 'number'
+                    ? 'Update Activity Block'
+                    : 'Add Activity Block'}
                 </SmallButton>
               </View>
-            ))}
-            <SmallButton tone="darkBlue" onPress={() => setBuilderStep(3)}>Next: Preview →</SmallButton>
+
+              <View
+                style={{
+                  flexShrink: 1,
+                  alignItems: 'flex-end',
+                }}
+              >
+                <SmallButton
+                  tone="darkBlue"
+                  onPress={() => setBuilderStep(3)}
+                >
+                  Next: Preview →
+                </SmallButton>
+              </View>
+            </View>
           </SectionCard>
         )}
 
@@ -6204,6 +6405,65 @@ async function handleLogout() {
         value: section,
       }));
 
+    const teacherStudentClassGroups = Object.values(
+      usableStudents.reduce((groups, student) => {
+        const grade =
+          getStudentGradeValue(student) || '—';
+
+        const studentSection =
+          normalizeSectionName(
+            getStudentSectionValue(student)
+          ) || 'Not assigned';
+
+        const groupKey = `${grade}::${studentSection}`;
+
+        if (!groups[groupKey]) {
+          groups[groupKey] = {
+            key: groupKey,
+            grade,
+            section: studentSection,
+            students: [],
+          };
+        }
+
+        groups[groupKey].students.push(student);
+        return groups;
+      }, {})
+    )
+      .map((group) => ({
+        ...group,
+        students: [...group.students].sort(
+          (first, second) =>
+            String(
+              first?.name ||
+                first?.studentName ||
+                'Student'
+            ).localeCompare(
+              String(
+                second?.name ||
+                  second?.studentName ||
+                  'Student'
+              )
+            )
+        ),
+      }))
+      .sort((first, second) => {
+        const firstGrade = Number(first.grade);
+        const secondGrade = Number(second.grade);
+
+        if (
+          Number.isFinite(firstGrade) &&
+          Number.isFinite(secondGrade) &&
+          firstGrade !== secondGrade
+        ) {
+          return firstGrade - secondGrade;
+        }
+
+        return String(first.section).localeCompare(
+          String(second.section)
+        );
+      });
+
     return (
       <>
         <SectionCard>
@@ -6453,6 +6713,189 @@ async function handleLogout() {
               </View>
             </View>
           ) : null}
+        </SectionCard>
+
+        <SectionCard style={styles.myStudentsCard}>
+          <View style={styles.myStudentsHeader}>
+            <View style={styles.myStudentsTitleRow}>
+              <View style={styles.myStudentsTitleIcon}>
+                <Text style={styles.myStudentsTitleEmoji}>
+                  🎓
+                </Text>
+              </View>
+
+              <View style={styles.myStudentsTitleCopy}>
+                <Text style={styles.cardTitle}>
+                  My Students
+                </Text>
+
+                <Text style={styles.muted}>
+                  Students assigned to your classes,
+                  grouped by grade and section.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.myStudentsTotalBadge}>
+              <Text style={styles.myStudentsTotalValue}>
+                {usableStudents.length}
+              </Text>
+
+              <Text style={styles.myStudentsTotalLabel}>
+                {usableStudents.length === 1
+                  ? 'Student'
+                  : 'Students'}
+              </Text>
+            </View>
+          </View>
+
+          {teacherStudentClassGroups.length ? (
+            <View style={styles.myStudentsClassList}>
+              {teacherStudentClassGroups.map(
+                (classGroup) => (
+                  <View
+                    key={classGroup.key}
+                    style={styles.myStudentsClassCard}
+                  >
+                    <View
+                      style={styles.myStudentsClassHeader}
+                    >
+                      <View
+                        style={
+                          styles.myStudentsClassHeaderCopy
+                        }
+                      >
+                        <Text
+                          style={styles.myStudentsClassName}
+                        >
+                          Grade {classGroup.grade} •{' '}
+                          {classGroup.section}
+                        </Text>
+
+                        <Text
+                          style={styles.myStudentsClassMeta}
+                        >
+                          Assigned class
+                        </Text>
+                      </View>
+
+                      <View
+                        style={
+                          styles.myStudentsClassCountBadge
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.myStudentsClassCountValue
+                          }
+                        >
+                          {classGroup.students.length}
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.myStudentsClassCountLabel
+                          }
+                        >
+                          {classGroup.students.length === 1
+                            ? 'Student'
+                            : 'Students'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View
+                      style={styles.myStudentsLearnerList}
+                    >
+                      {classGroup.students.map(
+                        (student, studentIndex) => {
+                          const studentName =
+                            student?.name ||
+                            student?.studentName ||
+                            'Student';
+
+                          const studentCode =
+                            student?.studentCode ||
+                            student?.student_code ||
+                            '';
+
+                          const stableStudentId =
+                            getStudentStableId(student);
+
+                          return (
+                            <View
+                              key={`${stableStudentId}-${studentIndex}`}
+                              style={
+                                styles.myStudentsLearnerRow
+                              }
+                            >
+                              <View
+                                style={
+                                  styles.myStudentsLearnerAvatar
+                                }
+                              >
+                                <Text
+                                  style={
+                                    styles.myStudentsLearnerAvatarText
+                                  }
+                                >
+                                  {String(studentName)
+                                    .trim()
+                                    .charAt(0)
+                                    .toUpperCase() || 'S'}
+                                </Text>
+                              </View>
+
+                              <View
+                                style={
+                                  styles.myStudentsLearnerCopy
+                                }
+                              >
+                                <Text
+                                  style={
+                                    styles.myStudentsLearnerName
+                                  }
+                                >
+                                  {studentName}
+                                </Text>
+
+                                {studentCode ? (
+                                  <Text
+                                    style={
+                                      styles.myStudentsLearnerCode
+                                    }
+                                  >
+                                    Student ID: {studentCode}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            </View>
+                          );
+                        }
+                      )}
+                    </View>
+                  </View>
+                )
+              )}
+            </View>
+          ) : (
+            <View style={styles.myStudentsEmpty}>
+              <View style={styles.myStudentsEmptyIcon}>
+                <Text style={styles.myStudentsEmptyEmoji}>
+                  👥
+                </Text>
+              </View>
+
+              <Text style={styles.myStudentsEmptyTitle}>
+                No assigned students yet
+              </Text>
+
+              <Text style={styles.myStudentsEmptyText}>
+                Students assigned to your grade and
+                section will appear here.
+              </Text>
+            </View>
+          )}
         </SectionCard>
 
         {selectedTeacherStudent ? (
@@ -6804,7 +7247,7 @@ async function handleLogout() {
               <Text style={styles.title}>Teacher Workspace</Text>
               <Text style={styles.subtitle}>Manage lessons, groups, assessments, and reports.</Text>
             </View>
-            <SmallButton tone="slate" onPress={confirmLogout}>Logout</SmallButton>
+            <SmallButton tone="red" onPress={confirmLogout}>Logout</SmallButton>
           </View>
 
           <View style={styles.workspaceHero}>
@@ -6883,8 +7326,12 @@ async function handleLogout() {
                 <Text style={styles.workspaceLogoutCancelText}>Cancel</Text>
               </TouchableOpacity>
 
+              {/* WORKSPACE_LOGOUT_DANGER_RED_V1 */}
               <TouchableOpacity
-                style={styles.workspaceLogoutConfirm}
+                style={[
+                  styles.workspaceLogoutConfirm,
+                  styles.workspaceLogoutDangerConfirm,
+                ]}
                 onPress={handleLogout}
               >
                 <Text style={styles.workspaceLogoutConfirmText}>Logout</Text>
@@ -7046,6 +7493,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  workspaceLogoutDangerConfirm: {
+    backgroundColor: '#DC2626',
+    borderColor: '#B91C1C',
+  },
+
   workspaceLogoutModalCard: {
     width: '100%',
     backgroundColor: '#FFFFFF',
@@ -7443,6 +7895,221 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#FFF', borderRadius: 22, padding: 16, marginBottom: 14, shadowColor: '#1E40AF', shadowOpacity: 0.07, shadowRadius: 10, elevation: 3 },
   cardTitle: { color: '#0F172A', fontSize: 20, fontWeight: '900', marginBottom: 10 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  assignedClassesCard: {
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    backgroundColor: '#FFFFFF',
+  },
+  assignedClassesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  assignedClassesHeaderCopy: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  assignedClassesTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  assignedClassesTitleIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DBEAFE',
+    marginRight: 12,
+  },
+  assignedClassesTitleEmoji: {
+    fontSize: 23,
+  },
+  assignedClassesTitle: {
+    color: '#0F172A',
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '900',
+  },
+  assignedClassesSubtitle: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  assignedClassesCount: {
+    minWidth: 62,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  assignedClassesCountValue: {
+    color: '#1D4ED8',
+    fontSize: 20,
+    lineHeight: 23,
+    fontWeight: '900',
+  },
+  assignedClassesCountLabel: {
+    color: '#475569',
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  assignedClassesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  assignedClassCard: {
+    width: '100%',
+    marginBottom: 10,
+    padding: 15,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    shadowColor: '#1D4ED8',
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    elevation: 2,
+  },
+  assignedClassTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  assignedClassGradeBadge: {
+    minWidth: 72,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 15,
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+  },
+  assignedClassGradeBadgeLabel: {
+    color: '#DBEAFE',
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  assignedClassGradeBadgeValue: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '900',
+  },
+  assignedClassStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  assignedClassStatusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#16A34A',
+    marginRight: 6,
+  },
+  assignedClassStatusText: {
+    color: '#166534',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  assignedClassBody: {
+    paddingTop: 16,
+    paddingBottom: 14,
+  },
+  assignedClassSectionLabel: {
+    color: '#64748B',
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '900',
+    letterSpacing: 1,
+  },
+  assignedClassSection: {
+    color: '#0F172A',
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  assignedClassFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 11,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  assignedClassFooterIcon: {
+    fontSize: 14,
+    marginRight: 7,
+  },
+  assignedClassFooterText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  assignedClassesEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 30,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderStyle: 'dashed',
+  },
+  assignedClassesEmptyIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E2E8F0',
+    marginBottom: 12,
+  },
+  assignedClassesEmptyEmoji: {
+    fontSize: 28,
+  },
+  assignedClassesEmptyTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  assignedClassesEmptyText: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+
   statCard: {
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -8165,6 +8832,190 @@ const styles = StyleSheet.create({
   stepTextActive: { color: '#0F172A', fontWeight: '900', fontSize: 12, lineHeight: 16, textAlign: 'center', includeFontPadding: false },
   previewTitle: { color: '#1E40AF', fontSize: 24, fontWeight: '900' },
   buttonRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  myStudentsCard: {
+    gap: 4,
+  },
+  myStudentsHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 16,
+  },
+  myStudentsTitleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  myStudentsTitleIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EDE9FE',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  myStudentsTitleEmoji: {
+    fontSize: 23,
+  },
+  myStudentsTitleCopy: {
+    flex: 1,
+  },
+  myStudentsTotalBadge: {
+    minWidth: 70,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F3FF',
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+  },
+  myStudentsTotalValue: {
+    color: '#5B21B6',
+    fontSize: 19,
+    fontWeight: '900',
+  },
+  myStudentsTotalLabel: {
+    color: '#6D28D9',
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginTop: 1,
+  },
+  myStudentsClassList: {
+    gap: 14,
+  },
+  myStudentsClassCard: {
+    overflow: 'hidden',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  myStudentsClassHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    backgroundColor: '#F8FAFC',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  myStudentsClassHeaderCopy: {
+    flex: 1,
+  },
+  myStudentsClassName: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  myStudentsClassMeta: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  myStudentsClassCountBadge: {
+    minWidth: 62,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#DBEAFE',
+  },
+  myStudentsClassCountValue: {
+    color: '#1D4ED8',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  myStudentsClassCountLabel: {
+    color: '#1E40AF',
+    fontSize: 9,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  myStudentsLearnerList: {
+    paddingHorizontal: 14,
+  },
+  myStudentsLearnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  myStudentsLearnerAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EDE9FE',
+  },
+  myStudentsLearnerAvatarText: {
+    color: '#6D28D9',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  myStudentsLearnerCopy: {
+    flex: 1,
+  },
+  myStudentsLearnerName: {
+    color: '#0F172A',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  myStudentsLearnerCode: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  myStudentsEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 28,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+  },
+  myStudentsEmptyIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EDE9FE',
+    marginBottom: 11,
+  },
+  myStudentsEmptyEmoji: {
+    fontSize: 26,
+  },
+  myStudentsEmptyTitle: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  myStudentsEmptyText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
+    textAlign: 'center',
+    marginTop: 5,
+  },
   studentCard: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
   studentAvatar: { fontSize: 28 },
   progressTrack: { height: 7, backgroundColor: '#E2E8F0', borderRadius: 99, overflow: 'hidden', marginTop: 7 },

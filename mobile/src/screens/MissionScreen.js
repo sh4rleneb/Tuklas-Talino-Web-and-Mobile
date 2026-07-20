@@ -24,6 +24,7 @@ const MOBILE_MISSION_TYPE_FALLBACKS = [
   'picture-guess',
   'sentence-builder',
   'story-quest',
+  'sound-and-say',
 ];
 
 const TAGALOG_MISSION_TITLES = Object.freeze({

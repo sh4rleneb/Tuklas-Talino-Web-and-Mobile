@@ -28,7 +28,6 @@ import LetterPopGame from './games/LetterPopGame';
 import PictureGuessGame from './games/PictureGuessGame';
 import SentenceBuilderGame from './games/SentenceBuilderGame';
 import StoryQuestGame from './games/StoryQuestGame';
-import FillInTheBlankGame from './games/FillInTheBlankGame';
 
 
 const MAX_MISSION_ATTEMPTS = 5;
@@ -1412,16 +1411,6 @@ export default function MissionGameScreen({ navigation, route }) {
             onMissionComplete={handleSubmit}
           />
         )}
-
-        {missionId === 'fill-in-the-blank' && (
-          <FillInTheBlankGame
-            key={`fill-in-the-blank-${missionAttemptNo}`}
-            activity={mission}
-            submitting={submitting}
-            onMissionComplete={handleSubmit}
-          />
-        )}
-
         {missionId === 'sound-and-say' && (
           <View style={styles.soundCard}>
             <Text style={styles.soundEyebrow}>
