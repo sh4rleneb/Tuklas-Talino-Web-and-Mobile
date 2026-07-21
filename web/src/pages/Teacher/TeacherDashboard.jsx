@@ -4028,43 +4028,258 @@ export default function TeacherDashboard({
                         {isOpen ? (
                           <div className="teacher-group-details-box">
                             <div className="teacher-group-detail-section">
+                              {/* TUKLAS_GROUP_MEMBER_BULK_REMOVE_V1 */}
+                              {/* TUKLAS_GROUP_MEMBER_UI_CLEANUP_V1 */}
+                              <style>{`
+                                .teacher-group-member-toolbar {
+                                  display: flex !important;
+                                  align-items: center !important;
+                                  gap: 8px !important;
+                                  flex-wrap: wrap !important;
+                                  margin-bottom: 12px !important;
+                                  padding: 8px !important;
+                                  background: #f8fafc !important;
+                                  border: 1px solid #e2e8f0 !important;
+                                  border-radius: 12px !important;
+                                }
+
+                                .teacher-group-member-toolbar
+                                .lms-outline-action {
+                                  width: auto !important;
+                                  min-width: 0 !important;
+                                  min-height: 36px !important;
+                                  padding: 8px 12px !important;
+                                  border-radius: 10px !important;
+                                  flex: 0 0 auto !important;
+                                  font-size: 13px !important;
+                                  line-height: 1.2 !important;
+                                }
+
+                                .teacher-group-member-compact {
+                                  width: 100% !important;
+                                  min-height: 0 !important;
+                                  padding: 10px 12px !important;
+                                  border-radius: 14px !important;
+                                  display: grid !important;
+                                  grid-template-columns:
+                                    minmax(0, 1fr) auto !important;
+                                  align-items: center !important;
+                                  gap: 10px !important;
+                                  box-sizing: border-box !important;
+                                }
+
+                                .teacher-group-member-main {
+                                  display: flex !important;
+                                  align-items: center !important;
+                                  gap: 8px !important;
+                                  min-width: 0 !important;
+                                }
+
+                                .teacher-group-member-main span {
+                                  font-size: 14px !important;
+                                  line-height: 1.25 !important;
+                                }
+
+                                .teacher-group-member-checkbox {
+                                  width: 16px !important;
+                                  height: 16px !important;
+                                  min-width: 16px !important;
+                                  margin: 0 !important;
+                                  flex: 0 0 auto !important;
+                                }
+
+                                .teacher-group-leader-action {
+                                  width: auto !important;
+                                  min-width: 0 !important;
+                                  min-height: 34px !important;
+                                  padding: 7px 10px !important;
+                                  border-radius: 10px !important;
+                                  white-space: nowrap !important;
+                                }
+
+                                @media (max-width: 560px) {
+                                  .teacher-group-member-compact {
+                                    grid-template-columns:
+                                      minmax(0, 1fr) !important;
+                                  }
+
+                                  .teacher-group-leader-action {
+                                    justify-self: start !important;
+                                    margin-left: 24px !important;
+                                  }
+                                }
+                              `}</style>
                               <h4>Members</h4>
+
                               {members.length ? (
-                                <div className="teacher-group-chip-list">
+                                <div className="teacher-group-member-toolbar">
+                                  <button
+                                    type="button"
+                                    className="lms-outline-action"
+                                    onClick={() => {
+                                      const container =
+                                        document.getElementById(
+                                          `remove-members-${group.id}`
+                                        );
+
+                                      container
+                                        ?.querySelectorAll(
+                                          'input[data-remove-member="true"]'
+                                        )
+                                        .forEach(input => {
+                                          input.checked = true;
+                                        });
+                                    }}
+                                  >
+                                    Select All
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="lms-outline-action"
+                                    onClick={() => {
+                                      const container =
+                                        document.getElementById(
+                                          `remove-members-${group.id}`
+                                        );
+
+                                      container
+                                        ?.querySelectorAll(
+                                          'input[data-remove-member="true"]'
+                                        )
+                                        .forEach(input => {
+                                          input.checked = false;
+                                        });
+                                    }}
+                                  >
+                                    Clear
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    className="lms-outline-action"
+                                    style={{
+                                      color: '#b42318',
+                                      borderColor:
+                                        'rgba(180, 35, 24, 0.28)'
+                                    }}
+                                    onClick={async () => {
+                                      const container =
+                                        document.getElementById(
+                                          `remove-members-${group.id}`
+                                        );
+
+                                      const selected = Array.from(
+                                        container?.querySelectorAll(
+                                          'input[data-remove-member="true"]:checked'
+                                        ) || []
+                                      )
+                                        .map(input =>
+                                          String(input.value || '')
+                                        )
+                                        .filter(Boolean);
+
+                                      if (!selected.length) {
+                                        window.alert(
+                                          'Select at least one member to remove.'
+                                        );
+                                        return;
+                                      }
+
+                                      const confirmed =
+                                        window.confirm(
+                                          `Remove ${selected.length} selected member(s) from "${group.name}"?`
+                                        );
+
+                                      if (!confirmed) return;
+
+                                      const results =
+                                        await Promise.allSettled(
+                                          selected.map(studentId =>
+                                            api(
+                                              `/groups/${group.id}/members/${studentId}`,
+                                              {
+                                                method: 'DELETE'
+                                              }
+                                            )
+                                          )
+                                        );
+
+                                      const removed =
+                                        results.filter(
+                                          result =>
+                                            result.status ===
+                                            'fulfilled'
+                                        ).length;
+
+                                      const failed =
+                                        results.length - removed;
+
+                                      if (
+                                        removed > 0 &&
+                                        typeof reload === 'function'
+                                      ) {
+                                        await reload();
+                                      }
+
+                                      setTeacherTab('groups');
+
+                                      setOpenGroupTools(previous => ({
+                                        ...previous,
+                                        [group.id]: true
+                                      }));
+
+                                      window.alert(
+                                        failed
+                                          ? `${removed} member(s) removed. ${failed} could not be removed.`
+                                          : `${removed} member(s) removed successfully.`
+                                      );
+                                    }}
+                                  >
+                                    Remove Selected
+                                  </button>
+                                </div>
+                              ) : null}
+                              {members.length ? (
+                                <div
+                                  id={`remove-members-${group.id}`}
+                                  className="teacher-group-chip-list"
+                                >
                                   {members.map(member => {
                                     const student = member.Student || member.student || member;
                                     const studentId = student.id || member.studentId;
                                     const isLeader = member.groupRole === 'leader';
                                     return (
-                                      <div className={`teacher-group-chip teacher-group-member-chip ${isLeader ? 'leader' : ''}`} key={member.id || studentId || student.studentCode || student.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                                          <span>👤 {student.name || 'Student'}</span>
+                                      <div className={`teacher-group-chip teacher-group-member-chip teacher-group-member-compact ${isLeader ? 'leader' : ''}`} key={member.id || studentId || student.studentCode || student.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                                        <div
+                                          className="teacher-group-member-main"
+                                        >
+                                          <input
+                                              className="teacher-group-member-checkbox"
+                                              type="checkbox"
+                                              value={studentId || ''}
+                                              data-remove-member="true"
+                                              disabled={!studentId}
+                                              aria-label={`Select ${student.name || 'student'} for removal`}
+                                            />
+
+                                            <span>👤 {student.name || 'Student'}</span>
                                           <small>{isLeader ? 'Leader' : 'Member'}</small>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                          {!isLeader && (
-                                            <button type="button" className="lms-outline-action" onClick={() => setGroupLeader(group.id, studentId)}>
-                                              Set as Leader
-                                            </button>
-                                          )}
+                                        {!isLeader && (
                                           <button
                                             type="button"
-                                            className="lms-outline-action"
-                                            style={{ color: '#b42318', borderColor: 'rgba(180, 35, 24, 0.28)' }}
-                                            onClick={() => {
-                                              if (!studentId) return;
-                                              api(`/groups/${group.id}/members/${studentId}`, { method: 'DELETE' })
-                                                .then(() => {
-                                                  window.location.reload();
-                                                })
-                                                .catch(() => {
-                                                  window.alert('Failed to remove member.');
-                                                });
-                                            }}
+                                            className="lms-outline-action teacher-group-leader-action"
+                                            onClick={() =>
+                                              setGroupLeader(
+                                                group.id,
+                                                studentId
+                                              )
+                                            }
                                           >
-                                            Remove
+                                            Set as Leader
                                           </button>
-                                        </div>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -4211,8 +4426,16 @@ export default function TeacherDashboard({
                                   if (!selected.length) return window.alert('Select at least one student to add.');
                                   const addPromises = selected.map(studentId => api(`/groups/${group.id}/members`, { method: 'POST', body: { studentId } }));
                                   Promise.all(addPromises)
-                                    .then(() => {
-                                      window.location.reload();
+                                    .then(async () => {
+                                      if (typeof reload === 'function') {
+                                        await reload();
+                                      }
+
+                                      setTeacherTab('groups');
+                                      setOpenGroupTools(previous => ({
+                                        ...previous,
+                                        [group.id]: true
+                                      }));
                                     })
                                     .catch(() => {
                                       window.alert('One or more students could not be added.');
