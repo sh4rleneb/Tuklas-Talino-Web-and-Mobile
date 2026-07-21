@@ -2325,7 +2325,36 @@ export default function TeacherDashboard({
 
         .teacher-group-actions-row button {
           flex: 1;
+          cursor: pointer;
+          transition:
+            transform 160ms ease,
+            box-shadow 160ms ease,
+            background-color 160ms ease,
+            border-color 160ms ease;
         }
+
+        .teacher-group-actions-row button:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+        }
+
+        .teacher-group-actions-row button:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+        }
+
+        .teacher-group-actions-row button:focus-visible {
+          outline: 3px solid rgba(34, 197, 94, 0.28);
+          outline-offset: 2px;
+        }
+
+        .teacher-group-actions-row button:disabled {
+          cursor: not-allowed;
+          opacity: 0.65;
+          transform: none;
+          box-shadow: none;
+        }
+
 
         .clean-groups-panel .teacher-add-member-row {
           margin-top: 14px;

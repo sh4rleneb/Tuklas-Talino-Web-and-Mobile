@@ -15,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6770,6 +6771,83 @@ async function handleLogout() {
     }
   }
 
+
+  // TEACHER_STUDENTS_AVATAR_PARITY_V2
+  function getTeacherStudentAvatar(student = {}) {
+    return String(
+      student?.avatar ??
+      student?.avatarUrl ??
+      student?.avatar_url ??
+      student?.profileImage ??
+      student?.profile_image ??
+      student?.profilePicture ??
+      student?.profile_picture ??
+      student?.photo ??
+      student?.image ??
+      student?.User?.avatar ??
+      student?.user?.avatar ??
+      ''
+    ).trim();
+  }
+
+  function teacherStudentAvatarIsImage(value) {
+    const avatar = String(value || '').trim();
+
+    return (
+      /^https?:\/\//i.test(avatar) ||
+      /^data:image\//i.test(avatar) ||
+      /^file:\/\//i.test(avatar) ||
+      /^content:\/\//i.test(avatar)
+    );
+  }
+
+  function getTeacherStudentInitial(student = {}) {
+    const name = String(
+      student?.name ||
+      student?.studentName ||
+      student?.displayName ||
+      student?.User?.displayName ||
+      student?.user?.displayName ||
+      'Student'
+    ).trim();
+
+    return name.charAt(0).toUpperCase() || 'S';
+  }
+
+  function renderTeacherStudentAvatar({
+    student,
+    containerStyle,
+    textStyle,
+    imageStyle,
+  }) {
+    const avatar = getTeacherStudentAvatar(student);
+
+    return (
+      <View style={containerStyle}>
+        {teacherStudentAvatarIsImage(avatar) ? (
+          <Image
+            source={{ uri: avatar }}
+            style={imageStyle}
+            resizeMode="cover"
+            accessibilityLabel={`${
+              student?.name ||
+              student?.studentName ||
+              'Student'
+            } avatar`}
+          />
+        ) : (
+          <Text
+            style={textStyle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
+            {avatar || getTeacherStudentInitial(student)}
+          </Text>
+        )}
+      </View>
+    );
+  }
+
   function renderStudents() {
     const selectedGrade = Number(
       selectedTeacherStudent?.gradeLevel ??
@@ -7073,26 +7151,21 @@ async function handleLogout() {
                             styles.studentSearchResultTop
                           }
                         >
-                          <View
-                            style={[
+                          {renderTeacherStudentAvatar({
+                            student,
+                            containerStyle: [
                               styles.studentSearchAvatar,
                               isSelected &&
                                 styles.studentSearchAvatarSelected,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.studentSearchAvatarText,
-                                isSelected &&
-                                  styles.studentSearchAvatarTextSelected,
-                              ]}
-                            >
-                              {String(studentName)
-                                .trim()
-                                .charAt(0)
-                                .toUpperCase() || 'S'}
-                            </Text>
-                          </View>
+                            ],
+                            textStyle: [
+                              styles.studentSearchAvatarText,
+                              isSelected &&
+                                styles.studentSearchAvatarTextSelected,
+                            ],
+                            imageStyle:
+                              styles.teacherStudentSearchAvatarImage,
+                          })}
 
                           <View
                             style={
@@ -7269,22 +7342,15 @@ async function handleLogout() {
                                 styles.myStudentsLearnerRow
                               }
                             >
-                              <View
-                                style={
-                                  styles.myStudentsLearnerAvatar
-                                }
-                              >
-                                <Text
-                                  style={
-                                    styles.myStudentsLearnerAvatarText
-                                  }
-                                >
-                                  {String(studentName)
-                                    .trim()
-                                    .charAt(0)
-                                    .toUpperCase() || 'S'}
-                                </Text>
-                              </View>
+                              {renderTeacherStudentAvatar({
+                                student,
+                                containerStyle:
+                                  styles.myStudentsLearnerAvatar,
+                                textStyle:
+                                  styles.myStudentsLearnerAvatarText,
+                                imageStyle:
+                                  styles.teacherMyStudentsAvatarImage,
+                              })}
 
                               <View
                                 style={
@@ -7377,21 +7443,15 @@ async function handleLogout() {
 
             <View style={styles.selectedStudentSummary}>
               <View style={styles.selectedStudentHeader}>
-                <View style={styles.selectedStudentAvatar}>
-                  <Text
-                    style={
-                      styles.selectedStudentAvatarText
-                    }
-                  >
-                    {String(
-                      selectedTeacherStudent.name ||
-                        'Student'
-                    )
-                      .trim()
-                      .charAt(0)
-                      .toUpperCase() || 'S'}
-                  </Text>
-                </View>
+                {renderTeacherStudentAvatar({
+                  student: selectedTeacherStudent,
+                  containerStyle:
+                    styles.selectedStudentAvatar,
+                  textStyle:
+                    styles.selectedStudentAvatarText,
+                  imageStyle:
+                    styles.teacherSelectedStudentAvatarImage,
+                })}
 
                 <View style={styles.selectedStudentCopy}>
                   <Text
@@ -10164,6 +10224,24 @@ const styles = StyleSheet.create({
   },
   teacherParitySectionEmoji: {
     fontSize: 22,
+  },
+
+
+  // TEACHER_STUDENTS_AVATAR_IMAGE_STYLES_V2
+  teacherStudentSearchAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+  },
+  teacherMyStudentsAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+  },
+  teacherSelectedStudentAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
   },
 
 });
